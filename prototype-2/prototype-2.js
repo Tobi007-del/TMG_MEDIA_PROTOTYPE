@@ -273,6 +273,7 @@ function launchVideoController(video, videoSettings) {
     <div class="T_M_G-video-controls-container">
         <div class="T_M_G-timeline-container" title="'>' - 5s & Shift + '>' - 10s" tabindex="0">
             <div class="T_M_G-timeline">
+                <div class="T_M_G-network-timeline"></div>
                 <div class="T_M_G-preview-img-container">
                     <img class="T_M_G-preview-img" alt="Preview image" src="${DEFAULT_SETTINGS.media.artwork[0].src}">
                 </div>
@@ -383,7 +384,8 @@ function launchVideoController(video, videoSettings) {
     captions = video.textTracks[0],   
     preventBreak = e => e.target.src = altImgSrc,           
     //custom events for notifying user
-    events = ["videoplay","videopause","volumeup","volumedown","volumemuted","captions","speed","theatre","fullScreen","fwd","bwd"],
+    notifierEvents = ["videoplay","videopause","volumeup","volumedown","volumemuted","captions","speed","theatre","fullScreen","fwd","bwd"],
+    removeNotifierEvent = event => notifierEvents.splice(notifierEvents.indexOf(event), 1),
     fire = (eventName, el = notifiersContainer, detail=null, bubbles=true, cancellable=true) => {
         let evt = new CustomEvent(eventName, {detail, bubbles, cancellable})
         el.dispatchEvent(evt)
@@ -393,7 +395,7 @@ function launchVideoController(video, videoSettings) {
             for(const notifier of notifiersContainer.children) {
                 notifier.addEventListener('transitionend', this.resetNotifiers)
             }
-            for (const event of events) {
+            for (const event of notifierEvents) {
                 notifiersContainer.addEventListener(event, this)
             }
         },
@@ -472,9 +474,8 @@ function launchVideoController(video, videoSettings) {
         if (captions) { 
             captions.mode = "hidden"
         } else {
-            captionsBtn.classList.add("T_M_G-disablec")
-            const n = events.findIndex(e => e === "captions")
-            events.splice(n, 1)
+            captionsBtn.classList.add("T_M_G-disabled")
+            removeNotifierEvent("captions")
         }
         if (!videoSettings.modes.includes("full-screen")) {
             fullScreenBtn.classList.add("T_M_G-hidden")
@@ -549,7 +550,7 @@ function launchVideoController(video, videoSettings) {
         miniPlayerCancelBtn.addEventListener("click", () => toggleMiniPlayerMode(false))        
 
         //videocontainer event listeners
-        videoContainer.addEventListener("mousemove", handleMouseMove)
+        videoContainer.addEventListener("pointermove", handleMouseMove)
 
         //timeline contanier event listeners
         timelineContainer.addEventListener("pointerdown", handleTimelineScrubbing)
@@ -815,7 +816,8 @@ function launchVideoController(video, videoSettings) {
     }
 
     function rewindReset() {
-        video.paused ? clearInterval(speedIntervalId) : speedIntervalId = setInterval(rewindVideo, 20)
+        clearInterval(speedIntervalId)
+        if(!video.paused) speedIntervalId = setInterval(rewindVideo, 20)
     }
     
     function slowDown() {
@@ -839,10 +841,11 @@ function launchVideoController(video, videoSettings) {
 
     //Captions
     function toggleCaptions() {
-        if (!captions) return
+        if (captions) {
         const isHidden = captions.mode === "hidden"
         captions.mode = isHidden ? "showing" : "hidden"
         videoContainer.classList.toggle("T_M_G-captions", isHidden)
+        }
     }
             
     //Volume
@@ -1041,11 +1044,13 @@ function launchVideoController(video, videoSettings) {
 
     //Keyboard and General Accessibility Functions
     function handleClick() {
+        if (!mobileMediaQuery()) {
         if (playId) clearTimeout(playId)
         playId = setTimeout(() => {
             if (!(speedCheck && smCounter < 1))  togglePlay()
             handleMouseMove()
         }, 300)
+        }
     }
 
     function handleDoubleClick({clientX: x}) {
@@ -1161,8 +1166,10 @@ function launchVideoController(video, videoSettings) {
                 fire("speed")
                 break
             case "c":
+                if (captions) {
                 toggleCaptions()
                 fire("captions")
+                }
                 break
         }
     }
