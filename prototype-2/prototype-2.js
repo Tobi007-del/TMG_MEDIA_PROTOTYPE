@@ -168,6 +168,7 @@ function launchVideoController(video, videoSettings) {
     `
     <!-- Code injected by TMG -->
     <div class="T_M_G-video-overlay-controls-container">
+    <div class="T_M_G-video-buffer"></div>
     <img class="T_M_G-thumbnail-img" alt="movie-image" src="${DEFAULT_SETTINGS.media.artwork[0].src}">
     <div class="T_M_G-notifiers-container" data-current-notifier="">
         <div class="T_M_G-notifiers T_M_G-play-notifier">
@@ -255,20 +256,29 @@ function launchVideoController(video, videoSettings) {
             </svg>
         </button>
     </div>
-    <div class="T_M_G-video-buffer"></div>
-    <button type="button" class="T_M_G-replay-btn" title="Replay(shift + r)">
-        <svg class="T_M_G-replay-icon" viewBox="0 -960 960 960" data-tooltip-text="Replay" data-tooltip-position="top">
-            <path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/>
-        </svg> 
-    </button>
+    <div class="T_M_G-overlay-main-buttons-wrapper">
+        <button type="button" class="T_M_G-main-prev-btn" title="Previous Video(Shift + p)">
+            <svg class="T_M_G-prev-icon" data-tooltip-text="Previous Video(Shift + p)" data-tooltip-position="top">
+                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+            </svg>
+        </button>        
         <button type="button" class="T_M_G-main-play-pause-btn" title="Play/Pause(p,l,a,y)">
             <svg class="T_M_G-play-icon" data-tooltip-text="Play(k)" data-tooltip-position="top">
-            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
-        </svg>
-        <svg class="T_M_G-pause-icon" data-tooltip-text="Pause(k)" data-tooltip-position="top">
-            <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z" />
-        </svg>
-    </button>        
+                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+            </svg>
+            <svg class="T_M_G-pause-icon" data-tooltip-text="Pause(k)" data-tooltip-position="top">
+                <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z" />
+            </svg>
+            <svg class="T_M_G-replay-icon" viewBox="0 -960 960 960" data-tooltip-text="Replay(shift + r)" data-tooltip-position="top">
+                <path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/>
+            </svg> 
+        </button>        
+        <button type="button" class="T_M_G-main-next-btn" title="Next Video(Shift + n)">
+            <svg class="T_M_G-next-icon" data-tooltip-text="Next Video(Shift + n)" data-tooltip-position="top">
+                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+            </svg>
+        </button>        
+    </div>
     </div>
     <div class="T_M_G-video-controls-container">
         <div class="T_M_G-timeline-container" title="'>' - 5s & Shift + '>' - 10s" tabindex="0">
@@ -281,15 +291,26 @@ function launchVideoController(video, videoSettings) {
             </div>
         </div>
         <div class="T_M_G-controls">
+        <div class="T_M_G-left-side-controls">
+            <button type="button" class="T_M_G-prev-btn" title="Previous Video(Shift + p)">
+                <svg class="T_M_G-prev-icon" data-tooltip-text="Previous Video(Shift + p)" data-tooltip-position="top">
+                    <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+                </svg>
+            </button>    
             <button type="button" class="T_M_G-play-pause-btn" title="Play/Pause(p,l,a,y)">
-                <svg class="T_M_G-replay-icon" viewBox="0 -960 960 960" data-tooltip-text="Replay(shift + r)" data-tooltip-position="top">
-                    <path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/>
-                </svg> 
                 <svg class="T_M_G-play-icon" data-tooltip-text="Play(p,l,a,y)" data-tooltip-position="top">
                     <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                 </svg>
                 <svg class="T_M_G-pause-icon" data-tooltip-text="Pause(p,l,a,y)" data-tooltip-position="top">
                     <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z" />
+                </svg>
+                <svg class="T_M_G-replay-icon" viewBox="0 -960 960 960" data-tooltip-text="Replay(shift + r)" data-tooltip-position="top">
+                    <path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/>
+                </svg> 
+            </button>
+            <button type="button" class="T_M_G-next-btn" title="Next Video(Shift + n)">
+                <svg class="T_M_G-next-icon" data-tooltip-text="Next Video(Shift + n)" data-tooltip-position="top">
+                    <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                 </svg>
             </button>
             <div class="T_M_G-volume-container">
@@ -311,16 +332,18 @@ function launchVideoController(video, videoSettings) {
                 /
                 <div class="T_M_G-total-time">0.00</div>
             </div>
-            <button type="button" class="T_M_G-settings-btn" title="Toggle Settings">
-                <svg class="T_M_G-settings-icon" viewBox="0 -960 960 960" data-tooltip-text="Settings(s)" data-tooltip-position="top">
-                    <path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/>
-                </svg>
-            </button>
+        </div>
+        <div class="T_M_G-right-side-controls">
             <button type="button" class="T_M_G-captions-btn" title="Toggle Closed Captions(c)">
                 <svg data-tooltip-text="Closed Captions(c)" data-tooltip-position="top">
                     <path fill="currentColor" d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z" />
                 </svg>
             </button>
+            <button type="button" class="T_M_G-settings-btn" title="Toggle Settings">
+                <svg class="T_M_G-settings-icon" viewBox="0 -960 960 960" data-tooltip-text="Settings(s)" data-tooltip-position="top">
+                    <path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/>
+                </svg>
+            </button>            
             <button type="button" class="T_M_G-speed-btn T_M_G-wide-btn" title="Playback Speed(s)">1x</button>
             <button type="button" class="T_M_G-picture-in-picture-btn" title="Toggle Picture-in-Picture(i)">
                 <svg data-tooltip-text="Picture-in-Picture(i)" data-tooltip-position="top">
@@ -344,6 +367,7 @@ function launchVideoController(video, videoSettings) {
                 </svg>
             </button>
         </div>
+        </div>
     </div>
     <!-- Code injected by TMG ends -->
     `
@@ -354,7 +378,6 @@ function launchVideoController(video, videoSettings) {
 
     //DOM Elements
     const 
-    replayBtn = videoContainer.querySelector(".T_M_G-replay-btn"), 
     playPauseBtn = videoContainer.querySelector(".T_M_G-play-pause-btn"),
     mainPlayPauseBtn = videoContainer.querySelector(".T_M_G-main-play-pause-btn"),
     theaterBtn = videoContainer.querySelector(".T_M_G-theater-btn"),
@@ -470,20 +493,20 @@ function launchVideoController(video, videoSettings) {
 
     function setInitialStates() {
         videoContainer.querySelector(".T_M_G-total-time").textContent = formatDuration(video.duration)
-        volumeState()
+        handleVolumeChange()
         if (captions) { 
             captions.mode = "hidden"
         } else {
             captionsBtn.classList.add("T_M_G-disabled")
             removeNotifierEvent("captions")
         }
-        if (!videoSettings.modes.includes("full-screen")) {
+        if (!videoSettings.modes.includes("full-screen") || !document.fullscreenEnabled) {
             fullScreenBtn.classList.add("T_M_G-hidden")
         } 
         if (!videoSettings.modes.includes("theater")) {
             theaterBtn.classList.add("T_M_G-hidden")
         }
-        if (!videoSettings.modes.includes("picture-in-picture") && !videoSettings.modes.includes("pip")) {
+        if ((!videoSettings.modes.includes("picture-in-picture") && !videoSettings.modes.includes("pip")) || !document.pictureInPictureEnabled) {
             pictureInPictureBtn.classList.add("T_M_G-hidden")
         }
         if (videoSettings.initialState) {
@@ -526,9 +549,9 @@ function launchVideoController(video, videoSettings) {
         video.addEventListener("playing", () => videoContainer.classList.remove("T_M_G-buffer"))
         video.addEventListener("ratechange", handlePlaybackChange)      
         video.addEventListener("timeupdate", handleTimeUpdate)
-        video.addEventListener("volumechange", volumeState)
+        video.addEventListener("volumechange", handleVolumeChange)
         video.addEventListener("loadeddata", () => totalTimeElem.textContent = formatDuration(video.duration))
-        video.addEventListener("ended", () => videoContainer.classList.add("T_M_G-replay"))
+        video.addEventListener("ended", handleEnded)
         video.addEventListener("mousedown", handlePointerDown)
         video.addEventListener("touchstart", handlePointerDown, {passive:true})
         video.addEventListener("click", handleClick)
@@ -542,7 +565,6 @@ function launchVideoController(video, videoSettings) {
         speedBtn.addEventListener("click", changePlaybackSpeed)
         captionsBtn.addEventListener("click", toggleCaptions)
         muteBtn.addEventListener("click", toggleMute)
-        replayBtn.addEventListener("click", handleReplay)
         theaterBtn.addEventListener("click", toggleTheaterMode)
         fullScreenBtn.addEventListener("click", toggleFullScreenMode)
         pictureInPictureBtn.addEventListener("click", togglePictureInPictureMode)
@@ -590,7 +612,7 @@ function launchVideoController(video, videoSettings) {
 
     //Play and Pause States
     function togglePlay(bool) {
-        bool ?? video.paused ? video.play() : video.pause()
+        video.ended ? handleReplay() : bool ?? video.paused ? video.play() : video.pause()
     }
     
     function handlePlay() {
@@ -619,6 +641,10 @@ function launchVideoController(video, videoSettings) {
     function handleReplay() {
         moveVideoTime({action: "moveTo", details: {to: "start"}})
         video.play()
+    }
+
+    function handleEnded() {
+        videoContainer.classList.add("T_M_G-replay")
     }
 
     function restraint() {
@@ -729,7 +755,7 @@ function launchVideoController(video, videoSettings) {
         currentTimeElem.textContent = formatDuration(video.currentTime)
         const percent = video.currentTime / video.duration
         timelineContainer.style.setProperty("--T_M_G-progress-position", percent)
-        if (video.currentTime < video.duration) videoContainer.classList.remove("T_M_G-replay")
+        if ((video.currentTime < video.duration) && videoContainer.classList.contains("T_M_G-replay")) videoContainer.classList.remove("T_M_G-replay")
     }
 
     function formatDuration(time) {
@@ -859,7 +885,7 @@ function launchVideoController(video, videoSettings) {
         video.muted = target.value === 0
     }
                 
-    function volumeState() {
+    function handleVolumeChange() {
         let { min, max, value } = volumeSlider
         value = (video.volume * 100).toFixed()
         notifiersContainer.querySelector(".T_M_G-volume-notifier-content").dataset.volume = value
