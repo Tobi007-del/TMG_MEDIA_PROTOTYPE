@@ -1,6 +1,4 @@
 {
-"progressBar": true,
-"beta": true,
 "media": {
     "title": "Justice League Teaser", 
     "artwork": [
@@ -9,8 +7,12 @@
         }
     ]
 },
-"previewImages": {
-    "address": "../assets/previewImgs/preview$.jpg", 
-    "fps": 10
+"settings": {
+    "progressBar": true,
+    "beta": true,
+    "previewImages": {
+        "address": "../assets/previewImgs/preview$.jpg", 
+        "fps": 10
+    }
 }
 }
