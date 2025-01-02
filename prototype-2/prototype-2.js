@@ -1752,6 +1752,10 @@ class _T_M_G_Video_Player {
     //Keyboard and General Accessibility Functions
     _handleClick() {
     try {
+        if (tmg.queryMediaMobile()) {
+            this.ui.dom.videoContainer.classList.toggle("T_M_G-movement")
+            this.showVideoOverlay()
+        } 
         if (tmg.queryMediaMobile() || this.ui.dom.videoContainer.classList.contains("T_M_G-mini-player")) return
         if (this.playId) clearTimeout(this.playId)
         this.playId = setTimeout(() => {
