@@ -160,7 +160,6 @@ video {
 .T_M_G-disabled {
     opacity: unset!important;
     cursor: default!important;
-    pointer-events: none!important;
 }
 
 .T_M_G-disabled svg path {
@@ -191,6 +190,10 @@ video {
 
 .T_M_G-dragging {
     opacity: 0.5;
+}
+
+.T_M_G-volume-container.T_M_G-dragging > .T_M_G-volume-slider {
+    display: none;
 }
 
 .T_M_G-dragover {
@@ -292,7 +295,8 @@ video {
 }
 
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-controls-wrapper > div {
-    padding: calc(var(--T_M_G-controls-size)/5) calc(var(--T_M_G-controls-size)/7.5);
+    padding-block: calc(var(--T_M_G-controls-size)/5);
+    padding-inline: calc(var(--T_M_G-controls-size)/1.5);
 }
 
 .T_M_G-mini-player-expand-btn-wrapper, 
@@ -406,7 +410,7 @@ video {
     border-radius: 0;
 }
 
-.T_M_G-video-container.T_M_G-theater {
+.T_M_G-video-container.T_M_G-theater:not(.T_M_G-mini-player) {
     --T_M_G-controls-size: 27.5px;
     min-height: 75vh;
 }
@@ -537,24 +541,21 @@ video {
 
 .T_M_G-video-controls-container .T_M_G-controls-wrapper {
     display: flex;
-    margin-inline: var(--T_M_G-controls-gap);
     align-items: center;
     justify-content: space-between;
 }
 
-.T_M_G-controls-wrapper > div {
+.T_M_G-video-container .T_M_G-controls-wrapper > div {
     display: flex;
     gap: var(--T_M_G-controls-gap);
-    padding: calc(var(--T_M_G-controls-size)/2.5) calc(var(--T_M_G-controls-size)/5);
-}
-
-.T_M_G-video-container:not(.T_M_G-mini-player) .T_M_G-controls-wrapper > div {
-    flex: 50%;
+    padding-block: calc(var(--T_M_G-controls-size)/2.5); 
+    padding-inline: var(--T_M_G-controls-size);
+    flex-grow: 1;
     overflow-x: auto;
     overflow-y: hidden;
 }
 
-.T_M_G-video-container:not(.T_M_G-mini-player) .T_M_G-controls-wrapper > div::-webkit-scrollbar {
+.T_M_G-video-container .T_M_G-controls-wrapper > div::-webkit-scrollbar {
     display: none;
 }
 
@@ -1352,6 +1353,9 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
 }
 
 @media (max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape) {
+    .T_M_G-video-container.T_M_G-theater {
+        min-height: unset;
+    }
     .T_M_G-video-container .T_M_G-video-buffer {
         --T_M_G-loader-width: calc(var(--T_M_G-controls-size)/7.5);
         --T_M_G-loader-size: 35px;
@@ -1451,9 +1455,9 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     .T_M_G-video-container.T_M_G-full-screen .T_M_G-video-controls-container {
         --T_M_G-controls-gap: calc(var(--T_M_G-controls-size)/2);
     }
-    .T_M_G-video-controls-container .T_M_G-controls-wrapper, 
-    .T_M_G-video-container.T_M_G-full-screen .T_M_G-video-controls-container .T_M_G-controls-wrapper {
-        margin-inline: calc(var(--T_M_G-controls-size)/2.5);
+    .T_M_G-video-controls-container .T_M_G-controls-wrapper > div, 
+    .T_M_G-video-container.T_M_G-full-screen .T_M_G-video-controls-container .T_M_G-controls-wrapper > div {
+        padding-inline: calc(var(--T_M_G-controls-size)/2);
     }
 }
 

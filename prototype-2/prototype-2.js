@@ -734,8 +734,8 @@ class _T_M_G_Video_Player {
         ` : null,
         volumeHTML = this.settings.status.ui.volume ?
         `
-                <div class="T_M_G-volume-container">
-                    <button type="button" class="T_M_G-mute-btn" title="Toggle Volume(m)" draggable="${this.settings.allowOverride ? true : false}">
+                <div class="T_M_G-volume-container" draggable="${this.settings.allowOverride ? true : false}">
+                    <button type="button" class="T_M_G-mute-btn" title="Toggle Volume(m)">
                         <svg class="T_M_G-volume-high-icon" data-tooltip-text="High Volume" data-tooltip-position="top">
                             <path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
                         </svg>
@@ -921,8 +921,8 @@ class _T_M_G_Video_Player {
                 theaterBtn : this.settings.status.ui.theater ? videoContainer.querySelector(".T_M_G-theater-btn") : null,
                 fullScreenBtn : this.settings.status.ui.fullScreen ? videoContainer.querySelector(".T_M_G-full-screen-btn") : null,
                 svgs : videoContainer.querySelectorAll("svg"),
-                draggableBtns: this.settings.allowOverride ? videoContainer.querySelectorAll(".T_M_G-video-controls-container [draggable=true]") : null,
-                draggableBtnContainers: this.settings.allowOverride ? videoContainer.querySelectorAll(".T_M_G-left-side-controls-wrapper, .T_M_G-right-side-controls-wrapper") : null
+                draggableControls: this.settings.allowOverride ? videoContainer.querySelectorAll(".T_M_G-video-controls-container [draggable=true]") : null,
+                draggableControlContainers: this.settings.allowOverride ? videoContainer.querySelectorAll(".T_M_G-left-side-controls-wrapper, .T_M_G-right-side-controls-wrapper") : null
             },        
             keyShortcuts : {
                 k: "playPause",
@@ -1110,12 +1110,12 @@ class _T_M_G_Video_Player {
     setDragEventListeners() {
     try {
     if (this.settings.controllerStructure) {
-        for (const btn of this.ui.dom.draggableBtns) {
+        for (const btn of this.ui.dom.draggableControls) {
             btn.addEventListener("dragstart", this._handleDragStart)
             btn.addEventListener("drag", this._handleDrag)
             btn.addEventListener("dragend", this._handleDragEnd)
         }
-        for (const container of this.ui.dom.draggableBtnContainers) {
+        for (const container of this.ui.dom.draggableControlContainers) {
             container.addEventListener("dragenter", this._handleDragEnter)
             container.addEventListener("dragover", this._handleDragOver)
             container.addEventListener("drop", this._handleDrop)
@@ -1835,7 +1835,7 @@ class _T_M_G_Video_Player {
     _handleClick() {
     try {
         if (tmg.queryMediaMobile() && !this.ui.dom.videoContainer.classList.contains("T_M_G-mini-player")) {
-            if (!(!this.ui.dom.videoContainer.classList.contains("T_M_G-movement") && !this.ui.dom.videoContainer.classList.contains("T_M_G-hover"))) this.ui.dom.videoContainer.classList.toggle("T_M_G-movement")
+            if (!(!this.ui.dom.videoContainer.classList.contains("T_M_G-movement") && !this.ui.dom.videoContainer.classList.contains("T_M_G-hover")) || (this.ui.dom.videoContainer.classList.contains("T_M_G-paused") && !this.ui.dom.videoContainer.classList.contains("T_M_G-hover"))) this.ui.dom.videoContainer.classList.toggle("T_M_G-movement")
             this.showVideoOverlay()
         } 
         if (tmg.queryMediaMobile() || this.ui.dom.videoContainer.classList.contains("T_M_G-mini-player")) return
@@ -2088,10 +2088,6 @@ class _T_M_G_Video_Player {
     try {
         e.dataTransfer.effectAllowed = "move"
         e.target.classList.add("T_M_G-dragging")
-        if (e.target == this.ui.dom.muteBtn) {
-            this.dragging = this.ui.dom.volumeContainer
-            return
-        }
         this.dragging = e.target
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
@@ -2128,8 +2124,13 @@ class _T_M_G_Video_Player {
     try {
         e.preventDefault()
         if (e.target.dataset.dropzone) {
-            e.dataTransfer.dropEffect = "move"
-            e.target.appendChild(this.dragging)
+            e.dataTransfer.dropEffect = "move
+            const afterControl = this.getDraggingAfterControl(e.target, e.clientX)
+            if (afterControl ?? false) {
+                e.target.insertBefore(this.dragging, afterControl) 
+            } else {
+                e.target.appendChild(this.dragging) 
+            }  
         }
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
@@ -2155,6 +2156,19 @@ class _T_M_G_Video_Player {
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }        
+    }
+
+    getDraggingAfterControl(container, x) {
+        const draggableControls = [...container.querySelectorAll("[draggable=true]:not(.T_M_G-dragging)")]
+
+        return draggableControls.reduce((closest, child) => {
+            const box = child.getBoundingClientRect()
+            const offset = x - box.left - box.width / 2
+            if (offset < 0 && offset > closest.offset) 
+                return {offset: offset, element: child}
+            else 
+                return closest
+        }, {offset: Number.NEGATIVE_INFINITY}).element
     }
 }
 
@@ -2270,6 +2284,7 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
                 }
             }   
             Object.freeze(this.#build)
+            tmg.loadScript("/TMG_MEDIA_PROTOTYPE/prototype-2/drag-drop-touch-polyfill.js")
             tmg.loadCSSStyleSheet("/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css").then(() => this.buildVideoPlayer(this.#build)).then(() => tmg.Players.push(this))
             this.#active = true
             console.log(this.#build)
@@ -2342,8 +2357,9 @@ if (typeof window === "undefined") {
             theater: "theater"
         },
         _styleCache : {},
+        _scriptCache : {},
         loadCSSStyleSheet : src => {
-            if (JSON.stringify(tmg._styleCache) === '{}') {
+            if (JSON.stringify(tmg._styleCache) === "{}") {
                 const styles = document.querySelectorAll("style")
                 for (const style of styles) {
                     if (style.className === "T_M_G-pre-styling") style.remove()
@@ -2354,13 +2370,26 @@ if (typeof window === "undefined") {
                 link.href = src
                 link.rel = "stylesheet"
         
-                link.onload = () => resolve(true)
+                link.onload = () => resolve(link)
                 link.onerror = () =>  reject(new Error(`Load error for TMG CSSStylesheet`))
         
                 document.head.append(link)
             })
         
             return tmg._styleCache[src]
+        },
+        loadScript : src => {
+            tmg._scriptCache[src] = tmg._scriptCache[src] || new Promise(function (resolve, reject) {
+                let script = document.createElement("script")
+                script.src = src
+
+                script.onload = () => resolve(script)
+                script.onerror = () =>  reject(new Error(`Load error for TMG JavaScript file`))
+
+                document.body.append(script)
+            })
+
+            return tmg._scriptCache[src]
         },
         //mobile media query
         queryMediaMobile : () => {
