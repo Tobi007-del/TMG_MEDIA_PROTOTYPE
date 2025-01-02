@@ -2130,7 +2130,7 @@ class _T_M_G_Video_Player {
                 e.target.insertBefore(this.dragging, afterControl) 
             } else {
                 e.target.appendChild(this.dragging) 
-            }  
+            }
         }
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
