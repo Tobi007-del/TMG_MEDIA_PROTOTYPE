@@ -1032,7 +1032,6 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     aspect-ratio: 16 / 9;
     width: 100%;
     filter: brightness(75%);
-    border-radius: inherit;
 }
 
 .T_M_G-video-container.T_M_G-scrubbing .T_M_G-thumbnail-img {
