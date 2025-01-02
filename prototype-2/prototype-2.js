@@ -2124,7 +2124,7 @@ class _T_M_G_Video_Player {
     try {
         e.preventDefault()
         if (e.target.dataset.dropzone) {
-            e.dataTransfer.dropEffect = "move
+            e.dataTransfer.dropEffect = "move"
             const afterControl = this.getDraggingAfterControl(e.target, e.clientX)
             if (afterControl ?? false) {
                 e.target.insertBefore(this.dragging, afterControl) 
