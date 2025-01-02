@@ -1352,7 +1352,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
 }
 
 @media (max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape) {
-    .T_M_G-video-container.T_M_G-theater {
+    .T_M_G-video-container.T_M_G-theater:not(.T_M_G-mini-player) {
         min-height: unset;
     }
     .T_M_G-video-container .T_M_G-video-buffer {
