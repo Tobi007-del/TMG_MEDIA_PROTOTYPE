@@ -75,27 +75,38 @@ video {
     --T_M_G-controls-gap: calc(var(--T_M_G-controls-size)/1.6);
     --T_M_G-captions-size: calc(var(--T_M_G-controls-size)/1.2);
     --T_M_G-brand-color : rgb(226,110,2);
-    --T_M_G-lighter-brand-color : rgb(255,187,123);
     --T_M_G-brand-accent-color: rgb(from var(--T_M_G-brand-color) r g b/.4);
-    --T_M_G-background-color: rgba(0,0,0,.5);
+    --T_M_G-lighter-brand-color : rgb(255,187,123);
+    --T_M_G-background-color: black;
+    --T_M_G-background-accent-color: rgba(0,0,0,.5);
     --T_M_G-curtain-color: transparent;
     --T_M_G-current-theme-color: white;
-    --T_M_G-current-theme-fade-color: whitesmoke;
+    --T_M_G-current-theme-accent-color: whitesmoke;
     --T_M_G-current-theme-inverse-color: black;
     --T_M_G-current-theme-inverse-accent-color: rgb(100, 100, 100);
-    --T_M_G-timeline-color: var(--T_M_G-brand-color);
-    --T_M_G-timeline-complement-color: var(--T_M_G-lighter-brand-color);
-    --T_M_G-base-timeline-color: rgb(from var(--T_M_G-current-theme-inverse-accent-color) r g b/.5);
+    --T_M_G-main-timeline-color: var(--T_M_G-brand-color);
+    --T_M_G-main-timeline-complement-color: var(--T_M_G-lighter-brand-color);
+    --T_M_G-timeline-base-color: rgb(from var(--T_M_G-current-theme-inverse-accent-color) r g b/.5);
     --T_M_G-preview-timeline-color: rgba(150,150,150,.65);
     --T_M_G-network-timeline-color: var(--T_M_G-preview-timeline-color);
-    --T_M_G-volume-slider-color: var(--T_M_G-current-theme-fade-color);
-    --T_M_G-volume-slider-complement-color: rgba(100,100,100,0.75);
+    --T_M_G-volume-slider-color: var(--T_M_G-current-theme-accent-color);
+    --T_M_G-volume-slider-base-color: rgba(100,100,100,0.75);
     --T_M_G-loader-size: 80px;
     --T_M_G-loader-width: calc(var(--T_M_G-controls-size)/3.5);
     --T_M_G-loader-color: var(--T_M_G-brand-color);
-    --T_M_G-loader-complement-color: var(--T_M_G-current-theme-inverse-accent-color);
+    --T_M_G-loader-base-color: var(--T_M_G-current-theme-inverse-accent-color);
     --T_M_G-thumb-indicator-scale: 0;
-    --T_M_G-color-transition: 250ms;
+    --T_M_G-color-transition: 350ms;
+    --T_M_G-transition-time: 500ms;
+    --T_M_G-arrows-transition-time: 800ms;
+    --T_M_G-mini-player-x: 7.5px;
+    --T_M_G-mini-player-y: 7.5px;
+    --T_M_G-preview-position: 0;
+    --T_M_G-preview-img-position: 0;
+    --T_M_G-preview-img-arrow-position: 0;
+    --T_M_G-progress-position: 0;
+    --T_M_G-volume-slider-position: 0;
+    --T_M_G-volume-value-position: 0;
 }
 
 .T_M_G-video-container {
@@ -105,7 +116,7 @@ video {
     max-height: 80lvh;
     display: flex;
     justify-content: center;
-    background-color: black;
+    background-color: var(--T_M_G-background-color);
     border-radius: calc(var(--T_M_G-controls-size)/1.5);
     overflow: hidden;
     -webkit-user-select: none;
@@ -157,7 +168,7 @@ video {
 
 .T_M_G-video-container img {
     color: transparent;
-    background: center/cover no-repeat url('/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png'), black!important;
+    background: center/cover no-repeat url('/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png'), var(--T_M_G-background-color)!important;
 }
 
 :where(.T_M_G-video-container button) {
@@ -236,11 +247,9 @@ video {
 .T_M_G-video-container.T_M_G-mini-player {
     --T_M_G-controls-size: 22px;
     --T_M_G-controls-gap: 10px;
-    --T_M_G-mouse-x: 7.5px;
-    --T_M_G-mouse-y:  7.5px;
     position: fixed;
-    right: var(--T_M_G-mouse-x);
-    bottom: var(--T_M_G-mouse-y);
+    right: var(--T_M_G-mini-player-x);
+    bottom: var(--T_M_G-mini-player-y);
     z-index: 500000;
     min-height: 150px;
     width: clamp(5rem, 50dvw, 400px)!important;
@@ -409,7 +418,7 @@ video {
     pointer-events: none;
     height: var(--T_M_G-loader-size); 
     aspect-ratio: 1 / 1;
-    border: var(--T_M_G-loader-width) solid var(--T_M_G-loader-complement-color);
+    border: var(--T_M_G-loader-width) solid var(--T_M_G-loader-base-color);
     border-top: var(--T_M_G-loader-width) solid var(--T_M_G-loader-color);
     border-right: var(--T_M_G-loader-width) solid var(--T_M_G-loader-color);
     border-left: var(--T_M_G-loader-width) solid var(--T_M_G-loader-color);
@@ -422,7 +431,7 @@ video {
 .T_M_G-video-container:has(:focus-visible), 
 .T_M_G-video-container.T_M_G-paused, 
 .T_M_G-video-container.T_M_G-picture-in-picture {
-    --T_M_G-curtain-color: var(--T_M_G-background-color);
+    --T_M_G-curtain-color: var(--T_M_G-background-accent-color);
 }
 
 .T_M_G-video-container .T_M_G-video-controls-container > *,
@@ -667,7 +676,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     max-width: calc(var(--T_M_G-controls-size)*2);
     position: relative;
     transition: width 150ms ease-in-out, transform 150ms ease-in-out;
-    background: linear-gradient(to right, var(--T_M_G-volume-slider-color) calc(var(--T_M_G-volume-percent) * 100%), var(--T_M_G-volume-slider-complement-color) 1%);
+    background: linear-gradient(to right, var(--T_M_G-volume-slider-color) calc(var(--T_M_G-volume-slider-position) * 100%), var(--T_M_G-volume-slider-base-color) 1%);
     box-shadow: 1px 1px 10px black;
 }
 
@@ -697,7 +706,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     position: absolute;
     display: none;
     top: calc(var(--T_M_G-controls-size)/2);
-    left: var(--T_M_G-volume-slider-percent);
+    left: var(--T_M_G-volume-value-position);
     width: calc(var(--T_M_G-controls-size)/1.5);
     transform: translateX(-50%);
     border-radius: var(--T_M_G-controls-size);
@@ -713,11 +722,11 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     position: absolute;
     display: none;
     top: calc(var(--T_M_G-controls-size)/4);
-    left: var(--T_M_G-volume-slider-percent);
+    left: var(--T_M_G-volume-value-position);
     transform: translateX(-50%);
     border-width: calc(var(--T_M_G-controls-size)/8);
     border-style: solid;
-    border-color: transparent transparent var(--T_M_G-current-theme-fade-color) transparent;
+    border-color: transparent transparent var(--T_M_G-current-theme-accent-color) transparent;
 }
 
 .T_M_G-volume-container.T_M_G-hover .T_M_G-volume-slider::after, 
@@ -740,6 +749,10 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     gap: calc(var(--T_M_G-controls-size)/10);
     color: var(--T_M_G-current-theme-color);
     font-size: calc(var(--T_M_G-controls-size)/1.75);
+}
+
+.T_M_G-video-container.T_M_G-scrubbing .T_M_G-current-time {
+    font-weight: bold;
 }
 
 .T_M_G-captions-btn {
@@ -858,7 +871,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     position: relative;
     height: calc(var(--T_M_G-controls-size)/6);
     width: 100%;
-    background-color: var(--T_M_G-base-timeline-color);
+    background-color: var(--T_M_G-timeline-base-color);
     margin-inline: inherit;
 }
 
@@ -892,7 +905,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     top: 0;
     bottom: 0;
     right: calc(100% - var(--T_M_G-progress-position) * 100%);
-    background: linear-gradient(to right, var(--T_M_G-timeline-color) 80%, var(--T_M_G-timeline-complement-color));
+    background: linear-gradient(to right, var(--T_M_G-main-timeline-color) 80%, var(--T_M_G-main-timeline-complement-color));
     z-index: 2;
 }
 
@@ -929,7 +942,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
 
 .T_M_G-preview-img-container {
     z-index: 4;
-    --T_M_G-border-color: var(--T_M_G-current-theme-fade-color);
+    --T_M_G-border-color: var(--T_M_G-current-theme-accent-color);
     position: absolute;
     display: none;
     height: calc(var(--T_M_G-controls-size)*5);
@@ -941,7 +954,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     border-radius: calc(var(--T_M_G-controls-size)/1.85);
     border: calc(var(--T_M_G-controls-size)/15) solid;
     border-color: var(--T_M_G-border-color);
-    background: var(--T_M_G-current-theme-inverse-color);
+    background: var(--T_M_G-background-color);
     pointer-events: none;
 }
 
@@ -1029,8 +1042,6 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
 }
 
 .T_M_G-notifiers-container {
-    --T_M_G-transition-time: 500ms;
-    --T_M_G-arrows-transition-time: 800ms;
     width: 100%;
     height: 100%;
     display: flex;
