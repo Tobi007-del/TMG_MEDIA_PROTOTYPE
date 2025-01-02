@@ -2,8 +2,9 @@
 body .T_M_G-video-container.T_M_G-initial .T_M_G-video-controls-container,
 body .T_M_G-video-container.T_M_G-initial .T_M_G-video-overlay-controls-container > *:not(.T_M_G-notifiers-container),
 body .T_M_G-video-container:has(.T_M_G-play-notifier.T_M_G-spin) .T_M_G-video-controls-container,
-body .T_M_G-video-container:has(.T_M_G-play-notifier.T_M_G-spin) .T_M_G-video-overlay-controls-containr > *:not(.T_M_G-notifiers-container) {
+body .T_M_G-video-container:has(.T_M_G-play-notifier.T_M_G-spin) .T_M_G-video-overlay-controls-container > *:not(.T_M_G-notifiers-container) {
     opacity: 0!important;
+    pointer-events: none!important;
 }
 
 body .T_M_G-video-container.T_M_G-initial .T_M_G-video-overlay-controls-container,
@@ -28,7 +29,7 @@ body .T_M_G-video-container.T_M_G-initial .T_M_G-notifiers:not(.T_M_G-play-notif
     display: none!important;
 }
 
-body .T_M_G-video-container.T_M_G-initial .T_M_G-play-notifier, .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
+body .T_M_G-video-container.T_M_G-initial .T_M_G-play-notifier, body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     display: flex!important;
     animation: beat 1s infinite ease-out!important;
 }
@@ -188,6 +189,14 @@ video {
     cursor: pointer;
 }
 
+.T_M_G-dragging {
+    opacity: 0.5;
+}
+
+.T_M_G-dragover {
+    background: linear-gradient(to top, var(--T_M_G-brand-accent-color), transparent);
+}
+
 .T_M_G-overlay-main-controls-wrapper,
 .T_M_G-video-buffer,
 .T_M_G-thumbnail-img {
@@ -335,6 +344,7 @@ video {
 .T_M_G-video-container.T_M_G-mini-player.T_M_G-scrubbing .T_M_G-mini-player-cancel-btn-wrapper,
 .T_M_G-video-container.T_M_G-scrubbing .T_M_G-overlay-main-controls-wrapper {
     opacity: 0!important;
+    pointer-events: none!important;
 }
 
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-preview-img-container {
@@ -373,6 +383,7 @@ video {
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-play-notifier, 
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-pause-notifier {
     display: none!important;
+    pointer-events: none!important;
 }
 
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-video-buffer {
@@ -397,7 +408,7 @@ video {
 
 .T_M_G-video-container.T_M_G-theater {
     --T_M_G-controls-size: 27.5px;
-    max-height: 90lvh;
+    min-height: 75vh;
 }
 
 .T_M_G-video-container.T_M_G-full-screen {
@@ -438,6 +449,7 @@ video {
 .T_M_G-overlay-main-controls-wrapper,
 .T_M_G-mini-player-expand-btn-wrapper, 
 .T_M_G-mini-player-cancel-btn-wrapper {
+    pointer-events: none;
     transition: opacity var(--T_M_G-color-transition) ease;
 }
 
@@ -450,6 +462,7 @@ video {
 .T_M_G-video-container:has(:focus-visible) .T_M_G-overlay-main-controls-wrapper,
 .T_M_G-video-container.T_M_G-picture-in-picture .T_M_G-overlay-main-controls-wrapper {
     opacity: 1;
+    pointer-events: all;
 }
 
 .T_M_G-video-container.T_M_G-hover.T_M_G-mini-player:hover .T_M_G-mini-player-expand-btn-wrapper, 
@@ -459,6 +472,7 @@ video {
 .T_M_G-video-container.T_M_G-mini-player.T_M_G-paused .T_M_G-mini-player-expand-btn-wrapper, 
 .T_M_G-video-container.T_M_G-mini-player.T_M_G-paused .T_M_G-mini-player-cancel-btn-wrapper {
     opacity: 1;
+    pointer-events: all;
 }
 
 .T_M_G-video-container.T_M_G-movement .T_M_G-video-controls-container > *:not(.T_M_G-timeline-container), 
@@ -467,6 +481,7 @@ video {
 .T_M_G-video-container.T_M_G-movement .T_M_G-mini-player-cancel-btn-wrapper,
 .T_M_G-video-container.T_M_G-movement video::-webkit-media-text-track-display {
     opacity: 0!important;
+    pointer-events: none!important;
 }
 
 .T_M_G-video-container.T_M_G-movement {
@@ -478,6 +493,7 @@ video {
     bottom: -2px!important;
     width: 100%!important;
     margin-inline: unset!important;
+    pointer-events: none!important;
 }
 
 .T_M_G-video-container.T_M_G-movement {
@@ -861,6 +877,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     width: unset;
     bottom: unset;
     opacity: 1;
+    pointer-events: all;
 }
 
 .T_M_G-video-container.T_M_G-scrubbing .T_M_G-timeline-container {
