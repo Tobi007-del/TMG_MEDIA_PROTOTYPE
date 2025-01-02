@@ -923,24 +923,7 @@ class _T_M_G_Video_Player {
                 svgs : videoContainer.querySelectorAll("svg"),
                 draggableControls: this.settings.allowOverride ? videoContainer.querySelectorAll(".T_M_G-video-controls-container [draggable=true]") : null,
                 draggableControlContainers: this.settings.allowOverride ? videoContainer.querySelectorAll(".T_M_G-left-side-controls-wrapper, .T_M_G-right-side-controls-wrapper") : null
-            },        
-            keyShortcuts : {
-                k: "playPause",
-                arrowleft: "bwd",
-                arrowright: "fwd",
-                arrowup: "volumeUp",
-                arrowdown: "volumeDown",
-                home: "start",
-                end: "end",
-                f: "fullScreen",
-                t: "theater",
-                e: "expandMiniPlayer",
-                r: "removeMiniPlayer",
-                i: "pictureInPicture",
-                m: "mute",
-                s: "playbackRate",
-                c: "captions"
-            } 
+            }
         }
         //initializing controller
         this.initializeVideoPlayer()
