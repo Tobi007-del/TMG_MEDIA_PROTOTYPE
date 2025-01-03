@@ -21,10 +21,6 @@ body .T_M_G-video-container.T_M_G-initial .T_M_G-play-notifier {
     pointer-events: all!important;
 }
 
-body .T_M_G-video-container.T_M_G-initial .T_M_G-notifiers-container, body .T_M_G-video-container:has(.T_M_G-play-notifier.T_M_G-spin) .T_M_G-notifiers-container {
-    z-index: 100!important;
-}
-
 body .T_M_G-video-container.T_M_G-initial .T_M_G-notifiers:not(.T_M_G-play-notifier), body .T_M_G-video-container:has(.T_M_G-play-notifier.T_M_G-spin) .T_M_G-notifiers:not(.T_M_G-play-notifier) {
     display: none!important;
 }
@@ -65,7 +61,7 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
 /* setting video initial state ends */
 
 /* setting video styles begins*/
-video {
+.T_M_G-video-container video {
     width: 100%;
     border-radius: inherit;
 }
@@ -158,12 +154,12 @@ video {
     display: none!important;
 }
 
-.T_M_G-disabled {
+.T_M_G-video-container .T_M_G-disabled {
     opacity: unset!important;
     cursor: default!important;
 }
 
-.T_M_G-disabled svg path {
+.T_M_G-video-container .T_M_G-disabled svg path {
     fill: grey!important;
 }
 
@@ -189,11 +185,11 @@ video {
     cursor: pointer;
 }
 
-.T_M_G-video-container [data-control="true"][draggable="true"] {
+.T_M_G-video-container [draggable="true"] {
     -webkit-user-drag: element!important;
 }
 
-.T_M_G-dragging {
+.T_M_G-video-container .T_M_G-dragging {
     opacity: 0.5;
 }
 
@@ -267,7 +263,7 @@ video {
     position: fixed;
     right: var(--T_M_G-mini-player-x);
     bottom: var(--T_M_G-mini-player-y);
-    z-index: 500000;
+    z-index: 999999999;
     min-height: 150px;
     width: clamp(5rem, 50dvw, 400px)!important;
     border-radius: calc(var(--T_M_G-controls-size)/1.5)!important;
@@ -875,6 +871,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
 }
 
 .T_M_G-timeline-container {
+    z-index: 1;
     cursor: grab;
     display: flex;
     align-items: center;

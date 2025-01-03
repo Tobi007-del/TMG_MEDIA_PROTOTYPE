@@ -2302,6 +2302,8 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
                 }
             }   
             Object.freeze(this.#build)
+            //commented out so drag and drop polyfill can be easily toggled
+            //tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/drag-drop-touch-polyfill.js", "script")
             tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css").then(() => this.buildVideoPlayer(this.#build)).then(() => tmg.Players.push(this))
             this.#active = true
             console.log(this.#build)
@@ -2391,18 +2393,21 @@ if (typeof window === "undefined") {
                 return tmg._scriptCache[src]
             break
             default:
-                if (JSON.stringify(tmg._styleCache) === "{}") {
-                    const styles = document.querySelectorAll("style")
-                    for (const style of styles) {
-                        if (style.className === "T_M_G-pre-styling") style.remove()
-                    }
-                }
+                const firstStyleCache = JSON.stringify(tmg._styleCache) === "{}"
                 tmg._styleCache[src] = tmg._styleCache[src] || new Promise(function (resolve, reject) {
                     let link = document.createElement("link")
                     link.href = src
                     link.rel = "stylesheet"
             
-                    link.onload = () => resolve(link)
+                    link.onload = () => {
+                        if (firstStyleCache) {
+                            const styles = document.querySelectorAll("style")
+                            for (const style of styles) {
+                                if (style.id === "T_M_G-pre-styling") style.remove()
+                            }
+                        }
+                        resolve(link)
+                    }
                     link.onerror = () =>  reject(new Error(`Load error for TMG CSSStylesheet`))
             
                     document.head.append(link)
@@ -2443,7 +2448,7 @@ if (typeof window === "undefined") {
                     else Promise.resolve(tmg.launch(tmg.media))
                 }            
             } else {
-                const v = medium.dataset, value = medium.getAttribute('TMGcontrols').toLowerCase()
+                const v = medium.dataset, value = medium.getAttribute('tmgcontrols').toLowerCase()
                 //building controls object
                 let fetchedControls
                 if (v.tmg?.includes('.json')) {
@@ -2536,7 +2541,7 @@ if (typeof window === "undefined") {
                         return player
                     } else {
                         console.error("TMG could not deploy custom controls so the Media Player was not rendered")
-                        console.warn(`Consider removing the '${value}' value from the 'TMGcontrols' attribute`)
+                        console.warn(`Consider removing the '${value}' value from the 'tmgcontrols' attribute`)
                     }
                 })(v)
             }
@@ -2568,6 +2573,17 @@ if (typeof window === "undefined") {
         //THE TMG MEDIA PLAYER BUILDER CLASS
         Player : _T_M_G_Media_Player
     }
+
+    //hiding video when styles have not been loaded yet
+    let style = document.createElement("style")
+    style.id = "T_M_G-pre-styling"
+    style.textContent = 
+    `
+        body [tmgcontrols] {
+            display: none;
+        }    
+    `
+    document.head.append(style)
 
     tmg.launch()
 }
