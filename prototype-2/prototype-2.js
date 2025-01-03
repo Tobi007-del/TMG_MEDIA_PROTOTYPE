@@ -204,12 +204,20 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainer.style.setProperty("--T_M_G-thumb-indicator-scale", value)
     }
 
-    get colorTransition() {
-        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-color-transition")
+    get fadeTransition() {
+        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-fade-transition")
     }
 
-    set colorTransition(value) {
-        this.ui.dom.videoContainer.style.setProperty("--T_M_G-color-transition", value)
+    set fadeTransition(value) {
+        this.ui.dom.videoContainer.style.setProperty("--T_M_G-fade-transition", value)
+    }
+
+    get timelineFadeTransition() {
+        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-timeline-fade-transition")
+    }
+
+    set timelineFadeTransition(value) {
+        this.ui.dom.videoContainer.style.setProperty("--T_M_G-timeline-fade-transition", value)
     }
 
     get notifiersTransitionTime() {
@@ -318,7 +326,8 @@ class _T_M_G_Video_Player {
             loaderColor: this.loaderColor,
             loaderBaseColor: this.loaderBaseColor,
             thumbIndicatorScale: this.thumbIndicatorScale,
-            colorTransition: this.colorTransition,
+            fadeTransition: this.fadeTransition,
+            timelineFadeTransition: this.timelineFadeTransition,
             notifiersTransitionTime: this.notifiersTransitionTime,
             notfierArrowsTransitionTime: this.notifierArrowsTransitionTime,
             miniPlayerX: this.miniPlayerX,
@@ -502,9 +511,9 @@ class _T_M_G_Video_Player {
         if (this.initialMode) {
             if (tmg.modeMatcher[this.initialMode]) videoContainer.classList.add(`T_M_G-${tmg.modeMatcher[this.initialMode]}`)
         }
-        if (this.settings.status.ui.timeline) videoContainer.setAttribute("data-tmg-timeline-position", `${this.settings.controllerStructure.find(c => c.startsWith("timeline"))?.replace("timeline", "").toLowerCase()}`)
-        if (this.settings.progressBar) videoContainer.setAttribute("data-tmg-progress-bar", this.settings.progressBar)
-        if (!(this.settings.previewImages?.address && this.settings.previewImages?.fps)) videoContainer.setAttribute("data-tmg-previews", false) 
+        if (this.settings.status.ui.timeline) videoContainer.setAttribute("data-timeline-position", `${this.settings.controllerStructure.find(c => c.startsWith("timeline"))?.replace("timeline", "").toLowerCase()}`)
+        if (this.settings.progressBar) videoContainer.setAttribute("data-progress-bar", this.settings.progressBar)
+        if (!(this.settings.previewImages?.address && this.settings.previewImages?.fps)) videoContainer.setAttribute("data-previews", false) 
         this.video.parentNode.insertBefore(videoContainer, this.video)
     
         //building HTML for the Video Player
@@ -692,7 +701,7 @@ class _T_M_G_Video_Player {
         ` : null,
         timelineHTML = this.settings.status.ui.timeline ?
         `
-            <div class="T_M_G-timeline-container" title="'>' - 5s & Shift + '>' - 10s" tabindex="0">
+            <div class="T_M_G-timeline-container" title="'>' - 5s & Shift + '>' - 10s" tabindex="0" data-control-id="timeline">
                 <div class="T_M_G-timeline">
                     <div class="T_M_G-network-timeline"></div>
                     <div class="T_M_G-preview-img-container">
@@ -704,7 +713,7 @@ class _T_M_G_Video_Player {
         ` : null,
         prevBtnHTML = this.settings.status.ui.prev ?
         `
-                <button type="button" class="T_M_G-prev-btn" title="Previous Video(Shift + p)">
+                <button type="button" class="T_M_G-prev-btn" title="Previous Video(Shift + p)" data-control-id="prev">
                     <svg class="T_M_G-prev-icon" data-tooltip-text="Previous Video(Shift + p)" data-tooltip-position="top">
                         <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                     </svg>
@@ -712,7 +721,7 @@ class _T_M_G_Video_Player {
         ` : null,
         playPauseBtnHTML = this.settings.status.ui.playPause ?
         `
-                <button type="button" class="T_M_G-play-pause-btn" title="Play/Pause(p,l,a,y)" draggable="${this.settings.allowOverride ? true : false}">
+                <button type="button" class="T_M_G-play-pause-btn" title="Play/Pause(p,l,a,y)" data-draggable-control="${this.settings.beta ? true : false}" data-control-id="playPause">
                     <svg class="T_M_G-play-icon" data-tooltip-text="Play(p,l,a,y)" data-tooltip-position="top">
                         <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                     </svg>
@@ -726,7 +735,7 @@ class _T_M_G_Video_Player {
         ` : null,
         nextBtnHTML = this.settings.status.ui.next ?
         `
-                <button type="button" class="T_M_G-next-btn" title="Next Video(Shift + n)" draggable="${this.settings.allowOverride ? true : false}">
+                <button type="button" class="T_M_G-next-btn" title="Next Video(Shift + n)" data-draggable-control="${this.settings.beta ? true : false}" data-control-id="next">
                     <svg class="T_M_G-next-icon" data-tooltip-text="Next Video(Shift + n)" data-tooltip-position="top">
                         <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                     </svg>
@@ -734,8 +743,8 @@ class _T_M_G_Video_Player {
         ` : null,
         volumeHTML = this.settings.status.ui.volume ?
         `
-                <div class="T_M_G-volume-container" draggable="${this.settings.allowOverride ? true : false}">
-                    <button type="button" class="T_M_G-mute-btn" title="Toggle Volume(m)">
+                <div class="T_M_G-volume-container" data-control-id="volume" data-control-id="volume">
+                    <button type="button" class="T_M_G-mute-btn" title="Toggle Volume(m)" data-draggable-control="${this.settings.beta ? true : false}">
                         <svg class="T_M_G-volume-high-icon" data-tooltip-text="High Volume" data-tooltip-position="top">
                             <path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
                         </svg>
@@ -751,7 +760,7 @@ class _T_M_G_Video_Player {
         ` : null,
         durationHTML = this.settings.status.ui.duration ?
         `
-                <div class="T_M_G-duration-container" draggable="${this.settings.allowOverride ? true : false}">
+                <div class="T_M_G-duration-container" data-draggable-control="${this.settings.beta ? true : false}" data-control-id="duration">
                     <div class="T_M_G-current-time">0.00</div>
                     /
                     <div class="T_M_G-total-time">0.00</div>
@@ -759,7 +768,7 @@ class _T_M_G_Video_Player {
         ` : null,
         captionsBtnHTML = this.settings.status.ui.captions ?
         `
-                <button type="button" class="T_M_G-captions-btn" title="Toggle Closed Captions(c)" draggable="${this.settings.allowOverride ? true : false}">
+                <button type="button" class="T_M_G-captions-btn" title="Toggle Closed Captions(c)" data-draggable-control="${this.settings.beta ? true : false}" data-control-id="captions">
                     <svg data-tooltip-text="Closed Captions(c)" data-tooltip-position="top">
                         <path fill="currentColor" d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z" />
                     </svg>
@@ -767,7 +776,7 @@ class _T_M_G_Video_Player {
         ` : null,
         settingsBtnHTML = this.settings.status.ui.settings ?
         `
-                <button type="button" class="T_M_G-settings-btn" title="Toggle Settings" draggable="${this.settings.allowOverride ? true : false}">
+                <button type="button" class="T_M_G-settings-btn" title="Toggle Settings" data-draggable-control="${this.settings.beta ? true : false}" data-control-id="settings">
                     <svg class="T_M_G-settings-icon" viewBox="0 -960 960 960" data-tooltip-text="Settings(s)" data-tooltip-position="top">
                         <path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/>
                     </svg>
@@ -775,11 +784,11 @@ class _T_M_G_Video_Player {
         ` : null,
         speedBtnHTML = this.settings.status.ui.speed ? 
         `
-                <button type="button" class="T_M_G-speed-btn T_M_G-wide-btn" title="Playback Speed(s)" draggable="${this.settings.allowOverride ? true : false}">1x</button>
+                <button type="button" class="T_M_G-speed-btn T_M_G-wide-btn" title="Playback Speed(s)" data-draggable-control="${this.settings.beta ? true : false}" data-control-id="speed">1x</button>
         ` : null,
         pictureInPictureBtnHTML = this.settings.status.ui.pip ? 
         `
-                <button type="button" class="T_M_G-picture-in-picture-btn" title="Toggle Picture-in-Picture(i)" draggable="${this.settings.allowOverride ? true : false}">
+                <button type="button" class="T_M_G-picture-in-picture-btn" title="Toggle Picture-in-Picture(i)" data-draggable-control="${this.settings.beta ? true : false}" data-control-id="pictureInPicture">
                     <svg data-tooltip-text="Picture-in-Picture(i)" data-tooltip-position="top">
                         <path fill="currentColor" d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-10-7h9v6h-9z"/>
                     </svg>
@@ -787,7 +796,7 @@ class _T_M_G_Video_Player {
         ` : null,  
         theaterBtnHTML = this.settings.status.ui.theater ?
         `
-                <button type="button" class="T_M_G-theater-btn" title="Toggle Theater Mode(t)" draggable="${this.settings.allowOverride ? true : false}">
+                <button type="button" class="T_M_G-theater-btn" title="Toggle Theater Mode(t)" data-draggable-control="${this.settings.beta ? true : false}" data-control-id="theater">
                     <svg class="T_M_G-tall" data-tooltip-text="Theater Mode(t)" data-tooltip-position="top">
                         <path fill="currentColor" d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"/>
                     </svg>
@@ -798,7 +807,7 @@ class _T_M_G_Video_Player {
         ` : null,
         fullScreenBtnHTML = this.settings.status.ui.fullScreen ?
         `
-                <button type="button" class="T_M_G-full-screen-btn" title="Toggle Full Screen(f)" draggable="${this.settings.allowOverride ? true : false}">
+                <button type="button" class="T_M_G-full-screen-btn" title="Toggle Full Screen(f)" data-draggable-control="${this.settings.beta ? true : false}" data-control-id="fullScreen">
                     <svg class="T_M_G-open" data-tooltip-text="Enter Full Screen(f)" data-tooltip-position="top">
                         <path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
                     </svg>
@@ -921,8 +930,8 @@ class _T_M_G_Video_Player {
                 theaterBtn : this.settings.status.ui.theater ? videoContainer.querySelector(".T_M_G-theater-btn") : null,
                 fullScreenBtn : this.settings.status.ui.fullScreen ? videoContainer.querySelector(".T_M_G-full-screen-btn") : null,
                 svgs : videoContainer.querySelectorAll("svg"),
-                draggableControls: this.settings.allowOverride ? videoContainer.querySelectorAll(".T_M_G-video-controls-container [draggable=true]") : null,
-                draggableControlContainers: this.settings.allowOverride ? videoContainer.querySelectorAll(".T_M_G-left-side-controls-wrapper, .T_M_G-right-side-controls-wrapper") : null
+                draggableControls: this.settings.beta && this.settings.allowOverride ? videoContainer.querySelectorAll(".T_M_G-video-controls-container [data-draggable-control]") : null,
+                draggableControlContainers: this.settings.beta && this.settings.allowOverride ? videoContainer.querySelectorAll(".T_M_G-left-side-controls-wrapper, .T_M_G-right-side-controls-wrapper") : null
             }
         }
         //initializing controller
@@ -950,6 +959,7 @@ class _T_M_G_Video_Player {
         this.setInitialStates()
         this.setEventListeners()
         this.observeVideoPosition()
+        this.loaded()
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }        
@@ -969,7 +979,6 @@ class _T_M_G_Video_Player {
             if (!this.video.autoplay) this._handlePlay()
             this.ui.dom.videoContainer.classList.remove("T_M_G-initial")
         }
-        this.CSSCustomPropertiesCache = this.AllCSSCustomProperties
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }    
@@ -1093,6 +1102,13 @@ class _T_M_G_Video_Player {
     setDragEventListeners() {
     try {
     if (this.settings.controllerStructure) {
+        if (this.settings.beta) {
+            for (const btn of this.ui.dom.draggableControls) {
+                btn.draggable=`${this.settings.allowOverride === true ? true : false}`
+            }
+        } else {
+            return
+        }
         for (const btn of this.ui.dom.draggableControls) {
             btn.addEventListener("dragstart", this._handleDragStart)
             btn.addEventListener("drag", this._handleDrag)
@@ -1128,6 +1144,17 @@ class _T_M_G_Video_Player {
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }            
+    }
+
+    loaded() {
+        this.cache()
+        this.fire("tmgload", this.video, {loaded: true})
+    }
+
+    cache() {
+        //doing some caching when loading finishes 
+        this.CSSCustomPropertiesCache = JSON.parse(JSON.stringify(this.AllCSSCustomProperties))
+        this.settingsCache = JSON.parse(JSON.stringify(this.settings))
     }
 
     //resizing controls
@@ -1425,13 +1452,13 @@ class _T_M_G_Video_Player {
             const rect = this.video.getBoundingClientRect()
             this.speedCheck = true
             this.wasPaused = this.video.paused
-            if (this.wasPaused) togglePlay(true)
+            if (this.wasPaused) this.togglePlay(true)
             if (x && this.settings.beta) {
                 x - rect.left >= this.video.offsetWidth*0.5 ? this.fastForward() : this.rewind()
             } else this.fastForward()
             this.ui.dom.speedNotifier.classList.add("T_M_G-active")
             this.ui.dom.videoContainer.classList.add("T_M_G-movement")
-            this.ui.dom.videoContainer.setAttribute("data-tmg-progress-bar", this.settings.progressBar)
+            this.ui.dom.videoContainer.setAttribute("data-progress-bar", true)
         }
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
@@ -1498,7 +1525,7 @@ class _T_M_G_Video_Player {
             }
             this.ui.dom.speedNotifier.classList.remove("T_M_G-active")
             this.ui.dom.videoContainer.classList.remove('T_M_G-movement')
-            this.ui.dom.videoContainer.removeAttribute("data-tmg-progress-bar", this.settings.progressBar)
+            this.ui.dom.videoContainer.setAttribute("data-progress-bar", this.settings.progressbar)
         }
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
@@ -1528,11 +1555,11 @@ class _T_M_G_Video_Player {
     }
 
     _handleVolumeSliderInput({target}) {
-    try {        
-        this.volumeHoverRestraint()            
-        this.hoverRestraint()
+    try {                
         this.video.volume = target.value / 100
         this.video.muted = target.value === 0
+        this.volumeHoverRestraint()            
+        this.hoverRestraint()
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }
@@ -2071,7 +2098,7 @@ class _T_M_G_Video_Player {
     try {
         e.dataTransfer.effectAllowed = "move"
         e.target.classList.add("T_M_G-dragging")
-        this.dragging = e.target
+        this.dragging = e.target === this.ui.dom.muteBtn ? e.target.parentElement : e.target
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }                
@@ -2088,6 +2115,14 @@ class _T_M_G_Video_Player {
     _handleDragEnd(e) {
     try {
         e.target.classList.remove("T_M_G-dragging")
+        let controllerStructure = []
+        controllerStructure.push(this.settings.controllerStructure.find(c => c.startsWith("timeline")))
+        const leftSideStructure = this.settings.status.ui.leftSidedControls && this.ui.dom.leftSidedControlsWrapper.children ? Array.from(this.ui.dom.leftSidedControlsWrapper.children, el => el.dataset.controlId) : []
+        const rightSideStructure = this.settings.status.ui.rightSidedControls && this.ui.dom.leftSidedControlsWrapper.children ? Array.from(this.ui.dom.rightSidedControlsWrapper.children, el => el.dataset.controlId) : []
+        controllerStructure = controllerStructure.concat(leftSideStructure, ["spacer"], rightSideStructure)
+        this.settings.controllerStructure = controllerStructure
+        //for testing purposes
+        this.userSettings = JSON.stringify({controllerStructure: this.settings.controllerStructure})
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }        
@@ -2113,7 +2148,7 @@ class _T_M_G_Video_Player {
                 e.target.insertBefore(this.dragging, afterControl) 
             } else {
                 e.target.appendChild(this.dragging) 
-            }
+            }            
         }
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
@@ -2142,11 +2177,11 @@ class _T_M_G_Video_Player {
     }
 
     getDraggingAfterControl(container, x) {
-        const draggableControls = [...container.querySelectorAll("[draggable=true]:not(.T_M_G-dragging)")]
+        const draggableControls = [...container.querySelectorAll("[draggable=true]:not(.T_M_G-dragging, .T_M_G-mute-btn), .T_M_G-volume-container:has([draggable=true])")]
 
         return draggableControls.reduce((closest, child) => {
             const box = child.getBoundingClientRect()
-            const offset = x - box.left - box.width / 2
+            const offset = x - box.left - (box.width / 2)
             if (offset < 0 && offset > closest.offset) 
                 return {offset: offset, element: child}
             else 
@@ -2201,7 +2236,7 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
 
     builder(customOptions) {
         if (this.queryBuild()) {
-            this.#build = customOptions ?? false ? {...this.#build, ...customOptions} : this.#build
+            this.#build = typeof customOptions === "object" ? {...this.#build, ...customOptions} : this.#build
             this.#build = {...tmg.DEFAULT_VIDEO_BUILD, ...this.#build} 
             this.#build.settings = this.#build.settings ?? false ? {...tmg.DEFAULT_VIDEO_BUILD.settings, ...this.#build.settings} : tmg.DEFAULT_VIDEO_BUILD.settings
             this.#build.settings.keyShortcuts = this.#build.settings.keyShortcuts !== false ? {...tmg.DEFAULT_VIDEO_BUILD.settings.keyShortcuts, ...this.#build.settings.keyShortcuts} : false
@@ -2235,7 +2270,7 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
             this.#build.playbackState = this.#medium.autoplay ? 'playing' : 'paused'
             //doing some cleanup to make sure no necessary settings were removed
             this.builder()
-            const settings = this.#build.settings.allowOverride ? this.userSettings : this.#build.settings
+            const settings = this.#build.settings.allowOverride ? {...this.#build.settings, ...this.userSettings} : this.#build.settings
             this.#medium.autoplay = settings.autoplay = (settings.autoplay === true) ? settings.autoplay : this.#medium.autoplay
             this.#medium.loop = settings.loop = (settings.loop === true) ? settings.loop : this.#medium.loop
             this.#medium.muted = settings.muted = (settings.muted === true) ? settings.muted : this.#medium.muted
@@ -2267,7 +2302,7 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
                 }
             }   
             Object.freeze(this.#build)
-            tmg.loadCSSStyleSheet("/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css").then(() => this.buildVideoPlayer(this.#build)).then(() => tmg.Players.push(this))
+            tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css").then(() => this.buildVideoPlayer(this.#build)).then(() => tmg.Players.push(this))
             this.#active = true
             console.log(this.#build)
         } else {
@@ -2340,38 +2375,42 @@ if (typeof window === "undefined") {
         },
         _styleCache : {},
         _scriptCache : {},
-        loadCSSStyleSheet : src => {
-            if (JSON.stringify(tmg._styleCache) === "{}") {
-                const styles = document.querySelectorAll("style")
-                for (const style of styles) {
-                    if (style.className === "T_M_G-pre-styling") style.remove()
+        loadResource : (src, type) => {
+        switch (type) {
+            case "script":
+                tmg._scriptCache[src] = tmg._scriptCache[src] || new Promise(function (resolve, reject) {
+                    let script = document.createElement("script")
+                    script.src = src
+    
+                    script.onload = () => resolve(script)
+                    script.onerror = () =>  reject(new Error(`Load error for TMG JavaScript file`))
+    
+                    document.body.append(script)
+                })
+    
+                return tmg._scriptCache[src]
+            break
+            default:
+                if (JSON.stringify(tmg._styleCache) === "{}") {
+                    const styles = document.querySelectorAll("style")
+                    for (const style of styles) {
+                        if (style.className === "T_M_G-pre-styling") style.remove()
+                    }
                 }
-            }
-            tmg._styleCache[src] = tmg._styleCache[src] || new Promise(function (resolve, reject) {
-                let link = document.createElement("link")
-                link.href = src
-                link.rel = "stylesheet"
-        
-                link.onload = () => resolve(link)
-                link.onerror = () =>  reject(new Error(`Load error for TMG CSSStylesheet`))
-        
-                document.head.append(link)
-            })
-        
-            return tmg._styleCache[src]
-        },
-        loadScript : src => {
-            tmg._scriptCache[src] = tmg._scriptCache[src] || new Promise(function (resolve, reject) {
-                let script = document.createElement("script")
-                script.src = src
-
-                script.onload = () => resolve(script)
-                script.onerror = () =>  reject(new Error(`Load error for TMG JavaScript file`))
-
-                document.body.append(script)
-            })
-
-            return tmg._scriptCache[src]
+                tmg._styleCache[src] = tmg._styleCache[src] || new Promise(function (resolve, reject) {
+                    let link = document.createElement("link")
+                    link.href = src
+                    link.rel = "stylesheet"
+            
+                    link.onload = () => resolve(link)
+                    link.onerror = () =>  reject(new Error(`Load error for TMG CSSStylesheet`))
+            
+                    document.head.append(link)
+                })
+            
+                return tmg._styleCache[src]
+            break
+        }
         },
         //mobile media query
         queryMediaMobile : () => {
@@ -2422,18 +2461,6 @@ if (typeof window === "undefined") {
                     const customOptions = await fetchedControls ??  {} 
                     if (customOptions && Object.keys(customOptions).length === 0) {
                             customOptions.settings = {}
-                            if (v.tmgPreviewImagesAddress) {
-                                customOptions.settings.previewImages ? customOptions.settings.previewImages.address = v.tmgPreviewImagesAddress : customOptions.settings.previewImages = {
-                                    address: v.tmgPreviewImagesAddress
-                                }
-                                medium.removeAttribute("data-tmg-preview-images-address")
-                            }
-                            if (v.tmgPreviewImagesFps) {
-                                customOptions.settings.previewImages ? customOptions.settings.previewImages.fps = v.tmgPreviewImagesFps : customOptions.settings.previewImages = {
-                                    fps: Number(v.tmgPreviewImagesFps)
-                                }
-                                medium.removeAttribute("data-tmg-preview-images-fps")
-                            } 
                             if (v.tmgMediaTitle) {
                                 customOptions.media ? customOptions.media.title = v.tmgMediaTitle : customOptions.media = {
                                     title: v.tmgMediaTitle
@@ -2450,14 +2477,22 @@ if (typeof window === "undefined") {
                                 customOptions.activated = JSON.parse(v.tmgActivated)
                                 medium.removeAttribute("data-tmg-activated")
                             }
+                            if (v.tmgInitialMode) {
+                                customOptions.initialMode = v.tmgInitialMode
+                                medium.removeAttribute("data-tmg-initial-mode")
+                            }                            
                             if (v.tmgInitialState) {
                                 customOptions.initialState = JSON.parse(v.tmgInitialState)
                                 medium.removeAttribute("data-tmg-initial-state")
                             }
-                            if (v.tmgInitialMode) {
-                                customOptions.initialMode = v.tmgInitialMode
-                                medium.removeAttribute("data-tmg-initial-mode")
-                            }
+                            if (v.tmgAllowOverride) {
+                                customOptions.settings.allowOverride = JSON.parse(v.tmgAllowOverride)
+                                medium.removeAttribute("data-tmg-allow-override")
+                            }         
+                            if (v.tmgBeta) {
+                                customOptions.settings.beta = JSON.parse(v.tmgBeta)
+                                medium.removeAttribute("data-tmg-beta")
+                            }      
                             if (v.tmgModes) {
                                 customOptions.settings.modes = v.tmgModes.replaceAll(" ", "").split(",")
                                 medium.removeAttribute("data-tmg-modes")
@@ -2465,31 +2500,31 @@ if (typeof window === "undefined") {
                             if (v.tmgControllerStructure) {
                                 customOptions.settings.controllerStructure = v.tmgControllerStructure.replaceAll("'", "").replaceAll(" ", "").split(",")
                                 medium.removeAttribute("data-tmg-controller-interface")
-                            }                  
-                            if (v.tmgProgressBar) {
-                                customOptions.settings.progressBar =  JSON.parse(v.tmgProgressBar)
-                                medium.removeAttribute("data-tmg-progress-bar")
-                            }
+                            }              
                             if (v.tmgNotifiers) {
                                 customOptions.settings.notifiers = JSON.parse(v.tmgNotifiers)
                                 medium.removeAttribute("data-tmg-notifiers")
-                            }
-                            if (v.tmgInitialState) {
-                                customOptions.initialState = JSON.parse(v.tmgInitialState)
-                                medium.removeAttribute("data-tmg-initial-state")
-                            }
-                            if (v.tmgBeta) {
-                                customOptions.settings.beta = JSON.parse(v.tmgBeta)
-                                medium.removeAttribute("data-tmg-beta")
+                            }    
+                            if (v.tmgProgressBar) {
+                                customOptions.settings.progressBar =  JSON.parse(v.tmgProgressBar)
+                                medium.removeAttribute("data-tmg-progress-bar")
                             }
                             if (v.tmgPersist) {
                                 customOptions.settings.persist = JSON.parse(v.tmgPersist)
                                 medium.removeAttribute("data-tmg-persist")
                             }
-                            if (v.tmgAllowOverride) {
-                                customOptions.settings.allowOverride = JSON.parse(v.tmgAllowOverride)
-                                medium.removeAttribute("data-tmg-allow-override")
+                            if (v.tmgPreviewImagesAddress) {
+                                customOptions.settings.previewImages ? customOptions.settings.previewImages.address = v.tmgPreviewImagesAddress : customOptions.settings.previewImages = {
+                                    address: v.tmgPreviewImagesAddress
+                                }
+                                medium.removeAttribute("data-tmg-preview-images-address")
                             }
+                            if (v.tmgPreviewImagesFps) {
+                                customOptions.settings.previewImages ? customOptions.settings.previewImages.fps = v.tmgPreviewImagesFps : customOptions.settings.previewImages = {
+                                    fps: Number(v.tmgPreviewImagesFps)
+                                }
+                                medium.removeAttribute("data-tmg-preview-images-fps")
+                            } 
                             if (v.tmgKeyShortcuts) {
                                 customOptions.settings.keyShortcuts = JSON.parse(v.tmgKeyShortcuts)
                                 medium.removeAttribute("data-tmg-key-shortcuts")
@@ -2536,5 +2571,3 @@ if (typeof window === "undefined") {
 
     tmg.launch()
 }
-
-
