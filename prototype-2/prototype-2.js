@@ -316,12 +316,20 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainer.style.setProperty("--T_M_G-dbc-inline-offset", value)
     } 
 
-    get dbcDimension() {
-        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-dbc-dimension")
+    get dbcWidth() {
+        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-dbc-width")
     }
 
-    set dbcDimension(value) {
-        this.ui.dom.videoContainer.style.setProperty("--T_M_G-dbc-dimension", value)
+    set dbcWidth(value) {
+        this.ui.dom.videoContainer.style.setProperty("--T_M_G-dbc-width", value)
+    } 
+
+    get dbcHeight() {
+        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-dbc-height")
+    }
+
+    set dbcHeight(value) {
+        this.ui.dom.videoContainer.style.setProperty("--T_M_G-dbc-height", value)
     } 
 
     get AllCSSCustomProperties() {
@@ -364,7 +372,8 @@ class _T_M_G_Video_Player {
             volumeValuePosition: this.volumeValuePosition, 
             dbcBlockOffset: this.dbcBlockOffset, 
             dbcInlineOffset: this.dbcInlineOffset, 
-            dbcDimension: this.dbcDimension
+            dbcWidth: this.dbcWidth,
+            dbcHeight: this.dbcHeight
         }
     }
 
@@ -1362,7 +1371,7 @@ class _T_M_G_Video_Player {
         if (percent < previewImgMin) {
             arrowPosition = `${Math.max(percent * rect.width, arrowPositionMin)}px`
         } else if (percent > (1 - previewImgMin)) {
-            arrowPosition = `${Math.min((this.ui.dom.previewImgContainer.offsetWidth/2 + (percent * rect.width) - this.ui.dom.previewImgContainer.offsetLeft), this.ui.dom.previewImgContainer.offsetWidth - arrowPositionMin - 2)}px`
+            arrowPosition = `${Math.min(((this.ui.dom.previewImgContainer.offsetWidth/2 + (percent * rect.width) - this.ui.dom.previewImgContainer.offsetLeft) - arrowPositionMin), this.ui.dom.previewImgContainer.offsetWidth - arrowPositionMin - 2)}px`
         } else arrowPosition = '50%'
         this.previewImgArrowPosition = arrowPosition
     } catch(e) {
@@ -1703,15 +1712,14 @@ class _T_M_G_Video_Player {
         if (this.settings.status.modes.fullScreen) {
         if (!this.ui.dom.videoContainer.classList.contains("T_M_G-picture-in-picture")) {
             if (document.fullscreenElement == null) {
+                this.ui.dom.videoContainer.requestFullscreen()
                 if (screen.orientation && screen.orientation.lock && screen.orientation.type.startsWith("portrait")) {  
                     screen.orientation.lock('landscape')
                     .then(() => console.log('Video was changed to fullscreen so orientation was locked to landscape.'))
                     .catch(error => console.error('TMG failed to lock orientation:', error))
                 }  
-                this.ui.dom.videoContainer.requestFullscreen()
             } else {
-                if (screen.orientation && screen.orientation.lock)
-                    screen.orientation.unlock()
+                if (screen.orientation && screen.orientation.lock) screen.orientation.unlock()
                 document.exitFullscreen()
             }    
         }
