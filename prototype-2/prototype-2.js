@@ -298,7 +298,31 @@ class _T_M_G_Video_Player {
 
     set volumeValuePosition(value) {
         this.ui.dom.videoContainer.style.setProperty("--T_M_G-volume-value-position", value)
+    } 
+
+    get dbcBlockOffset() {
+        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-dbc-block-offset")
     }
+
+    set dbcBlockOffset(value) {
+        this.ui.dom.videoContainer.style.setProperty("--T_M_G-dbc-block-offset", value)
+    } 
+
+    get dbcInlineOffset() {
+        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-dbc-inline-offset")
+    }
+
+    set dbcInlineOffset(value) {
+        this.ui.dom.videoContainer.style.setProperty("--T_M_G-dbc-inline-offset", value)
+    } 
+
+    get dbcDimension() {
+        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-dbc-dimension")
+    }
+
+    set dbcDimension(value) {
+        this.ui.dom.videoContainer.style.setProperty("--T_M_G-dbc-dimension", value)
+    } 
 
     get AllCSSCustomProperties() {
         return {
@@ -337,7 +361,10 @@ class _T_M_G_Video_Player {
             previewImgArrowPosition: this.previewImgArrowPosition,
             progressPosition: this.progressPosition,
             volumeSliderPosition: this.volumeSliderPosition,
-            volumeValuePosition: this.volumeValuePosition
+            volumeValuePosition: this.volumeValuePosition, 
+            dbcBlockOffset: this.dbcBlockOffset, 
+            dbcInlineOffset: this.dbcInlineOffset, 
+            dbcDimension: this.dbcDimension
         }
     }
 
@@ -1321,7 +1348,7 @@ class _T_M_G_Video_Player {
         const previewTime = tmg.formatDuration(percent * this.video.duration)
         const previewImgMin = (this.ui.dom.previewImgContainer.offsetWidth / 2) / rect.width
         const previewImgPercent = tmg.clamp(previewImgMin, percent, (1 - previewImgMin))
-        this.previewPosition = previewImgPercent
+        this.previewPosition = percent
         this.previewImgPosition = previewImgPercent
         this.ui.dom.previewImgContainer.dataset.previewTime = previewTime  
         if (this.isScrubbing) this.progressPosition =  percent
