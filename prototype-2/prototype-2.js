@@ -1723,8 +1723,6 @@ class _T_M_G_Video_Player {
 
     _handleFullScreenChange() {
     try {
-        this.ui.dom.videoContainer.classList.toggle("T_M_G-full-screen", document.fullscreenElement)            
-        if (this.ui.dom.videoContainer.classList.contains("T_M_G-mini-player") && this.ui.dom.videoContainer.classList.contains("T_M_G-full-screen")) this.ui.dom.videoContainer.classList.remove("T_M_G-mini-player")
         if (document.fullscreenElement) {
             if (screen.orientation && screen.orientation.lock && screen.orientation.type.startsWith("portrait")) {  
                 screen.orientation.lock('landscape')
@@ -1736,7 +1734,9 @@ class _T_M_G_Video_Player {
                 screen.orientation.unlock()
                 console.log("TMG has unlocked the orientation")
             }
-        }
+        }     
+        this.ui.dom.videoContainer.classList.toggle("T_M_G-full-screen", document.fullscreenElement)            
+        if (this.ui.dom.videoContainer.classList.contains("T_M_G-mini-player") && this.ui.dom.videoContainer.classList.contains("T_M_G-full-screen")) this.ui.dom.videoContainer.classList.remove("T_M_G-mini-player")
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }            
