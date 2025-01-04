@@ -1129,6 +1129,9 @@ class _T_M_G_Video_Player {
     removeDragEventListeners() {
     try {        
     if (this.settings.controllerStructure) {
+        for (const btn of this.ui.dom.draggableControls) {
+                btn.draggable = false
+        }
         for (const btn of this.ui.dom.draggableBtns) {
             btn.removeEventListener("dragstart", this._handleDragStart)
             btn.removeEventListener("drag", this._handleDrag)
