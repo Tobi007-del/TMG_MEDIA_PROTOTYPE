@@ -316,20 +316,20 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainer.style.setProperty("--T_M_G-dbc-inline-offset", value)
     } 
 
-    get dbcWidth() {
-        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-dbc-width")
+    get dblClickBackdropWidth() {
+        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-dbl-click-backdrop-width")
     }
 
-    set dbcWidth(value) {
-        this.ui.dom.videoContainer.style.setProperty("--T_M_G-dbc-width", value)
+    set dblClickBackdropWidth(value) {
+        this.ui.dom.videoContainer.style.setProperty("--T_M_G-dbl-click-backdrop-width", value)
     } 
 
-    get dbcHeight() {
-        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-dbc-height")
+    get dblClickBackdropHeight() {
+        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-dbl-click-backdrop-height")
     }
 
-    set dbcHeight(value) {
-        this.ui.dom.videoContainer.style.setProperty("--T_M_G-dbc-height", value)
+    set dblClickBackdropHeight(value) {
+        this.ui.dom.videoContainer.style.setProperty("--T_M_G-dbl-click-backdrop-height", value)
     } 
 
     get AllCSSCustomProperties() {
@@ -372,8 +372,8 @@ class _T_M_G_Video_Player {
             volumeValuePosition: this.volumeValuePosition, 
             dbcBlockOffset: this.dbcBlockOffset, 
             dbcInlineOffset: this.dbcInlineOffset, 
-            dbcWidth: this.dbcWidth,
-            dbcHeight: this.dbcHeight
+            dblClickBackdropWidth: this.dblClickBackdropWidth,
+            dblClickBackdropHeight: this.skipBackdropHeight
         }
     }
 
@@ -2158,8 +2158,6 @@ class _T_M_G_Video_Player {
         const rightSideStructure = this.settings.status.ui.rightSidedControls && this.ui.dom.leftSidedControlsWrapper.children ? Array.from(this.ui.dom.rightSidedControlsWrapper.children, el => el.dataset.controlId) : []
         controllerStructure = controllerStructure.concat(leftSideStructure, ["spacer"], rightSideStructure)
         this.settings.controllerStructure = controllerStructure
-        //for testing purposes
-        this.userSettings = JSON.stringify({controllerStructure: this.settings.controllerStructure})
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }        

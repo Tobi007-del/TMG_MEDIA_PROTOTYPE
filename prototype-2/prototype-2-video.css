@@ -107,8 +107,8 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     --T_M_G-volume-value-position: 0;
     --T_M_G-dbc-block-offset: 49%;
     --T_M_G-dbc-inline-offset: -50%;
-    --T_M_G-dbc-width: clamp(20vw, calc(var(--T_M_G-controls-size)*19), 60vw);
-    --T_M_G-dbc-height: var(--T_M_G-dbc-width);
+    --T_M_G-dbl-click-backdrop-width: clamp(20vw, calc(var(--T_M_G-controls-size)*19), 60vw);
+    --T_M_G-dbl-click-backdrop-height: var(--T_M_G-dbl-click-backdrop-width);
 }
 
 .T_M_G-video-container {
@@ -597,10 +597,6 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     justify-content: end;
 }
 
-.T_M_G-settings-btn {
-    display: none;
-}
-
 .T_M_G-prev-btn, .T_M_G-next-btn {
     position: relative;
 }
@@ -685,6 +681,10 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
 }
 
 .T_M_G-video-container.T_M_G-full-screen .T_M_G-theater-btn {
+    display: none;
+}
+
+.T_M_G-settings-btn {
     display: none;
 }
 
@@ -1206,12 +1206,12 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
 }
 
 .T_M_G-video-container.T_M_G-mini-player {
-    --T_M_G-dbc-width: clamp(20px, calc(var(--T_M_G-controls-size)*12.5), 34vw)!important;
+    --T_M_G-dbl-click-backdrop-width: clamp(20px, calc(var(--T_M_G-controls-size)*12.5), 34vw)!important;
 }
 
 .T_M_G-video-container.T_M_G-theater, 
 .T_M_G-video-container.T_M_G-full-screen {
-    --T_M_G-dbc-width: 65vw;
+    --T_M_G-dbl-click-backdrop-width: 65vw;
 }
 
 .T_M_G-notifiers-container[data-current-notifier = "fwd"] .T_M_G-fwd-notifier, 
@@ -1224,8 +1224,8 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
 .T_M_G-notifiers-container .T_M_G-fwd-notifier.T_M_G-persist, 
 .T_M_G-notifiers-container .T_M_G-bwd-notifier.T_M_G-persist {
     opacity: 1;
-    width: var(--T_M_G-dbc-width);
-    height: var(--T_M_G-dbc-height);
+    width: var(--T_M_G-dbl-click-backdrop-width);
+    height: var(--T_M_G-dbl-click-backdrop-height);
     padding-inline: var(--T_M_G-controls-size);
 } 
 
@@ -1370,7 +1370,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
 
 @media only screen and (orientation: portrait) {
     .T_M_G-video-container.T_M_G-full-screen {
-        --T_M_G-dbc-height: 120vh;
+        --T_M_G-dbl-click-backdrop-height: 120vh;
         --T_M_G-dbc-block-offset: 58vh;
     }
 }
@@ -1445,7 +1445,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
         border-radius: 0;
         width: 100%;
         max-width: unset;
-        --T_M_G-dbc-width: 65vw;
+        --T_M_G-dbl-click-backdrop-width: 65vw;
     }
     .T_M_G-video-container .T_M_G-overlay-main-controls-wrapper {
         display: flex!important;
