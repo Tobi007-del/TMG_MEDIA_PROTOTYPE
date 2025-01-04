@@ -430,6 +430,7 @@ class _T_M_G_Video_Player {
         this._handleLoadedData = this._handleLoadedData.bind(this)
         this._handleEnded = this._handleEnded.bind(this)
         this._handleHoverPointerMove = this._handleHoverPointerMove.bind(this)
+        this._handleHoverPointerDown = this._handleHoverPointerDown.bind(this)
         this._handlePointerDown = this._handlePointerDown.bind(this)
         this._handleSpeedPointerUp = this._handleSpeedPointerUp.bind(this)
         this._handleSpeedPointerMove = this._handleSpeedPointerMove.bind(this)
@@ -1076,7 +1077,8 @@ class _T_M_G_Video_Player {
         this.ui.dom.miniPlayerCancelBtn?.addEventListener("click", this.cancelMiniPlayer)        
 
         //videocontainer event listeners
-        this.ui.dom.videoContainer.addEventListener("pointermove", this._handleHoverPointerMove)
+        this.ui.dom.videoContainer.addEventListener("pointermove", this._handleHoverPointerMove, true)
+        this.ui.dom.videoContainer.addEventListener("click", this._handleHoverPointerDown, true)
 
         //timeline contanier event listeners
         this.ui.dom.timelineContainer?.addEventListener("pointerdown", this._handleTimelineScrubbing)
@@ -1916,6 +1918,10 @@ class _T_M_G_Video_Player {
 
     _handleHoverPointerMove() {
         if (!(tmg.queryMediaMobile() && !this.ui.dom.videoContainer.classList.contains("T_M_G-mini-player"))) this.showVideoOverlay()
+    }
+
+    _handleHoverPointerDown() {
+        this.hoverRestraint()
     }
 
     showVideoOverlay() {
