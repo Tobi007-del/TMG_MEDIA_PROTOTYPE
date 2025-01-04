@@ -360,7 +360,7 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     font-size: calc(var(--T_M_G-controls-size)/1.6);
 }
 
-.T_M_G-video-container.T_M_G-mini-player .T_M_G-speed-notifier::after, .T_M_G-speed-notifier.T_M_G-rewind::before {
+.T_M_G-video-container.T_M_G-mini-player .T_M_G-speed-notifier:not(.T_M_G-rewind)::after, .T_M_G-speed-notifier.T_M_G-rewind::before {
     background-size: calc(var(--T_M_G-controls-size)/4.25);
     width: calc(var(--T_M_G-controls-size)/2.155);
 }
@@ -487,15 +487,21 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
 }
 
 .T_M_G-video-container.T_M_G-movement .T_M_G-video-controls-container > *:not(.T_M_G-timeline-container), 
+.T_M_G-video-container:has(.T_M_G-notifiers.T_M_G-persist, .T_M_G-speed-notifier.T_M_G-active) .T_M_G-video-controls-container > *:not(.T_M_G-timeline-container),
 .T_M_G-video-container.T_M_G-movement .T_M_G-overlay-main-controls-wrapper,
+.T_M_G-video-container:has(.T_M_G-notifiers.T_M_G-persist, .T_M_G-speed-notifier.T_M_G-active) .T_M_G-overlay-main-controls-wrapper,
 .T_M_G-video-container.T_M_G-movement .T_M_G-mini-player-expand-btn-wrapper, 
+.T_M_G-video-container:has(.T_M_G-notifiers.T_M_G-persist, .T_M_G-speed-notifier.T_M_G-active) .T_M_G-mini-player-expand-btn-wrapper, 
 .T_M_G-video-container.T_M_G-movement .T_M_G-mini-player-cancel-btn-wrapper,
-.T_M_G-video-container.T_M_G-movement video::-webkit-media-text-track-display {
+.T_M_G-video-container:has(.T_M_G-notifiers.T_M_G-persist, .T_M_G-speed-notifier.T_M_G-active) .T_M_G-mini-player-cancel-btn-wrapper,
+.T_M_G-video-container.T_M_G-movement video::-webkit-media-text-track-display,
+.T_M_G-video-container:has(.T_M_G-notifiers.T_M_G-persist, .T_M_G-speed-notifier.T_M_G-active) video::-webkit-media-text-track-display {
     opacity: 0!important;
     pointer-events: none!important;
 }
 
-.T_M_G-video-container.T_M_G-movement {
+.T_M_G-video-container.T_M_G-movement,
+.T_M_G-video-container:has(.T_M_G-notifiers.T_M_G-persist, .T_M_G-speed-notifier.T_M_G-active) {
     --T_M_G-curtain-color: transparent!important;
 }
 
@@ -508,7 +514,8 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     transition: opacity var(--T_M_G-timeline-fade-transition) ease, transform var(--T_M_G-fade-transition)!important;
 }
 
-.T_M_G-video-container.T_M_G-movement[data-progress-bar="true"] .T_M_G-timeline-container {
+.T_M_G-video-container.T_M_G-movement[data-progress-bar="true"] .T_M_G-timeline-container,
+.T_M_G-video-container:has(.T_M_G-notifiers.T_M_G-persist, .T_M_G-speed-notifier.T_M_G-active) .T_M_G-timeline-container {
     opacity: 1!important;
     position: absolute!important;
     bottom: -2px!important;
@@ -518,7 +525,8 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     transform: scaleY(1)!important;
 }
 
-.T_M_G-video-container.T_M_G-movement {
+.T_M_G-video-container.T_M_G-movement,
+.T_M_G-video-container:has(.T_M_G-notifiers.T_M_G-persist, .T_M_G-speed-notifier.T_M_G-active) .T_M_G-timeline-container {
     --T_M_G-thumb-indicator-scale: 0!important;
 }
 
@@ -1140,14 +1148,15 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     width: fit-content;
     height: fit-content;
     min-width: calc(var(--T_M_G-controls-size)*1.3);
-    padding: calc(var(--T_M_G-controls-size)/10) calc(var(--T_M_G-controls-size)/2.5);
+    padding: calc(var(--T_M_G-controls-size)/7.5) calc(var(--T_M_G-controls-size)/2.5);
     font-size: calc(var(--T_M_G-controls-size)/2.4);
     font-weight: 700;
     border-radius: var(--T_M_G-controls-size);
     transition: none;
 }
 
-.T_M_G-speed-notifier::after, .T_M_G-speed-notifier.T_M_G-rewind::before {
+.T_M_G-speed-notifier:not(.T_M_G-rewind)::after, 
+.T_M_G-speed-notifier.T_M_G-rewind::before {
     content: '';
     background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='70' fill='white'><polygon points='0,0 50,35 0,70'/></svg>") 0 center repeat-x;
     background-size: calc(var(--T_M_G-controls-size)/5.9);
@@ -1155,17 +1164,27 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     height: calc(var(--T_M_G-controls-size)/2);
 }
 
-.T_M_G-speed-notifier::after {
+.T_M_G-speed-notifier:not(.T_M_G-rewind)::before,
+.T_M_G-speed-notifier.T_M_G-rewind::after {
+    content: attr(data-current-time);
+    font-weight: normal;
+}
+
+.T_M_G-speed-notifier:not(.T_M_G-rewind)::before {
+    margin-right: calc(var(--T_M_G-controls-size)/3.5);
+}
+
+.T_M_G-speed-notifier.T_M_G-rewind::after {
+    margin-left: calc(var(--T_M_G-controls-size)/3.5);
+}
+
+.T_M_G-speed-notifier:not(.T_M_G-rewind)::after {
     margin-left: calc(var(--T_M_G-controls-size)/5);
 }
 
 .T_M_G-speed-notifier.T_M_G-rewind::before {
     margin-right: calc(var(--T_M_G-controls-size)/5);
     transform: scaleX(-1);
-}
-
-.T_M_G-speed-notifier.T_M_G-rewind::after {
-    display: none;
 }
 
 .T_M_G-speed-notifier.T_M_G-active {
@@ -1248,6 +1267,18 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     width: fit-content;
     bottom: 20%;
     font-size: calc(var(--T_M_G-controls-size)/3.4);
+}
+
+.T_M_G-fwd-notifier[data-skip="1"]::after, 
+.T_M_G-fwd-notifier[data-skip="-1"]::after, 
+.T_M_G-fwd-notifier[data-skip="0"]::after,
+.T_M_G-bwd-notifier[data-skip="1"]::after,
+.T_M_G-bwd-notifier[data-skip="-1"]::after {
+    content: attr(data-skip) ' second';
+}
+
+.T_M_G-bwd-notifier[data-skip="0"]::after {
+    content: '-' attr(data-skip) ' second';
 }
 
 .T_M_G-fwd-notifier svg,
@@ -1450,7 +1481,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     .T_M_G-speed-notifier {
         font-size: calc(var(--T_M_G-controls-size)/1.4);
     }
-    .T_M_G-speed-notifier::after, .T_M_G-speed-notifier.T_M_G-rewind::before {
+    .T_M_G-speed-notifier:not(.T_M_G-rewind)::after, .T_M_G-speed-notifier.T_M_G-rewind::before {
         background-size: calc(var(--T_M_G-controls-size)/4.25);
         width: calc(var(--T_M_G-controls-size)/2.15);
     }

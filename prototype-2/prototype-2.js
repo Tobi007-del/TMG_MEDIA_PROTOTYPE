@@ -1196,6 +1196,7 @@ class _T_M_G_Video_Player {
 
     replay() {
         try {        
+            this.ui.dom.playNotifier.classList.add("T_M_G-spin")
             this.moveVideoTime({action: "moveTo", details: {to: "start"}})
             this.video.play()
         } catch(e) {
@@ -1382,9 +1383,9 @@ class _T_M_G_Video_Player {
     _handleTimeUpdate() {
     try {        
         if (this.ui.dom.currentTimeElement) this.ui.dom.currentTimeElement.textContent = tmg.formatDuration(this.video.currentTime)
+        if (this.ui.dom.speedNotifier) this.ui.dom.speedNotifier.dataset.currentTime = tmg.formatDuration(this.video.currentTime)
         const percent = this.video.currentTime / this.video.duration
         this.progressPosition = percent
-        if (this.video.currentTime < 1 && !this.video.paused && !this.ui.dom.playNotifier.classList.contains("T_M_G-spin")) this.ui.dom.playNotifier.classList.add("T_M_G-spin")
         if ((this.video.currentTime < this.video.duration) && this.ui.dom.videoContainer.classList.contains("T_M_G-replay")) this.ui.dom.videoContainer.classList.remove("T_M_G-replay")
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
@@ -1394,8 +1395,10 @@ class _T_M_G_Video_Player {
     //Time Skips
     skip(duration, persist = false) {
     try {
-        this.video.currentTime += duration
         const notifier = duration > 0 ? this.ui.dom.notifiersContainer?.querySelector(".T_M_G-fwd-notifier") : this.ui.dom.notifiersContainer?.querySelector(".T_M_G-bwd-notifier")
+        duration = Math.sign(duration) === 1 ? this.video.duration - this.video.currentTime > duration ? duration : this.video.duration - this.video.currentTime : Math.sign(duration) === -1 ? this.video.currentTime > Math.abs(duration) ? duration : -this.video.currentTime : 0
+        duration = Math.trunc(duration)
+        this.video.currentTime += duration
         if (persist) {
             if (notifier != this.currentNotifier) {
                 this.skipDuration = 0
@@ -1404,16 +1407,12 @@ class _T_M_G_Video_Player {
             this.currentNotifier = notifier
             notifier.classList.add("T_M_G-persist")
             this.ui.dom.videoContainer.classList.remove("T_M_G-hover") 
-            this.ui.dom.videoContainer.classList.add("T_M_G-movement")
-            if ((this.video.currentTime !== 0 && notifier.classList.contains("T_M_G-bwd-notifier")) || (this.video.currentTime !== this.video.duration && notifier.classList.contains("T_M_G-fwd-notifier"))) {
-                this.skipDuration += duration
-            }
+            this.skipDuration += duration
             if (this.skipDurationId) clearTimeout(this.skipDurationId)
             this.skipDurationId = setTimeout(() => {
                 this.skipDuration = 0
                 notifier.classList.remove("T_M_G-persist")
                 this.ui.dom.videoContainer.classList.remove("T_M_G-hover") 
-                this.ui.dom.videoContainer.classList.remove("T_M_G-movement")
             }, Number(this.notifierArrowsTransitionTime.replace('ms', '')) + 10)
             notifier.dataset.skip = this.skipDuration
             return
@@ -1458,8 +1457,6 @@ class _T_M_G_Video_Player {
                 x - rect.left >= this.video.offsetWidth*0.5 ? this.fastForward() : this.rewind()
             } else this.fastForward()
             this.ui.dom.speedNotifier.classList.add("T_M_G-active")
-            this.ui.dom.videoContainer.classList.add("T_M_G-movement")
-            this.ui.dom.videoContainer.setAttribute("data-progress-bar", true)
         }
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
@@ -1493,8 +1490,9 @@ class _T_M_G_Video_Player {
 
     rewindVideo() {
     try {        
-        this.rewindVideoTime -= .04
+        this.rewindVideoTime -= 0.04
         this.progressPosition =  this.rewindVideoTime/this.video.duration
+        if (this.ui.dom.speedNotifier) this.ui.dom.speedNotifier.dataset.currentTime = tmg.formatDuration(Math.max(this.rewindVideoTime, 0))
         this.video.currentTime -= .04
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
@@ -1525,8 +1523,6 @@ class _T_M_G_Video_Player {
                 if (this.speedIntervalId) clearInterval(this.speedIntervalId)
             }
             this.ui.dom.speedNotifier.classList.remove("T_M_G-active")
-            this.ui.dom.videoContainer.classList.remove('T_M_G-movement')
-            this.ui.dom.videoContainer.setAttribute("data-progress-bar", this.settings.progressbar)
         }
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
