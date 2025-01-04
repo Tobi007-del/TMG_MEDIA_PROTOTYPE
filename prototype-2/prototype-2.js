@@ -2330,7 +2330,7 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
             }   
             Object.freeze(this.#build)
             //commented out so drag and drop polyfill can be easily toggled
-            //tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/drag-drop-touch-polyfill.js", "script")
+            tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/drag-drop-touch-polyfill.js", "script")
             tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css").then(() => this.buildVideoPlayer(this.#build)).then(() => tmg.Players.push(this))
             this.#active = true
             console.log(this.#build)
