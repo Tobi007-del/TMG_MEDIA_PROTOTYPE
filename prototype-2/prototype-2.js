@@ -975,7 +975,7 @@ class _T_M_G_Video_Player {
         }
         if (this.initialState) {
             this.ui.dom.playNotifier.classList.add("T_M_G-spin")
-            this.ui.dom.playNotifier.addEventListener("animationend", () => this.ui.dom.playNotifier.classList.remove("T_M_G-spin"), {once: true})
+            this.ui.dom.playNotifier.addEventListener("animationend", () => this.ui.dom.playNotifier.classList.remove("T_M_G-spin"))
             if (!this.video.autoplay) this._handlePlay()
             this.ui.dom.videoContainer.classList.remove("T_M_G-initial")
         }
@@ -1188,11 +1188,20 @@ class _T_M_G_Video_Player {
     //Play and Pause States
     togglePlay(bool) {
     try {        
-        this.video.ended ? this._handleReplay() : typeof bool == "boolean" ? bool ? this.video.play() : this.video.pause() : this.video.paused ? this.video.play() : this.video.pause()
+        this.video.ended ? this.replay() : typeof bool == "boolean" ? bool ? this.video.play() : this.video.pause() : this.video.paused ? this.video.play() : this.video.pause()
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }        
     }
+
+    replay() {
+        try {        
+            this.moveVideoTime({action: "moveTo", details: {to: "start"}})
+            this.video.play()
+        } catch(e) {
+            console.warn(`TMG silenced a rendering error: `, e)
+        }        
+    }    
     
     //Buffering
     _handleBufferStart() {
@@ -1230,15 +1239,6 @@ class _T_M_G_Video_Player {
         if ('mediaSession' in navigator) {
             navigator.mediaSession.playbackState = this.playbackState
         }
-    } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
-    }        
-    }
-
-    _handleReplay() {
-    try {        
-        this.moveVideoTime({action: "moveTo", details: {to: "start"}})
-        this.video.play()
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }        
@@ -1384,6 +1384,7 @@ class _T_M_G_Video_Player {
         if (this.ui.dom.currentTimeElement) this.ui.dom.currentTimeElement.textContent = tmg.formatDuration(this.video.currentTime)
         const percent = this.video.currentTime / this.video.duration
         this.progressPosition = percent
+        if (this.video.currentTime < 1 && !this.video.paused) this.ui.dom.playNotifier.classList.add("T_M_G-spin")
         if ((this.video.currentTime < this.video.duration) && this.ui.dom.videoContainer.classList.contains("T_M_G-replay")) this.ui.dom.videoContainer.classList.remove("T_M_G-replay")
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
@@ -2039,7 +2040,7 @@ class _T_M_G_Video_Player {
                 break
             case this.settings.keyShortcuts["removeMiniPlayer"]:
                 if (this.ui.dom.videoContainer.classList.contains("T_M_G-mini-player")) {
-                e.shiftKey ? this._handleReplay() : this.toggleMiniPlayerMode(false) 
+                e.shiftKey ? this.replay() : this.toggleMiniPlayerMode(false) 
                 }
                 break
             case this.settings.keyShortcuts["pip"] ?? this.settings.keyShortcuts["pictureInPicture"]:
@@ -2323,7 +2324,7 @@ if (typeof window === "undefined") {
         media : document.querySelectorAll("[tmgcontrols]"),
         DEFAULT_VIDEO_BUILD : {
             mediaPlayer: 'TMG',
-            mediaType: 'video/audio',
+            mediaType: 'video',
             media: {
                 artwork: [
                     {
