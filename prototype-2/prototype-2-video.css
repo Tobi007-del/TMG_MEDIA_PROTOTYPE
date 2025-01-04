@@ -106,8 +106,8 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     --T_M_G-volume-slider-position: 0;
     --T_M_G-volume-value-position: 0;
     --T_M_G-dbc-block-offset: 49%;
-    --T_M_G-dbc-tap-offset: -50%;
-    --T_M_G-dbc-tap-dimension: clamp(20vw, calc(var(--T_M_G-controls-size)*19), 60vw);
+    --T_M_G-dbc-inline-offset: -50%;
+    --T_M_G-dbc-dimension: clamp(20vw, calc(var(--T_M_G-controls-size)*19), 60vw);
 }
 
 .T_M_G-video-container {
@@ -1205,12 +1205,12 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
 }
 
 .T_M_G-video-container.T_M_G-mini-player {
-    --T_M_G-dbc-tap-dimension: clamp(20px, calc(var(--T_M_G-controls-size)*12.5), 34vw)!important;
+    --T_M_G-dbc-dimension: clamp(20px, calc(var(--T_M_G-controls-size)*12.5), 34vw)!important;
 }
 
 .T_M_G-video-container.T_M_G-theater, 
 .T_M_G-video-container.T_M_G-full-screen {
-    --T_M_G-dbc-tap-dimension: 65vw;
+    --T_M_G-dbc-dimension: 65vw;
 }
 
 .T_M_G-notifiers-container[data-current-notifier = "fwd"] .T_M_G-fwd-notifier, 
@@ -1223,18 +1223,18 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
 .T_M_G-notifiers-container .T_M_G-fwd-notifier.T_M_G-persist, 
 .T_M_G-notifiers-container .T_M_G-bwd-notifier.T_M_G-persist {
     opacity: 1;
-    width: var(--T_M_G-dbc-tap-dimension);
-    height: var(--T_M_G-dbc-tap-dimension);
+    width: var(--T_M_G-dbc-dimension);
+    height: var(--T_M_G-dbc-dimension);
     padding-inline: var(--T_M_G-controls-size);
 } 
 
 .T_M_G-notifiers-container .T_M_G-fwd-notifier.T_M_G-persist {
-    right: var(--T_M_G-dbc-tap-offset);
+    right: var(--T_M_G-dbc-inline-offset);
     justify-content: start;
 }
 
 .T_M_G-notifiers-container .T_M_G-bwd-notifier.T_M_G-persist {
-    left: var(--T_M_G-dbc-tap-offset);
+    left: var(--T_M_G-dbc-inline-offset);
     justify-content: end;
 }
 
@@ -1437,7 +1437,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
         border-radius: 0;
         width: 100%;
         max-width: unset;
-        --T_M_G-dbc-tap-dimension: 65vw;
+        --T_M_G-dbc-dimension: 65vw;
     }
     .T_M_G-video-container .T_M_G-overlay-main-controls-wrapper {
         display: flex!important;
