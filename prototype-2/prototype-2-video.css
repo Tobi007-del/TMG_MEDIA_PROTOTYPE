@@ -1,3 +1,7 @@
+.T_M_G-settings-btn {
+    display: none;
+}
+
 /* setting video initial state begins*/
 body .T_M_G-video-container.T_M_G-initial .T_M_G-video-controls-container,
 body .T_M_G-video-container.T_M_G-initial .T_M_G-video-overlay-controls-container > *:not(.T_M_G-notifiers-container),
@@ -594,6 +598,7 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
 }
 
 .T_M_G-right-side-controls-wrapper {
+    flex-shrink: 0;
     justify-content: end;
 }
 
@@ -681,10 +686,6 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
 }
 
 .T_M_G-video-container.T_M_G-full-screen .T_M_G-theater-btn {
-    display: none;
-}
-
-.T_M_G-settings-btn {
     display: none;
 }
 
