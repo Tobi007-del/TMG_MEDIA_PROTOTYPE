@@ -1711,18 +1711,8 @@ class _T_M_G_Video_Player {
     try {
         if (this.settings.status.modes.fullScreen) {
         if (!this.ui.dom.videoContainer.classList.contains("T_M_G-picture-in-picture")) {
-            if (document.fullscreenElement == null) {
-                this.ui.dom.videoContainer.requestFullscreen()
-                if (screen.orientation && screen.orientation.lock && screen.orientation.type.startsWith("portrait")) {  
-                    screen.orientation.lock('landscape')
-                    .then(() => console.log('Video was changed to fullscreen so orientation was locked to landscape.'))
-                    .catch(error => console.error('TMG failed to lock orientation:', error))
-                }  
-            } else {
-                if (screen.orientation && screen.orientation.lock) screen.orientation.unlock()
-                document.exitFullscreen()
-            }    
-        }
+            document.fullscreenElement == null ? this.ui.dom.videoContainer.requestFullscreen() : document.exitFullscreen()
+        }    
         }
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
@@ -1733,6 +1723,18 @@ class _T_M_G_Video_Player {
     try {
         this.ui.dom.videoContainer.classList.toggle("T_M_G-full-screen", document.fullscreenElement)            
         if (this.ui.dom.videoContainer.classList.contains("T_M_G-mini-player") && this.ui.dom.videoContainer.classList.contains("T_M_G-full-screen")) this.ui.dom.videoContainer.classList.remove("T_M_G-mini-player")
+        if (document.fullscreenElement) {
+            if (screen.orientation && screen.orientation.lock && screen.orientation.type.startsWith("portrait")) {  
+                screen.orientation.lock('landscape')
+                .then(() => console.log("Video was changed to fullscreen so TMG locked orientation to landscape"))
+                .catch(error => console.error('TMG failed to lock orientation:', error))
+            } 
+        } else {
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.unlock()
+                console.log("TMG has unlocked the orientation")
+            }
+        }
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }            
