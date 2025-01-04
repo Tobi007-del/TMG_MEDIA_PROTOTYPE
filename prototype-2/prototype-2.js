@@ -1384,7 +1384,7 @@ class _T_M_G_Video_Player {
         if (this.ui.dom.currentTimeElement) this.ui.dom.currentTimeElement.textContent = tmg.formatDuration(this.video.currentTime)
         const percent = this.video.currentTime / this.video.duration
         this.progressPosition = percent
-        if (this.video.currentTime < 1 && !this.video.paused) this.ui.dom.playNotifier.classList.add("T_M_G-spin")
+        if (this.video.currentTime < 1 && !this.video.paused && !this.ui.dom.playNotifier.classList.contains("T_M_G-spin")) this.ui.dom.playNotifier.classList.add("T_M_G-spin")
         if ((this.video.currentTime < this.video.duration) && this.ui.dom.videoContainer.classList.contains("T_M_G-replay")) this.ui.dom.videoContainer.classList.remove("T_M_G-replay")
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
