@@ -105,6 +105,9 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     --T_M_G-progress-position: 0;
     --T_M_G-volume-slider-position: 0;
     --T_M_G-volume-value-position: 0;
+    --T_M_G-dbc-block-offset: 49%;
+    --T_M_G-dbc-tap-offset: -50%;
+    --T_M_G-dbc-tap-dimension: clamp(20vw, calc(var(--T_M_G-controls-size)*19), 60vw);
 }
 
 .T_M_G-video-container {
@@ -1199,12 +1202,6 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     align-items: start;
     transform: scale(1.5);
     transition: none;
-}
-
-.T_M_G-video-container {
-    --T_M_G-dbc-block-offset: 49%;
-    --T_M_G-dbc-tap-offset: -50%;
-    --T_M_G-dbc-tap-dimension: clamp(20vw, calc(var(--T_M_G-controls-size)*19), 60vw);
 }
 
 .T_M_G-video-container.T_M_G-mini-player {
