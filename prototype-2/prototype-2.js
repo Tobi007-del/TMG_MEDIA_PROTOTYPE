@@ -1343,10 +1343,10 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainer.classList.toggle("T_M_G-scrubbing", this.isScrubbing)
         if (this.isScrubbing) {
             this.wasPaused = this.video.paused
-            this.togglePlay(false)
+            this.video.pause()
         } else {
             this.video.currentTime = percent * this.video.duration
-            if (!this.wasPaused) this.togglePlay(true)     
+            if (!this.wasPaused) this.video.play()
         }
         this._handleTimelineUpdate(e)
     } catch(e) {
@@ -1374,11 +1374,11 @@ class _T_M_G_Video_Player {
             this.ui.dom.previewImg.src = previewImgSrc
             if (this.isScrubbing) this.ui.dom.thumbnailImg.src = previewImgSrc
         }
-        let arrowPosition, arrowPositionMin = (this.ui.dom.videoContainer.classList.contains("T_M_G-theater") || this.ui.dom.videoContainer.classList.contains("T_M_G-full-screen")) && !tmg.queryMediaMobile() ? Number(this.controlsSize.replace('px', ''))/3.25 : Number(this.controlsSize.replace('px', ''))/1.5 
+        let arrowPosition, arrowDimension = Number(this.controlsSize.replace('px', ''))/1.6, arrowPositionMin = ((this.ui.dom.videoContainer.classList.contains("T_M_G-theater") || this.ui.dom.videoContainer.classList.contains("T_M_G-full-screen")) && this.settings.status.ui.previewImages) && !tmg.queryMediaMobile() ? Number(this.controlsSize.replace('px', ''))/3.25 : arrowDimension
         if (percent < previewImgMin) {
             arrowPosition = `${Math.max(percent * rect.width, arrowPositionMin)}px`
         } else if (percent > (1 - previewImgMin)) {
-            arrowPosition = `${Math.min(((this.ui.dom.previewImgContainer.offsetWidth/2 + (percent * rect.width) - this.ui.dom.previewImgContainer.offsetLeft) - arrowPositionMin), this.ui.dom.previewImgContainer.offsetWidth - arrowPositionMin - 2)}px`
+            arrowPosition = `${Math.min(((this.ui.dom.previewImgContainer.offsetWidth/2 + (percent * rect.width) - this.ui.dom.previewImgContainer.offsetLeft) - arrowDimension), this.ui.dom.previewImgContainer.offsetWidth - arrowPositionMin - 2)}px`
         } else arrowPosition = '50%'
         this.previewImgArrowPosition = arrowPosition
     } catch(e) {

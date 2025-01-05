@@ -43,7 +43,8 @@ body .T_M_G-video-container.T_M_G-initial .T_M_G-play-notifier, body .T_M_G-vide
     }    
 }
 
-body .T_M_G-video-container.T_M_G-initial .T_M_G-play-notifier:hover, body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
+body .T_M_G-video-container.T_M_G-initial .T_M_G-play-notifier:hover, 
+body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     cursor: pointer!important;
     transition: all 500ms ease!important;
     opacity: 1!important;
@@ -97,7 +98,7 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     --T_M_G-loader-color: var(--T_M_G-brand-color);
     --T_M_G-loader-base-color: var(--T_M_G-current-theme-inverse-accent-color);
     --T_M_G-thumb-indicator-scale: 0;
-    --T_M_G-fade-transition: 350ms;
+    --T_M_G-fade-transition: 250ms;
     --T_M_G-timeline-fade-transition: 1s;
     --T_M_G-transition-time: 500ms;
     --T_M_G-arrows-transition-time: 800ms;
