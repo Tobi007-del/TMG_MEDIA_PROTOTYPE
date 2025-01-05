@@ -1921,7 +1921,7 @@ class _T_M_G_Video_Player {
     }
 
     _handleHoverPointerDown() {
-        this.showVideoOverlay()
+        this.hoverRestraint()
     }
 
     showVideoOverlay() {
@@ -2149,7 +2149,7 @@ class _T_M_G_Video_Player {
 
     _handleDrag() {
     try {
-        this.showVideoOverlay()
+        this.hoverRestraint()
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }                
