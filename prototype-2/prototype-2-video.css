@@ -1414,9 +1414,6 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     .T_M_G-video-container.T_M_G-mini-player, .T_M_G-video-container.T_M_G-mini-player .T_M_G-notifiers {
         --T_M_G-controls-size: 20px;
     }
-    .T_M_G-video-container.T_M_G-mini-player {
-        --T_M_G-controls-gap: 7.5px;
-    }
     .T_M_G-video-container.T_M_G-mini-player .T_M_G-preview-img-container::before {
         --T_M_G-border-color: var(--T_M_G-brand-accent-color);
     }  
