@@ -345,21 +345,6 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     display: flex;
 }
 
-.T_M_G-video-container.T_M_G-mini-player.T_M_G-scrubbing, 
-.T_M_G-video-container.T_M_G-mini-player.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) {
-    --T_M_G-curtain-color: transparent!important;
-}
-
-.T_M_G-video-container.T_M_G-mini-player.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) .T_M_G-mini-player-expand-btn-wrapper, 
-.T_M_G-video-container.T_M_G-mini-player.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) .T_M_G-mini-player-cancel-btn-wrapper,
-.T_M_G-video-container.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) .T_M_G-overlay-main-controls-wrapper,
-.T_M_G-video-container.T_M_G-mini-player.T_M_G-scrubbing .T_M_G-mini-player-expand-btn-wrapper, 
-.T_M_G-video-container.T_M_G-mini-player.T_M_G-scrubbing .T_M_G-mini-player-cancel-btn-wrapper,
-.T_M_G-video-container.T_M_G-scrubbing .T_M_G-overlay-main-controls-wrapper {
-    opacity: 0!important;
-    pointer-events: none!important;
-}
-
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-preview-img-container {
     height: calc(var(--T_M_G-controls-size)*3.75);
 }
@@ -385,6 +370,12 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     scale: 1.5;
 }
 
+.T_M_G-video-container.T_M_G-mini-player.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) .T_M_G-mini-player-expand-btn-wrapper, 
+.T_M_G-video-container.T_M_G-mini-player.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) .T_M_G-mini-player-cancel-btn-wrapper,
+.T_M_G-video-container.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) .T_M_G-overlay-main-controls-wrapper,
+.T_M_G-video-container.T_M_G-mini-player.T_M_G-scrubbing .T_M_G-mini-player-expand-btn-wrapper, 
+.T_M_G-video-container.T_M_G-mini-player.T_M_G-scrubbing .T_M_G-mini-player-cancel-btn-wrapper,
+.T_M_G-video-container.T_M_G-scrubbing .T_M_G-overlay-main-controls-wrapper, 
 .T_M_G-video-container.T_M_G-buffer .T_M_G-overlay-main-controls-wrapper,
 .T_M_G-video-container.T_M_G-replay .T_M_G-play-notifier,
 .T_M_G-video-container.T_M_G-replay .T_M_G-pause-notifier, 
@@ -395,6 +386,11 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-play-notifier, 
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-pause-notifier {
     display: none!important;
+}
+
+.T_M_G-video-container.T_M_G-mini-player.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover), 
+.T_M_G-video-container.T_M_G-mini-player.T_M_G-scrubbing {
+    --T_M_G-curtain-color: transparent!important;
 }
 
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-video-buffer {
