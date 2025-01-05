@@ -370,6 +370,16 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     scale: 1.5;
 }
 
+.T_M_G-video-container.T_M_G-mini-player.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) {
+    --T_M_G-curtain-color: transparent;
+}
+
+.T_M_G-video-container.T_M_G-mini-player.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) .T_M_G-mini-player-expand-btn-wrapper, 
+.T_M_G-video-container.T_M_G-mini-player.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) .T_M_G-mini-player-cancel-btn-wrapper,
+.T_M_G-video-container.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) .T_M_G-overlay-main-controls-wrapper {
+    display: none;
+}    
+
 .T_M_G-video-container.T_M_G-mini-player.T_M_G-scrubbing .T_M_G-mini-player-expand-btn-wrapper, 
 .T_M_G-video-container.T_M_G-mini-player.T_M_G-scrubbing .T_M_G-mini-player-cancel-btn-wrapper,
 .T_M_G-video-container.T_M_G-scrubbing .T_M_G-overlay-main-controls-wrapper, 
@@ -541,7 +551,7 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     display: flex;
     flex-direction: column;
     padding-bottom: calc(var(--T_M_G-controls-size)/7);
-    background: linear-gradient(to top, var(--T_M_G-curtain-color), transparent);
+    background: linear-gradient(to top, var(--T_M_G-background-accent-color), transparent);
     border-bottom-right-radius: inherit;
     border-bottom-left-radius: inherit;
     transition: background-color 400ms ease;
@@ -1074,7 +1084,10 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     display: block;
 }
 
-.T_M_G-video-container.T_M_G-scrubbing .T_M_G-preview-img-container,
+.T_M_G-video-container.T_M_G-scrubbing .T_M_G-preview-img-container {
+    display: block!important;
+}
+
 .T_M_G-video-container.T_M_G-hover .T_M_G-timeline-container:hover .T_M_G-preview-img-container {
     display: block;
 }
@@ -1186,7 +1199,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     opacity: 1!important;
 }
 
-.T_M_G-video-container:has(.T_M_G-speed-notifier.T_M_G-active) .T_M_G-video-buffer {
+.T_M_G-video-container:has(.T_M_G-speed-notifier.T_M_G-active, .T_M_G-notifiers.T_M_G-persist) .T_M_G-video-buffer {
     display: none!important;
 }
 
@@ -1405,6 +1418,9 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     }
     .T_M_G-video-container.T_M_G-mini-player {
         --T_M_G-controls-gap: 5px;
+    }
+    .T_M_G-video-container.T_M_G-mini-player .T_M_G-preview-img-container::before {
+        --T_M_G-border-color: var(--T_M_G-brand-accent-color);
     }  
     .T_M_G-preview-img-container {
         height: calc(var(--T_M_G-controls-size)*4);
@@ -1416,19 +1432,19 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
         --T_M_G-loader-width: calc(var(--T_M_G-controls-size)/7.5);
         --T_M_G-loader-size: 35px;
     }
-    .T_M_G-video-container.T_M_G-scrubbing, 
-    .T_M_G-video-container.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) {
+    .T_M_G-video-container.T_M_G-scrubbing {
         --T_M_G-curtain-color: transparent!important;
     }
     .T_M_G-video-container .T_M_G-video-overlay-controls-container {
         background-color: var(--T_M_G-curtain-color);
         transition: background-color var(--T_M_G-fade-transition) ease-in-out;      
     }
-    .T_M_G-theater-btn,
+    .T_M_G-video-container .T_M_G-theater-btn,
     .T_M_G-video-container .T_M_G-play-pause-btn,
     .T_M_G-video-container .T_M_G-prev-btn,
     .T_M_G-video-container .T_M_G-next-btn,
     .T_M_G-video-container .T_M_G-play-notifier,
+    .T_M_G-video-container .T_M_G-timeline::before,
     .T_M_G-video-container .T_M_G-pause-notifier {
         display: none!important;
     } 
@@ -1441,10 +1457,47 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     .T_M_G-video-container .T_M_G-overlay-main-controls-wrapper {
         display: flex!important;
     }
+    .T_M_G-video-container.T_M_G-hover {
+        --T_M_G-curtain-color: var(--T_M_G-background-accent-color);
+    }
+    .T_M_G-video-container.T_M_G-hover .T_M_G-video-controls-container > *:not(.T_M_G-timeline-container),
+    .T_M_G-video-container.T_M_G-hover .T_M_G-overlay-main-controls-wrapper,
+    .T_M_G-video-container.T_M_G-hover.T_M_G-mini-player .T_M_G-mini-player-expand-btn-wrapper, 
+    .T_M_G-video-container.T_M_G-hover.T_M_G-mini-player .T_M_G-mini-player-cancel-btn-wrapper {
+        opacity: 1;
+        pointer-events: all;        
+    }
+    .T_M_G-video-container.T_M_G-hover video::-webkit-media-text-track-display {
+        -webkit-transform: translateY(calc(var(--T_M_G-controls-size)*-2.5));
+        transform: translateY(calc(var(--T_M_G-controls-size)*-2.5));
+    }
+    .T_M_G-video-container.T_M_G-mini-player.T_M_G-hover video::-webkit-media-text-track-display {
+        -webkit-transform: translateY(calc(var(--T_M_G-controls-size)*-2));
+        transform: translateY(calc(var(--T_M_G-controls-size)*-2));        
+    }
+    .T_M_G-video-container.T_M_G-hover .T_M_G-timeline-container {
+        position: relative;
+        transform: scaleY(1);
+        height: calc(var(--T_M_G-controls-size)/4);
+        margin-inline: calc(var(--T_M_G-controls-size)/3.5);
+        width: unset;
+        bottom: unset;
+        opacity: 1;
+        pointer-events: all;
+        transition: opacity var(--T_M_G-fade-transition) ease;    
+    }
     .T_M_G-timeline {
         height: calc(var(--T_M_G-controls-size)/6)!important;
     }
-    .T_M_G-video-container.T_M_G-hover:hover, 
+    .T_M_G-video-container.T_M_G-mini-player.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) {
+        --T_M_G-curtain-color: var(--T_M_G-background-accent-color);
+    }
+    .T_M_G-video-container.T_M_G-mini-player.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) .T_M_G-mini-player-expand-btn-wrapper, 
+    .T_M_G-video-container.T_M_G-mini-player.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) .T_M_G-mini-player-cancel-btn-wrapper,
+    .T_M_G-video-container.T_M_G-hover:hover:has(.T_M_G-timeline-container:hover) .T_M_G-overlay-main-controls-wrapper {
+        display: flex;
+    }    
+    .T_M_G-video-container.T_M_G-hover, 
     .T_M_G-video-container:has(:focus-visible), 
     .T_M_G-video-container.T_M_G-paused, 
     .T_M_G-video-container.T_M_G-picture-in-picture, 
@@ -1466,6 +1519,9 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
         --T_M_G-border-color: var(--T_M_G-brand-accent-color)!important;
     }
     .T_M_G-video-container .T_M_G-preview-img {
+        display: none;
+    }
+    .T_M_G-video-container.T_M_G-hover .T_M_G-timeline-container:hover .T_M_G-preview-img-container {
         display: none;
     }
     .T_M_G-notifiers-container .T_M_G-fwd-notifier.T_M_G-persist::after, 

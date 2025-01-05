@@ -1247,10 +1247,12 @@ class _T_M_G_Video_Player {
     
     //Buffering
     _handleBufferStart() {
+        this.hoverRestraint()
         this.ui.dom.videoContainer.classList.add("T_M_G-buffer")
     }
 
     _handleBufferStop() {
+        this.hoverRestraint()
         this.ui.dom.videoContainer.classList.remove("T_M_G-buffer")
     }
     
@@ -2160,6 +2162,7 @@ class _T_M_G_Video_Player {
 
     _handleDragEnd(e) {
     try {
+        this.showVideoOverlay()
         e.target.classList.remove("T_M_G-dragging")
         if (!this.ui.dom.videoContainer.matches(":hover")) this.ui.dom.videoContainer.classList.remove("T_M_G-hover")
         let controllerStructure = []
