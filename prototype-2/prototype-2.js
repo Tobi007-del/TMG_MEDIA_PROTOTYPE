@@ -1498,7 +1498,7 @@ class _T_M_G_Video_Player {
             const rect = this.video.getBoundingClientRect()
             this.speedCheck = true
             this.wasPaused = this.video.paused
-            if (this.wasPaused) this.togglePlay(true)
+            if (this.wasPaused) this.video.play()
             if (x && this.settings.beta) {
                 x - rect.left >= this.video.offsetWidth*0.5 ? this.fastForward() : this.rewind()
             } else this.fastForward()
@@ -1558,7 +1558,7 @@ class _T_M_G_Video_Player {
     try {        
         if (this.speedCheck) {
             this.speedCheck = false
-            if (this.wasPaused) this.togglePlay(false)
+            if (this.wasPaused) this.video.pause()
             if (this.speedToken === 1) {
                 this.video.playbackRate = this.previousRate
             } else if (this.speedToken === 0) {
@@ -1819,7 +1819,7 @@ class _T_M_G_Video_Player {
     removeMiniPlayer() {
         try {
             this.cleanUpMiniPlayer()
-            if (!this.video.paused && !this.concerned) this.togglePlay(false)
+            if (!this.video.paused && !this.concerned) this.video.pause()
             this.concerned = false
         } catch(e) {
             console.warn(`TMG silenced a rendering error: `, e)
