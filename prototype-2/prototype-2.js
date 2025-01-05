@@ -1362,7 +1362,10 @@ class _T_M_G_Video_Player {
         this.previewPosition = percent
         this.previewImgPosition = previewImgPercent
         this.ui.dom.previewImgContainer.dataset.previewTime = previewTime  
-        if (this.isScrubbing) this.progressPosition =  percent
+        if (this.isScrubbing) {
+            this.progressPosition =  percent
+            this.hoverRestraint()
+        } 
         if (this.settings.status.ui.previewImages) {
             const previewImgNumber = Math.max(1, Math.floor((percent * this.video.duration) / this.settings.previewImages.fps))
             const previewImgSrc = this.settings.previewImages.address.replace('$', previewImgNumber)
