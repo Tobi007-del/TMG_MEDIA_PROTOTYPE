@@ -1,7 +1,3 @@
-.T_M_G-settings-btn {
-    display: none;
-}
-
 /* setting video initial state begins*/
 body .T_M_G-video-container.T_M_G-initial .T_M_G-video-controls-container,
 body .T_M_G-video-container.T_M_G-initial .T_M_G-video-overlay-controls-container > *:not(.T_M_G-notifiers-container),
@@ -372,6 +368,7 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
 }
 
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-preview-img-container {
+    border-radius: calc(var(--T_M_G-controls-size)/1.85);
     height: calc(var(--T_M_G-controls-size)*3.75);
 }
 
