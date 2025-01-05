@@ -1884,7 +1884,7 @@ class _T_M_G_Video_Player {
     _handleClick() {
     try {
         if (tmg.queryMediaMobile() && !this.ui.dom.videoContainer.classList.contains("T_M_G-mini-player")) {
-            if (!(!this.ui.dom.videoContainer.classList.contains("T_M_G-movement") && !this.ui.dom.videoContainer.classList.contains("T_M_G-hover")) || (this.ui.dom.videoContainer.classList.contains("T_M_G-paused") && !this.ui.dom.videoContainer.classList.contains("T_M_G-hover"))) this.ui.dom.videoContainer.classList.toggle("T_M_G-movement")
+            if (!(!this.ui.dom.videoContainer.classList.contains("T_M_G-movement") && !this.ui.dom.videoContainer.classList.contains("T_M_G-hover")) || (this.video.paused && !this.ui.dom.videoContainer.classList.contains("T_M_G-hover"))) this.ui.dom.videoContainer.classList.toggle("T_M_G-movement")
             this.showVideoOverlay()
         } 
         if (tmg.queryMediaMobile() || this.ui.dom.videoContainer.classList.contains("T_M_G-mini-player")) return
@@ -2149,7 +2149,7 @@ class _T_M_G_Video_Player {
 
     _handleDrag() {
     try {
-        this.showVideoOverlay()
+        this.hoverRestraint()
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
     }                
