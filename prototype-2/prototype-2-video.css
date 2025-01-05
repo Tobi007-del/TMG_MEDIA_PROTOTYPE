@@ -1,3 +1,7 @@
+.T_M_G-settings-btn {
+    display: none;
+}
+
 /* setting video initial state begins*/
 body .T_M_G-video-container.T_M_G-initial .T_M_G-video-controls-container,
 body .T_M_G-video-container.T_M_G-initial .T_M_G-video-overlay-controls-container > *:not(.T_M_G-notifiers-container),
