@@ -2485,7 +2485,7 @@ if (typeof window === "undefined") {
         },
         leadingZeroFormatter : new Intl.NumberFormat(undefined, {minimumIntegerDigits: 2}),
         isIterable : obj => obj !== null && obj !== undefined && typeof obj[Symbol.iterator] === 'function',
-        //a wild card for deploying TMG controls to available media
+        //a wild card for deploying TMG controls to available media, returns a promise that resolves with an array referencing the media
         launch : async function(medium) {
             let promises = []
             if (arguments.length === 0) {

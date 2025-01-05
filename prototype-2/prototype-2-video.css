@@ -586,7 +586,7 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     display: flex;
     gap: var(--T_M_G-controls-gap);
     padding-block: calc(var(--T_M_G-controls-size)/2.5); 
-    padding-inline: var(--T_M_G-controls-size);
+    padding-inline: calc(var(--T_M_G-controls-gap) * 1.6);
     flex-grow: 1;
     overflow-x: auto;
     overflow-y: hidden;
@@ -1541,6 +1541,10 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     .T_M_G-notifiers {
         --T_M_G-controls-size: 25px;
     }
+    .T_M_G-video-controls-container, 
+    .T_M_G-video-container.T_M_G-full-screen .T_M_G-video-controls-container {
+        --T_M_G-controls-gap: calc(var(--T_M_G-controls-size)/1.6);
+    }
 }
 
 @media (max-width: 480px) {
@@ -1563,10 +1567,6 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
     .T_M_G-video-controls-container, 
     .T_M_G-video-container.T_M_G-full-screen .T_M_G-video-controls-container {
         --T_M_G-controls-gap: calc(var(--T_M_G-controls-size)/2);
-    }
-    .T_M_G-video-controls-container .T_M_G-controls-wrapper > div, 
-    .T_M_G-video-container.T_M_G-full-screen .T_M_G-video-controls-container .T_M_G-controls-wrapper > div {
-        padding-inline: calc(var(--T_M_G-controls-size)/2);
     }
 }
 
