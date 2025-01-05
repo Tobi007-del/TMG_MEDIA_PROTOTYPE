@@ -1921,7 +1921,7 @@ class _T_M_G_Video_Player {
     }
 
     _handleHoverPointerDown() {
-        this.hoverRestraint()
+        this.showVideoOverlay()
     }
 
     showVideoOverlay() {
@@ -2158,6 +2158,7 @@ class _T_M_G_Video_Player {
     _handleDragEnd(e) {
     try {
         e.target.classList.remove("T_M_G-dragging")
+        if (!this.ui.dom.videoContainer.matches(":hover")) this.ui.dom.videoContainer.classList.remove("T_M_G-hover")
         let controllerStructure = []
         controllerStructure.push(this.settings.controllerStructure.find(c => c.startsWith("timeline")))
         const leftSideStructure = this.settings.status.ui.leftSidedControls && this.ui.dom.leftSidedControlsWrapper.children ? Array.from(this.ui.dom.leftSidedControlsWrapper.children, el => el.dataset.controlId) : []

@@ -388,7 +388,6 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
 .T_M_G-video-container.T_M_G-buffer .T_M_G-overlay-main-controls-wrapper,
 .T_M_G-video-container.T_M_G-replay .T_M_G-play-notifier,
 .T_M_G-video-container.T_M_G-replay .T_M_G-pause-notifier, 
-.T_M_G-video-container.T_M_G-scrubbing .T_M_G-overlay-main-controls-wrapper,
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-play-pause-btn,
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-prev-btn,
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-next-btn,
@@ -396,7 +395,6 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-play-notifier, 
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-pause-notifier {
     display: none!important;
-    pointer-events: none!important;
 }
 
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-video-buffer {
