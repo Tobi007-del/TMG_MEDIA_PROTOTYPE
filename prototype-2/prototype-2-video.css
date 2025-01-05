@@ -1,7 +1,3 @@
-.T_M_G-settings-btn {
-    display: none;
-}
-
 /* setting video initial state begins*/
 body .T_M_G-video-container.T_M_G-initial .T_M_G-video-controls-container,
 body .T_M_G-video-container.T_M_G-initial .T_M_G-video-overlay-controls-container > *:not(.T_M_G-notifiers-container),
@@ -300,8 +296,8 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     bottom: var(--T_M_G-mini-player-y);
     z-index: 999999999;
     min-height: 150px;
-    width: clamp(5rem, 50dvw, 400px)!important;
-    border-radius: calc(var(--T_M_G-controls-size)/1.5)!important;
+    width: clamp(5rem, 50dvw, 400px);
+    border-radius: calc(var(--T_M_G-controls-size)/1.5);
     transform: translateX(100%);
     opacity: 0;
     animation: tmp 0.25s ease forwards;  
@@ -422,10 +418,6 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-pause-notifier {
     display: none!important;
 }
- 
-.T_M_G-video-container.T_M_G-mini-player.T_M_G-scrubbing {
-    --T_M_G-curtain-color: transparent!important;
-}
 
 .T_M_G-video-container.T_M_G-mini-player .T_M_G-video-buffer {
     --T_M_G-loader-width: calc(var(--T_M_G-controls-size)/3);
@@ -451,6 +443,10 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     opacity: 0.85;
     border-radius: 50%;
     animation: spin 2s linear infinite;
+}
+
+.T_M_G-video-container.T_M_G-scrubbing {
+    --T_M_G-curtain-color: transparent!important;
 }
 
 .T_M_G-video-container.T_M_G-hover:hover, 
@@ -567,7 +563,7 @@ body .T_M_G-video-container .T_M_G-play-notifier.T_M_G-spin {
     content: "";
     position: absolute;
     bottom: 0;
-    background: linear-gradient(to top, var(--T_M_G-curtain-color), transparent);
+    background: linear-gradient(to top, var(--T_M_G-background-accent-color), transparent);
     width: 100%;
     aspect-ratio: 6 / 1;
     z-index: -1;
@@ -1434,9 +1430,6 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
         --T_M_G-loader-width: calc(var(--T_M_G-controls-size)/7.5);
         --T_M_G-loader-size: 35px;
     }
-    .T_M_G-video-container.T_M_G-scrubbing {
-        --T_M_G-curtain-color: transparent!important;
-    }
     .T_M_G-video-container .T_M_G-video-overlay-controls-container {
         background-color: var(--T_M_G-curtain-color);
         transition: background-color var(--T_M_G-fade-transition) ease-in-out;      
@@ -1457,7 +1450,7 @@ button:has(.T_M_G-next-icon, .T_M_G-prev-icon) svg {
         --T_M_G-dbl-click-backdrop-width: 65vw;
     }
     .T_M_G-video-container .T_M_G-overlay-main-controls-wrapper {
-        display: flex!important;
+        display: flex;
     }
     .T_M_G-video-container.T_M_G-hover {
         --T_M_G-curtain-color: var(--T_M_G-background-accent-color);
