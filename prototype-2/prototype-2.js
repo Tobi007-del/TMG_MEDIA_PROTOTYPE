@@ -1502,7 +1502,6 @@ class _T_M_G_Video_Player {
                 x - rect.left >= this.video.offsetWidth*0.5 ? this.fastForward() : this.rewind()
             } else this.fastForward()
             this.ui.dom.speedNotifier.classList.add("T_M_G-active")
-            if (this.wasPaused) this.togglePlay(true)
         }
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
@@ -1514,6 +1513,7 @@ class _T_M_G_Video_Player {
             this.speedToken = 1
             this.previousRate = this.video.playbackRate
             this.video.playbackRate = 2    
+            if (this.wasPaused) this.video.play()
         } catch(e) {
             console.warn(`TMG silenced a rendering error: `, e)
         }
@@ -1528,6 +1528,9 @@ class _T_M_G_Video_Player {
             this.video.addEventListener("pause", this.rewindReset)
             this.rewindVideoTime = this.video.currentTime
             this.speedIntervalId = setInterval(this.rewindVideo.bind(this), 20)
+            setTimeout(() => {
+                if (this.wasPaused) this.video.play()
+            }, 1000)
         } catch(e) {
             console.warn(`TMG silenced a rendering error: `, e)
         }
@@ -1558,7 +1561,7 @@ class _T_M_G_Video_Player {
     try {        
         if (this.speedCheck) {
             this.speedCheck = false
-            if (this.wasPaused) this.togglePlay(false)
+            if (this.wasPaused) this.video.pause()
             if (this.speedToken === 1) {
                 this.video.playbackRate = this.previousRate
             } else if (this.speedToken === 0) {
