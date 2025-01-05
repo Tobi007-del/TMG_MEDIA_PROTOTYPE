@@ -1374,7 +1374,7 @@ class _T_M_G_Video_Player {
             this.ui.dom.previewImg.src = previewImgSrc
             if (this.isScrubbing) this.ui.dom.thumbnailImg.src = previewImgSrc
         }
-        let arrowPosition, arrowDimension = Number(this.controlsSize.replace('px', ''))/1.6, arrowPositionMin = ((this.ui.dom.videoContainer.classList.contains("T_M_G-theater") || this.ui.dom.videoContainer.classList.contains("T_M_G-full-screen")) && this.settings.status.ui.previewImages) && !tmg.queryMediaMobile() ? Number(this.controlsSize.replace('px', ''))/3.25 : arrowDimension
+        let arrowPosition, arrowDimension = Number(this.controlsSize.replace('px', ''))/1.6, arrowPositionMin = (((this.ui.dom.videoContainer.classList.contains("T_M_G-theater") && !this.ui.dom.videoContainer.classList.contains("T_M_G-mini-player")) || this.ui.dom.videoContainer.classList.contains("T_M_G-full-screen")) && this.settings.status.ui.previewImages) && !tmg.queryMediaMobile() ? Number(this.controlsSize.replace('px', ''))/3.25 : arrowDimension
         if (percent < previewImgMin) {
             arrowPosition = `${Math.max(percent * rect.width, arrowPositionMin)}px`
         } else if (percent > (1 - previewImgMin)) {
