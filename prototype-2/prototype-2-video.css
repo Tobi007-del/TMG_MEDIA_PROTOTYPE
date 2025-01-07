@@ -930,11 +930,11 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
 
 .T_M_G-video-loaded-timeline {
     position: absolute;
-    margin-inline: inherit;
     height: 100%;
     top: 0;
     left: 0;
     right: calc(100% - var(--T_M_G-loaded-position) * 1%);
+    right: 0;
     background-color: var(--T_M_G-loaded-timeline-color);
     z-index: 1;
 }
@@ -1460,7 +1460,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
         align-items: center;
         box-shadow: none;
     }
-    .T_M_G-video-container {
+    .T_M_G-video-container.T_M_G-video-scrubbing {
         --T_M_G-preview-border-color: var(--T_M_G-brand-accent-color);
     }
     .T_M_G-video-container .T_M_G-video-preview-img {

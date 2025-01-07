@@ -1248,7 +1248,6 @@ class _T_M_G_Video_Player {
     //Buffer Progress
     _handleLoadedProgress() {
         if (this.video.duration > 0) {
-            console.log(this.video.buffered)
             for (let i = 0; i < this.video.buffered.length; i++) {
                 if (this.video.buffered.start(this.video.buffered.length - 1 - i) < this.video.currentTime) {
                     this.loadedPosition = (this.video.buffered.end(this.video.buffered.length - 1 - i) * 100) / this.video.duration
