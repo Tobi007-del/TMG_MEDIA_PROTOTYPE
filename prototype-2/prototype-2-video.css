@@ -934,7 +934,6 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     top: 0;
     left: 0;
     right: calc(100% - var(--T_M_G-loaded-position) * 1%);
-    right: 0;
     background-color: var(--T_M_G-loaded-timeline-color);
     z-index: 1;
 }
