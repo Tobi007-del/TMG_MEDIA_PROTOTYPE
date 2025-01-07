@@ -877,7 +877,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
 }
 
 .T_M_G-video-container[data-progress-bar="true"] .T_M_G-video-timeline-container, 
-.T_M_G-video-container:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, .T_M_G-video-speed-notifier.T_M_G-video-control-active) {
+.T_M_G-video-container:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, .T_M_G-video-speed-notifier.T_M_G-video-control-active) .T_M_G-video-timeline-container {
     position: absolute;
     transform: scaleY(1);
     margin-inline: 0;
