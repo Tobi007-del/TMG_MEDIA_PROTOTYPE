@@ -1464,10 +1464,11 @@ class _T_M_G_Video_Player {
 
     _handleTimeUpdate() {
     try {        
-        if (this.ui.dom.currentTimeElement) this.ui.dom.currentTimeElement.textContent = tmg.formatDuration(this.video.currentTime)
-        if (this.ui.dom.speedNotifier && this.speedCheck && this.speedToken === 1) this.ui.dom.speedNotifier.dataset.currentTime = tmg.formatDuration(this.video.currentTime)
         const percent = this.video.currentTime / this.video.duration
         this.progressPosition = percent
+        if (this.ui.dom.currentTimeElement) this.ui.dom.currentTimeElement.textContent = tmg.formatDuration(this.video.currentTime)
+        if (this.ui.dom.speedNotifier && this.speedCheck && this.speedToken === 1) this.ui.dom.speedNotifier.dataset.currentTime = tmg.formatDuration(this.video.currentTime)
+        this.skipVideoTime = this.video.currentTime
         if ((this.video.currentTime < this.video.duration) && this.ui.dom.videoContainer.classList.contains("T_M_G-video-replay")) this.ui.dom.videoContainer.classList.remove("T_M_G-video-replay")
     } catch(e) {
         console.warn(`TMG silenced a rendering error: `, e)
@@ -1480,6 +1481,8 @@ class _T_M_G_Video_Player {
         const notifier = duration > 0 ? this.ui.dom.notifiersContainer?.querySelector(".T_M_G-video-fwd-notifier") : this.ui.dom.notifiersContainer?.querySelector(".T_M_G-video-bwd-notifier")
         duration = Math.sign(duration) === 1 ? this.video.duration - this.video.currentTime > duration ? duration : this.video.duration - this.video.currentTime : Math.sign(duration) === -1 ? this.video.currentTime > Math.abs(duration) ? duration : -this.video.currentTime : 0
         duration = Math.trunc(duration)
+        this.skipVideoTime += duration
+        this.progressPosition = this.skipVideoTime / this.video.duration
         this.video.currentTime += duration
         if (persist) {
             if (notifier != this.currentNotifier) {
@@ -1576,7 +1579,7 @@ class _T_M_G_Video_Player {
     rewindVideo() {
     try {        
         this.speedVideoTime -= 0.04
-        this.progressPosition = this.speedVideoTime/this.video.duration
+        this.progressPosition = this.speedVideoTime / this.video.duration
         if (this.ui.dom.speedNotifier) this.ui.dom.speedNotifier.dataset.currentTime = tmg.formatDuration(Math.max(this.speedVideoTime, 0))
         this.video.currentTime -= .04
     } catch(e) {
