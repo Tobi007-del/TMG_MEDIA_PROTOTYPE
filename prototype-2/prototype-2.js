@@ -1985,9 +1985,11 @@ class _T_M_G_Video_Player {
     overlayRestraint() {
         try {        
             if (this.overlayRestraintId) clearTimeout(this.overlayRestraintId)
-            this.overlayRestraintId = setTimeout(() => {
-                if (!this.video.paused) this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
-            }, this.overlayRestraintTime)
+            if (!this.video.paused) {
+                this.overlayRestraintId = setTimeout(() => {
+                    if (!this.video.paused) this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
+                }, this.overlayRestraintTime)
+            }
         } catch(e) {
             console.warn(`TMG silenced a rendering error: `, e)
         }    
