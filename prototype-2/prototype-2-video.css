@@ -1398,7 +1398,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
         --T_M_G-controls-size: 20px;
     }
     .T_M_G-video-container.T_M_G-video-mini-player {
-        --T_M_G-preview-border-color: var(--T_M_G-brand-color);
+        --T_M_G-preview-border-color: var(--T_M_G-brand-accent-color);
     }  
     .T_M_G-video-preview-img-container {
         height: calc(var(--T_M_G-controls-size)*4);
@@ -1461,7 +1461,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
         box-shadow: none;
     }
     .T_M_G-video-container {
-        --T_M_G-preview-border-color: var(--T_M_G-brand-color);
+        --T_M_G-preview-border-color: var(--T_M_G-brand-accent-color);
     }
     .T_M_G-video-container .T_M_G-video-preview-img {
         display: none;
@@ -1496,7 +1496,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     .T_M_G-video-notifiers {
         --T_M_G-controls-size: 25px;
     }
-    .T_M_G-video-controls-container {
+    .T_M_G-video-container {
         --T_M_G-controls-gap: calc(var(--T_M_G-controls-size)/1.6);
     }
 }
