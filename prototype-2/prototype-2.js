@@ -3,7 +3,6 @@
 TODO: 
     next and prev video
     editable settings: shortcut, beta, keyshortcuts, notifiers, progressbar, controllerStructure
-    handle pointer down function edit
 */
 
 //running a runtime environment check
