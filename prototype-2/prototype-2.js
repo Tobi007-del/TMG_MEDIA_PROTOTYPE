@@ -67,6 +67,14 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainer.style.setProperty("--T_M_G-brand-color", value)
     }
 
+    get focusColor() {
+        return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-focus-color")
+    }
+
+    set focusColor(value) {
+        this.ui.dom.videoContainer.style.setProperty("--T_M_G-focus-color", value)
+    }
+
     get backgroundColor() {
         return getComputedStyle(this.ui.dom.videoContainer).getPropertyValue("--T_M_G-background-color")
     }
@@ -356,6 +364,7 @@ class _T_M_G_Video_Player {
             brandColor: this.brandColor,
             brandAccentColor: this.brandAccentColor,
             lighterBrandColor: this.lighterBrandColor,
+            focusColor: this.focusColor,
             backgroundColor: this.backgroundColor,
             currentThemeColor: this.currentThemeColor,
             currentThemeAccentColor: this.currentThemeAccentColor,
@@ -411,6 +420,7 @@ class _T_M_G_Video_Player {
         this.concerned = false
         this.parentIntersecting = true
         this.videoIntersecting = true
+        this.buffering = false
         this.playId 
         this.overlayRestraintId
         this.volumeActiveId 
@@ -1282,11 +1292,13 @@ class _T_M_G_Video_Player {
     
     //Buffering
     _handleBufferStart() {
-        this.overlayRestraint()
+        this.buffering = true
+        this.showVideoOverlay()
         this.ui.dom.videoContainer.classList.add("T_M_G-video-buffering")
     }
 
     _handleBufferStop() {
+        this.buffering = false
         this.overlayRestraint()
         this.ui.dom.videoContainer.classList.remove("T_M_G-video-buffering")
     }
@@ -1491,13 +1503,13 @@ class _T_M_G_Video_Player {
             }
             this.currentNotifier = notifier
             notifier.classList.add("T_M_G-video-control-persist")
-            this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay") 
+            this.removeOverlay() 
             this.skipDuration += duration
             if (this.skipDurationId) clearTimeout(this.skipDurationId)
             this.skipDurationId = setTimeout(() => {
                 this.skipDuration = 0
                 notifier.classList.remove("T_M_G-video-control-persist")
-                this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay") 
+                this.removeOverlay() 
             }, Number(this.notifierArrowsTransitionTime.replace('ms', '')) + 10)
             notifier.dataset.skip = this.skipDuration
             return
@@ -1930,7 +1942,7 @@ class _T_M_G_Video_Player {
     _handleClick() {
     try {
         if (tmg.queryMediaMobile() && !this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {
-            this.ui.dom.videoContainer.classList.toggle("T_M_G-video-overlay")
+            if (!this.buffering) this.ui.dom.videoContainer.classList.toggle("T_M_G-video-overlay")
         } 
         if (tmg.queryMediaMobile() || this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) return
         if (this.playId) clearTimeout(this.playId)
@@ -1971,8 +1983,7 @@ class _T_M_G_Video_Player {
 
     _handleHoverPointerOut() {
         if (!this.ui.dom.videoContainer.matches(":hover")) {
-            if (!tmg.queryMediaMobile()) 
-                if (!this.video.paused) this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
+            if (!tmg.queryMediaMobile()) this.removeOverlay()
         }
     }
 
@@ -1988,15 +1999,19 @@ class _T_M_G_Video_Player {
     overlayRestraint() {
         try {        
             if (this.overlayRestraintId) clearTimeout(this.overlayRestraintId)
-            if (!this.video.paused) {
+            if (!this.video.paused && !this.buffering) {
                 this.overlayRestraintId = setTimeout(() => {
-                    if (!this.video.paused) this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
+                    this.removeOverlay()
                 }, this.overlayRestraintTime)
             }
         } catch(e) {
             console.warn(`TMG silenced a rendering error: `, e)
         }    
     }        
+
+    removeOverlay() {
+        if (!this.video.paused && !this.buffering) this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
+    }
 
     _handlePointerDown(e) {
     try {
@@ -2215,7 +2230,6 @@ class _T_M_G_Video_Player {
     try {
         this.showVideoOverlay()
         e.target.classList.remove("T_M_G-video-dragging")
-        if (!this.ui.dom.videoContainer.matches(":hover")) this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
         let controllerStructure = []
         controllerStructure.push(this.settings.controllerStructure.find(c => c.startsWith("timeline")))
         const leftSideStructure = this.settings.status.ui.leftSidedControls && this.ui.dom.leftSidedControlsWrapper.children ? Array.from(this.ui.dom.leftSidedControlsWrapper.children, el => el.dataset.controlId) : []

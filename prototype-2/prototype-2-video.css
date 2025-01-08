@@ -82,6 +82,7 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     --T_M_G-brand-color : rgb(226,110,2);
     --T_M_G-brand-accent-color: rgb(from var(--T_M_G-brand-color) r g b/.4);
     --T_M_G-lighter-brand-color : rgb(255,187,123);
+    --T_M_G-focus-color: var(--T_M_G-lighter-brand-color);
     --T_M_G-background-color: black;
     --T_M_G-background-accent-color: rgba(0,0,0,.5);
     --T_M_G-curtain-color: transparent;
@@ -150,8 +151,12 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
 }
 
 .T_M_G-video-container *:focus-visible {
-    outline: 2px solid var(--T_M_G-brand-color);
-    outline-offset: 0.225rem;
+    outline: 2px solid var(--T_M_G-focus-color);
+    outline-offset: 3.5px;
+}
+
+.T_M_G-video-container .T_M_G-video-timeline-container:focus-visible {
+    outline-offset: .5px;
 }
 
 .T_M_G-video-container svg {
@@ -304,7 +309,7 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     bottom: var(--T_M_G-mini-player-y);
     z-index: 999999999;
     min-height: 150px;
-    width: clamp(5rem, 50dvw, 400px);
+    width: clamp(80px, 50dvw, 400px);
     border-radius: calc(var(--T_M_G-controls-size)/1.5);
     transform: translateX(100%);
     opacity: 0;
@@ -866,14 +871,10 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     align-items: center;
     touch-action: none;
     height: calc(var(--T_M_G-controls-size)/4);
-    margin-inline: calc(var(--T_M_G-controls-size)/3.5);
+    margin-inline: calc(var(--T_M_G-controls-size)/1.75);
     opacity: 0;
     transform: scaleY(0);
     transition: opacity var(--T_M_G-timeline-fade-transition) ease, transform var(--T_M_G-fade-transition);
-}
-
-.T_M_G-video-container .T_M_G-video-timeline-container:focus-visible {
-    outline-offset: 0;
 }
 
 .T_M_G-video-container[data-progress-bar="true"] .T_M_G-video-timeline-container, 
@@ -890,7 +891,8 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     bottom: -2px;
 }
 
-.T_M_G-video-container[data-progress-bar="true"].T_M_G-video-full-screen .T_M_G-video-timeline-container {
+.T_M_G-video-container[data-progress-bar="true"].T_M_G-video-full-screen .T_M_G-video-timeline-container,
+.T_M_G-video-container.T_M_G-video-full-screen:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, .T_M_G-video-speed-notifier.T_M_G-video-control-active) .T_M_G-video-timeline-container {
     bottom: -4px;
 }
 
@@ -900,7 +902,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     position: relative;
     transform: scaleY(1);
     height: calc(var(--T_M_G-controls-size)/4);
-    margin-inline: calc(var(--T_M_G-controls-size)/3.5);
+    margin-inline: calc(var(--T_M_G-controls-size)/1.75);
     width: unset;
     bottom: unset;
     opacity: 1;
@@ -917,7 +919,6 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     height: calc(var(--T_M_G-controls-size)/6);
     width: 100%;
     background-color: var(--T_M_G-timeline-base-color);
-    margin-inline: inherit;
 }
 
 .T_M_G-video-loaded-timeline {
@@ -1079,7 +1080,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
 }
 
 .T_M_G-video-container.T_M_G-video-scrubbing,
-.T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-timeline-container:hover {
+.T_M_G-video-container.T_M_G-video-overlay:has(.T_M_G-video-timeline-container:hover) {
     --T_M_G-thumb-indicator-scale: 1;
 } 
 
@@ -1156,6 +1157,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
 .T_M_G-video-speed-notifier:not(.T_M_G-video-rewind)::before,
 .T_M_G-video-speed-notifier.T_M_G-video-rewind::after {
     content: attr(data-current-time);
+    display: none;
     font-weight: normal;
 }
 
@@ -1176,8 +1178,12 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     transform: scaleX(-1);
 }
 
-.T_M_G-video-speed-notifier.T_M_G-video-control-active {
-    opacity: 1!important;
+.T_M_G-video-notifiers-container .T_M_G-video-speed-notifier.T_M_G-video-control-active {
+    opacity: 1;
+}
+
+.T_M_G-video-speed-notifier.T_M_G-video-control-active.T_M_G-video-rewind::after, .T_M_G-video-speed-notifier.T_M_G-video-control-active:not(.T_M_G-video-rewind)::before {
+    display: block;
 }
 
 .T_M_G-video-fwd-notifier, .T_M_G-video-bwd-notifier {
@@ -1474,7 +1480,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
         font-size: calc(var(--T_M_G-controls-size)/1.4);
     }
     .T_M_G-video-speed-notifier:not(.T_M_G-video-rewind)::after, .T_M_G-video-speed-notifier.T_M_G-video-rewind::before {
-        background-size: calc(var(--T_M_G-controls-size)/4.25);
+        background-size: calc(var(--T_M_G-controls-size)/4.35);
         width: calc(var(--T_M_G-controls-size)/2.15);
     }
 }
