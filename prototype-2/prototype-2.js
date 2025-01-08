@@ -444,6 +444,7 @@ class _T_M_G_Video_Player {
 
         //Binding methods so they don't lose context of the media player instance
         //Binding Handlers
+        this._handleError = this._handleError.bind(this)
         this._handleWindowResize = this._handleWindowResize.bind(this)
         this._handleFullScreenChange = this._handleFullScreenChange.bind(this)
         this._handleFullScreenChange = this._handleFullScreenChange.bind(this)
@@ -556,6 +557,11 @@ class _T_M_G_Video_Player {
 
         //building the Video Player interface
         this.buildVideoPlayerInterface()
+    }
+
+    //Custom Error Handling
+    _handleError(error) {
+        console.warn(`TMG silenced a rendering error: `, error)
     }
 
     //firing custom events
@@ -1029,7 +1035,7 @@ class _T_M_G_Video_Player {
         this.observeVideoPosition()
         this.loaded()
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1048,7 +1054,7 @@ class _T_M_G_Video_Player {
             this.ui.dom.videoContainer.classList.remove("T_M_G-video-initial")
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }    
     }
 
@@ -1136,7 +1142,7 @@ class _T_M_G_Video_Player {
         //notifiers event listeners
         this.notify.init(this)
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }                    
     }
 
@@ -1157,7 +1163,7 @@ class _T_M_G_Video_Player {
         document.addEventListener("keyup", this._handleKeyUp)
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1166,7 +1172,7 @@ class _T_M_G_Video_Player {
         document.removeEventListener("keydown", this._handleKeyDown)
         document.removeEventListener("keyup", this._handleKeyUp)
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1193,7 +1199,7 @@ class _T_M_G_Video_Player {
         }
     }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }            
     }
 
@@ -1216,7 +1222,7 @@ class _T_M_G_Video_Player {
         }
     }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }            
     }
 
@@ -1241,7 +1247,7 @@ class _T_M_G_Video_Player {
                 svg.setAttribute("viewBox", `0 0 ${controlsSize} ${controlsSize}`)
         })
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }       
 
@@ -1250,7 +1256,7 @@ class _T_M_G_Video_Player {
     try {        
         this.toggleMiniPlayerMode()
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1276,7 +1282,7 @@ class _T_M_G_Video_Player {
     try {        
         this.video.ended ? this.replay() : typeof bool == "boolean" ? bool ? this.video.play() : this.video.pause() : this.video.paused ? this.video.play() : this.video.pause()
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1286,7 +1292,7 @@ class _T_M_G_Video_Player {
             this.moveVideoTime({action: "moveTo", details: {to: "start"}})
             this.video.play()
         } catch(e) {
-            console.warn(`TMG silenced a rendering error: `, e)
+            this._handleError(e)
         }        
     }    
     
@@ -1319,7 +1325,7 @@ class _T_M_G_Video_Player {
             navigator.mediaSession.playbackState = this.playbackState
         }            
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }
     }
             
@@ -1332,7 +1338,7 @@ class _T_M_G_Video_Player {
             navigator.mediaSession.playbackState = this.playbackState
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1340,7 +1346,7 @@ class _T_M_G_Video_Player {
     try {        
         this.ui.dom.videoContainer.classList.add("T_M_G-video-replay")
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }  
 
@@ -1363,7 +1369,7 @@ class _T_M_G_Video_Player {
                 break
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1380,7 +1386,7 @@ class _T_M_G_Video_Player {
             this.ui.dom.timelineContainer?.releasePointerCapture(e.pointerId)
         }, { once: true })
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
     
@@ -1398,7 +1404,7 @@ class _T_M_G_Video_Player {
         }
         this._handleTimelineUpdate(e)
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }
     }
 
@@ -1430,7 +1436,7 @@ class _T_M_G_Video_Player {
         } else arrowPosition = '50%'
         this.previewImgArrowPosition = arrowPosition
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1441,7 +1447,7 @@ class _T_M_G_Video_Player {
             document.addEventListener("keydown", this._handleTimelineKeyDown)
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1461,7 +1467,7 @@ class _T_M_G_Video_Player {
             break
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1470,7 +1476,7 @@ class _T_M_G_Video_Player {
         document.removeEventListener('keydown', this._handleTimelineKeyDown)
         if(this.videoIntersecting && this.settings.keyShortcuts) this.setKeyEventListeners()
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }            
     }
 
@@ -1483,7 +1489,7 @@ class _T_M_G_Video_Player {
         this.skipVideoTime = this.video.currentTime
         if ((this.video.currentTime < this.video.duration) && this.ui.dom.videoContainer.classList.contains("T_M_G-video-replay")) this.ui.dom.videoContainer.classList.remove("T_M_G-video-replay")
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }            
     }
 
@@ -1519,7 +1525,7 @@ class _T_M_G_Video_Player {
         }            
         notifier.dataset.skip = Math.abs(duration)
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
             
@@ -1530,7 +1536,7 @@ class _T_M_G_Video_Player {
         if (newPlaybackRate > 2) newPlaybackRate = .25
         this.video.playbackRate = newPlaybackRate
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
     
@@ -1539,7 +1545,7 @@ class _T_M_G_Video_Player {
         if (this.ui.dom.speedBtn) this.ui.dom.speedBtn.textContent = `${this.video.playbackRate}x`
         if (this.ui.dom.speedNotifier) this.ui.dom.speedNotifier.textContent = `${this.video.playbackRate}x`  
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
     
@@ -1555,7 +1561,7 @@ class _T_M_G_Video_Player {
             this.ui.dom.speedNotifier.classList.add("T_M_G-video-control-active")
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }    
     }
 
@@ -1566,7 +1572,7 @@ class _T_M_G_Video_Player {
             this.video.playbackRate = 2    
             if (this.wasPaused) this.video.play()
         } catch(e) {
-            console.warn(`TMG silenced a rendering error: `, e)
+            this._handleError(e)
         }
     }
 
@@ -1583,7 +1589,7 @@ class _T_M_G_Video_Player {
                 if (this.wasPaused) this.video.play()
             }, 1000)
         } catch(e) {
-            console.warn(`TMG silenced a rendering error: `, e)
+            this._handleError(e)
         }
     }        
 
@@ -1595,7 +1601,7 @@ class _T_M_G_Video_Player {
         if (this.ui.dom.speedNotifier) this.ui.dom.speedNotifier.dataset.currentTime = tmg.formatDuration(Math.max(this.speedVideoTime, 0))
         this.video.currentTime -= .04
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1604,7 +1610,7 @@ class _T_M_G_Video_Player {
         clearInterval(this.speedIntervalId)
         if(!this.video.paused) this.speedIntervalId = setInterval(this.rewindVideo.bind(this), 20)
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }            
     }
     
@@ -1625,7 +1631,7 @@ class _T_M_G_Video_Player {
             this.ui.dom.speedNotifier.classList.remove("T_M_G-video-control-active")
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }    
     }
 
@@ -1638,7 +1644,7 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainer.classList.toggle("T_M_G-video-captions", isHidden)
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
             
@@ -1647,7 +1653,7 @@ class _T_M_G_Video_Player {
     try {
         this.video.muted = !this.video.muted
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1658,7 +1664,7 @@ class _T_M_G_Video_Player {
         this.volumeActiveRestraint()            
         this.overlayRestraint()
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }
     }
 
@@ -1693,7 +1699,7 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainer.dataset.volumeLevel = volumeLevel
     }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1721,7 +1727,7 @@ class _T_M_G_Video_Player {
                 break
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }
     }
 
@@ -1735,7 +1741,7 @@ class _T_M_G_Video_Player {
             }
         }, 250)
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1744,7 +1750,7 @@ class _T_M_G_Video_Player {
         if (this.volumeActiveRestraintId) clearTimeout(this.volumeActiveRestraintId)
         this.volumeActiveRestraintId = setTimeout(() => this.ui.dom.volumeSlider?.parentElement.classList.remove("T_M_G-video-control-active"), this.overlayRestraintTime)  
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }
     }
 
@@ -1752,7 +1758,7 @@ class _T_M_G_Video_Player {
     try {
         if (this.volumeActiveId) clearTimeout(this.volumeActiveId)
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }            
     }
 
@@ -1763,7 +1769,7 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainer.classList.toggle("T_M_G-video-theater")
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
     
@@ -1776,7 +1782,7 @@ class _T_M_G_Video_Player {
         }    
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1785,19 +1791,15 @@ class _T_M_G_Video_Player {
         if (document.fullscreenElement) {
             if (screen.orientation && screen.orientation.lock && screen.orientation.type.startsWith("portrait")) {  
                 screen.orientation.lock('landscape')
-                .then(() => console.log("Video was changed to fullscreen so TMG locked orientation to landscape"))
-                .catch(error => console.error('TMG failed to lock orientation:', error))
+                .catch(e => this._handleError(e))
             } 
         } else {
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.unlock()
-                console.log("TMG has unlocked the orientation")
-            }
+            if (screen.orientation && screen.orientation.lock)screen.orientation.unlock()
         }     
         this.ui.dom.videoContainer.classList.toggle("T_M_G-video-full-screen", document.fullscreenElement)            
         if (this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player") && this.ui.dom.videoContainer.classList.contains("T_M_G-video-full-screen")) this.ui.dom.videoContainer.classList.remove("T_M_G-video-mini-player")
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }            
     }        
 
@@ -1808,7 +1810,7 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainer.classList.contains("T_M_G-video-picture-in-picture") ? document.exitPictureInPicture() : this.video.requestPictureInPicture()
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     } 
 
@@ -1817,7 +1819,7 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainer.classList.add("T_M_G-video-picture-in-picture")
         this.toggleMiniPlayerMode(false)
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1826,7 +1828,7 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainer.classList.remove("T_M_G-video-picture-in-picture")
         this.toggleMiniPlayerMode()
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }        
 
@@ -1866,7 +1868,7 @@ class _T_M_G_Video_Player {
     }
     }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }
     }    
 
@@ -1876,7 +1878,7 @@ class _T_M_G_Video_Player {
             if (!this.video.paused && !this.concerned) this.togglePlay(false)
             this.concerned = false
         } catch(e) {
-            console.warn(`TMG silenced a rendering error: `, e)
+            this._handleError(e)
         }
     }                
 
@@ -1886,7 +1888,7 @@ class _T_M_G_Video_Player {
             this.ui.dom.videoContainer.removeEventListener("mousedown", this.moveMiniPlayer)
             this.ui.dom.videoContainer.removeEventListener("touchstart", this.moveMiniPlayer, {passive: false})
         } catch(e) {
-            console.warn(`TMG silenced a rendering error: `, e)
+            this._handleError(e)
         }
     }                
 
@@ -1902,7 +1904,7 @@ class _T_M_G_Video_Player {
         }
     }        
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }    
 
@@ -1915,7 +1917,7 @@ class _T_M_G_Video_Player {
             this.ui.dom.videoContainer.removeEventListener("touchmove", this._handleMiniPlayerPosition, {passive: false})
             this.ui.dom.videoContainer.removeEventListener("touchend", this.emptyMiniPlayerListeners, {once: true, passive: false})
         } catch(e) {
-            console.warn(`TMG silenced a rendering error: `, e)
+            this._handleError(e)
         }
     }
 
@@ -1934,7 +1936,7 @@ class _T_M_G_Video_Player {
             this.miniPlayerX = (posX/ww * 100).toFixed() + '%'
             this.miniPlayerY = (posY/wh * 100).toFixed() + '%'
         } catch(e) {
-            console.warn(`TMG silenced a rendering error: `, e)
+            this._handleError(e)
         }
     }    
 
@@ -1951,7 +1953,7 @@ class _T_M_G_Video_Player {
                 this.showVideoOverlay()
         }, 300)
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1969,7 +1971,7 @@ class _T_M_G_Video_Player {
             this.skip(-10, true)
         } else this.toggleFullScreenMode()
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -1992,7 +1994,7 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainer.classList.add("T_M_G-video-overlay")
         this.overlayRestraint()
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
     
@@ -2005,7 +2007,7 @@ class _T_M_G_Video_Player {
                 }, this.overlayRestraintTime)
             }
         } catch(e) {
-            console.warn(`TMG silenced a rendering error: `, e)
+            this._handleError(e)
         }    
     }        
 
@@ -2030,7 +2032,7 @@ class _T_M_G_Video_Player {
             this.speedPosition = x - rect.left >= this.video.offsetWidth * 0.5 ? "right" : "left"
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }   
     
@@ -2047,7 +2049,7 @@ class _T_M_G_Video_Player {
             }
             }
         } catch(e) {
-            console.warn(`TMG silenced a rendering error: `, e)
+            this._handleError(e)
         }
     }
         
@@ -2064,7 +2066,7 @@ class _T_M_G_Video_Player {
             if (this.speedTimeoutId) clearTimeout(this.speedTimeoutId)
             if (this.speedCheck && this.playTriggerCounter < 1) this.slowDown()     
         } catch(e) {
-            console.warn(`TMG silenced a rendering error: `, e)                   
+            this._handleError(e)                   
         }
     }
 
@@ -2123,7 +2125,7 @@ class _T_M_G_Video_Player {
                 break                
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }        
 
@@ -2177,7 +2179,7 @@ class _T_M_G_Video_Player {
                 break
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -2203,7 +2205,7 @@ class _T_M_G_Video_Player {
         }
         document.removeEventListener("keyup", this._handlePlayTriggerUp)
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }    
 
@@ -2214,7 +2216,7 @@ class _T_M_G_Video_Player {
         e.target.classList.add("T_M_G-video-dragging")
         this.dragging = e.target === this.ui.dom.muteBtn ? e.target.parentElement : e.target
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }                
     }
 
@@ -2222,7 +2224,7 @@ class _T_M_G_Video_Player {
     try {
         this.overlayRestraint()
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }                
     }
 
@@ -2237,7 +2239,7 @@ class _T_M_G_Video_Player {
         controllerStructure = controllerStructure.concat(leftSideStructure, ["spacer"], rightSideStructure)
         this.settings.controllerStructure = controllerStructure
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -2247,7 +2249,7 @@ class _T_M_G_Video_Player {
             e.target.classList.add("T_M_G-video-dragover")
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }                
     }
 
@@ -2264,7 +2266,7 @@ class _T_M_G_Video_Player {
             }            
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }                
     }
 
@@ -2275,7 +2277,7 @@ class _T_M_G_Video_Player {
             e.target.classList.remove("T_M_G-video-dragover")
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }            
     }
 
@@ -2285,7 +2287,7 @@ class _T_M_G_Video_Player {
             e.target.classList.remove("T_M_G-video-dragover")
         }
     } catch(e) {
-        console.warn(`TMG silenced a rendering error: `, e)
+        this._handleError(e)
     }        
     }
 
@@ -2591,6 +2593,18 @@ if (typeof window === "undefined") {
                                 }
                                 medium.removeAttribute("data-tmg-media-artwork")
                             }                
+                            if (v.tmgMediaArtist) {
+                                customOptions.media ? customOptions.media.artist = v.tmgMediaArtist : customOptions.media = {
+                                    artist: v.tmgMediaArtist
+                                }
+                                medium.removeAttribute("data-tmg-media-artist")
+                            }
+                            if (v.tmgMediaAlbum) {
+                                customOptions.media ? customOptions.media.album = v.tmgMediaAlbum : customOptions.media = {
+                                    album: v.tmgMediaAulbum
+                                }
+                                medium.removeAttribute("data-tmg-media-album")
+                            }
                             if (v.tmgActivated) {
                                 customOptions.activated = JSON.parse(v.tmgActivated)
                                 medium.removeAttribute("data-tmg-activated")
