@@ -1432,8 +1432,8 @@ class _T_M_G_Video_Player {
         if (percent < previewImgMin) {
             arrowPosition = `${Math.max(percent * rect.width, arrowPositionMin)}px`
         } else if (percent > (1 - previewImgMin)) {
-            arrowPosition = `${Math.min(((this.ui.dom.previewImgContainer.offsetWidth/2 + (percent * rect.width) - this.ui.dom.previewImgContainer.offsetLeft) - arrowDimension), this.ui.dom.previewImgContainer.offsetWidth - arrowPositionMin - 2)}px`
-        } else arrowPosition = '50%'
+            arrowPosition = `${Math.min(((this.ui.dom.previewImgContainer.offsetWidth/2 + (percent * rect.width) - this.ui.dom.previewImgContainer.offsetLeft)), this.ui.dom.previewImgContainer.offsetWidth - arrowPositionMin - 2)}px`
+        } else arrowPosition = "50%"
         this.previewImgArrowPosition = arrowPosition
     } catch(e) {
         this._handleError(e)
