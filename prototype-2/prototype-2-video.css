@@ -1365,6 +1365,13 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
 @media only screen and (orientation: landscape) {
     .T_M_G-video-container.T_M_G-video-full-screen {
         --T_M_G-dbl-click-backdrop-height: 120vh;
+        --T_M_G-dbc-block-offset: 57vh;
+    }
+}
+
+@media only screen and (orientation: landscape) and (max-height: 480px) {
+    .T_M_G-video-container.T_M_G-video-full-screen {
+        --T_M_G-dbl-click-backdrop-height: 120vh;
         --T_M_G-dbc-block-offset: 56vh;
     }
 }
