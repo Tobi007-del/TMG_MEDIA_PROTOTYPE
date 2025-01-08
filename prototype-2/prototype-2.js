@@ -474,8 +474,8 @@ class _T_M_G_Video_Player {
         this._handleEnterPip = this._handleEnterPip.bind(this)
         this._handleLeavePip = this._handleLeavePip.bind(this)
         this._handleTimelineScrubbing = this._handleTimelineScrubbing.bind(this)
-        this._handleTimelineMouseOver = this._handleTimelineMouseOver.bind(this)
-        this._handleTimelineMouseLeave = this._handleTimelineMouseLeave.bind(this)
+        this.showPreviewImages = this.showPreviewImages.bind(this)
+        this.hidePreviewImages = this.hidePreviewImages.bind(this)
         this._handleTimelineUpdate = this._handleTimelineUpdate.bind(this)
         this._handleTimelineFocus = this._handleTimelineFocus.bind(this)
         this._handleTimelineFocus = this._handleTimelineFocus.bind(this)
@@ -1125,9 +1125,10 @@ class _T_M_G_Video_Player {
 
         //timeline contanier event listeners
         this.ui.dom.timelineContainer?.addEventListener("pointerdown", this._handleTimelineScrubbing)
-        this.ui.dom.timelineContainer?.addEventListener("mouseover", this._handleTimelineMouseOver)
+        this.ui.dom.timelineContainer?.addEventListener("mouseover", this.showPreviewImages)
+        this.ui.dom.timelineContainer?.addEventListener("mouseleave", this.hidePreviewImages)
+        this.ui.dom.timelineContainer?.addEventListener("touchend", this.hidePreviewImages)
         this.ui.dom.timelineContainer?.addEventListener("mousemove", this._handleTimelineUpdate)
-        this.ui.dom.timelineContainer?.addEventListener("mouseleave", this._handleTimelineMouseLeave)
         this.ui.dom.timelineContainer?.addEventListener("focus", this._handleTimelineFocus)
         this.ui.dom.timelineContainer?.addEventListener("blur", this._handleTimelineFocus)
 
@@ -1415,12 +1416,12 @@ class _T_M_G_Video_Player {
     }
     }
 
-    _handleTimelineMouseOver() {
+    showPreviewImages() {
         this.ui.dom.timelineContainer.classList.add("T_M_G-video-previewing")
     }
 
-    _handleTimelineMouseLeave() {
-        this.ui.dom.timelineContainer.classList.remove("T_M_G-video-previewing")
+    hidePreviewImages() {
+        setTimeout(() => this.ui.dom.timelineContainer.classList.remove("T_M_G-video-previewing"))
     }
 
     _handleTimelineUpdate({clientX: x}) { 
