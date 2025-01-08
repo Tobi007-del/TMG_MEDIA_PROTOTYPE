@@ -1417,11 +1417,11 @@ class _T_M_G_Video_Player {
     }
 
     showPreviewImages() {
-        this.ui.dom.timelineContainer.classList.add("T_M_G-video-previewing")
+        this.ui.dom.videoContainer.classList.add("T_M_G-video-previewing")
     }
 
     hidePreviewImages() {
-        setTimeout(() => this.ui.dom.timelineContainer.classList.remove("T_M_G-video-previewing"))
+        setTimeout(() => this.ui.dom.videoContainer.classList.remove("T_M_G-video-previewing"))
     }
 
     _handleTimelineUpdate({clientX: x}) { 
