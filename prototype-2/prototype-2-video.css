@@ -1,6 +1,6 @@
-/* putting this here temporarily as the settings interface is still in the development phase */
+/* SETTINGS BTN HIDDEN AS THE SETTINGS INTERFACE IS STILL IN DEVELOPMENT */
 .T_M_G-video-settings-btn {
-    display: none;
+    display: none
 }
 
 /* setting video initial state begins*/
@@ -407,13 +407,13 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     scale: 1.5;
 }
 
-.T_M_G-video-container.T_M_G-video-mini-player.T_M_G-video-overlay:has(.T_M_G-video-timeline-container:hover) {
+.T_M_G-video-container.T_M_G-video-mini-player.T_M_G-video-overlay:has(.T_M_G-video-timeline-container.T_M_G-video-previewing) {
     --T_M_G-curtain-color: transparent;
 }
 
-.T_M_G-video-container.T_M_G-video-mini-player.T_M_G-video-overlay:has(.T_M_G-video-timeline-container:hover) .T_M_G-video-mini-player-expand-btn-wrapper, 
-.T_M_G-video-container.T_M_G-video-mini-player.T_M_G-video-overlay:has(.T_M_G-video-timeline-container:hover) .T_M_G-video-mini-player-cancel-btn-wrapper,
-.T_M_G-video-container.T_M_G-video-overlay:has(.T_M_G-video-timeline-container:hover) .T_M_G-video-overlay-main-controls-wrapper {
+.T_M_G-video-container.T_M_G-video-mini-player.T_M_G-video-overlay:has(.T_M_G-video-timeline-container.T_M_G-video-previewing) .T_M_G-video-mini-player-expand-btn-wrapper, 
+.T_M_G-video-container.T_M_G-video-mini-player.T_M_G-video-overlay:has(.T_M_G-video-timeline-container.T_M_G-video-previewing) .T_M_G-video-mini-player-cancel-btn-wrapper,
+.T_M_G-video-container.T_M_G-video-overlay:has(.T_M_G-video-timeline-container.T_M_G-video-previewing) .T_M_G-video-overlay-main-controls-wrapper {
     display: none;
 }    
 
@@ -1070,22 +1070,22 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     display: block;
 }
 
-.T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-timeline-container:hover .T_M_G-video-preview-img-container {
+.T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-timeline-container.T_M_G-video-previewing .T_M_G-video-preview-img-container {
     display: block;
 }
 
 .T_M_G-video-container.T_M_G-video-scrubbing .T_M_G-video-timeline::before,
-.T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-timeline-container:hover .T_M_G-video-timeline::before {
+.T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-timeline-container.T_M_G-video-previewing .T_M_G-video-timeline::before {
     display: block;
 }
 
 .T_M_G-video-container.T_M_G-video-scrubbing,
-.T_M_G-video-container.T_M_G-video-overlay:has(.T_M_G-video-timeline-container:hover) {
+.T_M_G-video-container.T_M_G-video-overlay:has(.T_M_G-video-timeline-container.T_M_G-video-previewing) {
     --T_M_G-thumb-indicator-scale: 1;
 } 
 
 .T_M_G-video-container.T_M_G-video-scrubbing .T_M_G-video-timeline,
-.T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-timeline-container:hover .T_M_G-video-timeline {
+.T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-timeline-container.T_M_G-video-previewing .T_M_G-video-timeline {
     height: 100%;
 }
 
@@ -1371,7 +1371,6 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
 
 @media only screen and (orientation: landscape) and (max-height: 480px) {
     .T_M_G-video-container.T_M_G-video-full-screen {
-        --T_M_G-dbl-click-backdrop-height: 120vh;
         --T_M_G-dbc-block-offset: 56vh;
     }
 }
@@ -1444,22 +1443,15 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     .T_M_G-video-container .T_M_G-video-overlay-main-controls-wrapper {
         display: flex;
     }
-    .T_M_G-video-timeline {
-        height: calc(var(--T_M_G-controls-size)/6)!important;
+    .T_M_G-video-container.T_M_G-video-scrubbing .T_M_G-video-timeline,
+    .T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-timeline-container.T_M_G-video-previewing .T_M_G-video-timeline {
+        height: calc(var(--T_M_G-controls-size)/6);
     }
-    .T_M_G-video-container.T_M_G-video-mini-player.T_M_G-video-overlay:has(.T_M_G-video-timeline-container:hover) {
-        --T_M_G-curtain-color: var(--T_M_G-background-accent-color);
-    }
-    .T_M_G-video-container.T_M_G-video-mini-player.T_M_G-video-overlay:has(.T_M_G-video-timeline-container:hover) .T_M_G-video-mini-player-expand-btn-wrapper, 
-    .T_M_G-video-container.T_M_G-video-mini-player.T_M_G-video-overlay:has(.T_M_G-video-timeline-container:hover) .T_M_G-video-mini-player-cancel-btn-wrapper,
-    .T_M_G-video-container.T_M_G-video-overlay:has(.T_M_G-video-timeline-container:hover) .T_M_G-video-overlay-main-controls-wrapper {
-        display: flex;
-    }    
     .T_M_G-video-container.T_M_G-video-overlay, 
     .T_M_G-video-container:has(:focus-visible), 
     .T_M_G-video-container.T_M_G-video-picture-in-picture, 
     .T_M_G-video-container.T_M_G-video-scrubbing, 
-    .T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-timeline-container:hover {
+    .T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-timeline-container.T_M_G-video-previewing {
         --T_M_G-thumb-indicator-scale: 1.5;
     } 
     .T_M_G-video-container .T_M_G-video-controls-container .T_M_G-video-preview-img-container {
@@ -1478,7 +1470,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     .T_M_G-video-container .T_M_G-video-preview-img {
         display: none;
     }
-    .T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-timeline-container:hover .T_M_G-video-preview-img-container {
+    .T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-timeline-container.T_M_G-video-previewing .T_M_G-video-preview-img-container {
         display: none;
     }
     .T_M_G-video-container.T_M_G-video-overlay.T_M_G-video-scrubbing .T_M_G-video-controls-container .T_M_G-video-preview-img-container {
@@ -1533,12 +1525,6 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     .T_M_G-video-controls-container, 
     .T_M_G-video-container.T_M_G-video-full-screen .T_M_G-video-controls-container {
         --T_M_G-controls-gap: calc(var(--T_M_G-controls-size)/2);
-    }
-}
-
-@media (max-width: 350px) {
-    .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-picture-in-picture-btn {
-        display: none;
     }
 }
 /* setting video styles ends*/
