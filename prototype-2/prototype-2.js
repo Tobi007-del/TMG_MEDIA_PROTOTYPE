@@ -415,6 +415,8 @@ class _T_M_G_Video_Player {
         //some general variables
         this.CSSCustomPropertiesCache
         this.wasPaused = !this.video.autoplay
+        this.hasOverlay = false
+        this.hadOverlayBeforeBuffering
         this.previousRate = this.video.playbackRate
         this.isScrubbing = false
         this.concerned = false
@@ -614,8 +616,8 @@ class _T_M_G_Video_Player {
         rightSidedControls = spacerIndex > -1 ? controllerStructure.slice(spacerIndex + 1) : null
     
         //breaking HTML into smaller units to use as building blocks
-        const videoOverlayControlsContainerBuild = videoContainer.querySelector(".T_M_G-video-overlay-controls-container"),
-        videoControlsContainerBuild = videoContainer.querySelector(".T_M_G-video-controls-container"),
+        const overlayControlsContainerBuild = videoContainer.querySelector(".T_M_G-video-overlay-controls-container"),
+        controlsContainerBuild = videoContainer.querySelector(".T_M_G-video-controls-container"),
         notifiersContainerBuild = this.settings.status.ui.notifiers || this.initialState ? document.createElement("div") : null,
         overlayMainControlsWrapperBuild = document.createElement("div"),
         controlsWrapperBuild = document.createElement("div"),
@@ -892,26 +894,26 @@ class _T_M_G_Video_Player {
         ` : null
         
         //building and deploying video controls
-        videoOverlayControlsContainerBuild.innerHTML = ``
-        videoControlsContainerBuild.innerHTML = ``
+        overlayControlsContainerBuild.innerHTML = ``
+        controlsContainerBuild.innerHTML = ``
         //builidng and deploying Notifiers HTML
         if (this.settings.status.ui.notifiers || this.initialState) {
             notifiersContainerBuild.classList = "T_M_G-video-notifiers-container"
             notifiersContainerBuild.dataset.currentNotifier = ""
             const notifiersContainerHTML =  ``.concat(playPauseNotifierHTML ?? "", captionsNotifierHTML ?? "", speedNotifierHTML ?? "", theaterNotifierHTML ?? "", fullscreenNotifierHTML ?? "", volumeNotifierHTML ?? "", fwdNotifierHTML ?? "", bwdNotiferHTML ?? "")
             notifiersContainerBuild.innerHTML += notifiersContainerHTML
-            videoOverlayControlsContainerBuild.append(notifiersContainerBuild)
+            overlayControlsContainerBuild.append(notifiersContainerBuild)
         }
     
         //building and deploying overlay general controls
         const overlayControlsHTML = ``.concat(videoBufferHTML ?? '', thumbnailImgHTML ?? '', miniPlayerExpandBtnHTML ?? '', miniPlayerCancelBtnHTML ?? '')
-        videoOverlayControlsContainerBuild.innerHTML += overlayControlsHTML
+        overlayControlsContainerBuild.innerHTML += overlayControlsHTML
     
         //building and deploying overlay main controls wrapper 
         const overlayMainControlsHTML = ``.concat(mainPrevBtnHTML ?? '', mainPlayPauseBtnHTML ?? '', mainNextBtnHTML ?? '')
         overlayMainControlsWrapperBuild.innerHTML += overlayMainControlsHTML
         overlayMainControlsWrapperBuild.classList = "T_M_G-video-overlay-main-controls-wrapper"
-        videoOverlayControlsContainerBuild.append(overlayMainControlsWrapperBuild)
+        overlayControlsContainerBuild.append(overlayMainControlsWrapperBuild)
 
         //building and deploying controls wrapper
         const allControlsHTML = {
@@ -947,9 +949,9 @@ class _T_M_G_Video_Player {
             controlsWrapperBuild.append(rightSidedControlsWrapperBuild)
         }
 
-        videoControlsContainerBuild.innerHTML += timelineHTML ?? ""        
+        controlsContainerBuild.innerHTML += timelineHTML ?? ""        
         controlsWrapperBuild.classList = "T_M_G-video-controls-wrapper"
-        videoControlsContainerBuild.append(controlsWrapperBuild)  
+        controlsContainerBuild.append(controlsWrapperBuild)  
 
         //retreiving elements from the document
         this.retreiveVideoPlayerDOM(videoContainer)
@@ -1299,13 +1301,14 @@ class _T_M_G_Video_Player {
     //Buffering
     _handleBufferStart() {
         this.buffering = true
+        this.hadOverlayBeforeBuffering = this.hasOverlay
         this.showVideoOverlay()
         this.ui.dom.videoContainer.classList.add("T_M_G-video-buffering")
     }
 
     _handleBufferStop() {
         this.buffering = false
-        this.overlayRestraint()
+        this.hadOverlayBeforeBuffering ? this.overlayRestraint() : this.removeOverlay()
         this.ui.dom.videoContainer.classList.remove("T_M_G-video-buffering")
     }
     
@@ -1925,6 +1928,7 @@ class _T_M_G_Video_Player {
         try {
             e.preventDefault()
             this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
+            this.hasOverlay = false
             const x = e.clientX ?? e.changedTouches[0].clientX,
             y = e.clientY ?? e.changedTouches[0].clientY,
             {innerWidth: ww, innerHeight: wh} = window,
@@ -1992,6 +1996,7 @@ class _T_M_G_Video_Player {
     showVideoOverlay() {
     try {
         this.ui.dom.videoContainer.classList.add("T_M_G-video-overlay")
+        this.hasOverlay = true
         this.overlayRestraint()
     } catch(e) {
         this._handleError(e)
@@ -2012,7 +2017,10 @@ class _T_M_G_Video_Player {
     }        
 
     removeOverlay() {
-        if (!this.video.paused && !this.buffering) this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
+        if (!this.video.paused && !this.buffering) {
+            this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
+            this.hasOverlay = false
+        }
     }
 
     _handlePointerDown(e) {
@@ -2434,7 +2442,7 @@ if (typeof window === "undefined") {
     console.warn("Consider moving to a browser environment to use the TMG Media Player")
 } else {
     window.tmg = {
-        //some utility functions that do not need replication
+        //some utilities that do not need replication
         media : document.querySelectorAll("[tmgcontrols]"),
         DEFAULT_VIDEO_BUILD : {
             mediaPlayer: 'TMG',
@@ -2475,7 +2483,6 @@ if (typeof window === "undefined") {
                     expandMiniPlayer : "e",
                     removeMiniPlayer : "r",
                     pip : "i",
-                    pictureInPicture: "i",
                     mute : "m",
                     playbackRate : "s",
                     captions : "c"
@@ -2571,7 +2578,7 @@ if (typeof window === "undefined") {
                         if (!res.ok) throw new Error(`TMG could not find JSON file!. Status: ${res.status}`)
                         return res.json()
                     }).catch(({message: mssg}) => {
-                        console.error(`${mssg} Please provide a valid JSON file`)
+                        console.error(`${mssg} TMG requires a valid JSON file`)
                         fetchedControls = undefined
                     })
                 } else if(v.tmg) {

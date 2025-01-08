@@ -166,15 +166,15 @@ var DragDropTouch;
             var _this = this;
             if (this._shouldHandle(e)) {
                 // raise double-click and prevent zooming
-                if (Date.now() - this._lastClick < DragDropTouch._DBLCLICK) {
-                    if (this._dispatchEvent(e, 'dblclick', e.target)) {
-                        if (e.cancelable) {
-                            e.preventDefault();
-                        }
-                        this._reset();
-                        return;
-                    }
-                }
+                // if (Date.now() - this._lastClick < DragDropTouch._DBLCLICK) {
+                //     if (this._dispatchEvent(e, 'dblclick', e.target)) {
+                //         if (e.cancelable) {
+                //             e.preventDefault();
+                //         }
+                //         this._reset();
+                //         return;
+                //     }
+                // }
                 // clear all variables
                 this._reset();
                 // get nearest draggable element
