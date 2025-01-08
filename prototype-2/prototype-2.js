@@ -2532,7 +2532,7 @@ if (typeof window === "undefined") {
             break
         }
         },
-        //mobile media query
+        //mobile devices media query
         queryMediaMobile : () => {
             return window.matchMedia('(max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape)').matches
         },
