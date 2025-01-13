@@ -369,7 +369,7 @@ class _T_M_G_Video_Player {
                         </button>                            
                     </div>
                     <div class="T_M_G-video-settings-bottom-panel">
-                        Settings Not Available Yet!
+                        No Settings Available Yet!
                     </div>
                 </div>
             </div>            
