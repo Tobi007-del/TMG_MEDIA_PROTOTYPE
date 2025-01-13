@@ -81,12 +81,10 @@ class _T_M_G_Video_Player {
         this.keyOverrideRegex = /(arrow|home|end)/i
         this.settingsView = false
         this.textTrackIndex = 0
+        this.previewVideo = document.createElement("video")
         this.previewCanvas = document.createElement("canvas")
         this.previewContext = this.previewCanvas.getContext("2d")
-        this.previewVideo = document.createElement("video")
         this.previewContext.imageSmoothingEnabled = false
-        this.previewVideo.setAttribute("src", this.video.src)
-        
 
         //Binding methods so they don't lose context of the media player instance
         //Binding Handlers
@@ -831,6 +829,7 @@ class _T_M_G_Video_Player {
     try {
         this._handleVolumeChange()
         this.setBtnStates()
+        this.previewVideo.src = this.video.currentSrc
         if (this.initialState) {
         this.ui.dom.playNotifier.classList.add("T_M_G-video-control-spin")
         this.ui.dom.playNotifier.addEventListener("animationend", () => this.ui.dom.playNotifier.classList.remove("T_M_G-video-control-spin"))
@@ -847,11 +846,11 @@ class _T_M_G_Video_Player {
             this.ui.thumbnailImgContext = this.ui.dom.thumbnailImg.getContext("2d")
             this.ui.previewImgContext.imageSmoothingEnabled = false
             this.ui.thumbnailImgContext.imageSmoothingEnabled = false
-            let dummyImg = document.createAttribute("img")
+            let dummyImg = document.createElement("img")
             dummyImg.src = tmg.altImgSrc
             dummyImg.onload = () => {
-                this.ui.previewImgContext.drawImage(dummyImg.altImgSrc, 0, 0, this.ui.dom.previewImg.width, this.ui.dom.previewImg.height)
-                this.ui.thumbnailImgContext.drawImage(dummyImg.altImgSrc, 0, 0, this.ui.dom.thumbnailImg.width, this.ui.dom.thumbnailImg.height)
+                this.ui.previewImgContext.drawImage(dummyImg, 0, 0, this.ui.dom.previewImg.width, this.ui.dom.previewImg.height)
+                this.ui.thumbnailImgContext.drawImage(dummyImg, 0, 0, this.ui.dom.thumbnailImg.width, this.ui.dom.thumbnailImg.height)
                 dummyImg = null
             }
         }
