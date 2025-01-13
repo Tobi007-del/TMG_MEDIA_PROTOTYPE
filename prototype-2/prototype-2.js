@@ -2376,7 +2376,7 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
                 leftSidedControls: this.#build.settings.controllerStructure.indexOf("spacer") > -1 ? this.#build.settings.controllerStructure.slice(0, this.#build.settings.controllerStructure.indexOf("spacer")).length > 0 : true,
                 rightSidedControls: this.#build.settings.controllerStructure.indexOf("spacer") > -1 ? this.#build.settings.controllerStructure.slice(this.#build.settings.controllerStructure.indexOf("spacer") + 1).length > 0 : false,
                 //draggable controls would be in the UI if there is a controller structure and if specified in the beta features and if override is allowed
-                draggableControls: !!(this.#build.controllerStructure && this.#build.settings.status.beta.draggableControls && this.#build.settings.status.allowOverride.controllerStructure)
+                draggableControls: !!(this.#build.settings.controllerStructure && this.#build.settings.status.beta.draggableControls && this.#build.settings.status.allowOverride.controllerStructure)
             }
             this.#build.settings.status.modes = {
                 fullScreen: this.#build.settings.modes.includes("fullScreen") && !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled),

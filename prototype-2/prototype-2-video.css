@@ -290,6 +290,7 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     padding-top: calc(--T_M_G-video-settings-content-padding);
     justify-content: center;
     align-items: center;
+    text-align: center;
     font-size: calc(var(--T_M_G-video-current-controls-size));
     flex-grow: 1;
     color: var(--T_M_G-video-lighter-brand-color);
