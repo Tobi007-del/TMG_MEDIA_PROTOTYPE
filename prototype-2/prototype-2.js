@@ -2093,7 +2093,7 @@ class _T_M_G_Video_Player {
                 }
                 break
             case this.settings.keyShortcuts["settings"]:
-                this.toggleSettingsView() 
+                if (!this.ui.dom.videoContainer.classList.contains("T_M_G-video-picture-in-picture")) this.toggleSettingsView() 
             break
         }
     } catch(e) {

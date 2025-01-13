@@ -820,7 +820,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
 }
 
 .T_M_G-video-container.T_M_G-video-picture-in-picture .T_M_G-video-captions-btn,
-.T_M_G-video-container.T_M_G-video-picture-in-picture .T_M_G-video-full-screen-btn,
+.T_M_G-video-container.T_M_G-video-picture-in-picture .T_M_G-video-settings-btn,
 .T_M_G-video-container.T_M_G-video-picture-in-picture .T_M_G-video-notifiers-container,
 .T_M_G-video-container.T_M_G-video-picture-in-picture video::-webkit-media-text-track-container {
     display: none;
