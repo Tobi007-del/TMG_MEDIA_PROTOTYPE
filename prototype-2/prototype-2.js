@@ -1938,9 +1938,9 @@ class _T_M_G_Video_Player {
             }
             this.speedPointerCheck = true
             const x = e.clientX ?? e.changedTouches[0].clientX
-            this.speedTimeoutId = setTimeout(this.speedUp.bind(this), this.speedUpThreshold, x)
-            const rect = this.video.getBoundingClientRect()
+	    const rect = this.video.getBoundingClientRect()
             this.speedPosition = x - rect.left >= this.video.offsetWidth * 0.5 ? "right" : "left"
+            this.speedTimeoutId = setTimeout(this.speedUp.bind(this), this.speedUpThreshold, this.speedPosition)
         }
     } catch(e) {
         this._handleError(e)
