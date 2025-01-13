@@ -22,15 +22,227 @@
         }
     </style>
     <script src="prototype-2.js" defer></script>
+    <link rel="stylesheet" href="prototype-2-video.css">
 </head>
 <body>
     <div class="container">
-        <video tmgcontrols data-tmg-media-title="Justice League Teaser" data-tmg-media-artwork="../assets/justice-league-b.jpeg" data-tmg-media-artist="TMG MEDIA PROTOTYPE" data-tmg-preview-images-address="../assets/previewImgs/preview$.jpg" data-tmg-preview-images-fps="10" data-tmg-progress-bar="false" data-tmg-beta="true" muted src="../assets/justice_league_preview.mp4" type="video/mp4">
+        <video tmgcontrols data-tmg-media-title="Justice League Teaser" data-tmg-media-artwork="../assets/justice-league-b.jpeg" data-tmg-media-artist="TMG MEDIA PROTOTYPE 2" data-tmg-preview-images-address="../assets/previewImgs/preview$.jpg" data-tmg-preview-images-fps="10" muted src="../assets/justice_league_preview.mp4" type="video/mp4">
         </video> 
     </div>
     <!-- <div class="container">
         <video tmgcontrols data-tmg="tmg.json" src="../assets/justice_league_preview.mp4" type="video/mp4">
         </video> 
+    </div> -->
+
+    <!-- html build sample used during build process-->
+    <!-- <div class="container">
+        <div class="T_M_G-video-container T_M_G-video-overlay" data-timeline-position="bottom">
+            <div class="T_M_G-video-container-content-wrapper">
+                <div class="T_M_G-video-container-content">
+                    <div class="T_M_G-video-overlay-controls-container">
+                    <div class="T_M_G-video-notifiers-container" data-current-notifier="">
+                        <div class="T_M_G-video-notifiers T_M_G-video-play-notifier">
+                            <svg class="T_M_G-video-play-notifier-icon" data-tooltip-text="Play(k)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                            </svg>
+                        </div>
+                        <div class="T_M_G-video-notifiers T_M_G-video-pause-notifier">
+                            <svg class="T_M_G-video-pause-notifier-icon" data-tooltip-text="Pause(k)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z"></path>
+                            </svg>
+                        </div>    
+                        <div class="T_M_G-video-notifiers T_M_G-video-captions-notifier">
+                            <svg data-tooltip-text="Closed Captions(c)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z"></path>
+                            </svg>
+                        </div>
+                        <div class="T_M_G-video-notifiers T_M_G-video-speed-notifier"></div>
+                        <div class="T_M_G-video-notifiers T_M_G-video-theater-notifier">
+                            <svg class="T_M_G-video-tall" data-tooltip-text="Theater Mode(t)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"></path>
+                            </svg>
+                            <svg class="T_M_G-video-wide" data-tooltip-text="Normal Mode(t)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M19 7H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 8H5V9h14v6z"></path>
+                            </svg>
+                        </div>
+                        <div class="T_M_G-video-notifiers T_M_G-video-full-screen-notifier">
+                            <svg class="T_M_G-video-open" data-tooltip-text="Enter Full Screen(f)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"></path>
+                            </svg>
+                            <svg class="T_M_G-video-close" data-tooltip-text="Leave Full Screen(f)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"></path>
+                            </svg>
+                        </div>      
+                        <div class="T_M_G-video-notifiers T_M_G-video-volume-notifier-content" data-volume="100"></div>
+                        <div class="T_M_G-video-notifiers T_M_G-video-volume-up-notifier">
+                            <svg class="T_M_G-video-volume-up-notifier-icon" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"></path>
+                            </svg>
+                        </div>
+                        <div class="T_M_G-video-notifiers T_M_G-video-volume-down-notifier">
+                            <svg class="T_M_G-video-volume-down-notifier-icon" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z"></path>
+                            </svg>
+                        </div>
+                        <div class="T_M_G-video-notifiers T_M_G-video-volume-muted-notifier">
+                            <svg class="T_M_G-video-volume-muted-notifier-icon" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z"></path>
+                            </svg>
+                        </div>
+                        <div class="T_M_G-video-notifiers T_M_G-video-fwd-notifier">
+                            <svg preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                            </svg>
+                            <svg preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                            </svg>
+                            <svg preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                            </svg>                
+                        </div>
+                        <div class="T_M_G-video-notifiers T_M_G-video-bwd-notifier">
+                            <svg preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                            </svg>
+                            <svg preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                            </svg>
+                            <svg preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                            </svg>                
+                        </div>    
+                    </div>
+                    <div class="T_M_G-video-buffer"></div>
+                    <canvas class="T_M_G-video-thumbnail-img"></canvas>
+                    <div class="T_M_G-video-mini-player-expand-btn-wrapper">
+                        <button type="button" class="T_M_G-video-mini-player-expand-btn" title="Expand mini-player(e)">
+                            <svg class="T_M_G-video-mini-player-expand-icon" viewBox="0 -960 960 960" data-tooltip-text="Expand(e)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet">
+                                <path d="M120-120v-320h80v184l504-504H520v-80h320v320h-80v-184L256-200h184v80H120Z"></path>
+                            </svg>
+                        </button>
+                    </div>    
+                    <div class="T_M_G-video-mini-player-cancel-btn-wrapper">
+                        <button type="button" class="T_M_G-video-mini-player-cancel-btn" title="Remove Mini-player(r)">
+                            <svg class="T_M_G-video-mini-player-cancel-icon" viewBox="0 -960 960 960" data-tooltip-text="Remove(r)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet">
+                                <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"></path>
+                            </svg>
+                        </button>
+                    </div>    
+                    <div class="T_M_G-video-overlay-main-controls-wrapper">
+                        <button type="button" class="T_M_G-video-main-play-pause-btn" title="Play/Pause(p,l,a,y)">
+                            <svg class="T_M_G-video-play-icon" data-tooltip-text="Play(k)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                            </svg>
+                            <svg class="T_M_G-video-pause-icon" data-tooltip-text="Pause(k)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z"></path>
+                            </svg>
+                            <svg class="T_M_G-video-replay-icon" viewBox="0 -960 960 960" data-tooltip-text="Replay(shift + r)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet">
+                                <path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"></path>
+                            </svg> 
+                        </button>            
+                    </div>
+                    </div>
+                    <div class="T_M_G-video-controls-container">
+                    <div class="T_M_G-video-timeline-container" title="'>' - 5s &amp; Shift + '>' - 10s" tabindex="0" data-control-id="timeline">
+                        <div class="T_M_G-video-timeline">
+                            <div class="T_M_G-video-loaded-timeline"></div>
+                            <div class="T_M_G-video-preview-img-container" data-preview-time="0:56">
+                                <canvas class="T_M_G-video-preview-img"></canvas>
+                            </div>
+                            <div class="T_M_G-video-thumb-indicator"></div>
+                        </div>
+                    </div>
+                    <div class="T_M_G-video-controls-wrapper">
+                        <div class="T_M_G-video-left-side-controls-wrapper" data-dropzone="true">
+                            <button type="button" class="T_M_G-video-play-pause-btn" title="Play/Pause(p,l,a,y)" data-draggable-control="true" data-control-id="playPause" draggable="true">
+                                <svg class="T_M_G-video-play-icon" data-tooltip-text="Play(p,l,a,y)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                    <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"></path>
+                                </svg>
+                                <svg class="T_M_G-video-pause-icon" data-tooltip-text="Pause(p,l,a,y)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                    <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z"></path>
+                                </svg>
+                                <svg class="T_M_G-video-replay-icon" viewBox="0 -960 960 960" data-tooltip-text="Replay(shift + r)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet">
+                                    <path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"></path>
+                                </svg> 
+                            </button>            
+                            <div class="T_M_G-video-volume-container T_M_G-video-control-active" data-control-id="volume">
+                                <button type="button" class="T_M_G-video-mute-btn" title="Toggle Volume(m)" data-draggable-control="true" draggable="true">
+                                    <svg class="T_M_G-video-volume-high-icon" data-tooltip-text="High Volume" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                        <path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"></path>
+                                    </svg>
+                                    <svg class="T_M_G-video-volume-low-icon" data-tooltip-text="Low Volume" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                        <path fill="currentColor" d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z"></path>
+                                    </svg>
+                                    <svg class="T_M_G-video-volume-muted-icon" data-tooltip-text="Volume Muted" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                        <path fill="currentColor" d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z"></path>
+                                    </svg>
+                                </button>
+                                <input class="T_M_G-video-volume-slider" type="range" min="0" max="100" step="any" value="0" title="Adjust Volume - Vertical arrows" data-volume="0">
+                            </div>
+                            <div class="T_M_G-video-duration-container" data-draggable-control="true" data-control-id="duration" draggable="true">
+                                <div class="T_M_G-video-current-time">-:--</div>
+                                /
+                                <div class="T_M_G-video-total-time">-:--</div>
+                            </div>    
+                        </div>
+                        <div class="T_M_G-video-right-side-controls-wrapper" data-dropzone="true">
+                            <button type="button" class="T_M_G-video-playback-rate-btn T_M_G-video-wide-btn" title="Playback Rate(s)" data-draggable-control="true" data-control-id="playbackRate" draggable="true">1x</button>
+                            <button type="button" class="T_M_G-video-captions-btn" title="Toggle Captions/Subtitles(c)" data-draggable-control="true" data-control-id="captions" draggable="true">
+                                <svg data-tooltip-text="Captions/Subtitles(c)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                    <path fill="currentColor" d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z" />
+                                </svg>
+                            </button>        
+                            <button type="button" class="T_M_G-video-settings-btn" title="Toggle Settings" data-draggable-control="true" data-control-id="settings" draggable="true">
+                                <svg class="T_M_G-video-settings-icon" viewBox="0 -960 960 960" data-tooltip-text="Settings(s)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet">
+                                    <path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"></path>
+                                </svg>
+                            </button>        
+                            <button type="button" class="T_M_G-video-picture-in-picture-btn" title="Toggle Picture-in-Picture(i)" data-draggable-control="true" data-control-id="pictureInPicture" draggable="true">
+                                <svg data-tooltip-text="Picture-in-Picture(i)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                    <path fill="currentColor" d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-10-7h9v6h-9z"></path>
+                                </svg>
+                            </button>    
+                            <button type="button" class="T_M_G-video-theater-btn" title="Toggle Theater Mode(t)" data-draggable-control="true" data-control-id="theater" draggable="true">
+                                <svg class="T_M_G-video-tall" data-tooltip-text="Theater Mode(t)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                    <path fill="currentColor" d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"></path>
+                                </svg>
+                                 <svg class="T_M_G-video-wide" data-tooltip-text="Normal Mode(t)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                    <path fill="currentColor" d="M19 7H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 8H5V9h14v6z"></path>
+                                </svg>
+                            </button>
+                            <button type="button" class="T_M_G-video-full-screen-btn" title="Toggle Full Screen(f)" data-draggable-control="true" data-control-id="fullScreen" draggable="true">
+                                <svg class="T_M_G-video-open" data-tooltip-text="Enter Full Screen(f)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                    <path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"></path>
+                                </svg>
+                                <svg class="T_M_G-video-close" data-tooltip-text="Leave Full Screen(f)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                                    <path fill="currentColor" d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"></path>
+                                </svg>
+                            </button>    
+                        </div>
+                    </div>
+                    </div>
+                    <video tmgcontrols data-tmg-media-title="Justice League Teaser" data-tmg-media-artwork="../assets/justice-league-b.jpeg" data-tmg-media-artist="TMG MEDIA PROTOTYPE" data-tmg-autocaptions="true" autoplay muted src="/TMG_MEDIA_PROTOTYPE/assets/justice_league_preview.mp4" type="video/mp4">
+                    </video>  
+                </div>
+                <div class="T_M_G-video-settings">
+                    <div class="T_M_G-video-settings-content">
+                        <div class="T_M_G-video-settings-top-panel">
+                            <button type="button" title="Close Settings" class="T_M_G-video-settings-close-btn">
+                                <span>
+                                    <svg class="T_M_G-video-settings-close-btn-icon">
+                                        <path fill="currentColor" d="M1.307,5.988 L6.616,1.343 C7.027,0.933 7.507,0.864 7.918,1.275 L7.918,4.407 C8.014,4.406 8.098,4.406 8.147,4.406 C13.163,4.406 16.885,7.969 16.885,12.816 C16.885,14.504 16.111,13.889 15.788,13.3 C14.266,10.52 11.591,8.623 8.107,8.623 C8.066,8.623 7.996,8.624 7.917,8.624 L7.917,11.689 C7.506,12.099 6.976,12.05 6.615,11.757 L1.306,7.474 C0.897,7.064 0.897,6.399 1.307,5.988 L1.307,5.988 Z"></path>
+                                    </svg>
+                                </span>
+                                <span>Close Settings</span>
+                            </button>                            
+                        </div>
+                        <div class="T_M_G-video-settings-bottom-panel">
+                            Settings Not Available Yet!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div> -->
 </body>
 </html>
