@@ -1786,7 +1786,7 @@ class _T_M_G_Video_Player {
     removeMiniPlayer() {
         try {
             this.cleanUpMiniPlayer()
-            if (!this.video.paused && !this.concerned) this.togglePlay(false)
+            if (!this.video.paused && !this.concerned && !this.ui.dom.videoContainer.classList.contains("T_M_G-video-picture-in-picture")) this.togglePlay(false)
             this.concerned = false
         } catch(e) {
             this._handleError(e)
