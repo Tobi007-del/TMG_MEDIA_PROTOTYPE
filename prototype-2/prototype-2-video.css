@@ -196,6 +196,7 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     max-height: 80lvh;
     border-radius: var(--T_M_G-video-border-radius);
     perspective: 1000px;
+    margin: auto;
 }
 
 .T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-container-content-wrapper {
