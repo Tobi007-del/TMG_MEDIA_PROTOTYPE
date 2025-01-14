@@ -133,7 +133,6 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     --T_M_G-video-background-color: black;
     --T_M_G-video-curtain-color: rgb(from var(--T_M_G-video-background-color) r g b/.5);
     --T_M_G-video-current-curtain-color: transparent;
-    --T_M_G-video-settings-background-color: rgba(0,0,0,.75);
     --T_M_G-video-loader-color: var(--T_M_G-video-brand-color);
     --T_M_G-video-loader-base-color: var(--T_M_G-video-theme-inverse-accent-color);
     --T_M_G-video-main-timeline-background: linear-gradient(to right, var(--T_M_G-video-brand-color) 80%, var(--T_M_G-video-lighter-brand-color));
@@ -160,7 +159,7 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     --T_M_G-video-icons-color: var(--T_M_G-video-theme-color);
     --T_M_G-video-icons-hover-color: var(--T_M_G-video-icons-color);
     --T_M_G-video-controls-color: var(--T_M_G-video-icons-color);
-    --T_M_G-video-current-controls-color: var(--T_M_G-video-controls-color);
+    --T_M_G-video-current-controls-color: var(--T_M_G-video-icons-color);
     --T_M_G-video-controls-hover-color: var(--T_M_G-video-current-controls-color);
     --T_M_G-video-controls-disabled-color: grey;
     --T_M_G-video-controls-background: transparent;
@@ -186,7 +185,8 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
 
 /* settings variables */
 .T_M_G-video-container {
-    --T_M_G-video-settings-content-padding: calc(var(--T_M_G-video-current-unit)/1.75)
+    --T_M_G-video-settings-content-padding: calc(var(--T_M_G-video-current-unit)/1.75);
+    --T_M_G-video-settings-background-color: rgba(0,0,0,.75);
 }
 
 .T_M_G-video-container {
@@ -282,7 +282,7 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
 .T_M_G-video-settings-close-btn {
     display: flex;
     align-items: center;
-    gap: calc(var(--T_M_G-video-current-unit)/6);
+    gap: calc(var(--T_M_G-video-current-unit)/7.5);
     height: calc(var(--T_M_G-video-current-unit)/1.15);
     font-size: calc(var(--T_M_G-video-current-unit)/1.25);
     position: relative;
@@ -291,7 +291,7 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
 .T_M_G-video-settings-close-btn-icon {
     max-width: var(--T_M_G-video-current-unit);
     position: absolute;
-    top: 12.5%;
+    top: 15%;
 }
 
 .T_M_G-video-settings-close-btn span:last-child {
@@ -783,7 +783,7 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     transition: fill var(--T_M_G-video-transition-time) ease;
 }
 
-.T_M_G-video-container-content div:hover {
+.T_M_G-video-container-content button:hover {
     --T_M_G-video-current-controls-color: var(--T_M_G-video-controls-hover-color);
 }
 
