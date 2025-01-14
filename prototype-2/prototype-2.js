@@ -618,7 +618,7 @@ class _T_M_G_Video_Player {
         durationHTML = this.settings.status.ui.duration ?
         `
                 <div class="T_M_G-video-duration-container" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="duration">
-                    <div class="T_M_G-video-current-time">-:--</div>
+                    <div class="T_M_G-video-current-time">0:00</div>
                     /
                     <div class="T_M_G-video-total-time">-:--</div>
                 </div>    
@@ -827,6 +827,7 @@ class _T_M_G_Video_Player {
 
     setInitialStates() {
     try {
+        this.showVideoOverlay()
         this._handleVolumeChange()
         this.setBtnStates()
         this.previewVideo.src = this.video.currentSrc
