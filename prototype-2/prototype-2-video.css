@@ -308,11 +308,6 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     color: var(--T_M_G-video-lighter-brand-color);
 }
 
-.T_M_G-video-container:not(.T_M_G-video-full-screen, .T_M_G-video-theater, .T_M_G-video-mini-player) {
-    left: 50%;
-    translate: -50%;
-}
-
 .T_M_G-video-container *,
 .T_M_G-video-container *::after, 
 .T_M_G-video-container *::before {
