@@ -909,7 +909,7 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
 }
 
 .T_M_G-video-buffer {
-    /* display: none; */
+    display: none;
     position: relative;
     pointer-events: none;
     height: var(--T_M_G-video-current-loader-size); 
