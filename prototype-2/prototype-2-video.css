@@ -212,7 +212,7 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     width: 90dvw;
     max-width: 700px;
     max-height: 80lvh;
-    min-height: 250px;
+    min-height: 215px;
     border-radius: var(--T_M_G-video-border-radius);
     margin: auto;
 }
@@ -439,9 +439,13 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     --T_M_G-video-current-controls-color: var(--T_M_G-video-controls-disabled-color)!important;
 }
 
-.T_M_G-video-container img {
+.T_M_G-video-container:has(img) img {
     color: transparent!important;
-    background: center/cover no-repeat url('/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png'), var(--T_M_G-video-background)!important;
+    background: center/cover no-repeat url('/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png'), var(--T_M_G-video-background);
+    min-width: unset;
+    min-height: unset;
+    max-width: unset;
+    max-height: unset;
 }
 
 :where(.T_M_G-video-container button) {
