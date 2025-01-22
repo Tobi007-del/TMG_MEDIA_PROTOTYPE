@@ -1580,15 +1580,16 @@ class _T_M_G_Video_Player {
             navigator.mediaSession.setActionHandler('pause', () => this.togglePlay(false))
             navigator.mediaSession.setActionHandler("seekbackward", () => this.skip(-this.skipTime))
             navigator.mediaSession.setActionHandler("seekforward", () => this.skip(this.skipTime))
-            if (this.#playlist) {
-            navigator.mediaSession.setActionHandler("previoustrack", () => this.previousVideo())
-            navigator.mediaSession.setActionHandler("nexttrack", () => this.nextVideo())
-            navigator.mediaSession.playbackState = this.playbackState
-            } else {
             navigator.mediaSession.setActionHandler("previoustrack", null)
             navigator.mediaSession.setActionHandler("nexttrack", null)
-            }
-        }            
+            if (this.#playlist) {
+            if (this.currentPlaylistIndex > 0)
+                navigator.mediaSession.setActionHandler("previoustrack", () => this.previousVideo())
+            if (this.currentPlaylistIndex < this.#playlist?.length - 1)
+                navigator.mediaSession.setActionHandler("nexttrack", () => this.nextVideo())
+            }            
+            navigator.mediaSession.playbackState = this.playbackState
+        }
     } catch(e) {
         this._log(e, "error", "swallow")
     }
