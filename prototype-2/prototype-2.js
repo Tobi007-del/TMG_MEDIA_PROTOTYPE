@@ -245,14 +245,17 @@ class _T_M_G_Video_Player {
             })
         }, {root: null, rootMargin: '0px', threshold: 0})           
 
+        //the code block below is used during build process
+        const videoContainer = document.querySelector(".build.container >  .T_M_G-video-container")
+        if (videoContainer) {
+        this.initCSSVariablesManager(videoContainer)
+        this.retrieveVideoPlayerDOM(videoContainer)
+        this.initializeVideoPlayer()
+        return
+        }
+
         //building the Video Player interface
         this.buildVideoPlayerInterface()
-
-        //the commented code below is used during build process
-        // const videoContainer = document.querySelector(".T_M_G-video-container")
-        // this.initCSSVariablesManager(videoContainer)
-        // this.retrieveVideoPlayerDOM(videoContainer)
-        // this.initializeVideoPlayer()
     } catch(e) {
         this._log(e, "error", "swallow")
     }                        
@@ -447,40 +450,25 @@ class _T_M_G_Video_Player {
                         <span class="T_M_G-video-picture-in-picture-active-icon-wrapper">
                             <svg class="T_M_G-video-picture-in-picture-active-icon" viewBox="0 0 73 73" data-no-resize="true">
                                 <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-                                    <g transform="translate(2.000000, 2.000000)" fill="#FFFFFF" fill-rule="nonzero"
-                                        stroke="#3E3D3D" stroke-width="2">
-                                        <rect x="-1" y="-1" width="71" height="71" rx="14">
-                                        </rect>
+                                    <g transform="translate(2.000000, 2.000000)" fill-rule="nonzero" stroke="#3E3D3D" stroke-width="2" fill="currentColor" class="T_M_G-video-pip-background">
+                                        <rect x="-1" y="-1" width="71" height="71" rx="14"></rect>
                                     </g>
                                     <g transform="translate(15.000000, 15.000000)" fill-rule="nonzero">
-                                        <g>
-                                            <polygon fill="#FF493B" points="0 0 0 36 36 36 36 0">
-                                            </polygon>
-                                            <rect fill="#DEECF1" x="4.2890625" y="4.2890625" width="27.421875"
-                                                height="13.2679687">
-                                            </rect>
-                                            <g transform="translate(4.289063, 27.492187)" fill="#5A5A5A">
-                                                <rect x="0" y="0" width="3.1640625" height="2.109375">                    
-                                                </rect>
-                                                <rect x="7.3828125" y="0" width="20.0390625" height="2.109375">                    
-                                                </rect>
-                                            </g>
-                                            <circle fill="#DEECF1" cx="9.5625" cy="28.546875" r="3.1640625">                    
-                                            </circle>
-                                            <polygon fill="#5A5A5A"
-                                                points="31.7109375 17.5569609 31.7109375 23.2734375 4.2890625 23.2734375 4.2890625 17.5569609 13.78125 8.06477344 20.109375 14.3928984 24.328125 10.1741484">                    
-                                            </polygon>
+                                    <g>
+                                        <polygon class="T_M_G-video-pip-content-background" fill="#FF493B" points="0 0 0 36 36 36 36 0"></polygon>
+                                        <rect class="T_M_G-video-pip-content-backdrop" fill="#DEECF1" x="4.2890625" y="4.2890625" width="27.421875" height="13.2679687"></rect>
+                                        <g transform="translate(4.289063, 27.492187)" fill="#5A5A5A">
+                                            <rect x="0" y="0" width="3.1640625" height="2.109375" class="T_M_G-video-pip-timeline-progress"></rect>
+                                            <rect x="7.3828125" y="0" width="20.0390625" height="2.109375" class="T_M_G-video-pip-timeline-base"></rect>
                                         </g>
-                                        <g transform="translate(21.000000, 26.000000)">
-                                            <polygon fill="#5A5A5A" points="0 0 0 17.7727273 23 17.7727273 23 0">
-                                            </polygon>
-                                            <rect fill="#DEECF1" x="2.74023438" y="2.74023438" width="17.5195312"
-                                                height="8.47675781">                    
-                                            </rect>
-                                            <polygon fill="#FF493B"
-                                                points="20.2597656 11.2169473 20.2597656 14.8691406 2.74023438 14.8691406 2.74023438 11.2169473 8.8046875 5.15249414 12.8476562 9.19546289 15.5429687 6.50015039">                    
-                                            </polygon>
-                                        </g>
+                                        <circle class="T_M_G-video-pip-thumb-indicator" fill="#DEECF1" cx="9.5625" cy="28.546875" r="3.1640625"></circle>
+                                        <polygon fill="#5A5A5A" class="T_M_G-video-pip-content" points="31.7109375 17.5569609 31.7109375 23.2734375 4.2890625 23.2734375 4.2890625 17.5569609 13.78125 8.06477344 20.109375 14.3928984 24.328125 10.1741484"></polygon>
+                                    </g>
+                                    <g transform="translate(21.000000, 26.000000)">
+                                        <polygon fill="#FF493B" class="T_M_G-video-pip-content-background" points="0 0 0 17.7727273 23 17.7727273 23 0"></polygon>
+                                        <rect fill="#DEECF1" class="T_M_G-video-pip-content-backdrop" x="2.74023438" y="2.74023438" width="17.5195312" height="8.47675781"></rect>
+                                        <polygon fill="#5A5A5A" class="T_M_G-video-pip-content"points="20.2597656 11.2169473 20.2597656 14.8691406 2.74023438 14.8691406 2.74023438 11.2169473 8.8046875 5.15249414 12.8476562 9.19546289 15.5429687 6.50015039"></polygon>
+                                    </g>
                                     </g>
                                 </g>
                             </svg>
@@ -523,7 +511,7 @@ class _T_M_G_Video_Player {
         `
             <div class="T_M_G-video-notifiers T_M_G-video-captions-notifier">
                 <svg data-tooltip-text="Closed Captions(c)" data-tooltip-position="top">
-                    <path fill="currentColor" d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z" />
+                    <path fill="currentColor" transform="scale(0.5)" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" />
                 </svg>
             </div>
         ` : null,
@@ -535,21 +523,27 @@ class _T_M_G_Video_Player {
         `
             <div class="T_M_G-video-notifiers T_M_G-video-theater-notifier">
                 <svg class="T_M_G-video-tall" data-tooltip-text="Theater Mode(t)" data-tooltip-position="top">
-                    <path fill="currentColor" d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"/>
+                    <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M23 7C23 5.34315 21.6569 4 20 4H4C2.34315 4 1 5.34315 1 7V17C1 18.6569 2.34315 20 4 20H20C21.6569 20 23 18.6569 23 17V7ZM21 7C21 6.44772 20.5523 6 20 6H4C3.44772 6 3 6.44771 3 7V17C3 17.5523 3.44772 18 4 18H20C20.5523 18 21 17.5523 21 17V7Z"/>
                 </svg>
                 <svg class="T_M_G-video-wide" data-tooltip-text="Normal Mode(t)" data-tooltip-position="top">
-                    <path fill="currentColor" d="M19 7H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 8H5V9h14v6z"/>
+                    <path fill="currentColor" d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"></path>
                 </svg>
             </div>
         ` : null,
         fullscreenNotifierHTML = this.settings.status.ui.notifiers ?
         `
             <div class="T_M_G-video-notifiers T_M_G-video-full-screen-notifier">
-                <svg class="T_M_G-video-open" data-tooltip-text="Enter Full Screen(f)" data-tooltip-position="top">
-                    <path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                <svg class="T_M_G-video-open" data-tooltip-text="Enter Full Screen(f)" data-tooltip-position="top" transform="scale(.85)">
+                    <path d="M4 1.5C2.61929 1.5 1.5 2.61929 1.5 4V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H3.5C4.05228 9.5 4.5 9.05228 4.5 8.5V4.5H8.5C9.05228 4.5 9.5 4.05228 9.5 3.5V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H4Z" fill="currentColor" />
+                    <path d="M20 1.5C21.3807 1.5 22.5 2.61929 22.5 4V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H20.5C19.9477 9.5 19.5 9.05228 19.5 8.5V4.5H15.5C14.9477 4.5 14.5 4.05228 14.5 3.5V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H20Z" fill="currentColor" />
+                    <path d="M20 22.5C21.3807 22.5 22.5 21.3807 22.5 20V15.5C22.5 14.9477 22.0523 14.5 21.5 14.5H20.5C19.9477 14.5 19.5 14.9477 19.5 15.5V19.5H15.5C14.9477 19.5 14.5 19.9477 14.5 20.5V21.5C14.5 22.0523 14.9477 22.5 15.5 22.5H20Z" fill="currentColor" />
+                    <path d="M1.5 20C1.5 21.3807 2.61929 22.5 4 22.5H8.5C9.05228 22.5 9.5 22.0523 9.5 21.5V20.5C9.5 19.9477 9.05228 19.5 8.5 19.5H4.5V15.5C4.5 14.9477 4.05228 14.5 3.5 14.5H2.5C1.94772 14.5 1.5 14.9477 1.5 15.5V20Z" fill="currentColor" />
                 </svg>
-                <svg class="T_M_G-video-close" data-tooltip-text="Leave Full Screen(f)" data-tooltip-position="top">
-                    <path fill="currentColor" d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+                <svg class="T_M_G-video-close" data-tooltip-text="Leave Full Screen(f)" data-tooltip-position="top" transform="scale(.85)">
+                    <path d="M7 9.5C8.38071 9.5 9.5 8.38071 9.5 7V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H7.5C6.94772 1.5 6.5 1.94772 6.5 2.5V6.5H2.5C1.94772 6.5 1.5 6.94772 1.5 7.5V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H7Z" fill="currentColor" />
+                    <path d="M17 9.5C15.6193 9.5 14.5 8.38071 14.5 7V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H16.5C17.0523 1.5 17.5 1.94772 17.5 2.5V6.5H21.5C22.0523 6.5 22.5 6.94772 22.5 7.5V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H17Z" fill="currentColor" />
+                    <path d="M17 14.5C15.6193 14.5 14.5 15.6193 14.5 17V21.5C14.5 22.0523 14.9477 22.5 15.5 22.5H16.5C17.0523 22.5 17.5 22.0523 17.5 21.5V17.5H21.5C22.0523 17.5 22.5 17.0523 22.5 16.5V15.5C22.5 14.9477 22.0523 14.5 21.5 14.5H17Z" fill="currentColor" />
+                    <path d="M9.5 17C9.5 15.6193 8.38071 14.5 7 14.5H2.5C1.94772 14.5 1.5 14.9477 1.5 15.5V16.5C1.5 17.0523 1.94772 17.5 2.5 17.5H6.5V21.5C6.5 22.0523 6.94772 22.5 7.5 22.5H8.5C9.05228 22.5 9.5 22.0523 9.5 21.5V17Z" fill="currentColor" />
                 </svg>
             </div>      
         ` : null,
@@ -605,13 +599,8 @@ class _T_M_G_Video_Player {
             <div class="T_M_G-video-full-screen-orientation-btn-wrapper">
                 <button type="button" class="T_M_G-video-full-screen-orientation-btn T_M_G-video-control-hidden" title="Change Orientation"> 
                     <svg viewBox="0 0 512 512" class="T_M_G-video-full-screen-orientation-icon" data-tooltip-text="Toggle Orientation" data-no-resize="true">
-                        <g id="Layer_1"/>
-                        <g id="Layer_2">
-                        <g>
                         <path fill="currentColor" d="M446.81,275.82H236.18V65.19c0-20.78-16.91-37.69-37.69-37.69H65.19c-20.78,0-37.69,16.91-37.69,37.69v255.32    c0,20.78,16.91,37.68,37.69,37.68h88.62v88.62c0,20.78,16.9,37.69,37.68,37.69h255.32c20.78,0,37.69-16.91,37.69-37.69v-133.3    C484.5,292.73,467.59,275.82,446.81,275.82z M65.19,326.19c-3.14,0-5.69-2.55-5.69-5.68V65.19c0-3.14,2.55-5.69,5.69-5.69h133.3    c3.14,0,5.69,2.55,5.69,5.69v210.63h-12.69c-20.78,0-37.68,16.91-37.68,37.69v12.68H65.19z M452.5,446.81    c0,3.14-2.55,5.69-5.69,5.69H191.49c-3.13,0-5.68-2.55-5.68-5.69V342.19v-28.68c0-2.94,2.24-5.37,5.1-5.66    c0.19-0.02,0.38-0.03,0.58-0.03h28.69h226.63c3.14,0,5.69,2.55,5.69,5.69V446.81z"/>
                         <path fill="currentColor" d="M369.92,181.53c-6.25-6.25-16.38-6.25-22.63,0c-6.25,6.25-6.25,16.38,0,22.63l44.39,44.39    c3.12,3.13,7.22,4.69,11.31,4.69c0.21,0,0.42-0.02,0.63-0.03c0.2,0.01,0.4,0.03,0.6,0.03c6.31,0,11.74-3.66,14.35-8.96    l37.86-37.86c6.25-6.25,6.25-16.38,0-22.63c-6.25-6.25-16.38-6.25-22.63,0l-13.59,13.59v-86.58c0-8.84-7.16-16-16-16h-86.29    l15.95-15.95c6.25-6.25,6.25-16.38,0-22.63c-6.25-6.25-16.38-6.25-22.63,0l-40.33,40.33c-5.19,2.65-8.75,8.03-8.75,14.25    c0,0.19,0.02,0.37,0.03,0.56c-0.01,0.19-0.03,0.38-0.03,0.57c0,4.24,1.69,8.31,4.69,11.31l42.14,42.14    c3.12,3.12,7.22,4.69,11.31,4.69s8.19-1.56,11.31-4.69c6.25-6.25,6.25-16.38,0-22.63l-15.95-15.95h72.54v73.05L369.92,181.53z"/>
-                        </g>
-                        </g>  
                     </svg>                                
                 </button>
             </div>                
@@ -736,8 +725,8 @@ class _T_M_G_Video_Player {
         captionsBtnHTML = this.settings.status.ui.captions ?
         `
                 <button type="button" class="T_M_G-video-captions-btn" title="Toggle Captions/Subtitles(c)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="captions">
-                    <svg data-tooltip-text="Captions/Subtitles(c)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
-                        <path fill="currentColor" d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z" />
+                    <svg data-tooltip-text="Captions/Subtitles(c)" data-tooltip-position="top" viewBox="0 0 44 46">
+                        <path fill="currentColor" transform="scale(0.5)" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" />
                     </svg>
                 </button>
         ` : null,
@@ -756,11 +745,11 @@ class _T_M_G_Video_Player {
         pictureInPictureBtnHTML = this.settings.status.ui.pictureInPicture ? 
         `
                 <button type="button" class="T_M_G-video-picture-in-picture-btn" title="Toggle Picture-in-Picture(i)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="pictureInPicture">
-                    <svg class="T_M_G-video-enter-picture-in-picture-icon" data-tooltip-text="Enter Picture-in-Picture(i)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                    <svg class="T_M_G-video-enter-picture-in-picture-icon" data-tooltip-text="Enter Picture-in-Picture(i)" data-tooltip-position="top">
                         <path class="T_M_G-video-no-fill-path" fill="none" d="M0 0h24v24H0z" />
                         <path fill="currentColor" fill-rule="nonzero" d="M21 3a1 1 0 0 1 1 1v7h-2V5H4v14h6v2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zm0 10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h8zM6.707 6.293l2.25 2.25L11 6.5V12H5.5l2.043-2.043-2.25-2.25 1.414-1.414z" />
                     </svg>
-                    <svg class="T_M_G-video-leave-picture-in-picture-icon" data-tooltip-text="Leave Picture-in-Picture(i)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
+                    <svg class="T_M_G-video-leave-picture-in-picture-icon" data-tooltip-text="Leave Picture-in-Picture(i)" data-tooltip-position="top">
                         <path class="T_M_G-video-no-fill-path" fill="none" d="M0 0h24v24H0z"></path>
                         <path fill-rule="nonzero" d="M21 3a1 1 0 0 1 1 1v7h-2V5H4v14h6v2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zm0 10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h8zm-9.5-6L9.457 9.043l2.25 2.25-1.414 1.414-2.25-2.25L6 12.5V7h5.5z">
                         </path>
@@ -771,21 +760,27 @@ class _T_M_G_Video_Player {
         `
                 <button type="button" class="T_M_G-video-theater-btn" title="Toggle Theater Mode(t)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="theater">
                     <svg class="T_M_G-video-tall" data-tooltip-text="Theater Mode(t)" data-tooltip-position="top">
-                        <path fill="currentColor" d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"/>
+                        <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M23 7C23 5.34315 21.6569 4 20 4H4C2.34315 4 1 5.34315 1 7V17C1 18.6569 2.34315 20 4 20H20C21.6569 20 23 18.6569 23 17V7ZM21 7C21 6.44772 20.5523 6 20 6H4C3.44772 6 3 6.44771 3 7V17C3 17.5523 3.44772 18 4 18H20C20.5523 18 21 17.5523 21 17V7Z"/>
                     </svg>
-                     <svg class="T_M_G-video-wide" data-tooltip-text="Normal Mode(t)" data-tooltip-position="top">
-                        <path fill="currentColor" d="M19 7H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 8H5V9h14v6z"/>
+                    <svg class="T_M_G-video-wide" data-tooltip-text="Normal Mode(t)" data-tooltip-position="top">
+                        <path fill="currentColor" d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"></path>
                     </svg>
                 </button>
         ` : null,
         fullScreenBtnHTML = this.settings.status.ui.fullScreen ?
         `
                 <button type="button" class="T_M_G-video-full-screen-btn" title="Toggle Full Screen(f)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="fullScreen">
-                    <svg class="T_M_G-video-open" data-tooltip-text="Enter Full Screen(f)" data-tooltip-position="top">
-                        <path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                    <svg class="T_M_G-video-open" data-tooltip-text="Enter Full Screen(f)" data-tooltip-position="top" transform="scale(.85)">
+                        <path d="M4 1.5C2.61929 1.5 1.5 2.61929 1.5 4V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H3.5C4.05228 9.5 4.5 9.05228 4.5 8.5V4.5H8.5C9.05228 4.5 9.5 4.05228 9.5 3.5V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H4Z" fill="currentColor" />
+                        <path d="M20 1.5C21.3807 1.5 22.5 2.61929 22.5 4V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H20.5C19.9477 9.5 19.5 9.05228 19.5 8.5V4.5H15.5C14.9477 4.5 14.5 4.05228 14.5 3.5V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H20Z" fill="currentColor" />
+                        <path d="M20 22.5C21.3807 22.5 22.5 21.3807 22.5 20V15.5C22.5 14.9477 22.0523 14.5 21.5 14.5H20.5C19.9477 14.5 19.5 14.9477 19.5 15.5V19.5H15.5C14.9477 19.5 14.5 19.9477 14.5 20.5V21.5C14.5 22.0523 14.9477 22.5 15.5 22.5H20Z" fill="currentColor" />
+                        <path d="M1.5 20C1.5 21.3807 2.61929 22.5 4 22.5H8.5C9.05228 22.5 9.5 22.0523 9.5 21.5V20.5C9.5 19.9477 9.05228 19.5 8.5 19.5H4.5V15.5C4.5 14.9477 4.05228 14.5 3.5 14.5H2.5C1.94772 14.5 1.5 14.9477 1.5 15.5V20Z" fill="currentColor" />
                     </svg>
-                    <svg class="T_M_G-video-close" data-tooltip-text="Leave Full Screen(f)" data-tooltip-position="top">
-                        <path fill="currentColor" d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+                    <svg class="T_M_G-video-close" data-tooltip-text="Leave Full Screen(f)" data-tooltip-position="top" transform="scale(.85)">
+                        <path d="M7 9.5C8.38071 9.5 9.5 8.38071 9.5 7V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H7.5C6.94772 1.5 6.5 1.94772 6.5 2.5V6.5H2.5C1.94772 6.5 1.5 6.94772 1.5 7.5V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H7Z" fill="currentColor" />
+                        <path d="M17 9.5C15.6193 9.5 14.5 8.38071 14.5 7V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H16.5C17.0523 1.5 17.5 1.94772 17.5 2.5V6.5H21.5C22.0523 6.5 22.5 6.94772 22.5 7.5V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H17Z" fill="currentColor" />
+                        <path d="M17 14.5C15.6193 14.5 14.5 15.6193 14.5 17V21.5C14.5 22.0523 14.9477 22.5 15.5 22.5H16.5C17.0523 22.5 17.5 22.0523 17.5 21.5V17.5H21.5C22.0523 17.5 22.5 17.0523 22.5 16.5V15.5C22.5 14.9477 22.0523 14.5 21.5 14.5H17Z" fill="currentColor" />
+                        <path d="M9.5 17C9.5 15.6193 8.38071 14.5 7 14.5H2.5C1.94772 14.5 1.5 14.9477 1.5 15.5V16.5C1.5 17.0523 1.94772 17.5 2.5 17.5H6.5V21.5C6.5 22.0523 6.94772 22.5 7.5 22.5H8.5C9.05228 22.5 9.5 22.0523 9.5 21.5V17Z" fill="currentColor" />
                     </svg>
                 </button>    
         ` : null
@@ -1658,8 +1653,8 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainer.classList.toggle("T_M_G-video-scrubbing", this.isScrubbing)
         if (this.isScrubbing) {
             const {width,height} = tmg.getRenderedBox(this.video)
-            this.ui.dom.thumbnailImg.height = height
-            this.ui.dom.thumbnailImg.width = width
+            this.ui.dom.thumbnailImg.height = height + 1
+            this.ui.dom.thumbnailImg.width = width + 1
             this.wasPaused = this.video.paused
             this.video.pause()
         } else {
