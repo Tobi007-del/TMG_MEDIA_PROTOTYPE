@@ -1,36 +1,42 @@
 /* setting video initial state begins*/
 /* all initial video styles have to be important because they override every property no matter what */
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-controls-container,
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-overlay-controls-container > *:not(.T_M_G-video-notifiers-container),
-body .T_M_G-video-container:has(.T_M_G-video-play-notifier.T_M_G-video-control-spin) .T_M_G-video-controls-container,
-body .T_M_G-video-container:has(.T_M_G-video-play-notifier.T_M_G-video-control-spin) .T_M_G-video-overlay-controls-container > *:not(.T_M_G-video-notifiers-container) {
-    opacity: 0!important;
-    pointer-events: none!important;
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content {
+    cursor: auto;
 }
 
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-overlay-controls-container,
-body .T_M_G-video-container:has(.T_M_G-video-play-notifier.T_M_G-video-control-spin) .T_M_G-video-overlay-controls-container {
-    background-color: transparent!important;
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-controls-container,
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-overlay-controls-container > *:not(.T_M_G-video-notifiers-container),
+body .T_M_G-video-container:has(.T_M_G-video-play-notifier.T_M_G-video-control-spin) .T_M_G-video-container-content-wrapper .T_M_G-video-container-content  .T_M_G-video-controls-container,
+body .T_M_G-video-container:has(.T_M_G-video-play-notifier.T_M_G-video-control-spin) .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-overlay-controls-container > *:not(.T_M_G-video-notifiers-container) {
+    opacity: 0;
+    pointer-events: none;
+}
+
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-overlay-controls-container,
+body .T_M_G-video-container:has(.T_M_G-video-play-notifier.T_M_G-video-control-spin) .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-overlay-controls-container {
+    background-color: transparent;
 }
 
 body .T_M_G-video-container.T_M_G-video-initial > *:not(.T_M_G-video-notifiers-container) {
-    pointer-events: none!important;
+    pointer-events: none;
 }
 
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-notifiers-container,
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-play-notifier {
-    pointer-events: all!important;
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-notifiers-container,
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier {
+    pointer-events: all;
 }
 
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-notifiers:not(.T_M_G-video-play-notifier), body .T_M_G-video-container:has(.T_M_G-video-play-notifier.T_M_G-video-control-spin) .T_M_G-video-notifiers:not(.T_M_G-video-play-notifier) {
-    display: none!important;
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-notifiers:not(.T_M_G-video-play-notifier), 
+body .T_M_G-video-container:has(.T_M_G-video-play-notifier.T_M_G-video-control-spin) .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-notifiers:not(.T_M_G-video-play-notifier) {
+    display: none;
 }
 
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-play-notifier, body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin {
-    display: flex!important;
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier, 
+body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier.T_M_G-video-control-spin {
+    display: flex;
 }
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-play-notifier {
-    animation: beat 1s infinite ease-out!important;
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier {
+    animation: beat 1s infinite ease-out;
 }
 @keyframes beat {
     from, to {
@@ -42,18 +48,20 @@ body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-play-notifier {
     }    
 }
 
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-play-notifier:hover, 
-body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin {
-    cursor: pointer!important;
-    transition: all 500ms ease!important;
-    opacity: 1!important;
-    transform: scale(1.5)!important;
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:hover, 
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:focus-visible,
+body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier.T_M_G-video-control-spin {
+    cursor: pointer;
+    transition: all 500ms ease;
+    opacity: 1;
+    transform: scale(1.5);
 }
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-play-notifier:hover {
-    animation: none!important;
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:hover,
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:focus-visible {
+    animation: none;
 }
-body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin {
-    animation: spin 1s ease-out!important;
+body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier.T_M_G-video-control-spin {
+    animation: spin 1s ease-out;
 }
 @keyframes spin {
     from {
@@ -502,7 +510,8 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     position: absolute;
     top: 0;
     left: 0;
-    padding: calc(var(--T_M_G-video-current-unit)/1.25);
+    padding-inline: calc(var(--T_M_G-video-current-unit)/1.5);
+    padding-block: calc(var(--T_M_G-video-current-unit)/1.65);
     font-size: calc(var(--T_M_G-video-current-unit)/1.35);
     width: 100%;
     background: linear-gradient(to bottom, var(--T_M_G-video-curtain-color), transparent);
@@ -513,6 +522,9 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
 
 .T_M_G-video-container.T_M_G-video-full-screen .T_M_G-video-playlist-title-wrapper {
     font-size: calc(var(--T_M_G-video-current-unit)/1.25);
+}
+
+.T_M_G-video-container.T_M_G-video-full-screen:has(.T_M_G-video-full-screen-orientation-btn:not(.T_M_G-video-control-hidden)) .T_M_G-video-playlist-title-wrapper {
     padding-inline-end: calc(var(--T_M_G-video-current-unit)*2.5);
 }
 
@@ -536,7 +548,7 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     position: absolute;
     z-index: -1;
     color: transparent;
-    -webkit-text-stroke: .2px var(--T_M_G-video-brand-color);
+    -webkit-text-stroke: .15px var(--T_M_G-video-brand-color);
     transform: translate(0, 0);
     transition: transform 1s ease;
 }
@@ -924,6 +936,7 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     aspect-ratio: 1 / 1;
     border: var(--T_M_G-video-current-loader-thickness) solid transparent;
     border-radius: 50%;
+    opacity: .9;
     background: rgba(255, 255, 255, 0.009);
     animation: spin 2s linear infinite;
 }
@@ -957,6 +970,16 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
 .T_M_G-video-container.T_M_G-video-overlay.T_M_G-video-scrubbing, 
 .T_M_G-video-container:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, .T_M_G-video-playback-rate-notifier.T_M_G-video-control-active) {
     --T_M_G-video-current-curtain-color: transparent;
+}
+
+.T_M_G-video-container-content {
+    cursor: none;
+}
+
+.T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-container-content,
+.T_M_G-video-container:has(:focus-visible) .T_M_G-video-container-content,
+.T_M_G-video-container.T_M_G-video-picture-in-picture .T_M_G-video-container-content {
+    cursor: auto;
 }
 
 .T_M_G-video-container.T_M_G-video-overlay, 

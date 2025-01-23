@@ -1,7 +1,6 @@
 "use strict"
 /* 
 TODO: 
-    next and prev video
     editable settings: shortcut, beta, keyshortcuts, notifiers, progressbar, controllerStructure
 */
 
@@ -174,6 +173,8 @@ class _T_M_G_Video_Player {
         this._handleDrop = this._handleDrop.bind(this)
         this._handleDragLeave = this._handleDragLeave.bind(this)
         //Binding Performers
+        this.enableFocusableControls = this.enableFocusableControls.bind(this)
+        this.disableFocusableControls = this.disableFocusableControls.bind(this)
         this.previousVideo = this.previousVideo.bind(this)
         this.nextVideo = this.nextVideo.bind(this)
         this.togglePlay = this.togglePlay.bind(this)
@@ -297,6 +298,7 @@ class _T_M_G_Video_Player {
         if (!this.wasPaused) this.togglePlay(false)
         this.ui.dom.videoContainer.classList.add("T_M_G-video-settings-view")
         this.removeKeyEventListeners()
+        this.disableFocusableControls()
         document.addEventListener("keyup", this._handleSettingsKeyUp) 
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -322,6 +324,7 @@ class _T_M_G_Video_Player {
         if (!this.wasPaused) this.togglePlay(true) 
         this.ui.dom.videoContainer.classList.remove("T_M_G-video-settings-view")
         this.setKeyEventListeners()
+        this.enableFocusableControls()
         document.removeEventListener("keyup", this._handleSettingsKeyUp)
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -407,7 +410,7 @@ class _T_M_G_Video_Player {
             <div class="T_M_G-video-settings">
                 <div class="T_M_G-video-settings-content">
                     <div class="T_M_G-video-settings-top-panel">
-                        <button type="button" title="Close Settings" class="T_M_G-video-settings-close-btn">
+                        <button type="button" title="Close Settings" class="T_M_G-video-settings-close-btn" data-focusable-control="false" tabindex="-1">
                             <span>
                                 <svg class="T_M_G-video-settings-close-btn-icon">
                                     <path fill="currentColor" d="M1.307,5.988 L6.616,1.343 C7.027,0.933 7.507,0.864 7.918,1.275 L7.918,4.407 C8.014,4.406 8.098,4.406 8.147,4.406 C13.163,4.406 16.885,7.969 16.885,12.816 C16.885,14.504 16.111,13.889 15.788,13.3 C14.266,10.52 11.591,8.623 8.107,8.623 C8.066,8.623 7.996,8.624 7.917,8.624 L7.917,11.689 C7.506,12.099 6.976,12.05 6.615,11.757 L1.306,7.474 C0.897,7.064 0.897,6.399 1.307,5.988 L1.307,5.988 Z"></path>
@@ -605,7 +608,7 @@ class _T_M_G_Video_Player {
         fullScreenOrientationBtnHTML = this.settings.status.modes.fullScreen ?
         `
             <div class="T_M_G-video-full-screen-orientation-btn-wrapper">
-                <button type="button" class="T_M_G-video-full-screen-orientation-btn T_M_G-video-control-hidden" title="Change Orientation"> 
+                <button type="button" class="T_M_G-video-full-screen-orientation-btn T_M_G-video-control-hidden" title="Change Orientation" data-focusable-control="false" tabindex="-1"> 
                     <svg viewBox="0 0 512 512" class="T_M_G-video-full-screen-orientation-icon" data-tooltip-text="Toggle Orientation" data-no-resize="true">
                         <path fill="currentColor" d="M446.81,275.82H236.18V65.19c0-20.78-16.91-37.69-37.69-37.69H65.19c-20.78,0-37.69,16.91-37.69,37.69v255.32    c0,20.78,16.91,37.68,37.69,37.68h88.62v88.62c0,20.78,16.9,37.69,37.68,37.69h255.32c20.78,0,37.69-16.91,37.69-37.69v-133.3    C484.5,292.73,467.59,275.82,446.81,275.82z M65.19,326.19c-3.14,0-5.69-2.55-5.69-5.68V65.19c0-3.14,2.55-5.69,5.69-5.69h133.3    c3.14,0,5.69,2.55,5.69,5.69v210.63h-12.69c-20.78,0-37.68,16.91-37.68,37.69v12.68H65.19z M452.5,446.81    c0,3.14-2.55,5.69-5.69,5.69H191.49c-3.13,0-5.68-2.55-5.68-5.69V342.19v-28.68c0-2.94,2.24-5.37,5.1-5.66    c0.19-0.02,0.38-0.03,0.58-0.03h28.69h226.63c3.14,0,5.69,2.55,5.69,5.69V446.81z"/>
                         <path fill="currentColor" d="M369.92,181.53c-6.25-6.25-16.38-6.25-22.63,0c-6.25,6.25-6.25,16.38,0,22.63l44.39,44.39    c3.12,3.13,7.22,4.69,11.31,4.69c0.21,0,0.42-0.02,0.63-0.03c0.2,0.01,0.4,0.03,0.6,0.03c6.31,0,11.74-3.66,14.35-8.96    l37.86-37.86c6.25-6.25,6.25-16.38,0-22.63c-6.25-6.25-16.38-6.25-22.63,0l-13.59,13.59v-86.58c0-8.84-7.16-16-16-16h-86.29    l15.95-15.95c6.25-6.25,6.25-16.38,0-22.63c-6.25-6.25-16.38-6.25-22.63,0l-40.33,40.33c-5.19,2.65-8.75,8.03-8.75,14.25    c0,0.19,0.02,0.37,0.03,0.56c-0.01,0.19-0.03,0.38-0.03,0.57c0,4.24,1.69,8.31,4.69,11.31l42.14,42.14    c3.12,3.12,7.22,4.69,11.31,4.69s8.19-1.56,11.31-4.69c6.25-6.25,6.25-16.38,0-22.63l-15.95-15.95h72.54v73.05L369.92,181.53z"/>
@@ -616,7 +619,7 @@ class _T_M_G_Video_Player {
         miniPlayerExpandBtnHTML = this.settings.status.modes.miniPlayer ?
         `
         <div class="T_M_G-video-mini-player-expand-btn-wrapper">
-            <button type="button" class="T_M_G-video-mini-player-expand-btn" title="Expand mini-player(e)">
+            <button type="button" class="T_M_G-video-mini-player-expand-btn" title="Expand mini-player(e)" data-focusable-control="false" tabindex="-1">
                 <svg class="T_M_G-video-mini-player-expand-icon" viewBox="0 -960 960 960" data-tooltip-text="Expand(e)" data-tooltip-position="top" data-no-resize="true">
                     <path d="M120-120v-320h80v184l504-504H520v-80h320v320h-80v-184L256-200h184v80H120Z"/>
                 </svg>
@@ -626,7 +629,7 @@ class _T_M_G_Video_Player {
         miniPlayerCancelBtnHTML = this.settings.status.modes.miniPlayer ?
         `
         <div class="T_M_G-video-mini-player-cancel-btn-wrapper">
-            <button type="button" class="T_M_G-video-mini-player-cancel-btn" title="Remove Mini-player(r)">
+            <button type="button" class="T_M_G-video-mini-player-cancel-btn" title="Remove Mini-player(r)" data-focusable-control="false" tabindex="-1">
                 <svg class="T_M_G-video-mini-player-cancel-icon" viewBox="0 -960 960 960" data-tooltip-text="Remove(r)" data-tooltip-position="top" data-no-resize="true">
                     <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
                 </svg>
@@ -635,7 +638,7 @@ class _T_M_G_Video_Player {
         ` : null,
         mainPrevBtnHTML = this.settings.status.ui.prev ?
         `
-            <button type="button" class="T_M_G-video-main-prev-btn" title="Previous Video(Shift + p)">
+            <button type="button" class="T_M_G-video-main-prev-btn" title="Previous Video(Shift + p)" data-focusable-control="false" tabindex="-1">
                 <svg class="T_M_G-video-prev-icon" data-tooltip-text="Previous Video(Shift + p)" data-tooltip-position="top">
                     <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                 </svg>
@@ -643,7 +646,7 @@ class _T_M_G_Video_Player {
         ` : null,
         mainPlayPauseBtnHTML = this.settings.status.ui.playPause ?
         `
-            <button type="button" class="T_M_G-video-main-play-pause-btn" title="Play/Pause(k)">
+            <button type="button" class="T_M_G-video-main-play-pause-btn" title="Play/Pause(k)" data-focusable-control="false" tabindex="-1">
                 <svg class="T_M_G-video-play-icon" data-tooltip-text="Play(k)" data-tooltip-position="top">
                     <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                 </svg>
@@ -657,7 +660,7 @@ class _T_M_G_Video_Player {
         ` : null,
         mainNextBtnHTML = this.settings.status.ui.next ?
         `
-            <button type="button" class="T_M_G-video-main-next-btn" title="Next Video(Shift + n)">
+            <button type="button" class="T_M_G-video-main-next-btn" title="Next Video(Shift + n)" data-focusable-control="false" tabindex="-1">
                 <svg class="T_M_G-video-next-icon" data-tooltip-text="Next Video(Shift + n)" data-tooltip-position="top">
                     <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                 </svg>
@@ -665,7 +668,7 @@ class _T_M_G_Video_Player {
         ` : null,
         timelineHTML = this.settings.status.ui.timeline ?
         `
-            <div class="T_M_G-video-timeline-container" title="'>' - 5s & Shift + '>' - 10s" tabindex="0" data-control-id="timeline">
+            <div class="T_M_G-video-timeline-container" title="'>' - 5s & Shift + '>' - 10s" data-control-id="timeline" data-focusable-control="false">
                 <div class="T_M_G-video-timeline">
                     <div class="T_M_G-video-loaded-timeline"></div>
                     <div class="T_M_G-video-preview-img-container">
@@ -677,7 +680,7 @@ class _T_M_G_Video_Player {
         ` : null,
         prevBtnHTML = this.settings.status.ui.prev ?
         `
-                <button type="button" class="T_M_G-video-prev-btn" title="Previous Video(Shift + p)" data-control-id="prev">
+                <button type="button" class="T_M_G-video-prev-btn" title="Previous Video(Shift + p)" data-control-id="prev" data-focusable-control="false" tabindex="-1">
                     <svg class="T_M_G-video-prev-icon" data-tooltip-text="Previous Video(Shift + p)" data-tooltip-position="top">
                         <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                     </svg>
@@ -685,7 +688,7 @@ class _T_M_G_Video_Player {
         ` : null,
         playPauseBtnHTML = this.settings.status.ui.playPause ?
         `
-                <button type="button" class="T_M_G-video-play-pause-btn" title="Play/Pause(k)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="playPause">
+                <button type="button" class="T_M_G-video-play-pause-btn" title="Play/Pause(k)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="playPause" data-focusable-control="false" tabindex="-1">
                     <svg class="T_M_G-video-play-icon" data-tooltip-text="Play(k)" data-tooltip-position="top">
                         <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                     </svg>
@@ -699,7 +702,7 @@ class _T_M_G_Video_Player {
         ` : null,
         nextBtnHTML = this.settings.status.ui.next ?
         `
-                <button type="button" class="T_M_G-video-next-btn" title="Next Video(Shift + n)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="next">
+                <button type="button" class="T_M_G-video-next-btn" title="Next Video(Shift + n)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="next" data-focusable-control="false" tabindex="-1">
                     <svg class="T_M_G-video-next-icon" data-tooltip-text="Next Video(Shift + n)" data-tooltip-position="top">
                         <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                     </svg>
@@ -707,8 +710,8 @@ class _T_M_G_Video_Player {
         ` : null,
         volumeHTML = this.settings.status.ui.volume ?
         `
-                <div class="T_M_G-video-volume-container" data-control-id="volume" data-control-id="volume">
-                    <button type="button" class="T_M_G-video-mute-btn" title="Toggle Volume(m)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}">
+                <div class="T_M_G-video-volume-container" data-control-id="volume">
+                    <button type="button" class="T_M_G-video-mute-btn" title="Toggle Volume(m)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1">
                         <svg class="T_M_G-video-volume-high-icon" data-tooltip-text="High Volume" data-tooltip-position="top">
                             <path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
                         </svg>
@@ -719,7 +722,7 @@ class _T_M_G_Video_Player {
                             <path fill="currentColor" d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" />
                         </svg>
                     </button>
-                    <input class="T_M_G-video-volume-slider" type="range" min="0" max="100" step="any" title="Adjust Volume - Vertical arrows">
+                    <input class="T_M_G-video-volume-slider" type="range" min="0" max="100" step="any" title="Adjust Volume - Vertical arrows" data-focusable-control="false" tabindex="-1">
                 </div>
         ` : null,
         durationHTML = this.settings.status.ui.duration ?
@@ -732,7 +735,7 @@ class _T_M_G_Video_Player {
         ` : null,
         captionsBtnHTML = this.settings.status.ui.captions ?
         `
-                <button type="button" class="T_M_G-video-captions-btn" title="Toggle Captions/Subtitles(c)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="captions">
+                <button type="button" class="T_M_G-video-captions-btn" title="Toggle Captions/Subtitles(c)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="captions">
                     <svg data-tooltip-text="Captions/Subtitles(c)" data-tooltip-position="top" viewBox="0 0 44 46">
                         <path fill="currentColor" transform="scale(0.5)" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" />
                     </svg>
@@ -740,7 +743,7 @@ class _T_M_G_Video_Player {
         ` : null,
         settingsBtnHTML = this.settings.status.ui.settings ?
         `
-                <button type="button" class="T_M_G-video-settings-btn" title="Toggle Settings" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="settings">
+                <button type="button" class="T_M_G-video-settings-btn" title="Toggle Settings" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="settings">
                     <svg class="T_M_G-video-settings-icon" viewBox="0 -960 960 960" data-tooltip-text="Settings(s)" data-tooltip-position="top" data-no-resize="true">
                         <path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/>
                     </svg>
@@ -748,11 +751,11 @@ class _T_M_G_Video_Player {
         ` : null,
         playbackRateBtnHTML = this.settings.status.ui.playbackRate ? 
         `
-                <button type="button" class="T_M_G-video-playback-rate-btn T_M_G-video-wide-btn" title="Playback Rate(s)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="playbackRate">1x</button>
+                <button type="button" class="T_M_G-video-playback-rate-btn T_M_G-video-wide-btn" title="Playback Rate(s)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="playbackRate">1x</button>
         ` : null,
         pictureInPictureBtnHTML = this.settings.status.ui.pictureInPicture ? 
         `
-                <button type="button" class="T_M_G-video-picture-in-picture-btn" title="Toggle Picture-in-Picture(i)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="pictureInPicture">
+                <button type="button" class="T_M_G-video-picture-in-picture-btn" title="Toggle Picture-in-Picture(i)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="pictureInPicture">
                     <svg class="T_M_G-video-enter-picture-in-picture-icon" data-tooltip-text="Enter Picture-in-Picture(i)" data-tooltip-position="top">
                         <path class="T_M_G-video-no-fill-path" fill="none" d="M0 0h24v24H0z" />
                         <path fill="currentColor" fill-rule="nonzero" d="M21 3a1 1 0 0 1 1 1v7h-2V5H4v14h6v2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zm0 10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h8zM6.707 6.293l2.25 2.25L11 6.5V12H5.5l2.043-2.043-2.25-2.25 1.414-1.414z" />
@@ -766,7 +769,7 @@ class _T_M_G_Video_Player {
         ` : null,  
         theaterBtnHTML = this.settings.status.ui.theater ?
         `
-                <button type="button" class="T_M_G-video-theater-btn" title="Toggle Theater Mode(t)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="theater">
+                <button type="button" class="T_M_G-video-theater-btn" title="Toggle Theater Mode(t)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="theater">
                     <svg class="T_M_G-video-tall" data-tooltip-text="Theater Mode(t)" data-tooltip-position="top">
                         <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M23 7C23 5.34315 21.6569 4 20 4H4C2.34315 4 1 5.34315 1 7V17C1 18.6569 2.34315 20 4 20H20C21.6569 20 23 18.6569 23 17V7ZM21 7C21 6.44772 20.5523 6 20 6H4C3.44772 6 3 6.44771 3 7V17C3 17.5523 3.44772 18 4 18H20C20.5523 18 21 17.5523 21 17V7Z"/>
                     </svg>
@@ -777,7 +780,7 @@ class _T_M_G_Video_Player {
         ` : null,
         fullScreenBtnHTML = this.settings.status.ui.fullScreen ?
         `
-                <button type="button" class="T_M_G-video-full-screen-btn" title="Toggle Full Screen(f)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="fullScreen">
+                <button type="button" class="T_M_G-video-full-screen-btn" title="Toggle Full Screen(f)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="fullScreen">
                     <svg class="T_M_G-video-open" data-tooltip-text="Enter Full Screen(f)" data-tooltip-position="top" transform="scale(.85)">
                         <path d="M4 1.5C2.61929 1.5 1.5 2.61929 1.5 4V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H3.5C4.05228 9.5 4.5 9.05228 4.5 8.5V4.5H8.5C9.05228 4.5 9.5 4.05228 9.5 3.5V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H4Z" fill="currentColor" />
                         <path d="M20 1.5C21.3807 1.5 22.5 2.61929 22.5 4V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H20.5C19.9477 9.5 19.5 9.05228 19.5 8.5V4.5H15.5C14.9477 4.5 14.5 4.05228 14.5 3.5V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H20Z" fill="currentColor" />
@@ -915,8 +918,8 @@ class _T_M_G_Video_Player {
                 theaterBtn : this.settings.status.ui.theater ? videoContainer.querySelector(".T_M_G-video-theater-btn") : null,
                 fullScreenBtn : this.settings.status.ui.fullScreen ? videoContainer.querySelector(".T_M_G-video-full-screen-btn") : null,
                 svgs : videoContainer.querySelectorAll("svg"),
-                focusableControls: videoContainer.querySelectorAll("button, .T_M_G-video-timeline-container"),
-                draggableControls: this.settings.status.ui.draggableControls ? videoContainer.querySelectorAll(".T_M_G-video-controls-container [data-draggable-control]") : null,
+                focusableControls: videoContainer.querySelectorAll("[data-focusable-control]"),
+                draggableControls: this.settings.status.ui.draggableControls ? videoContainer.querySelectorAll("[data-draggable-control]") : null,
                 draggableControlContainers: this.settings.status.ui.draggableControls ? videoContainer.querySelectorAll(".T_M_G-video-left-side-controls-wrapper, .T_M_G-video-right-side-controls-wrapper") : null,
                 settingsCloseBtn: this.settings ? videoContainer.querySelector(".T_M_G-video-settings-close-btn") : null,
             }
@@ -929,15 +932,35 @@ class _T_M_G_Video_Player {
     initializeVideoPlayer() {
     try {
         this.controlsResize()
-        this.fire("tmgload", this.video, {loaded: true})
         this.video.addEventListener("loadedmetadata", () => {
             this.aspectRatio = this.video.videoWidth / this.video.videoHeight
             this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`   
         }, {once: true})
+        this.fire("tmgload", this.video, {loaded: true})
         if (this.activated) {
             if (this.initialState) {
-                this.ui.dom.notifiersContainer?.addEventListener("click", () => this.togglePlay(true), {once:true})
                 this.video.addEventListener("timeupdate", this.initializeVideoControls, {once:true})
+                const removeInitialState = () => {
+                    this.togglePlay(true)
+                    document.removeEventListener("keyup", handleInitialKeyUp)
+                    this.ui.dom.playNotifier.blur()
+                    this.ui.dom.playNotifier.tabIndex = "-1"
+                }
+                const handleInitialKeyUp = e => {
+                    if (document.activeElement.tagName.toLowerCase() === "input") return
+                    switch (e.key.toString().toLowerCase()) {
+                        case "enter":     
+                        case " ":
+                            e.preventDefault()
+                            removeInitialState()
+                            break
+                    }
+                }
+                this.ui.dom.playNotifier.tabIndex = "0"
+                this.ui.dom.playNotifier.addEventListener("focus", e => {
+                    if (this.ui.dom.playNotifier.matches(":focus-visible")) document.addEventListener("keyup", handleInitialKeyUp)
+                })
+                this.ui.dom.notifiersContainer?.addEventListener("click", removeInitialState, {once:true})
             } else this.initializeVideoControls()        
         } else {
             console.warn("You have to activate the TMG controller to access the custom controls")
@@ -949,6 +972,10 @@ class _T_M_G_Video_Player {
 
     initializeVideoControls() {
     try {     
+        for (const control of this.ui.dom.focusableControls) {
+            control.tabIndex = "0"
+            control.dataset.focusableControl = true
+        }
         this.video.currentTime = this.startTime || 0
         if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
         this.setInitialStates()
@@ -1104,6 +1131,7 @@ class _T_M_G_Video_Player {
         this.setWindowEventListeners()
         this.setDocumentEventListeners()
         this.setVideoContainerEventListeners()
+        this.setVideoContainerContentEventListeners()
         this.setVideoEventListeners()
         this.setControlsEventListeners()
         this.setSettingsEventListeners()
@@ -1153,9 +1181,21 @@ class _T_M_G_Video_Player {
 
     setVideoContainerEventListeners() {
     try {
-        this.ui.dom.videoContainer.addEventListener("pointermove", this._handleHoverPointerMove, true)
-        this.ui.dom.videoContainer.addEventListener("click", this._handleHoverPointerDown, true)
-        this.ui.dom.videoContainer.addEventListener("mouseleave", this._handleHoverPointerOut, true)
+        this.ui.dom.videoContainer.addEventListener("contextmenu", this._handleRightClick)
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }  
+    }
+
+    setVideoContainerContentEventListeners() {
+    try {
+        this.ui.dom.videoContainerContent.addEventListener("click", this._handleHoverPointerDown, true)
+        this.ui.dom.videoContainerContent.addEventListener("pointermove", this._handleHoverPointerMove, true)
+        this.ui.dom.videoContainerContent.addEventListener("mouseleave", this._handleHoverPointerOut, true)
+        this.ui.dom.videoContainerContent.addEventListener("click", this._handleClick)
+        this.ui.dom.videoContainerContent.addEventListener("dblclick", this._handleDoubleClick)
+        this.ui.dom.videoContainerContent.addEventListener("mousedown", this._handlePointerDown)
+        this.ui.dom.videoContainerContent.addEventListener("touchstart", this._handlePointerDown, {passive:true})
     } catch(e) {
         this._log(e, "error", "swallow")
     }            
@@ -1174,11 +1214,6 @@ class _T_M_G_Video_Player {
         this.video.addEventListener("loadedmetadata", this._handleLoadedMetadata)
         this.video.addEventListener("loadeddata", this._handleLoadedData)
         this.video.addEventListener("ended", this._handleEnded)
-        this.video.addEventListener("mousedown", this._handlePointerDown)
-        this.video.addEventListener("touchstart", this._handlePointerDown, {passive:true})
-        this.video.addEventListener("contextmenu", this._handleRightClick)
-        this.video.addEventListener("click", this._handleClick)
-        this.video.addEventListener("dblclick", this._handleDoubleClick)
         this.video.addEventListener("enterpictureinpicture", this._handleEnterPictureInPicture)
         this.video.addEventListener("leavepictureinpicture", this._handleLeavePictureInPicture)
     } catch(e) {
@@ -1283,7 +1318,11 @@ class _T_M_G_Video_Player {
     }
 
     setSettingsEventListeners() {
+    try {
         this.ui.dom.settingsCloseBtn?.addEventListener("click", this.leaveSettingsView)
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
     }
 
     observePosition() {
@@ -1306,11 +1345,36 @@ class _T_M_G_Video_Player {
 
     cache() {
     try {
-        //doing some caching when loading finishes 
         this.settingsCache = JSON.parse(JSON.stringify(this.settings))
     } catch(e) {
         this._log(e, "error", "swallow")
     }                        
+    }
+
+    enableFocusableControls() {
+    try {
+        for (const control of this.ui.dom.focusableControls) {
+            if (this.ui.dom.videoContainerContent.contains(control)) {
+                control.tabIndex = "0"
+                control.dataset.focusableControl = true
+            }
+        }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }  
+    }
+
+    disableFocusableControls() {
+    try {
+        for (const control of this.ui.dom.focusableControls) {
+            if (this.ui.dom.videoContainerContent.contains(control)) {
+                control.tabIndex = "-1"
+                control.dataset.focusableControl = false
+            }
+        }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }  
     }
 
     //resizing controls
@@ -2242,8 +2306,9 @@ class _T_M_G_Video_Player {
     }    
 
     //Keyboard and General Accessibility Functions
-    _handleClick() {
+    _handleClick({target}) {
     try {
+        if (target === this.video) {
         if (tmg.queryMediaMobile() && !this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {
             if (!this.buffering) this.ui.dom.videoContainer.classList.toggle("T_M_G-video-overlay")
         } 
@@ -2253,6 +2318,7 @@ class _T_M_G_Video_Player {
             if (!(this.speedCheck && this.playTriggerCounter < 1))  this.togglePlay()
                 this.showVideoOverlay()
         }, 300)
+        }
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
@@ -2266,8 +2332,9 @@ class _T_M_G_Video_Player {
     }                
     }
 
-    _handleDoubleClick({clientX: x}) {
+    _handleDoubleClick({clientX: x, target}) {
     try {
+        if (target === this.video) {
         if (this.playId) clearTimeout(this.playId)
         const rect = this.video.getBoundingClientRect()
         if (((x-rect.left) > (this.video.offsetWidth*0.65))) {
@@ -2275,6 +2342,7 @@ class _T_M_G_Video_Player {
         } else if ((x-rect.left) < (this.video.offsetWidth*0.35)) {
             this.skip(-this.dbcSkipTime, true)
         } else this.toggleFullScreenMode()
+        }
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
@@ -2334,6 +2402,7 @@ class _T_M_G_Video_Player {
 
     _handlePointerDown(e) {
     try {
+        if (e.target === this.video) {
         if (!this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {
             this.ui.dom.videoContainer.addEventListener("mouseup", this._handleSpeedPointerUp)
             this.ui.dom.videoContainer.addEventListener("mouseleave", this._handleSpeedPointerOut)                
@@ -2350,6 +2419,7 @@ class _T_M_G_Video_Player {
                 }
                 this.speedUp(this.speedPosition)
             }, this.speedUpThreshold)
+        }
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2545,11 +2615,11 @@ class _T_M_G_Video_Player {
     }    
 
     //drag and drop implementation
-    _handleDragStart(e) {
+    _handleDragStart({target, dataTransfer}) {
     try {
-        e.dataTransfer.effectAllowed = "move"
-        e.target.classList.add("T_M_G-video-control-dragging")
-        this.dragging = e.target === this.ui.dom.muteBtn ? e.target.parentElement : e.target
+        dataTransfer.effectAllowed = "move"
+        target.classList.add("T_M_G-video-control-dragging")
+        this.dragging = target === this.ui.dom.muteBtn ? target.parentElement : target
     } catch(e) {
         this._log(e, "error", "swallow")
     }                
@@ -2563,10 +2633,10 @@ class _T_M_G_Video_Player {
     }                
     }
 
-    _handleDragEnd(e) {
+    _handleDragEnd({target}) {
     try {
         this.showVideoOverlay()
-        e.target.classList.remove("T_M_G-video-control-dragging")
+        target.classList.remove("T_M_G-video-control-dragging")
         let controllerStructure = []
         controllerStructure.push(this.settings.controllerStructure.find(c => c.startsWith("timeline")))
         const leftSideStructure = this.settings.status.ui.leftSidedControls && this.ui.dom.leftSidedControlsWrapper.children ? Array.from(this.ui.dom.leftSidedControlsWrapper.children, el => el.dataset.controlId) : []
@@ -2578,10 +2648,10 @@ class _T_M_G_Video_Player {
     }        
     }
 
-    _handleDragEnter(e) {
+    _handleDragEnter({target}) {
     try {
-        if (e.target.dataset.dropzone) {
-            e.target.classList.add("T_M_G-video-dragover")
+        if (target.dataset.dropzone) {
+            target.classList.add("T_M_G-video-dragover")
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2616,11 +2686,9 @@ class _T_M_G_Video_Player {
     }            
     }
 
-    _handleDragLeave(e) {
+    _handleDragLeave({target}) {
     try {
-        if (e.target.dataset.dropzone) {
-            e.target.classList.remove("T_M_G-video-dragover")
-        }
+        if (target.dataset.dropzone) target.classList.remove("T_M_G-video-dragover")
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
@@ -2803,7 +2871,7 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
                 leftSidedControls: this.#build.settings.controllerStructure.indexOf("spacer") > -1 ? this.#build.settings.controllerStructure.slice(0, this.#build.settings.controllerStructure.indexOf("spacer")).length > 0 : true,
                 rightSidedControls: this.#build.settings.controllerStructure.indexOf("spacer") > -1 ? this.#build.settings.controllerStructure.slice(this.#build.settings.controllerStructure.indexOf("spacer") + 1).length > 0 : false,
                 //draggable controls would be in the UI if there is a controller structure and if specified in the beta features and if override is allowed
-                draggableControls: !!(this.#build.settings.controllerStructure && this.#build.settings.status.beta.draggableControls && this.#build.settings.status.allowOverride.controllerStructure)
+                draggableControls: !!(this.#build.settings.controllerStructure && this.#build.settings.status.allowOverride.controllerStructure)
             }
             this.#build.settings.status.modes = {
                 fullScreen: this.#build.settings.modes.includes("fullScreen") && !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled),
