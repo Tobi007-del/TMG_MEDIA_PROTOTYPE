@@ -960,6 +960,7 @@ class _T_M_G_Video_Player {
                 this.ui.dom.playNotifier.addEventListener("focus", e => {
                     if (this.ui.dom.playNotifier.matches(":focus-visible")) document.addEventListener("keyup", handleInitialKeyUp)
                 })
+                this.ui.dom.playNotifier.addEventListener("blur", () => document.removeEventListener("keyup", handleInitialKeyUp))
                 this.ui.dom.notifiersContainer?.addEventListener("click", removeInitialState, {once:true})
             } else this.initializeVideoControls()        
         } else {
