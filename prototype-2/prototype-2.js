@@ -129,6 +129,8 @@ class _T_M_G_Video_Player {
         this._handleFullScreenChange = this._handleFullScreenChange.bind(this)
         this._handleKeyDown = this._handleKeyDown.bind(this)
         this._handleKeyUp = this._handleKeyUp.bind(this)
+        this._handlePlayTriggerUp = this._handlePlayTriggerUp.bind(this)
+        this._handleSettingsKeyUp = this._handleSettingsKeyUp.bind(this)
         this._handlePlay = this._handlePlay.bind(this)
         this._handlePause = this._handlePause.bind(this)
         this._handleBufferStart = this._handleBufferStart.bind(this)
@@ -164,7 +166,6 @@ class _T_M_G_Video_Player {
         this._handleVolumeContainerMouseUp = this._handleVolumeContainerMouseUp.bind(this)
         this._handleImgBreak = this._handleImgBreak.bind(this)
         this._handleMiniPlayerPosition = this._handleMiniPlayerPosition.bind(this)
-        this._handlePlayTriggerUp = this._handlePlayTriggerUp.bind(this)
         this._handleDragStart = this._handleDragStart.bind(this)
         this._handleDrag = this._handleDrag.bind(this)
         this._handleDragEnd = this._handleDragEnd.bind(this)
@@ -293,28 +294,35 @@ class _T_M_G_Video_Player {
     try {
         this.ui.dom.settingsCloseBtn.focus()
         this.wasPaused = this.video.paused
-        this.video.pause()
+        if (!this.wasPaused) this.togglePlay(false)
         this.ui.dom.videoContainer.classList.add("T_M_G-video-settings-view")
         this.removeKeyEventListeners()
-        document.addEventListener("keyup", e => {
-            if (document.activeElement.tagName.toLowerCase() === "input") return
-            switch (e.key.toString().toLowerCase()) {
-                case this.settings.keyShortcuts["settings"]?.toString()?.toLowerCase():     
-                    this.leaveSettingsView()
-                    break
-            }
-        }) 
+        document.addEventListener("keyup", this._handleSettingsKeyUp) 
     } catch(e) {
         this._log(e, "error", "swallow")
     }                    
     }
 
+    _handleSettingsKeyUp(e) {
+    try {
+        if (document.activeElement.tagName.toLowerCase() === "input") return
+        switch (e.key.toString().toLowerCase()) {
+            case this.settings.keyShortcuts["settings"]?.toString()?.toLowerCase():     
+                this.leaveSettingsView()
+                break
+        }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }
+
     leaveSettingsView() {
     try {
         this.ui.dom.settingsCloseBtn.blur()
-        if (!this.wasPaused) this.video.play() 
+        if (!this.wasPaused) this.togglePlay(true) 
         this.ui.dom.videoContainer.classList.remove("T_M_G-video-settings-view")
         this.setKeyEventListeners()
+        document.removeEventListener("keyup", this._handleSettingsKeyUp)
     } catch(e) {
         this._log(e, "error", "swallow")
     }                        

@@ -172,7 +172,7 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     --T_M_G-video-icons-color: var(--T_M_G-video-theme-color);
     --T_M_G-video-icons-hover-color: var(--T_M_G-video-icons-color);
     --T_M_G-video-controls-color: var(--T_M_G-video-icons-color);
-    --T_M_G-video-current-controls-color: var(--T_M_G-video-icons-color);
+    --T_M_G-video-current-controls-color: var(--T_M_G-video-controls-color);
     --T_M_G-video-controls-hover-color: var(--T_M_G-video-icons-hover-color);
     --T_M_G-video-controls-disabled-color: grey;
     --T_M_G-video-controls-background: transparent;
@@ -284,6 +284,8 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
     min-width: inherit;
     min-height: inherit;
     border-radius: inherit;
+    transition: transform var(--T_M_G-video-settings-view-transition-time) ease;
+    transform-style: preserve-3d;
 }
 
 .T_M_G-video-container-content {
@@ -295,11 +297,12 @@ body .T_M_G-video-container .T_M_G-video-play-notifier.T_M_G-video-control-spin 
 
 .T_M_G-video-settings {
     pointer-events: none;
-    opacity: 0;
     transform: rotateY(180deg);
+    transform-style: preserve-3d;
     position: absolute;
     inset: 0;
     z-index: 1;
+    opacity: 0;
     background-color: var(--T_M_G-video-settings-background-color);
     -webkit-backdrop-filter: blur(1px);
     backdrop-filter: blur(1px);
