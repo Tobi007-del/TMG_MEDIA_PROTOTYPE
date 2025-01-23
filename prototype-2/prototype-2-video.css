@@ -33,7 +33,8 @@ body .T_M_G-video-container:has(.T_M_G-video-play-notifier.T_M_G-video-control-s
 
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier, 
 body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier.T_M_G-video-control-spin {
-    display: flex;
+    display: flex!important;
+    outline-offset: 2px;
 }
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier {
     animation: beat 1s infinite ease-out;
@@ -451,7 +452,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 }
 
 .T_M_G-video-container:has(img) img {
-    color: transparent!important;
+    color: transparent;
     background: center/cover no-repeat url('/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png'), var(--T_M_G-video-background);
     min-width: unset;
     min-height: unset;
