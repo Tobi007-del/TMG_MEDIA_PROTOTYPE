@@ -511,8 +511,8 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     position: absolute;
     top: 0;
     left: 0;
-    padding-inline: calc(var(--T_M_G-video-current-unit)/1.5);
-    padding-block: calc(var(--T_M_G-video-current-unit)/1.65);
+    padding-inline: calc(var(--T_M_G-video-current-unit)/1.25);
+    padding-block: calc(var(--T_M_G-video-current-unit)/1.45);
     font-size: calc(var(--T_M_G-video-current-unit)/1.35);
     width: 100%;
     background: linear-gradient(to bottom, var(--T_M_G-video-curtain-color), transparent);
@@ -530,7 +530,8 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 }
 
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-playlist-title-wrapper {
-    height: calc(var(--T_M_G-video-current-unit)*2.75);
+    height: calc(var(--T_M_G-video-current-unit)*2.5);
+    padding-block: 0;
     padding-inline: calc(var(--T_M_G-video-current-unit)*2.5);
     font-size: calc(var(--T_M_G-video-current-unit)/1.5);
     text-align: center;
