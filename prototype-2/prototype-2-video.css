@@ -183,7 +183,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     --T_M_G-video-controls-color: var(--T_M_G-video-icons-color);
     --T_M_G-video-current-controls-color: var(--T_M_G-video-controls-color);
     --T_M_G-video-controls-hover-color: var(--T_M_G-video-icons-hover-color);
-    --T_M_G-video-controls-disabled-color: grey;
+    --T_M_G-video-controls-disabled-color: lightgrey;
     --T_M_G-video-controls-background: transparent;
     --T_M_G-video-controls-hover-background: var(--T_M_G-video-controls-background);
     --T_M_G-video-controls-background-radius: 0;
@@ -498,7 +498,9 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 
 .T_M_G-video-overlay-main-controls-wrapper,
 .T_M_G-video-buffer, 
-.T_M_G-video-thumbnail-img {
+.T_M_G-video-thumbnail-img,
+.T_M_G-video-container .T_M_G-video-captions-btn::after,
+.T_M_G-video-captions-notifier::after {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -1195,6 +1197,11 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     display: none;
 }
 
+.T_M_G-video-container[data-track-kind="captions"] .T_M_G-video-subtitles-icon,
+.T_M_G-video-container:not([data-track-kind="captions"]) .T_M_G-video-captions-icon {
+    display: none;
+}
+
 .T_M_G-video-container.T_M_G-video-picture-in-picture .T_M_G-video-enter-picture-in-picture-icon,
 .T_M_G-video-container:not(.T_M_G-video-picture-in-picture) .T_M_G-video-leave-picture-in-picture-icon,
 .T_M_G-video-container.T_M_G-video-picture-in-picture button:has(.T_M_G-video-play-icon, .T_M_G-video-pause-icon, .T_M_G-video-prev-icon, .T_M_G-video-next-icon),
@@ -1324,7 +1331,6 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     position: relative;
     width: 0;
     overflow: hidden;
-    max-width: calc(var(--T_M_G-video-current-unit)*2);
     transition: width 150ms ease-in-out;
     background: linear-gradient(to right, var(--T_M_G-video-volume-slider-color) calc(var(--T_M_G-video-current-volume-slider-position) * 100%), var(--T_M_G-video-volume-slider-base-color) 1%);
     box-shadow: 1px 1px 10px black;
@@ -1412,24 +1418,21 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
 .T_M_G-video-container .T_M_G-video-captions-btn::after, 
 .T_M_G-video-captions-notifier::after {
     content: '';
-    position: absolute;
-    left: 50%;
-    translate: -50%;
-    height: calc(var(--T_M_G-video-current-unit)/8.3);
-    width: calc(var(--T_M_G-video-current-unit)/1.1);
+    z-index: -1;
+    height: calc(var(--T_M_G-video-current-unit)/1.5);
+    width: calc(var(--T_M_G-video-current-unit)/1.25);
     background-color: var(--T_M_G-video-brand-color);
-    transform: scaleX(0);
-    transform-origin: center;
+    transform: scaleY(0);
+    transform-origin: top;
     border-radius: calc(var(--T_M_G-video-current-unit)/16.7);
 }
 
-.T_M_G-video-container .T_M_G-video-captions-btn::after {
-    bottom: calc(var(--T_M_G-video-current-unit)/-12.5);
+.T_M_G-video-container .T_M_G-video-captions-btn::after,
+.T_M_G-video-captions-notifier::after {
     transition: transform 0.25s ease;
 }
 
 .T_M_G-video-container .T_M_G-video-captions-notifier::after {
-    bottom: calc(50% - calc(var(--T_M_G-video-current-unit)/2));
     background-color: var(--T_M_G-video-theme-inverse-color);
 }
 
@@ -1439,7 +1442,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
 
 .T_M_G-video-container.T_M_G-video-captions .T_M_G-video-captions-btn::after, 
 .T_M_G-video-container.T_M_G-video-captions .T_M_G-video-captions-notifier::after {
-    transform: scaleX(1);
+    transform: scaleY(1);
 }
 
 .T_M_G-video-container video::-webkit-media-text-track-display,

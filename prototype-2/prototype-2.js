@@ -272,9 +272,9 @@ class _T_M_G_Video_Player {
         this._log(e, "error", "swallow")
     }                        
     }
-    
+
     //settings 
-    initSettingsManager(settings) {
+    initSettingsManager() {
     try {
         this._log("TMG Video Settings Manager started")
     } catch(e) {
@@ -521,9 +521,12 @@ class _T_M_G_Video_Player {
         captionsNotifierHTML = this.settings.status.ui.notifiers ?
         `
             <div class="T_M_G-video-notifiers T_M_G-video-captions-notifier">
-                <svg data-tooltip-text="Closed Captions(c)" data-tooltip-position="top">
+                <svg data-tooltip-text="Subtitles(c)" class="T_M_G-video-subtitles-icon">
                     <path fill="currentColor" transform="scale(0.5)" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" />
                 </svg>
+                <svg data-tooltip-text="Captions(c)" data-tooltip-position="top" class="T_M_G-video-captions-icon" transform="scale(1.15)">
+                    <path fill="currentColor" d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z"></path>
+                <svg>
             </div>
         ` : null,
         playbackRateNotifierHTML = this.settings.status.ui.notifiers ? 
@@ -736,9 +739,12 @@ class _T_M_G_Video_Player {
         captionsBtnHTML = this.settings.status.ui.captions ?
         `
                 <button type="button" class="T_M_G-video-captions-btn" title="Toggle Captions/Subtitles(c)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="captions">
-                    <svg data-tooltip-text="Captions/Subtitles(c)" data-tooltip-position="top" viewBox="0 0 44 46">
+                    <svg data-tooltip-text="Subtitles(c)" data-tooltip-position="top" class="T_M_G-video-subtitles-icon">
                         <path fill="currentColor" transform="scale(0.5)" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" />
                     </svg>
+                    <svg data-tooltip-text="Captions(c)" data-tooltip-position="top" class="T_M_G-video-captions-icon" transform="scale(1.15)">
+                        <path fill="currentColor" d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z"></path>
+                    <svg>
                 </button>
         ` : null,
         settingsBtnHTML = this.settings.status.ui.settings ?
@@ -1001,6 +1007,7 @@ class _T_M_G_Video_Player {
         if (this.video.textTracks[this.textTrackIndex]) { 
             this.video.textTracks[this.textTrackIndex].mode = this.settings.autocaptions ? "showing" : "hidden"
             this.ui.dom.videoContainer.classList.toggle("T_M_G-video-captions", this.settings.autocaptions)
+            this.ui.dom.videoContainer.dataset.trackKind = this.video.textTracks[this.textTrackIndex].kind
         }
         if (!this.settings.status.ui.previewImages) {
             this.ui.previewImgContext = this.ui.dom.previewImg.getContext("2d")
@@ -1193,10 +1200,10 @@ class _T_M_G_Video_Player {
         this.ui.dom.videoContainerContent.addEventListener("click", this._handleHoverPointerDown, true)
         this.ui.dom.videoContainerContent.addEventListener("pointermove", this._handleHoverPointerMove, true)
         this.ui.dom.videoContainerContent.addEventListener("mouseleave", this._handleHoverPointerOut, true)
-        this.ui.dom.videoContainerContent.addEventListener("click", this._handleClick)
-        this.ui.dom.videoContainerContent.addEventListener("dblclick", this._handleDoubleClick)
-        this.ui.dom.videoContainerContent.addEventListener("mousedown", this._handlePointerDown)
-        this.ui.dom.videoContainerContent.addEventListener("touchstart", this._handlePointerDown, {passive:true})
+        this.ui.dom.videoContainerContent.addEventListener("click", this._handleClick, true)
+        this.ui.dom.videoContainerContent.addEventListener("dblclick", this._handleDoubleClick, true)
+        this.ui.dom.videoContainerContent.addEventListener("mousedown", this._handlePointerDown, true)
+        this.ui.dom.videoContainerContent.addEventListener("touchstart", this._handlePointerDown, {passive:true, useCapture:true})
     } catch(e) {
         this._log(e, "error", "swallow")
     }            
@@ -1641,7 +1648,6 @@ class _T_M_G_Video_Player {
         }
         this.overlayRestraint()
         this.ui.dom.videoContainer.classList.remove("T_M_G-video-paused")
-        this.playbackState = "playing"
         if ('mediaSession' in navigator) {
             if (this.media) navigator.mediaSession.metadata = new MediaMetadata(this.media)
             navigator.mediaSession.setActionHandler('play', () => this.togglePlay(true))
@@ -1656,7 +1662,7 @@ class _T_M_G_Video_Player {
             if (this.currentPlaylistIndex < this.#playlist?.length - 1)
                 navigator.mediaSession.setActionHandler("nexttrack", () => this.nextVideo())
             }            
-            navigator.mediaSession.playbackState = this.playbackState
+            navigator.mediaSession.playbackState = "playing"
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -1667,9 +1673,8 @@ class _T_M_G_Video_Player {
     try {        
         this.showVideoOverlay()
         this.ui.dom.videoContainer.classList.add("T_M_G-video-paused")
-        this.playbackState = "paused"
         if ('mediaSession' in navigator) {
-            navigator.mediaSession.playbackState = this.playbackState
+            navigator.mediaSession.playbackState = "paused"
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2309,7 +2314,7 @@ class _T_M_G_Video_Player {
     //Keyboard and General Accessibility Functions
     _handleClick({target}) {
     try {
-        if (target === this.video) {
+        if (!(this.ui.dom.videoControlsContainer.contains(target) || this.ui.dom.videoOverlayControlsContainer.contains(target))) {
         if (tmg.queryMediaMobile() && !this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {
             if (!this.buffering) this.ui.dom.videoContainer.classList.toggle("T_M_G-video-overlay")
         } 
@@ -2335,7 +2340,7 @@ class _T_M_G_Video_Player {
 
     _handleDoubleClick({clientX: x, target}) {
     try {
-        if (target === this.video) {
+        if (!(this.ui.dom.videoControlsContainer.contains(target) || this.ui.dom.videoOverlayControlsContainer.contains(target))) {
         if (this.playId) clearTimeout(this.playId)
         const rect = this.video.getBoundingClientRect()
         if (((x-rect.left) > (this.video.offsetWidth*0.65))) {
@@ -2403,7 +2408,7 @@ class _T_M_G_Video_Player {
 
     _handlePointerDown(e) {
     try {
-        if (e.target === this.video) {
+        if (!(this.ui.dom.videoControlsContainer.contains(e.target) || this.ui.dom.videoOverlayControlsContainer.contains(e.target))) {
         if (!this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {
             this.ui.dom.videoContainer.addEventListener("mouseup", this._handleSpeedPointerUp)
             this.ui.dom.videoContainer.addEventListener("mouseleave", this._handleSpeedPointerOut)                
@@ -2789,7 +2794,6 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
             this.#build.video = this.#medium
             this.#build.mediaPlayer = 'TMG'
             this.#build.mediaType = 'video'
-            this.#build.playbackState = this.#medium.autoplay ? 'playing' : 'paused'
             //doing some cleanup to make sure no necessary settings were removed
             this.builder()
             const settings = this.#build.settings.allowOverride ? {...this.#build.settings, ...this.userSettings} : this.#build.settings
@@ -2875,7 +2879,7 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
                 draggableControls: !!(this.#build.settings.controllerStructure && this.#build.settings.status.allowOverride.controllerStructure)
             }
             this.#build.settings.status.modes = {
-                fullScreen: this.#build.settings.modes.includes("fullScreen") && !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled),
+                fullScreen: this.#build.settings.modes.includes("fullScreen") && !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.documentElement.webkitSupportsFullscreen || document.webkitFullscreenEnabled),
                 theater: this.#build.settings.modes.includes("theater"),
                 pictureInPicture: this.#build.settings.modes.includes("pictureInPicture") && document.pictureInPictureEnabled,
                 miniPlayer: this.#build.settings.modes.includes("miniPlayer")
@@ -2931,7 +2935,6 @@ if (typeof window === "undefined") {
             activated: true,
             initialMode: "normal",
             initialState: true,
-            playbackState: "none",
             debug: true,
             playlist: null,
             settings: {
