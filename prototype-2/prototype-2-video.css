@@ -688,9 +688,6 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     position: absolute;
     background-color: transparent;
     border-radius: inherit;
-}
-
-.T_M_G-video-overlay-controls-container > * {
     z-index: 1;
 }
 

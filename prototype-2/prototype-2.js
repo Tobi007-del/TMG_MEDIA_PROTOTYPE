@@ -1139,7 +1139,6 @@ class _T_M_G_Video_Player {
         this.setWindowEventListeners()
         this.setDocumentEventListeners()
         this.setVideoContainerEventListeners()
-        this.setVideoContainerContentEventListeners()
         this.setVideoEventListeners()
         this.setControlsEventListeners()
         this.setSettingsEventListeners()
@@ -1189,21 +1188,18 @@ class _T_M_G_Video_Player {
 
     setVideoContainerEventListeners() {
     try {
-        this.ui.dom.videoContainer.addEventListener("contextmenu", this._handleRightClick)
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }  
-    }
-
-    setVideoContainerContentEventListeners() {
-    try {
-        this.ui.dom.videoContainerContent.addEventListener("click", this._handleHoverPointerDown, true)
-        this.ui.dom.videoContainerContent.addEventListener("pointermove", this._handleHoverPointerMove, true)
-        this.ui.dom.videoContainerContent.addEventListener("mouseleave", this._handleHoverPointerOut, true)
-        this.ui.dom.videoContainerContent.addEventListener("click", this._handleClick, true)
-        this.ui.dom.videoContainerContent.addEventListener("dblclick", this._handleDoubleClick, true)
-        this.ui.dom.videoContainerContent.addEventListener("mousedown", this._handlePointerDown, true)
-        this.ui.dom.videoContainerContent.addEventListener("touchstart", this._handlePointerDown, {passive:true, useCapture:true})
+        this.ui.dom.videoControlsContainer.addEventListener("contextmenu", this._handleRightClick)
+        this.ui.dom.videoOverlayControlsContainer.addEventListener("contextmenu", this._handleRightClick)
+        this.ui.dom.videoOverlayControlsContainer.addEventListener("click", this._handleHoverPointerDown, true)
+        this.ui.dom.videoControlsContainer.addEventListener("click", this._handleHoverPointerDown, true)
+        this.ui.dom.videoOverlayControlsContainer.addEventListener("pointermove", this._handleHoverPointerMove, true)
+        this.ui.dom.videoControlsContainer.addEventListener("pointermove", this._handleHoverPointerMove, true)
+        this.ui.dom.videoOverlayControlsContainer.addEventListener("mouseleave", this._handleHoverPointerOut, true)
+        this.ui.dom.videoControlsContainer.addEventListener("mouseleave", this._handleHoverPointerOut, true)
+        this.ui.dom.videoOverlayControlsContainer.addEventListener("click", this._handleClick, true)
+        this.ui.dom.videoOverlayControlsContainer.addEventListener("dblclick", this._handleDoubleClick, true)
+        this.ui.dom.videoOverlayControlsContainer.addEventListener("mousedown", this._handlePointerDown, true)
+        this.ui.dom.videoOverlayControlsContainer.addEventListener("touchstart", this._handlePointerDown, {passive:true, useCapture:true})
     } catch(e) {
         this._log(e, "error", "swallow")
     }            
@@ -2314,8 +2310,9 @@ class _T_M_G_Video_Player {
     //Keyboard and General Accessibility Functions
     _handleClick({target}) {
     try {
-        if (!(this.ui.dom.videoControlsContainer.contains(target) || this.ui.dom.videoOverlayControlsContainer.contains(target))) {
+        if (target === this.ui.dom.videoControlsContainer || target === this.ui.dom.videoOverlayControlsContainer) {
         if (tmg.queryMediaMobile() && !this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {
+            console.log("hmm")
             if (!this.buffering) this.ui.dom.videoContainer.classList.toggle("T_M_G-video-overlay")
         } 
         if (tmg.queryMediaMobile() || this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) return
@@ -2340,7 +2337,7 @@ class _T_M_G_Video_Player {
 
     _handleDoubleClick({clientX: x, target}) {
     try {
-        if (!(this.ui.dom.videoControlsContainer.contains(target) || this.ui.dom.videoOverlayControlsContainer.contains(target))) {
+        if (target === this.ui.dom.videoControlsContainer || target === this.ui.dom.videoOverlayControlsContainer) {
         if (this.playId) clearTimeout(this.playId)
         const rect = this.video.getBoundingClientRect()
         if (((x-rect.left) > (this.video.offsetWidth*0.65))) {
@@ -2408,7 +2405,7 @@ class _T_M_G_Video_Player {
 
     _handlePointerDown(e) {
     try {
-        if (!(this.ui.dom.videoControlsContainer.contains(e.target) || this.ui.dom.videoOverlayControlsContainer.contains(e.target))) {
+        if (e.target === this.ui.dom.videoControlsContainer || e.target === this.ui.dom.videoOverlayControlsContainer) {
         if (!this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {
             this.ui.dom.videoContainer.addEventListener("mouseup", this._handleSpeedPointerUp)
             this.ui.dom.videoContainer.addEventListener("mouseleave", this._handleSpeedPointerOut)                
