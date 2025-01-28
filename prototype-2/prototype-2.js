@@ -1000,8 +1000,10 @@ class _T_M_G_Video_Player {
     try {
         if (this.initialState) {
             this.ui.dom.playNotifier.classList.add("T_M_G-video-control-spin")
-            this.ui.dom.playNotifier.onanimationend = () => this.ui.dom.playNotifier.classList.remove("T_M_G-video-control-spin")
-            this.ui.dom.videoContainer.classList.remove("T_M_G-video-initial")
+            this.ui.dom.playNotifier.onanimationend = () => {
+                this.ui.dom.videoContainer.classList.remove("T_M_G-video-initial")
+                this.ui.dom.playNotifier.classList.remove("T_M_G-video-control-spin")
+            }
             if (!this.video.paused) this._handlePlay()
         }  
     } catch(e) {
@@ -1481,7 +1483,6 @@ class _T_M_G_Video_Player {
             this.#playlist[this.currentPlaylistIndex].settings.startTime = this.video.currentTime
         }
         if (this.#playlist) {
-            this.stall()    
             this.currentPlaylistIndex = index
             const video = this.#playlist[index]
             if (video.media?.artwork) 
