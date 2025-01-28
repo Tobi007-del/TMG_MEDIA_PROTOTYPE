@@ -1001,8 +1001,8 @@ class _T_M_G_Video_Player {
         if (this.initialState) {
             this.ui.dom.playNotifier.classList.add("T_M_G-video-control-spin")
             this.ui.dom.playNotifier.onanimationend = () => {
-                this.ui.dom.videoContainer.classList.remove("T_M_G-video-initial")
                 this.ui.dom.playNotifier.classList.remove("T_M_G-video-control-spin")
+                this.ui.dom.videoContainer.classList.remove("T_M_G-video-initial")
             }
             if (!this.video.paused) this._handlePlay()
         }  
