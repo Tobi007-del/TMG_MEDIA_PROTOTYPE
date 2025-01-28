@@ -2075,7 +2075,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     }
     .T_M_G-video-container {
         --T_M_G-video-current-dbc-backdrop-width: 65vw;
-        --T_M_G-video-current-loader-thickness: calc(var(--T_M_G-video-relative-unit)/10);
+        --T_M_G-video-current-loader-thickness: calc(var(--T_M_G-video-relative-unit)/9);
         --T_M_G-video-current-loader-size: calc(var(--T_M_G-video-relative-unit)*1.35);
     }
     .T_M_G-video-container, 
