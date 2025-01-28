@@ -2982,7 +2982,9 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
                 draggableControls: !!(settings.controllerStructure && settings.status.allowOverride.controllerStructure)
             }
             settings.status.modes = {
-                fullScreen: settings.modes.includes("fullScreen") && !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled),
+                fullScreen: settings.modes.includes("fullScreen") 
+                // && !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled)
+                ,
                 theater: settings.modes.includes("theater"),
                 pictureInPicture: settings.modes.includes("pictureInPicture") && document.pictureInPictureEnabled,
                 miniPlayer: settings.modes.includes("miniPlayer")
