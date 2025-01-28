@@ -2163,6 +2163,7 @@ class _T_M_G_Video_Player {
     try {
         if (this.settings.status.modes.fullScreen) {
         if(!this.inFullScreen()) {
+            if (document.pictureInPictureElement) document.exitPictureInPicture()
             if (this.ui.dom.videoContainer.requestFullscreen) this.ui.dom.videoContainer.requestFullscreen()
 			else if (this.ui.dom.videoContainer.mozRequestFullScreen) this.ui.dom.videoContainer.mozRequestFullScreen()
 			else if (this.ui.dom.videoContainer.webkitRequestFullScreen) this.ui.dom.videoContainer.webkitRequestFullScreen() || video.webkitRequestFullScreen()
