@@ -4,7 +4,7 @@ const vp = new tmg.Player();
 vp.build.playlist = [
     {
         media: {title: "Zack Snyder's Justice League Trailer", artist: "TMG MEDIA PROTOTYPE", artwork: [{src: "/TMG.com/SPARE-PICS/zack-snyder-justice-league-b.jpg"}],},
-        src: "/TMG.com/MOVIES/Justice League/Zack Snyder's Justice League - Official Trailer - Warner Bros. UK.mp4"
+        src: "/TMG.com/MOVIES/Justice League/Zack Snyder's Justice League - Official Trailer - Warner Bros. UK.mp4",
     },
     {
         media: {title: "Madam Web Trailer", artwork: [{src: "/TMG.com/SPARE-PICS/madame-web.png"}],},

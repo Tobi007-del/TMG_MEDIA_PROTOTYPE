@@ -503,7 +503,7 @@ class _T_M_G_Video_Player {
         `,
         thumbnailImgHTML =
         `
-        ${this.settings.status.ui.previewImages ? `<img class="T_M_G-video-thumbnail-img" alt="movie-image" src="${tmg.DEFAULT_VIDEO_BUILD.media.artwork[0].src}">` : '<canvas class="T_M_G-video-thumbnail-img"></canvas>'}
+        ${this.settings.status.ui.previewImages ? `<img class="T_M_G-video-thumbnail-img" alt="movie-image" src="${tmg.altImgSrc}">` : '<canvas class="T_M_G-video-thumbnail-img"></canvas>'}
         `,
         playPauseNotifierHTML = this.settings.status.ui.notifiers || this.initialState ?
         `
@@ -675,7 +675,7 @@ class _T_M_G_Video_Player {
                 <div class="T_M_G-video-timeline">
                     <div class="T_M_G-video-loaded-timeline"></div>
                     <div class="T_M_G-video-preview-img-container">
-                        ${this.settings.status.ui.previewImages ? `<img class="T_M_G-video-preview-img" alt="Preview image" src="${tmg.DEFAULT_VIDEO_BUILD.media.artwork[0].src}">` : '<canvas class="T_M_G-video-preview-img"></canvas>'}
+                        ${this.settings.status.ui.previewImages ? `<img class="T_M_G-video-preview-img" alt="Preview image" src="${tmg.altImgSrc}">` : '<canvas class="T_M_G-video-preview-img"></canvas>'}
                     </div>
                     <div class="T_M_G-video-thumb-indicator"></div>
                 </div>
@@ -968,7 +968,8 @@ class _T_M_G_Video_Player {
                 })
                 this.ui.dom.playNotifier.addEventListener("blur", () => document.removeEventListener("keyup", handleInitialKeyUp))
                 this.ui.dom.notifiersContainer?.addEventListener("click", removeInitialState, {once:true})
-            } else this.initializeVideoControls()        
+            } else this.initializeVideoControls()  
+
         } else {
             console.warn("You have to activate the TMG controller to access the custom controls")
         }
@@ -979,11 +980,12 @@ class _T_M_G_Video_Player {
 
     initializeVideoControls() {
     try {     
+        this.stall()
         for (const control of this.ui.dom.focusableControls) {
             control.tabIndex = "0"
             control.dataset.focusableControl = true
         }
-        this.video.currentTime = this.startTime || 0
+        if (this.initialState && this.settings.status.allowOverride.startTime) this.video.currentTime = this.settings?.startTime || 0
         if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
         this.setInitialStates()
         this.setAllEventListeners()
@@ -994,17 +996,31 @@ class _T_M_G_Video_Player {
     }        
     }
 
-    setInitialStates() {
+    stall() {
     try {
         if (this.initialState) {
             this.ui.dom.playNotifier.classList.add("T_M_G-video-control-spin")
             this.ui.dom.playNotifier.onanimationend = () => this.ui.dom.playNotifier.classList.remove("T_M_G-video-control-spin")
             this.ui.dom.videoContainer.classList.remove("T_M_G-video-initial")
-            this._handlePlay()
-        }
-        if (this.#playlist || this.media.title) 
+            if (!this.video.paused) this._handlePlay()
+        }  
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }           
+    }
+
+    setInitialStates() {
+    try {        
+        if (this.media?.title) 
             this.ui.dom.playlistTitle.textContent = this.ui.dom.playlistTitle.dataset.videoTitle = this.media.title || ""
-        if (this.video.textTracks[this.textTrackIndex]) { 
+        if (this.video.textTracks.length > 0) { 
+            Array.from(this.video.textTracks).forEach((track, index) => {
+                if (track.mode === "showing") {
+                    this.textTrackIndex = index
+                    return
+                }
+                track.mode = "hidden"
+            })
             this.video.textTracks[this.textTrackIndex].mode = this.settings.autocaptions ? "showing" : "hidden"
             this.ui.dom.videoContainer.classList.toggle("T_M_G-video-captions", this.settings.autocaptions)
             this.ui.dom.videoContainer.dataset.trackKind = this.video.textTracks[this.textTrackIndex].kind
@@ -1422,7 +1438,7 @@ class _T_M_G_Video_Player {
 
     _handleLoadedMetadata() {
     try {
-        this.video.currentTime = this.startTime || 0
+        if (this.settings.status.allowOverride.startTime) this.video.currentTime = this.settings?.startTime || 0
         if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
         this.aspectRatio = this.video.videoWidth / this.video.videoHeight
         this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`
@@ -1461,21 +1477,37 @@ class _T_M_G_Video_Player {
     movePlaylistTo(index) {
     try {
         if (this.video.currentTime < (this.video.duration - this.autoPlaylistCountdown) && this.video.currentTime > 0) {
-            this.#playlist[this.currentPlaylistIndex].startTime = this.video.currentTime
+            this.#playlist[this.currentPlaylistIndex].settings = this.#playlist[this.currentPlaylistIndex].settings ?? {}
+            this.#playlist[this.currentPlaylistIndex].settings.startTime = this.video.currentTime
         }
         if (this.#playlist) {
+            this.stall()    
             this.currentPlaylistIndex = index
             const video = this.#playlist[index]
             if (video.media?.artwork) 
             if (video.media.artwork[0]?.src) 
-                this.video.poster = video.media.artwork[0]?.src
-            if (video.media) 
-                this.media = {...this.media, ...video.media}
-            if (video.settings)
-                if (video.settings.previewImages)
-                    this.settings.previewImages = {...this.settings.previewImages, ...video.settings.previewImages}
-            this.startTime = video.startTime ?? null
-            this.video.src = video.src ?? tmg.altImgSrc
+                this.video.poster = video.media.artwork[0].src
+            tmg.removeSources(this.video)
+            tmg.removeTracks(this.video)
+            if (video.src) {
+                tmg.removeSources(this.video)
+                this.video.setAttribute("src", video.src)
+                this.src = video.src
+            } else if (video.sources?.length > 0) {
+                this.video.removeAttribute("src")
+                tmg.addSources(video.sources, this.video) 
+                this.sources = video.sources
+            }
+            if (video.tracks?.length > 0) {
+                tmg.addTracks(video.tracks, this.video)
+                this.tracks = video.tracks
+            }
+            this.media = video.media ? {...this.media, ...video.media} : video.media ?? null
+            this.settings.startTime = video.settings?.startTime || null
+            this.settings.endTime = video.settings?.endTime || null
+            this.settings.previewImages = video.settings?.previewImages?.length > 0 ? {...this.settings.previewImages, ...video.settings.previewImages} : video.settings?.previewImages ?? null
+            this.settings.status.ui.previewImages = (this.settings.previewImages?.address && this.settings.previewImages.fps) ? true : false
+            if (this.settings.previewImages === false) videoContainer.setAttribute("data-previews", false) 
             this.setInitialStates()
             this.togglePlay(true)
         }        
@@ -1769,7 +1801,7 @@ class _T_M_G_Video_Player {
             previewImgSrc = this.settings.previewImages.address.replace('$', previewImgNumber)
             if (this.settings.previewImages !== false && !tmg.queryMediaMobile()) this.ui.dom.previewImg.src = previewImgSrc
             if (this.isScrubbing) this.ui.dom.thumbnailImg.src = previewImgSrc
-        } else {
+        } else if (this.settings.previewImages !== false) {
             this.pseudoVideo.currentTime = percent * this.video.duration
             if (this.settings.previewImages !== false && !tmg.queryMediaMobile()) this.ui.previewImgContext.drawImage(this.pseudoVideo, 0, 0, this.ui.dom.previewImg.width, this.ui.dom.previewImg.height)
             if (this.isScrubbing) this.ui.thumbnailImgContext.drawImage(this.pseudoVideo, 0, 0, this.ui.dom.thumbnailImg.width, this.ui.dom.thumbnailImg.height)
@@ -1834,7 +1866,7 @@ class _T_M_G_Video_Player {
         if (this.ui.dom.currentTimeElement) this.ui.dom.currentTimeElement.textContent = tmg.formatDuration(this.video.currentTime)
         if (this.ui.dom.playbackRateNotifier && this.speedCheck && this.speedToken === 1) this.ui.dom.playbackRateNotifier.dataset.currentTime = tmg.formatDuration(this.video.currentTime)
         this.skipVideoTime = this.video.currentTime
-        if (Math.floor(this.video.duration - this.video.currentTime) <= this.autoPlaylistCountdown) this.autoMovePlaylist()
+        if (Math.floor((this.settings?.endTime || this.video.duration) - this.video.currentTime) <= this.autoPlaylistCountdown) this.autoMovePlaylist()
         if ((this.video.currentTime < this.video.duration) && this.ui.dom.videoContainer.classList.contains("T_M_G-video-replay")) this.ui.dom.videoContainer.classList.remove("T_M_G-video-replay")
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2233,22 +2265,14 @@ class _T_M_G_Video_Player {
             this.ui.dom.videoContainer.addEventListener("touchstart", this.moveMiniPlayer, {passive: false})
             return
         } 
-        if ((this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player") && this.parentIntersecting) || (this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player") && window.innerWidth < threshold)) this.cleanUpMiniPlayer()
+        if ((this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player") && this.parentIntersecting) || (this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player") && window.innerWidth < threshold)) this.removeMiniPlayer()
     }
     } catch(e) {
         this._log(e, "error", "swallow")
     }
-    }    
+    }                  
 
     removeMiniPlayer() {
-        try {
-            this.cleanUpMiniPlayer()
-        } catch(e) {
-            this._log(e, "error", "swallow")
-        }
-    }                
-
-    cleanUpMiniPlayer() {
         try {
             this.pseudoVideoContainer.remove()
             this.ui.dom.videoContainer.classList.remove("T_M_G-video-mini-player")
@@ -2263,6 +2287,7 @@ class _T_M_G_Video_Player {
     try {
         if (this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {
         if (!this.ui.dom.videoControlsContainer.contains(e.target)) {
+            this.ui.dom.videoContainerContent.classList.add("T_M_G-video-cursor-auto")
             document.addEventListener("mousemove", this._handleMiniPlayerPosition)
             document.addEventListener("mouseup", this.emptyMiniPlayerListeners)
             document.addEventListener("mouseleave", this.emptyMiniPlayerListeners)
@@ -2278,6 +2303,7 @@ class _T_M_G_Video_Player {
     emptyMiniPlayerListeners() {
         try {
             this.showVideoOverlay()
+            this.ui.dom.videoContainerContent.classList.remove("T_M_G-video-cursor-auto")
             document.removeEventListener("mousemove", this._handleMiniPlayerPosition)
             document.removeEventListener("mouseup", this.emptyMiniPlayerListeners)
             document.removeEventListener("mouseleave", this.emptyMiniPlayerListeners)
@@ -2312,7 +2338,6 @@ class _T_M_G_Video_Player {
     try {
         if (target === this.ui.dom.videoControlsContainer || target === this.ui.dom.videoOverlayControlsContainer) {
         if (tmg.queryMediaMobile() && !this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {
-            console.log("hmm")
             if (!this.buffering) this.ui.dom.videoContainer.classList.toggle("T_M_G-video-overlay")
         } 
         if (tmg.queryMediaMobile() || this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) return
@@ -2769,7 +2794,7 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
     attach(medium) {
         if (tmg.isIterable(medium)) {
             console.error("Please provide a single media element to the TMG media player")
-            console.warn("Consider looping the iterable argument to get a single argument and create a new TMG player instance for each of them")
+            console.warn("Consider looping the iterable argument to get a single argument and instantiate a new 'tmg.Player' for each of them")
         } else {
             if (this.#active ?? false) {
                 console.error("This TMG media player already has a viable media element attached")
@@ -2788,29 +2813,68 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
                 console.warn("Please remove the 'controls' attribute to deploy the TMG video controller!")
                 return                
             }
+            //making sure the video plays inline even on ios mobile
+            this.#medium.setAttribute("playsinline", true)
+            this.#medium.setAttribute("webkit-playsinline", true)
+            //doing some cleanup to make sure no necessary settings were removed
+            const settings = this.#build.settings.allowOverride ? {...this.#build.settings, ...this.userSettings} : this.#build.settings
             this.#build.video = this.#medium
             this.#build.mediaPlayer = 'TMG'
             this.#build.mediaType = 'video'
-            //doing some cleanup to make sure no necessary settings were removed
-            this.builder()
-            const settings = this.#build.settings.allowOverride ? {...this.#build.settings, ...this.userSettings} : this.#build.settings
-            this.#medium.setAttribute("playsinline", true)
-            this.#medium.setAttribute("webkit-playsinline", true)
+            //making some changes to the build based on the state of the playlist
             if (this.#build.playlist) {
-                if (this.#build.playlist[0]?.src) this.#medium.setAttribute("src", this.#build.playlist[0].src)
-                if (this.#build.playlist[0]?.media) this.#build.media = {...this.#build.media, ...this.#build.playlist[0].media}
-                if (this.#build.playlist[0]?.startTime) this.#build.startTime = this.#build.playlist[0].startTime
+                const video = this.#build.playlist[0]
+                if (video) {
+                if (video.src) this.#build.src = video.src
+                else if (video.sources?.length > 0) this.#build.sources = video.sources
+                if (video.tracks?.length > 0) this.#build.tracks = video.tracks
+                if (video.media) this.#build.media = {...this.#build.media, ...video.media}
+                if (video.settings?.startTime) settings.startTime = video.settings.startTime
+                if (video.settings?.endTime) settings.endTime = video.settings.endTime
+                if (video.settings?.previewImages) settings.previewImages = video.settings.previewImages
+                }
+            }
+            const sources = this.#medium.querySelectorAll("source")
+            const tracks = this.#medium.querySelectorAll("track[kind='captions'], track[kind='subtitles']")
+            if (this.#build.src) {
+                tmg.removeSources(this.#medium)
+                this.#medium.setAttribute("src", this.#build.src)
+            } else if (this.#build.sources) {
+                this.#medium.removeAttribute("src")
+                tmg.removeSources(this.#medium)
+                tmg.addSources(this.#build.sources, this.#medium)
+            } else if (this.#medium.src) {
+                this.#build.src = this.#medium.src
+            } else if (sources.length > 0) {
+                this.#build.sources = []
+                for (const source of sources) {
+                    const obj = {} 
+                    tmg.putSourceDetails(source, obj)
+                    this.#build.sources.push(obj)
+                }
+            }
+            if (this.#build.tracks) {
+                tmg.removeTracks(this.#medium)
+                tmg.addTracks(this.#build.tracks, this.#medium)
+            } else if (tracks.length > 0) {
+                this.#build.tracks = []
+                for (const track of tracks) {
+                    const obj = {}
+                    tmg.putTrackDetails(track, obj)
+                    this.#build.tracks.push(obj)
+                }
             }
             this.#medium.autoplay = settings.autoplay = (settings.autoplay === true) ? settings.autoplay : this.#medium.autoplay
             this.#medium.loop = settings.loop = (settings.loop === true) ? settings.loop : this.#medium.loop
             this.#medium.muted = settings.muted = (settings.muted === true) ? settings.muted : this.#medium.muted
-            this.#build.settings = {...tmg.DEFAULT_VIDEO_BUILD.settings, ...settings}
             //doing some more work setting boolean values to indicate the status of the player
-            this.#build.settings.status = {}
-            this.#build.settings.status.allowOverride = {
+            settings.status = {}
+            settings.status.allowOverride = {
                 beta: false,
                 modes: false, 
                 controllerStructure: false, 
+                startTime: false,
+                endTime: false,
                 notifiers: false,
                 progressBar: false, 
                 persist: false,
@@ -2820,71 +2884,74 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
                 previewImages: false,
                 keyShortcuts: false
             }
-            this.#build.settings.status.beta = {
+            settings.status.beta = {
                 rewind: false,
                 draggableControls: false
             }
-            //beta and override can either be a boolean or an array of all the features that the developer specifies, if it is a boolean, the boolean is assigned to all props else the specified features are assigned so if value is truthy then, the props will not be assigned a false value which was assigned above except explicitly stated
-            if (this.#build.settings.allowOverride) {
-                if (this.#build.settings.allowOverride === true) {
-                    Object.keys(this.#build.settings.status.allowOverride).forEach(key => this.#build.settings.status.allowOverride[key] = true)
-                } else {
-                    this.#build.settings.status.allowOverride = {
-                        beta: this.#build.settings.allowOverride.includes("beta"),
-                        modes: this.#build.settings.allowOverride.includes("modes"),
-                        controllerStructure: this.#build.settings.allowOverride.includes("controllerStructure"),
-                        notifiers: this.#build.settings.allowOverride.includes("notifiers"),
-                        progressBar: this.#build.settings.allowOverride.includes("progressBar"),
-                        persist: this.#build.settings.allowOverride.includes("persist"),
-                        autoplay: this.#build.settings.allowOverride.includes("autoplay"),
-                        loop: this.#build.settings.allowOverride.includes("loop"),
-                        muted: this.#build.settings.allowOverride.includes("muted"),
-                        previewImages: this.#build.settings.allowOverride.includes("previewImages"),
-                        keyShortcuts: this.#build.settings.allowOverride.includes("keyShortcuts")
-                    }
-                }
-            }
-            if (this.#build.settings.beta) {
-                if (this.#build.settings.beta === true) {
-                    Object.keys(this.#build.settings.status.beta).forEach(key => this.#build.settings.status.beta[key] = true)
-                } else {
-                    this.#build.settings.status.beta = {
-                        rewind: this.#build.settings.beta.includes("rewind"),
-                        draggableControls: this.#build.settings.beta.includes("draggableControls")
-                    }
-                }
-            }
-            this.#build.settings.status.ui = {
+            settings.status.ui = {
                 //notifiers would be in the UI if specified in the settings or if not specified but override is allowed
-                notifiers: this.#build.settings.notifiers || (!this.#build.settings.notifiers && this.#build.settings.status.allowOverride.notifiers),
-                prev: this.#build.settings.controllerStructure.includes("prev"),
-                playPause: this.#build.settings.controllerStructure.includes("playPause"),
-                timeline: this.#build.settings.controllerStructure.some(c => c.startsWith("timeline")),
-                next: this.#build.settings.controllerStructure.includes("next"),
-                volume: this.#build.settings.controllerStructure.includes("volume"),
-                duration: this.#build.settings.controllerStructure.includes("duration"),
-                captions: this.#build.settings.controllerStructure.includes("captions"),
-                settings: this.#build.settings.controllerStructure.includes("settings"),
-                playbackRate: this.#build.settings.controllerStructure.includes("playbackRate"),
-                pictureInPicture: this.#build.settings.controllerStructure.includes("pictureInPicture"),
-                theater: this.#build.settings.controllerStructure.includes("theater"),
-                fullScreen: this.#build.settings.controllerStructure.includes("fullScreen"),
-                previewImages: (this.#build.settings.previewImages?.address && this.#build.settings.previewImages?.fps) ? true : false,
-                leftSidedControls: this.#build.settings.controllerStructure.indexOf("spacer") > -1 ? this.#build.settings.controllerStructure.slice(0, this.#build.settings.controllerStructure.indexOf("spacer")).length > 0 : true,
-                rightSidedControls: this.#build.settings.controllerStructure.indexOf("spacer") > -1 ? this.#build.settings.controllerStructure.slice(this.#build.settings.controllerStructure.indexOf("spacer") + 1).length > 0 : false,
+                notifiers: settings.notifiers || (!settings.notifiers && settings.status.allowOverride.notifiers),
+                prev: settings.controllerStructure.includes("prev"),
+                playPause: settings.controllerStructure.includes("playPause"),
+                timeline: settings.controllerStructure.some(c => c.startsWith("timeline")),
+                next: settings.controllerStructure.includes("next"),
+                volume: settings.controllerStructure.includes("volume"),
+                duration: settings.controllerStructure.includes("duration"),
+                captions: settings.controllerStructure.includes("captions"),
+                settings: settings.controllerStructure.includes("settings"),
+                playbackRate: settings.controllerStructure.includes("playbackRate"),
+                pictureInPicture: settings.controllerStructure.includes("pictureInPicture"),
+                theater: settings.controllerStructure.includes("theater"),
+                fullScreen: settings.controllerStructure.includes("fullScreen"),
+                previewImages: (settings.previewImages?.address && settings.previewImages?.fps) ? true : false,
+                leftSidedControls: settings.controllerStructure.indexOf("spacer") > -1 ? settings.controllerStructure.slice(0, settings.controllerStructure.indexOf("spacer")).length > 0 : true,
+                rightSidedControls: settings.controllerStructure.indexOf("spacer") > -1 ? settings.controllerStructure.slice(settings.controllerStructure.indexOf("spacer") + 1).length > 0 : false,
                 //draggable controls would be in the UI if there is a controller structure and if specified in the beta features and if override is allowed
-                draggableControls: !!(this.#build.settings.controllerStructure && this.#build.settings.status.allowOverride.controllerStructure)
+                draggableControls: !!(settings.controllerStructure && settings.status.allowOverride.controllerStructure)
             }
-            this.#build.settings.status.modes = {
-                fullScreen: this.#build.settings.modes.includes("fullScreen") && !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.documentElement.webkitSupportsFullscreen || document.webkitFullscreenEnabled),
-                theater: this.#build.settings.modes.includes("theater"),
-                pictureInPicture: this.#build.settings.modes.includes("pictureInPicture") && document.pictureInPictureEnabled,
-                miniPlayer: this.#build.settings.modes.includes("miniPlayer")
+            settings.status.modes = {
+                fullScreen: settings.modes.includes("fullScreen") && !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled),
+                theater: settings.modes.includes("theater"),
+                pictureInPicture: settings.modes.includes("pictureInPicture") && document.pictureInPictureEnabled,
+                miniPlayer: settings.modes.includes("miniPlayer")
+            }            
+            //beta and override can either be a boolean or an array of all the features that the developer specifies, if it is a boolean, the boolean is assigned to all props else the specified features are assigned so if value is truthy then, the props will not be assigned a false value which was assigned above except explicitly stated
+            if (settings.allowOverride) {
+                if (settings.allowOverride === true) {
+                    Object.keys(settings.status.allowOverride).forEach(key => settings.status.allowOverride[key] = true)
+                } else {
+                    settings.status.allowOverride = {
+                        beta: settings.allowOverride.includes("beta"),
+                        modes: settings.allowOverride.includes("modes"),
+                        controllerStructure: settings.allowOverride.includes("controllerStructure"),
+                        startTime: settings.allowOverride.includes("startTime"),
+                        endTime: settings.allowOverride.includes("endTime"),
+                        notifiers: settings.allowOverride.includes("notifiers"),
+                        progressBar: settings.allowOverride.includes("progressBar"),
+                        persist: settings.allowOverride.includes("persist"),
+                        autoplay: settings.allowOverride.includes("autoplay"),
+                        loop: settings.allowOverride.includes("loop"),
+                        muted: settings.allowOverride.includes("muted"),
+                        previewImages: settings.allowOverride.includes("previewImages"),
+                        keyShortcuts: settings.allowOverride.includes("keyShortcuts")
+                    }
+                }
             }
-            Object.freeze(this.#build)
+            if (settings.beta) {
+                if (settings.beta === true) {
+                    Object.keys(settings.status.beta).forEach(key => settings.status.beta[key] = true)
+                } else {
+                    settings.status.beta = {
+                        rewind: settings.beta.includes("rewind"),
+                        draggableControls: settings.beta.includes("draggableControls")
+                    }
+                }
+            }
+            //Updating the build settings after the cleanup and modifications
+            this.#build.settings = {...tmg.DEFAULT_VIDEO_BUILD.settings, ...settings}
             //commented out so drag and drop polyfill can be easily toggled
             //tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/drag-drop-touch-polyfill.js", "script")
-            tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css").then(() => this.buildVideoPlayer(this.#build)).then(() => tmg.Players.push(this)).then(() => this.#active = true)
+            tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css").then(() => this.buildVideoPlayer(this.#build)).then(() => this.#build = null).then(() => tmg.Players.push(this)).then(() => this.#active = true)
         } else {
             console.error(`TMG could not deploy custom controls on the '${this.#medium.tagName.toLowerCase()}' element as it is not supported`)
             console.warn("TMG only supports the 'video' element currently")
@@ -2898,47 +2965,22 @@ if (typeof window === "undefined") {
 } else {
     window.tmg = {
         //some utilities that do not need replication
-        media : document.querySelectorAll("[tmgcontrols]"),
-        toggleMedia : bool => {
-            let style = document.getElementById("T_M_G-pre-styling")
-            if (typeof bool == "boolean") 
-                if (bool) {
-                    if (style) style.remove()
-                } else {
-                    if (style) return
-                    style = document.createElement("style")
-                    style.id = "T_M_G-pre-styling"
-                    style.textContent = 
-                    `
-                    body [tmgcontrols] {
-                        display: none!important;
-                    }    
-                    `
-                    document.head.append(style)                
-                }
-            else tmg.toggleMedia(!!style)
-        },        
+        media : document.querySelectorAll("[tmgcontrols]"),       
         DEFAULT_VIDEO_BUILD : {
             mediaPlayer: 'TMG',
             mediaType: 'video',
-            media: {
-                artwork: [
-                    {
-                        src: "/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png"
-                    }
-                ]
-            },
-            startTime: null,
+            media: null,
             activated: true,
             initialMode: "normal",
             initialState: true,
             debug: true,
-            playlist: null,
             settings: {
-                allowOverride: ["beta", "modes", "controllerStructure", "notifiers", "progressBar", "persist", "autocaptions", "autoplay", "loop", "muted", "previewImages", "keyShortcuts"],
+                allowOverride: ["beta", "modes", "controllerStructure", "notifiers", "progressBar", "persist", "autocaptions", "autoplay", "loop", "muted", "previewImages", "keyShortcuts", "startTime", "endTime"],
                 beta: ["rewind", "draggableControls"],
                 modes: ["normal", "fullScreen", "theater", "pictureInPicture", "miniPlayer"],
                 controllerStructure: ["timelineBottom", "prev", "playPause", "next", "volume", "duration", "spacer", "playbackRate", "captions", "settings", "pictureInPicture", "theater", "fullScreen"],
+                startTime: null,
+                endTime: null,
                 notifiers: true,
                 progressBar: false,
                 persist: true,
@@ -2946,7 +2988,7 @@ if (typeof window === "undefined") {
                 autoplay: false,
                 loop: false,
                 muted: false,
-                previewImages: null,
+                previewImages: true,
                 keyShortcuts: {
                     prev: "P", 
                     next: "N",
@@ -3002,6 +3044,52 @@ if (typeof window === "undefined") {
                 return tmg._styleCache[src]
         }
         },
+        addSources : function(sources, medium) {
+            const addSource = (source, medium) => {
+                const sourceElement = document.createElement("source")
+                this.putSourceDetails(source, sourceElement)
+                medium.appendChild(sourceElement)
+            }
+            if (this.isIterable(sources)) 
+                for (const source of sources) {
+                    addSource(source, medium)
+                }
+            else addSource(sources, medium)
+        },
+        putSourceDetails: function(source, sourceElement) {
+            if (source.src) sourceElement.src = source.src
+            if (source.type) sourceElement.type = source.type
+            if (source.media) sourceElement.media = source.media
+        },
+        addTracks : function(tracks, medium) {
+            const addTrack = (track, medium) => {
+                const trackElement = document.createElement("track")
+                this.putTrackDetails(track, trackElement)
+                medium.appendChild(trackElement)
+            }
+            if (this.isIterable(tracks)) 
+                for (const track of tracks) {
+                    addTrack(track, medium)
+                }
+            else addTrack(tracks, medium)
+        },
+        putTrackDetails: function(track, trackElement) {
+            if (track.kind) trackElement.kind = track.kind
+            if (track.label) trackElement.label = track.label
+            if (track.srclang) trackElement.srclang = track.srclang
+            if (track.src) trackElement.src = track.src
+            if (track.default) trackElement.default = track.default
+            if (track.id) trackElement.id = track.id
+        },
+        removeSources: function(medium) {
+            medium.querySelectorAll("source").forEach(source => source.remove())
+        },
+        removeTracks: function(medium) {
+            medium.querySelectorAll("track").forEach(track => {
+                if (track.kind == "subtitles" || track.kind == "captions") track.remove()
+            })
+        },
+        //object deep clone
         modeMatcher : {
             normal: "normal",
             fullScreen: "full-screen",
@@ -3027,7 +3115,9 @@ if (typeof window === "undefined") {
             } else return '-:--'
         },
         leadingZeroFormatter : new Intl.NumberFormat(undefined, {minimumIntegerDigits: 2}),
-        isIterable : obj => obj !== null && obj !== undefined && typeof obj[Symbol.iterator] === 'function',
+        isIterable : function(obj) { 
+            return obj !== null && obj !== undefined && typeof obj[Symbol.iterator] === 'function'
+        },
         //camelizing strings
         camelize(str) {  
             return str  
@@ -3097,16 +3187,11 @@ if (typeof window === "undefined") {
                 let width  = object.width  * minRatio
                 let height = object.height * minRatio
                 let outRatio  = 1
-                if (width < bbox.width) {
-                    outRatio = bbox.width / width
-                }
-                if (Math.abs(outRatio - 1) < 1e-14 && height < bbox.height) {
-                    outRatio = bbox.height / height
-                }
+                if (width < bbox.width) outRatio = bbox.width / width
+                if (Math.abs(outRatio - 1) < 1e-14 && height < bbox.height) outRatio = bbox.height / height
                 width  *= outRatio
                 height *= outRatio
-        
-                const { left, top } = parseObjectPosition   (objectPosition, bbox, {width, height})
+                const { left, top } = parseObjectPosition(objectPosition, bbox, {width, height})
                 return { left, top, width, height }
             }
         },
@@ -3115,14 +3200,11 @@ if (typeof window === "undefined") {
             let promises = []
             if (arguments.length === 0) {
                 if (tmg.media) {
-                    if (tmg.isIterable(tmg.media)) {
-                        for(const medium of tmg.media) {
-                            if (!(medium.dataset?.tmgAutoLaunch === "false")) promises.push(tmg.launch(medium))
-                        }
-                        return Promise.all(promises)
+                    for(const medium of tmg.media) {
+                        if (!(medium.dataset?.tmgAutoLaunch === "false")) promises.push(tmg.launch(medium))
                     }
-                    else if(!(tmg.media.dataset?.tmgAutoLaunch === "false")) Promise.resolve(tmg.launch(tmg.media))
-                }            
+                    return Promise.all(promises)
+                }
             } else {
                 const v = medium.dataset, value = medium.getAttribute('tmgcontrols').toLowerCase()
                 //building controls object
@@ -3166,10 +3248,6 @@ if (typeof window === "undefined") {
                                 }
                                 medium.removeAttribute("data-tmg-media-album")
                             }
-                            if (v.tmgStartTime) {
-                                customOptions.startTime = JSON.parse(v.tmgStartTime)
-                                medium.removeAttribute("data-tmg-start-time")
-                            }
                             if (v.tmgActivated) {
                                 customOptions.activated = JSON.parse(v.tmgActivated)
                                 medium.removeAttribute("data-tmg-activated")
@@ -3202,6 +3280,14 @@ if (typeof window === "undefined") {
                                 customOptions.settings.controllerStructure = v.tmgControllerStructure.replaceAll("'", "").replaceAll(" ", "").split(",")
                                 medium.removeAttribute("data-tmg-controller-interface")
                             }              
+                            if (v.tmgStartTime) {
+                                customOptions.settings.startTime = JSON.parse(v.tmgStartTime)
+                                medium.removeAttribute("data-tmg-start-time")
+                            }
+                            if (v.tmgStartTime) {
+                                customOptions.settings.endTime = JSON.parse(v.tmgEndTime)
+                                medium.removeAttribute("data-tmg-end-time")
+                            }
                             if (v.tmgNotifiers) {
                                 customOptions.settings.notifiers = JSON.parse(v.tmgNotifiers)
                                 medium.removeAttribute("data-tmg-notifiers")
@@ -3348,7 +3434,6 @@ if (typeof window === "undefined") {
                     (i == 0 || p !== arr[i - 1]) &&
                     props.indexOf(p) === -1
                 )
-
                 props = props.concat(o)
             } while (
                 (obj = Object.getPrototypeOf(obj)) &&
