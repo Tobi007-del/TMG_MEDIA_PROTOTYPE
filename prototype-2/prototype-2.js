@@ -14,7 +14,7 @@ class _T_M_G_Video_Player {
     _log(message, type, action) {
         switch (type) {
             case "error":
-                if (this.debug) action === "swallow" ? console.warn(`TMG silenced a rendering error:`, message) : console.error(`TMG silenced a rendering error:`, message)
+                if (this.debug) action === "swallow" ? console.warn(`TMG silenced a rendering error:`, message) : console.error(`TMG rendering error:`, message)
             break
             default:
                 if (this.debug) console.log(message)
@@ -73,6 +73,7 @@ class _T_M_G_Video_Player {
         //inititalizing settings manager
         this.initSettingsManager(videoOptions.settings)
         //some general variables
+        this.loaded = false
         this.CSSCustomPropertiesCache = {}
         this.currentPlaylistIndex = this.#playlist ? 0 : null
         this.wasPaused = !this.video.autoplay
@@ -137,6 +138,7 @@ class _T_M_G_Video_Player {
         this._handlePlaybackChange = this._handlePlaybackChange.bind(this)
         this._handleTimeUpdate = this._handleTimeUpdate.bind(this)
         this._handleVolumeChange = this._handleVolumeChange.bind(this)
+        this._handleLoadedError = this._handleLoadedError.bind(this)
         this._handleLoadedProgress = this._handleLoadedProgress.bind(this)
         this._handleLoadedMetadata = this._handleLoadedMetadata.bind(this)
         this._handleLoadedData = this._handleLoadedData.bind(this)
@@ -495,10 +497,7 @@ class _T_M_G_Video_Player {
         `,
         videoBufferHTML = 
         `
-        <div class="T_M_G-video-buffer">
-            <div class="T_M_G-video-buffer-sector T_M_G-video-buffer-sector-one"></div>
-            <div class="T_M_G-video-buffer-sector T_M_G-video-buffer-sector-two"></div>
-            <div class="T_M_G-video-buffer-sector T_M_G-video-buffer-sector-three"></div>
+        <div title="Video buffering" class="T_M_G-video-buffer">
         </div>
         `,
         thumbnailImgHTML =
@@ -938,21 +937,21 @@ class _T_M_G_Video_Player {
     initializeVideoPlayer() {
     try {
         this.controlsResize()
-        this.video.addEventListener("loadedmetadata", () => {
-            this.aspectRatio = this.video.videoWidth / this.video.videoHeight
-            this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`   
-        }, {once: true})
+        if (!this.video.src) {
+            this._handleLoadedError()
+            return
+        }
         this.fire("tmgload", this.video, {loaded: true})
+        this.video.addEventListener("loadedmetadata", this._handleLoadedMetadata, {once: true})
+        this.video.addEventListener("error", this._handleLoadedError, {once: true})
         if (this.activated) {
             if (this.initialState) {
                 this.video.addEventListener("timeupdate", this.initializeVideoControls, {once:true})
-                const removeInitialState = () => {
-                    this.togglePlay(true)
-                    document.removeEventListener("keyup", handleInitialKeyUp)
-                    this.ui.dom.playNotifier.blur()
-                    this.ui.dom.playNotifier.tabIndex = "-1"
+                const handleInitialStateFocus = e => {
+                    if (this.ui.dom.playNotifier.matches(":focus-visible")) document.addEventListener("keyup", handleInitialStateKeyUp)
                 }
-                const handleInitialKeyUp = e => {
+                const handleInitialStateBlur = () => document.removeEventListener("keyup", handleInitialStateKeyUp)
+                const handleInitialStateKeyUp = e => {
                     if (document.activeElement.tagName.toLowerCase() === "input") return
                     switch (e.key.toString().toLowerCase()) {
                         case "enter":     
@@ -962,11 +961,16 @@ class _T_M_G_Video_Player {
                             break
                     }
                 }
+                const removeInitialState = () => {
+                    this.togglePlay(true)
+                    this.ui.dom.playNotifier.blur()
+                    this.ui.dom.playNotifier.tabIndex = "-1"
+                    this.ui.dom.playNotifier.removeEventListener("focus", handleInitialStateFocus)
+                    this.ui.dom.playNotifier.removeEventListener("blur", handleInitialStateBlur)
+                }
                 this.ui.dom.playNotifier.tabIndex = "0"
-                this.ui.dom.playNotifier.addEventListener("focus", e => {
-                    if (this.ui.dom.playNotifier.matches(":focus-visible")) document.addEventListener("keyup", handleInitialKeyUp)
-                })
-                this.ui.dom.playNotifier.addEventListener("blur", () => document.removeEventListener("keyup", handleInitialKeyUp))
+                this.ui.dom.playNotifier.addEventListener("focus", handleInitialStateFocus)
+                this.ui.dom.playNotifier.addEventListener("blur", handleInitialStateBlur)
                 this.ui.dom.notifiersContainer?.addEventListener("click", removeInitialState, {once:true})
             } else this.initializeVideoControls()  
 
@@ -985,8 +989,7 @@ class _T_M_G_Video_Player {
             control.tabIndex = "0"
             control.dataset.focusableControl = true
         }
-        if (this.initialState && this.settings.status.allowOverride.startTime) this.video.currentTime = this.settings?.startTime || 0
-        if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
+        if (!this.loaded) this._handleLoadedMetadata()
         this.setInitialStates()
         this.setAllEventListeners()
         this.observePosition()
@@ -1232,6 +1235,7 @@ class _T_M_G_Video_Player {
         this.video.addEventListener("ratechange", this._handlePlaybackChange)      
         this.video.addEventListener("timeupdate", this._handleTimeUpdate)
         this.video.addEventListener("volumechange", this._handleVolumeChange)
+        this.video.addEventListener("error", this._handleLoadedError)
         this.video.addEventListener("progress", this._handleLoadedProgress)
         this.video.addEventListener("loadedmetadata", this._handleLoadedMetadata)
         this.video.addEventListener("loadeddata", this._handleLoadedData)
@@ -1422,6 +1426,60 @@ class _T_M_G_Video_Player {
     }        
     }
 
+    deactivate() {
+    try {
+        this.ui.dom.videoContainer.classList.add("T_M_G-video-unavailable")
+        this._log("TMG player deactivated", "swallow")
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    } 
+    }
+
+    reactivate() {
+    try {
+        if (this.ui.dom.videoContainer.classList.contains("T_M_G-video-unavailable")) {
+            this.ui.dom.videoContainer.classList.remove("T_M_G-video-unavailable")
+            this._log("TMG player reactivated", "swallow")
+        }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    } 
+    }
+
+    _handleLoadedError() {
+    try {
+        console.log("hmm")
+        this.deactivate()
+        this.loaded = false
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    } 
+    }
+
+    _handleLoadedMetadata() {
+    try {
+        if (this.settings.status.allowOverride.startTime && this.loaded) this.video.currentTime = this.settings?.startTime || 0
+        if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
+        this.aspectRatio = this.video.videoWidth / this.video.videoHeight
+        this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`
+        this.reactivate()
+        this.loaded = true
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }                   
+    }
+
+    //Loaded data
+    _handleLoadedData() {
+    try {
+        if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
+        this.reactivate()
+        this.loaded = true
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }                
+    }
+
     //Buffer Progress
     _handleLoadedProgress() {
     try {
@@ -1436,27 +1494,7 @@ class _T_M_G_Video_Player {
     } catch(e) {
         this._log(e, "error", "swallow")
     }                    
-    }
-
-    _handleLoadedMetadata() {
-    try {
-        if (this.settings.status.allowOverride.startTime) this.video.currentTime = this.settings?.startTime || 0
-        if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
-        this.aspectRatio = this.video.videoWidth / this.video.videoHeight
-        this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }                   
-    }
-
-    //Loaded data
-    _handleLoadedData() {
-    try {
-        if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }                
-    }
+    }    
 
     previousVideo() {
     try {
@@ -2889,34 +2927,7 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
             settings.status.beta = {
                 rewind: false,
                 draggableControls: false
-            }
-            settings.status.ui = {
-                //notifiers would be in the UI if specified in the settings or if not specified but override is allowed
-                notifiers: settings.notifiers || (!settings.notifiers && settings.status.allowOverride.notifiers),
-                prev: settings.controllerStructure.includes("prev"),
-                playPause: settings.controllerStructure.includes("playPause"),
-                timeline: settings.controllerStructure.some(c => c.startsWith("timeline")),
-                next: settings.controllerStructure.includes("next"),
-                volume: settings.controllerStructure.includes("volume"),
-                duration: settings.controllerStructure.includes("duration"),
-                captions: settings.controllerStructure.includes("captions"),
-                settings: settings.controllerStructure.includes("settings"),
-                playbackRate: settings.controllerStructure.includes("playbackRate"),
-                pictureInPicture: settings.controllerStructure.includes("pictureInPicture"),
-                theater: settings.controllerStructure.includes("theater"),
-                fullScreen: settings.controllerStructure.includes("fullScreen"),
-                previewImages: (settings.previewImages?.address && settings.previewImages?.fps) ? true : false,
-                leftSidedControls: settings.controllerStructure.indexOf("spacer") > -1 ? settings.controllerStructure.slice(0, settings.controllerStructure.indexOf("spacer")).length > 0 : true,
-                rightSidedControls: settings.controllerStructure.indexOf("spacer") > -1 ? settings.controllerStructure.slice(settings.controllerStructure.indexOf("spacer") + 1).length > 0 : false,
-                //draggable controls would be in the UI if there is a controller structure and if specified in the beta features and if override is allowed
-                draggableControls: !!(settings.controllerStructure && settings.status.allowOverride.controllerStructure)
-            }
-            settings.status.modes = {
-                fullScreen: settings.modes.includes("fullScreen") && !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled),
-                theater: settings.modes.includes("theater"),
-                pictureInPicture: settings.modes.includes("pictureInPicture") && document.pictureInPictureEnabled,
-                miniPlayer: settings.modes.includes("miniPlayer")
-            }            
+            }          
             //beta and override can either be a boolean or an array of all the features that the developer specifies, if it is a boolean, the boolean is assigned to all props else the specified features are assigned so if value is truthy then, the props will not be assigned a false value which was assigned above except explicitly stated
             if (settings.allowOverride) {
                 if (settings.allowOverride === true) {
@@ -2949,6 +2960,33 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
                     }
                 }
             }
+            settings.status.ui = {
+                //notifiers would be in the UI if specified in the settings or if not specified but override is allowed
+                notifiers: settings.notifiers || (!settings.notifiers && settings.status.allowOverride.notifiers),
+                prev: settings.controllerStructure.includes("prev"),
+                playPause: settings.controllerStructure.includes("playPause"),
+                timeline: settings.controllerStructure.some(c => c.startsWith("timeline")),
+                next: settings.controllerStructure.includes("next"),
+                volume: settings.controllerStructure.includes("volume"),
+                duration: settings.controllerStructure.includes("duration"),
+                captions: settings.controllerStructure.includes("captions"),
+                settings: settings.controllerStructure.includes("settings"),
+                playbackRate: settings.controllerStructure.includes("playbackRate"),
+                pictureInPicture: settings.controllerStructure.includes("pictureInPicture"),
+                theater: settings.controllerStructure.includes("theater"),
+                fullScreen: settings.controllerStructure.includes("fullScreen"),
+                previewImages: (settings.previewImages?.address && settings.previewImages?.fps) ? true : false,
+                leftSidedControls: settings.controllerStructure.indexOf("spacer") > -1 ? settings.controllerStructure.slice(0, settings.controllerStructure.indexOf("spacer")).length > 0 : true,
+                rightSidedControls: settings.controllerStructure.indexOf("spacer") > -1 ? settings.controllerStructure.slice(settings.controllerStructure.indexOf("spacer") + 1).length > 0 : false,
+                //draggable controls would be in the UI if there is a controller structure and if specified in the beta features and if override is allowed
+                draggableControls: !!(settings.controllerStructure && settings.status.allowOverride.controllerStructure)
+            }
+            settings.status.modes = {
+                fullScreen: settings.modes.includes("fullScreen") && !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled),
+                theater: settings.modes.includes("theater"),
+                pictureInPicture: settings.modes.includes("pictureInPicture") && document.pictureInPictureEnabled,
+                miniPlayer: settings.modes.includes("miniPlayer")
+            }  
             //Updating the build settings after the cleanup and modifications
             this.#build.settings = {...tmg.DEFAULT_VIDEO_BUILD.settings, ...settings}
             //commented out so drag and drop polyfill can be easily toggled
