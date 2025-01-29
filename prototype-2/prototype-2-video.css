@@ -141,7 +141,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     --T_M_G-video-timeline-fade-transition: 1s;
     --T_M_G-video-transition-time: 500ms;
     --T_M_G-video-arrows-transition-time: 800ms;
-    --T_M_G-video-loader-animation-time: 2s;
+    --T_M_G-video-loader-animation-time: 1250ms;
 }
 
 /* color variables */
