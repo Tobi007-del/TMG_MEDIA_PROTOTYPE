@@ -5,7 +5,8 @@ body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-w
 }
 
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-controls-container,
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-overlay-controls-container > *:not(.T_M_G-video-notifiers-container) {
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-overlay-controls-container > *:not(.T_M_G-video-notifiers-container),
+body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content:has(.T_M_G-video-play-notifier.T_M_G-video-control-spin) *:is(.T_M_G-video-overlay-main-controls-wrapper, .T_M_G-video-buffer) {
     opacity: 0;
     pointer-events: none;
 }
@@ -44,7 +45,6 @@ body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-w
         transform: scale(1.5);
     }    
 }
-
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:hover, 
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:focus-visible,
 body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier.T_M_G-video-control-spin {
@@ -57,8 +57,8 @@ body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-w
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:focus-visible {
     animation: none;
 }
-body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-notifiers.T_M_G-video-play-notifier.T_M_G-video-control-spin {
-    animation: spin 1s ease-out!important;
+body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-notifiers-container .T_M_G-video-notifiers.T_M_G-video-play-notifier.T_M_G-video-control-spin {
+    animation: spin 1s ease-out;
 }
 @keyframes spin {
     from {
@@ -80,6 +80,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 .T_M_G-pseudo-video {
     width: 100%;
     aspect-ratio: var(--T_M_G-video-aspect-ratio);
+    object-fit: var(--T_M_G-video-object-fit);
     border-radius: inherit;
 }
 
@@ -100,6 +101,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 .T_M_G-video-container {
     --T_M_G-video-relative-unit: 26px;
     --T_M_G-video-aspect-ratio: auto;
+    --T_M_G-video-object-fit: contain;
     --T_M_G-video-border-radius: calc(var(--T_M_G-video-current-unit)/1.5);
     --T_M_G-video-current-unit: var(--T_M_G-video-relative-unit);
     --T_M_G-video-full-screen-unit: calc(var(--T_M_G-video-relative-unit)*1.15);
@@ -112,7 +114,6 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     --T_M_G-video-mobile-portrait-mini-player-unit: calc(var(--T_M_G-video-relative-unit)/1.53);
     --T_M_G-video-current-controls-gap: calc(var(--T_M_G-video-current-unit)/1.6);
     --T_M_G-video-current-loader-size: calc(var(--T_M_G-video-relative-unit)*3.25);
-    --T_M_G-video-current-loader-max-size: 20%;
     --T_M_G-video-current-loader-thickness: calc(var(--T_M_G-video-relative-unit)/5);
     --T_M_G-video-current-dbc-backdrop-width: clamp(20vw, calc(var(--T_M_G-video-current-unit)*19), 60vw);
     --T_M_G-video-current-dbc-backdrop-height: var(--T_M_G-video-current-dbc-backdrop-width);

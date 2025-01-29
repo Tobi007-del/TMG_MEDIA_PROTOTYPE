@@ -201,10 +201,7 @@ class _T_M_G_Video_Player {
         this.toggleSettingsView = this.toggleSettingsView.bind(this)
         this.enterSettingsView = this.enterSettingsView.bind(this)
         this.leaveSettingsView = this.leaveSettingsView.bind(this)
-        //other properties that need binding
-        this.setInitialStates = this.setInitialStates.bind(this)
         this.initializeVideoControls = this.initializeVideoControls.bind(this)
-        this.setInitialStates = this.setInitialStates.bind(this)
 
         //custom events for otifying user
         this.notifierEvents = this.settings.status.ui.notifiers ? ["videoplay","videopause","volumeup","volumedown","volumemuted","captions","playbackratechange","theater","fullScreen","fwd","bwd"] : null
@@ -984,6 +981,7 @@ class _T_M_G_Video_Player {
 
     initializeVideoControls() {
     try {     
+        this.ui.dom.videoContainer.classList.remove("T_M_G-video-initial")
         this.stall()
         for (const control of this.ui.dom.focusableControls) {
             control.tabIndex = "0"
@@ -1002,11 +1000,9 @@ class _T_M_G_Video_Player {
     stall() {
     try {
         if (this.initialState) {
+            this.showVideoOverlay()
             this.ui.dom.playNotifier.classList.add("T_M_G-video-control-spin")
-            this.ui.dom.playNotifier.addEventListener("animationend", () => {
-                this.ui.dom.playNotifier.classList.remove("T_M_G-video-control-spin")
-                this.ui.dom.videoContainer.classList.remove("T_M_G-video-initial")
-            }, {once: true}) 
+            this.ui.dom.playNotifier.addEventListener("animationend", () => this.ui.dom.playNotifier.classList.remove("T_M_G-video-control-spin"), {once: true}) 
             if (!this.video.paused) this._handlePlay()
         }
     } catch(e) {
@@ -1620,7 +1616,7 @@ class _T_M_G_Video_Player {
                 setTimeout(() => this.nextVideo())
             }
 
-            const cleanUpPlaylistToastWhenPaused = () => {
+            const cleanUpPlaylistToastWhenNeeded = () => {
                 if (!(this.video.currentTime === this.video.duration)) cleanUpPlaylistToast()
             }
 
@@ -1632,7 +1628,8 @@ class _T_M_G_Video_Player {
                 playlistToastContainer.remove()
                 cancelAnimationFrame(nextVideoFrameId)
                 document.removeEventListener("visibilitychange", handleAutoPlaylistVisibilityChange)
-                this.video.removeEventListener("pause", cleanUpPlaylistToastWhenPaused)
+                this.video.removeEventListener("pause", cleanUpPlaylistToastWhenNeeded)
+                this.video.removeEventListener("waiting", cleanUpPlaylistToastWhenNeeded)
                 this.video.removeEventListener("timeupdate", autoCleanUpPlaylistToast)
                 if (e) {
                     if (e.target.classList.contains("T_M_G-video-playlist-next-video-cancel-btn"))
@@ -1656,7 +1653,8 @@ class _T_M_G_Video_Player {
             playlistToastContainer.addEventListener("mouseover", () => isPaused = true)
             playlistToastContainer.addEventListener("mouseleave", () => {if(!playlistToastContainer.matches(":hover")) setTimeout(() => isPaused = false)})
             playlistToastContainer.addEventListener("touchend", () => setTimeout(() => isPaused = false))
-            this.video.addEventListener("pause", cleanUpPlaylistToastWhenPaused)
+            this.video.addEventListener("pause", cleanUpPlaylistToastWhenNeeded)
+            this.video.addEventListener("waiting", cleanUpPlaylistToastWhenNeeded)
             this.video.addEventListener("timeupdate", autoCleanUpPlaylistToast)
             playlistNextVideoPreviewWrapper.addEventListener('click', autoNextVideo)
             playlistNextVideoCancelBtn.addEventListener('click', cleanUpPlaylistToast)
@@ -1677,7 +1675,7 @@ class _T_M_G_Video_Player {
 
     replay() {
     try {        
-        this.ui.dom.playNotifier.classList.add("T_M_G-video-control-spin")
+        this.stall()
         this.moveVideoTime({to: "start"})
         this.video.play()
     } catch(e) {
@@ -2982,9 +2980,7 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
                 draggableControls: !!(settings.controllerStructure && settings.status.allowOverride.controllerStructure)
             }
             settings.status.modes = {
-                fullScreen: settings.modes.includes("fullScreen") 
-                // && !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled)
-                ,
+                fullScreen: settings.modes.includes("fullScreen") && !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled),
                 theater: settings.modes.includes("theater"),
                 pictureInPicture: settings.modes.includes("pictureInPicture") && document.pictureInPictureEnabled,
                 miniPlayer: settings.modes.includes("miniPlayer")
