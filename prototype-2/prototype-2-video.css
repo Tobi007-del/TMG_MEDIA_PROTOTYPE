@@ -71,7 +71,12 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 
 /* settings deactivated state */
 .T_M_G-video-container.T_M_G-video-unavailable {
-    all: unset;
+    --T_M_G-video-icons-color: var(--T_M_G-video-controls-disabled-color)!important;
+    all: unset!important;
+    pointer-events: none!important;
+}
+.T_M_G-video-container.T_M_G-video-unavailable * {
+    pointer-events: none!important;
 }
 /* settings deactivated state ends */
 
@@ -2047,7 +2052,9 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
 }
 
 @media (max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape) {
-    .T_M_G-video-container video {
+    .T_M_G-video-container video, 
+    .T_M_G-video-container,
+    .T_M_G-pseudo-video-container {
         width: 100%;
     }
     .T_M_G-video-container, 

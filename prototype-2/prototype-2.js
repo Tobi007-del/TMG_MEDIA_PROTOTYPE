@@ -934,13 +934,12 @@ class _T_M_G_Video_Player {
     initializeVideoPlayer() {
     try {
         this.controlsResize()
-        if (!this.video.src) {
-            this._handleLoadedError()
-            return
+        if (!this.video.src) this._handleLoadedError() 
+        else {
+            this.fire("tmgload", this.video, {loaded: true})
+            this.video.addEventListener("loadedmetadata", this._handleLoadedMetadata, {once: true})
+            this.video.addEventListener("error", this._handleLoadedError, {once: true})
         }
-        this.fire("tmgload", this.video, {loaded: true})
-        this.video.addEventListener("loadedmetadata", this._handleLoadedMetadata, {once: true})
-        this.video.addEventListener("error", this._handleLoadedError, {once: true})
         if (this.activated) {
             if (this.initialState) {
                 this.video.addEventListener("timeupdate", this.initializeVideoControls, {once:true})
@@ -983,10 +982,7 @@ class _T_M_G_Video_Player {
     try {     
         this.ui.dom.videoContainer.classList.remove("T_M_G-video-initial")
         this.stall()
-        for (const control of this.ui.dom.focusableControls) {
-            control.tabIndex = "0"
-            control.dataset.focusableControl = true
-        }
+        this.enableFocusableControls("all")
         if (!this.loaded) this._handleLoadedMetadata()
         this.setInitialStates()
         this.setAllEventListeners()
@@ -1373,26 +1369,39 @@ class _T_M_G_Video_Player {
     }                        
     }
 
-    enableFocusableControls() {
+    enableFocusableControls(all) {
     try {
+        if (all === "all") {
+        for (const control of this.ui.dom.focusableControls) {
+            control.tabIndex = "0"
+            control.dataset.focusableControl = true
+        }
+        } else {
         for (const control of this.ui.dom.focusableControls) {
             if (this.ui.dom.videoContainerContent.contains(control)) {
                 control.tabIndex = "0"
                 control.dataset.focusableControl = true
             }
-        }
+        }}
     } catch(e) {
         this._log(e, "error", "swallow")
     }  
     }
 
-    disableFocusableControls() {
+    disableFocusableControls(all) {
     try {
+        if (all === "all") {
+        for (const control of this.ui.dom.focusableControls) {
+            control.tabIndex = "-1"
+            control.dataset.focusableControl = false
+        }
+        } else {
         for (const control of this.ui.dom.focusableControls) {
             if (this.ui.dom.videoContainerContent.contains(control)) {
                 control.tabIndex = "-1"
                 control.dataset.focusableControl = false
             }
+        }
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -1425,6 +1434,7 @@ class _T_M_G_Video_Player {
     deactivate() {
     try {
         this.ui.dom.videoContainer.classList.add("T_M_G-video-unavailable")
+        this.disableFocusableControls("all")
         this._log("TMG player deactivated", "swallow")
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -1433,8 +1443,9 @@ class _T_M_G_Video_Player {
 
     reactivate() {
     try {
-        if (this.ui.dom.videoContainer.classList.contains("T_M_G-video-unavailable")) {
+        if (this.ui.dom.videoContainer.classList.contains("T_M_G-video-unavailable") && this.loaded) {
             this.ui.dom.videoContainer.classList.remove("T_M_G-video-unavailable")
+            this.enableFocusableControls("all")
             this._log("TMG player reactivated", "swallow")
         }
     } catch(e) {
@@ -1469,8 +1480,6 @@ class _T_M_G_Video_Player {
     _handleLoadedData() {
     try {
         if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
-        this.reactivate()
-        this.loaded = true
     } catch(e) {
         this._log(e, "error", "swallow")
     }                
@@ -3145,7 +3154,8 @@ if (typeof window === "undefined") {
             return Math.min(Math.max(amount, min), max)
         },
         formatDuration(time) {    
-            if (!isNaN(time ?? NaN)) {
+            console.log(time)
+            if (!isNaN(time ?? NaN) && time !== Infinity) {
                 const seconds = Math.floor(time % 60)
                 const minutes = Math.floor(time / 60) % 60
                 const hours = Math.floor(time / 3600)
