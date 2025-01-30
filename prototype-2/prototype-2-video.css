@@ -836,8 +836,9 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     scale: 0.5;
 }
 
-.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-notifiers {
-    --T_M_G-video-current-unit: calc(var(--T_M_G-video-relative-unit)/1.01);
+.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-overlay-main-controls-wrapper,
+.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-notifiers-container {
+    --T_M_G-video-current-unit: calc(var(--T_M_G-video-relative-unit)/1.15);
 }
 
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-overlay-main-controls-wrapper {
@@ -1720,8 +1721,12 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     justify-content: center;
 }
 
+.T_M_G-video-overlay-main-controls-wrapper,
+.T_M_G-video-notifiers-container {
+    --T_M_G-video-current-unit: calc(var(--T_M_G-video-relative-unit)*1.25);
+}
+
 .T_M_G-video-notifiers {
-    --T_M_G-video-current-unit: calc(var(--T_M_G-video-relative-unit)*1.35);
     width: calc(var(--T_M_G-video-current-unit)*2);
     height: calc(var(--T_M_G-video-current-unit)*2);
     background: var(--T_M_G-video-brand-translucent-color);
@@ -2034,14 +2039,17 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
         --T_M_G-video-current-loader-thickness: calc(var(--T_M_G-video-relative-unit)/7);
         --T_M_G-video-current-loader-size: calc(var(--T_M_G-video-relative-unit)*2.25);
     }
-    .T_M_G-video-notifiers {
-        --T_M_G-video-current-unit: calc(var(--T_M_G-video-relative-unit)*1.15);
+    .T_M_G-video-overlay-main-controls-wrapper,
+    .T_M_G-video-notifiers-container {
+        --T_M_G-video-current-unit: calc(var(--T_M_G-video-relative-unit)*1.05);
     }
     .T_M_G-video-container.T_M_G-video-mini-player {
         --T_M_G-video-preview-border-color: var(--T_M_G-video-no-preview-pointer-color);
         --T_M_G-video-preview-pointer-color: var(--T_M_G-video-no-preview-pointer-color);
     }  
-    .T_M_G-video-container.T_M_G-video-mini-player, .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-notifiers {
+    .T_M_G-video-container.T_M_G-video-mini-player,
+    .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-overlay-main-controls-wrapper,
+    .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-notifiers-container {
         --T_M_G-video-current-unit: var(--T_M_G-video-tablet-mini-player-unit);
     }
     .T_M_G-video-preview-img-container {
@@ -2079,7 +2087,8 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
         transition: background-color var(--T_M_G-video-fade-transition) ease-in-out;      
     }
     .T_M_G-video-container.T_M_G-video-mini-player,
-    .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-notifiers {
+    .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-overlay-main-controls-wrapper,
+    .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-notifiers-container {
         --T_M_G-video-current-unit: var(--T_M_G-video-mobile-mini-player-unit);
     }
     /* this style is here to override the display property in case of unpredictability in the UI */
@@ -2164,7 +2173,8 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     } 
     .T_M_G-video-container.T_M_G-video-full-screen,
     .T_M_G-video-container.T_M_G-video-theater,
-    .T_M_G-video-notifiers {
+    .T_M_G-video-overlay-main-controls-wrapper,
+    .T_M_G-video-notifiers-container {
         --T_M_G-video-current-unit: var(--T_M_G-video-mobile-landscape-unit);
     }
     .T_M_G-video-container {
@@ -2183,7 +2193,8 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     .T_M_G-video-container, 
     .T_M_G-video-container.T_M_G-video-full-screen, 
     .T_M_G-video-container.T_M_G-video-theater,
-    .T_M_G-video-notifiers {
+    .T_M_G-video-overlay-main-controls-wrapper,
+    .T_M_G-video-notifiers-container {
         --T_M_G-video-current-unit: var(--T_M_G-video-mobile-portrait-unit);
     }
     .T_M_G-video-container.T_M_G-video-mini-player {

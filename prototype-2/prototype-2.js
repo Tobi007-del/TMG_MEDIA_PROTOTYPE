@@ -934,7 +934,7 @@ class _T_M_G_Video_Player {
     initializeVideoPlayer() {
     try {
         this.controlsResize()
-        if (!this.video.src) this._handleLoadedError() 
+        if (!(this.video.currentSrc || this.video.src)) this._handleLoadedError() 
         else {
             this.fire("tmgload", this.video, {loaded: true})
             this.video.addEventListener("loadedmetadata", this._handleLoadedMetadata, {once: true})
