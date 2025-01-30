@@ -32,7 +32,7 @@ class _T_M_G_Video_Player {
                 return []
             }
         })
-        .filter(cssRule => cssRule instanceof CSSStyleRule && cssRule.selectorText === ".T_M_G-video-container")
+        .filter(cssRule => cssRule instanceof CSSStyleRule && (cssRule.selectorText === ".T_M_G-video-container" || cssRule.selectorText === ":where(.T_M_G-video-container)"))
         .flatMap(cssRule => [...cssRule.style])
         .filter(style => style.startsWith("--T_M_G-video-"))
         .forEach(variable => {
@@ -3154,7 +3154,6 @@ if (typeof window === "undefined") {
             return Math.min(Math.max(amount, min), max)
         },
         formatDuration(time) {    
-            console.log(time)
             if (!isNaN(time ?? NaN) && time !== Infinity) {
                 const seconds = Math.floor(time % 60)
                 const minutes = Math.floor(time / 60) % 60
