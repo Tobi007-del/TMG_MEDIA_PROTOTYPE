@@ -1442,9 +1442,9 @@ class _T_M_G_Video_Player {
     } 
     }
 
-    _handleLoadedError() {
+    _handleLoadedError(e) {
     try {
-        console.log("hmm")
+        if (e) this._log(e, "swallow")
         this.deactivate()
         this.loaded = false
     } catch(e) {
@@ -1903,7 +1903,7 @@ class _T_M_G_Video_Player {
         if (this.ui.dom.currentTimeElement) this.ui.dom.currentTimeElement.textContent = tmg.formatDuration(this.video.currentTime)
         if (this.ui.dom.playbackRateNotifier && this.speedCheck && this.speedToken === 1) this.ui.dom.playbackRateNotifier.dataset.currentTime = tmg.formatDuration(this.video.currentTime)
         this.skipVideoTime = this.video.currentTime
-        if (Math.floor((this.settings?.endTime || this.video.duration) - this.video.currentTime) <= this.autoPlaylistCountdown) this.autoMovePlaylist()
+        if (Math.floor((this.settings?.endTime || this.video.duration) - this.video.currentTime) <= this.autoPlaylistCountdown && Math.ceil(this.video.duration - this.video.currentTime) > 1) this.autoMovePlaylist()
         if ((this.video.currentTime < this.video.duration) && this.ui.dom.videoContainer.classList.contains("T_M_G-video-replay")) this.ui.dom.videoContainer.classList.remove("T_M_G-video-replay")
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2226,6 +2226,7 @@ class _T_M_G_Video_Player {
         } else {
             if (screen.orientation && screen.orientation.lock) screen.orientation.unlock()
             this.ui.dom.fullScreenOrientationBtn.classList.add("T_M_G-video-control-hidden")
+            if (this.speedPointerCheck) this._handleSpeedPointerUp()
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2494,8 +2495,7 @@ class _T_M_G_Video_Player {
 
     _handleSpeedPointerOut(e) {
     try {
-        if (!this.ui.dom.videoContainer.matches(":hover"))
-            this._handleSpeedPointerUp(e)
+        if (!this.ui.dom.videoContainer.matches(":hover")) this._handleSpeedPointerUp(e)
     } catch(e) {
         this._log(e, "error", "swallow")
     }          
@@ -2851,6 +2851,7 @@ class _T_M_G_Media_Player extends _T_M_G_Video_Player {
                 console.warn("Please remove the 'controls' attribute to deploy the TMG video controller!")
                 return                
             }
+            this.#medium.classList.add("T_M_G-video")
             //making sure the video plays inline even on ios mobile
             this.#medium.setAttribute("playsinline", true)
             this.#medium.setAttribute("webkit-playsinline", true)

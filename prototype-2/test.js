@@ -7,7 +7,7 @@ vp.build.playlist = [
         src: "/TMG.com/MOVIES/Justice League/Zack Snyder's Justice League - Official Trailer - Warner Bros. UK.mp4",
     },
     {
-        media: {title: "Madam Web Trailer", artwork: [{src: "/TMG.com/SPARE-PICS/madame-web.png"}],},
+        media: {title: "Madame Web Trailer", artwork: [{src: "/TMG.com/SPARE-PICS/madame-web.png"}],},
         src: "/TMG.com/MOVIES/Madame Web/madame-web-trailer.mp4"
     },
     {
