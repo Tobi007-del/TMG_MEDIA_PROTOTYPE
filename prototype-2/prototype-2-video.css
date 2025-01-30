@@ -96,7 +96,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     visibility: hidden;
 }
 
-.T_M_G-video-container .T_M_G-video-container-content .T_M_G-video {
+.T_M_G-video-container .T_M_G-video {
     transition: filter var(--T_M_G-video-settings-view-transition-time) ease;
 }
 
@@ -272,12 +272,6 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     overflow: hidden;
 }
 
-.T_M_G-pseudo-video-container:has(~ .T_M_G-video-container.T_M_G-video-theater) {
-    width: 100%;
-    max-width: unset;
-    border-radius: 0;
-}
-
 .T_M_G-pseudo-video-container::before {
     content: "Playing in mini player";
     position: absolute;
@@ -340,6 +334,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 }
 
 .T_M_G-video-settings {
+    width: 100%;
     pointer-events: none;
     transform: rotateY(180deg);
     transform-style: preserve-3d;
@@ -360,7 +355,6 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     border-radius: inherit;
     color: var(--T_M_G-video-settings-text-color);
     padding: var(--T_M_G-video-settings-content-padding);
-    transform: translateY(180deg);
 }
 
 .T_M_G-video-settings-content > div {
@@ -756,7 +750,8 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 
 /* fullscreen, theater and miniplayer styles are arranged in the order of which the specificity is desired meaning theater is less specific among the three since it can be active at the same time with each of the other two */
 .T_M_G-video-container.T_M_G-video-theater,
-.T_M_G-video-container.T_M_G-video-full-screen {
+.T_M_G-video-container.T_M_G-video-full-screen,
+.T_M_G-pseudo-video-container:has(~ .T_M_G-video-container.T_M_G-video-theater, ~ .T_M_G-video-container.T_M_G-video-full-screen) {
     width: 100%;
     border-radius: 0;
 }
