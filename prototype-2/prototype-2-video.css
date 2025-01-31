@@ -928,7 +928,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 .T_M_G-video-container.T_M_G-video-mini-player.T_M_G-video-scrubbing .T_M_G-video-mini-player-expand-btn-wrapper, 
 .T_M_G-video-container.T_M_G-video-mini-player.T_M_G-video-scrubbing .T_M_G-video-mini-player-cancel-btn-wrapper,
 .T_M_G-video-container.T_M_G-video-scrubbing .T_M_G-video-overlay-main-controls-wrapper, 
-.T_M_G-video-container.T_M_G-video-buffering .T_M_G-video-overlay-main-controls-wrapper,
+.T_M_G-video-container.T_M_G-video-buffering:not(:has(.T_M_G-video-play-notifier.T_M_G-video-control-spin)) .T_M_G-video-overlay-main-controls-wrapper,
 .T_M_G-video-container.T_M_G-video-replay .T_M_G-video-play-notifier,
 .T_M_G-video-container.T_M_G-video-replay .T_M_G-video-pause-notifier, 
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-play-pause-btn,

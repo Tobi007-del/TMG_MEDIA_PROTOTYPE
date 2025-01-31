@@ -77,6 +77,8 @@ class _T_M_G_Video_Player {
         this.CSSCustomPropertiesCache = {}
         this.currentPlaylistIndex = this.#playlist ? 0 : null
         this.wasPaused = !this.video.autoplay
+        this.miniPlayerThrottleId = null
+        this.miniPlayerThrottleDelay = 16
         this.previousRate = this.video.playbackRate
         this.isScrubbing = false
         this.parentIntersecting = true
@@ -85,6 +87,8 @@ class _T_M_G_Video_Player {
         this.buffering = false
         this.playId 
         this.overlayRestraintId
+        this.timelineThrottleId = null
+        this.timelineThrottleDelay = 33
         this.lastVolume
         this.lastVolumeTimeoutId
         this.volumeActiveId 
@@ -98,6 +102,8 @@ class _T_M_G_Video_Player {
         this.speedIntervalId
         this.speedVideoTime
         this.speedPosition
+        this.speedThrottleId = null
+        this.speedThrottleDelay = 500
         this.skipVideoTime
         this.skipDurationId = null
         this.skipDuration = 0
@@ -125,6 +131,7 @@ class _T_M_G_Video_Player {
         //Binding Handlers
         this._log = this._log.bind(this)
         this._handleWindowResize = this._handleWindowResize.bind(this)
+        this._handleVisibilityChange = this._handleVisibilityChange.bind(this)
         this._handleFullScreenChange = this._handleFullScreenChange.bind(this)
         this._handleFullScreenChange = this._handleFullScreenChange.bind(this)
         this._handleKeyDown = this._handleKeyDown.bind(this)
@@ -183,6 +190,7 @@ class _T_M_G_Video_Player {
         this.showVideoOverlay = this.showVideoOverlay.bind(this)
         this.showPreviewImages = this.showPreviewImages.bind(this)
         this.hidePreviewImages = this.hidePreviewImages.bind(this)
+        this.stopTimelineScrubbing = this.stopTimelineScrubbing.bind(this)
         this.changePlaybackRate = this.changePlaybackRate.bind(this)
         this.toggleCaptions = this.toggleCaptions.bind(this)
         this.toggleMute = this.toggleMute.bind(this)
@@ -1168,6 +1176,7 @@ class _T_M_G_Video_Player {
 
     setDocumentEventListeners() {
     try {
+        document.addEventListener("visibilitychange", this._handleVisibilityChange)
         document.addEventListener("fullscreenchange", this._handleFullScreenChange)
         document.addEventListener("webkitfullscreenchange", this._handleFullScreenChange)
         document.addEventListener("mozfullscreenchange", this._handleFullScreenChange)
@@ -1420,13 +1429,23 @@ class _T_M_G_Video_Player {
     }        
     }       
 
-    //window resizing
     _handleWindowResize() {
     try {        
         this.toggleMiniPlayerMode()
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
+    }
+
+    _handleVisibilityChange() {
+    try {
+        //tending to some observed glitches when visibility changes
+        if (document.visibilityState === "visible") {
+            if (this.isScrubbing) this.stopTimelineScrubbing()
+        }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
     }
 
     deactivate() {
@@ -1612,9 +1631,7 @@ class _T_M_G_Video_Player {
                 nextVideoFrameId = requestAnimationFrame(updatePlaylistToast)
             }
 
-            const handleAutoPlaylistVisibilityChange = () => {
-                shouldUnPause = document.visibilityState === "visible"
-            }
+            const handleAutoPlaylistVisibilityChange = () => shouldUnPause = document.visibilityState === "visible"
 
             const autoNextVideo = () => {
                 cleanUpPlaylistToast.call(this)
@@ -1783,15 +1800,21 @@ class _T_M_G_Video_Player {
         this.isScrubbing = true
         this.toggleScrubbing(e)
         this.ui.dom.timelineContainer?.addEventListener("pointermove", this._handleTimelineUpdate)
-        this.ui.dom.timelineContainer?.addEventListener("pointerup", e => {
-            this.isScrubbing = false
-            this.toggleScrubbing(e)
-            this.ui.dom.timelineContainer?.removeEventListener("pointermove", this._handleTimelineUpdate)
-            this.ui.dom.timelineContainer?.releasePointerCapture(e.pointerId)
-        }, { once: true })
+        this.ui.dom.timelineContainer?.addEventListener("pointerup", this.stopTimelineScrubbing, { once: true })
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
+    }
+
+    stopTimelineScrubbing(e) {
+    try {
+        this.isScrubbing = false
+        if (e) this.toggleScrubbing(e)
+        else this.ui.dom.videoContainer.classList.remove("T_M_G-video-scrubbing")
+        this.ui.dom.timelineContainer?.removeEventListener("pointermove", this._handleTimelineUpdate)
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
     }
     
     toggleScrubbing(e) {
@@ -1825,6 +1848,9 @@ class _T_M_G_Video_Player {
 
     _handleTimelineUpdate({clientX: x}) { 
     try {        
+        if (this.timelineThrottleId !== null) return
+        this.timelineThrottleId = setTimeout(() => this.timelineThrottleId = null, this.timelineThrottleDelay)
+
         const rect = this.ui.dom.timelineContainer?.getBoundingClientRect()
         const percent = tmg.clamp(x - rect.x, 0, rect.width) / rect.width
         const previewTime = tmg.formatDuration(percent * this.video.duration)
@@ -2346,36 +2372,39 @@ class _T_M_G_Video_Player {
     }    
 
     emptyMiniPlayerListeners() {
-        try {
-            this.showVideoOverlay()
-            this.ui.dom.videoContainerContent.classList.remove("T_M_G-video-cursor-auto")
-            document.removeEventListener("mousemove", this._handleMiniPlayerPosition)
-            document.removeEventListener("mouseup", this.emptyMiniPlayerListeners)
-            document.removeEventListener("mouseleave", this.emptyMiniPlayerListeners)
-            document.removeEventListener("touchmove", this._handleMiniPlayerPosition, {passive: false})
-            document.removeEventListener("touchend", this.emptyMiniPlayerListeners, {passive: false})
-        } catch(e) {
-            this._log(e, "error", "swallow")
-        }
+    try {
+        this.showVideoOverlay()
+        this.ui.dom.videoContainerContent.classList.remove("T_M_G-video-cursor-auto")
+        document.removeEventListener("mousemove", this._handleMiniPlayerPosition)
+        document.removeEventListener("mouseup", this.emptyMiniPlayerListeners)
+        document.removeEventListener("mouseleave", this.emptyMiniPlayerListeners)
+        document.removeEventListener("touchmove", this._handleMiniPlayerPosition, {passive: false})
+        document.removeEventListener("touchend", this.emptyMiniPlayerListeners, {passive: false})
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
     }
 
     _handleMiniPlayerPosition(e) {
-        try {
-            e.preventDefault()
-            this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
-            let {innerWidth: ww, innerHeight: wh} = window,
-            {offsetWidth: w, offsetHeight: h} = this.ui.dom.videoContainer
-            const x = e.clientX ?? e.changedTouches[0].clientX,
-            y = e.clientY ?? e.changedTouches[0].clientY,
-            xR = 0,
-            yR = 0,
-            posX = tmg.clamp(xR, ww - x - w/2, ww - w - xR),
-            posY = tmg.clamp(yR, wh - y - h/2, wh - h - yR)
-            this.videoCurrentMiniPlayerX = `${Math.round(posX/ww * 100)}%`
-            this.videoCurrentMiniPlayerY = `${Math.round(posY/wh * 100)}%`
-        } catch(e) {
-            this._log(e, "error", "swallow")
-        }
+    try {
+        if (this.miniPlayerThrottleId !== null) return
+        this.miniPlayerThrottleId = setTimeout(() => this.miniPlayerThrottleId = null, this.miniPlayerThrottleDelay)
+
+        e.preventDefault()
+        this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
+        let {innerWidth: ww, innerHeight: wh} = window,
+        {offsetWidth: w, offsetHeight: h} = this.ui.dom.videoContainer
+        const x = e.clientX ?? e.changedTouches[0].clientX,
+        y = e.clientY ?? e.changedTouches[0].clientY,
+        xR = 0,
+        yR = 0,
+        posX = tmg.clamp(xR, ww - x - w/2, ww - w - xR),
+        posY = tmg.clamp(yR, wh - y - h/2, wh - h - yR)
+        this.videoCurrentMiniPlayerX = `${Math.round(posX/ww * 100)}%`
+        this.videoCurrentMiniPlayerY = `${Math.round(posY/wh * 100)}%`
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
     }    
 
     //Keyboard and General Accessibility Functions
@@ -2514,6 +2543,9 @@ class _T_M_G_Video_Player {
     
     _handleSpeedPointerMove(e) {
     try {
+        if (this.speedThrottleId !== null) return
+        this.speedThrottleId = setTimeout(() => this.speedThrottleId = null, this.speedThrottleDelay)
+        
         const rect = this.video.getBoundingClientRect()
         const x = e.clientX ?? e.changedTouches[0].clientX
         const currPos = x - rect.left >= this.video.offsetWidth * 0.5 ? "right" : "left"
