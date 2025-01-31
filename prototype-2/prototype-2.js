@@ -1582,7 +1582,6 @@ class _T_M_G_Video_Player {
                 <button title="Cancel" type="button" class="T_M_G-video-playlist-next-video-cancel-btn">&times;</button>            
             `   
             this.ui.dom.videoOverlayControlsContainer.append(playlistToastContainer)
-
             
             //now to explain this seemingly complex function, for the first if statement, it is a known fact that request animation frame stops when one leaves the current tab so our last time variable will become stale and lead to unpredictabilities so everytime visibility changes, we update a boolean shouldUnpase which works like so: it is set to false if it was true which would have been caused by the document becoming visible again and it is set to false to ensure that the only other time it is set to true is when the document loses visibility and then gets it back and then lastTime will be set to null which will then lead the second if statement which is a smart one as it is activated initially when lastTime was null or undefined but coerced to null since the comparison is not strict and it is also activated after the whole visibility sharade which does the same initial work as the two lines at the bottom so like a refresh that is exactly the same as the initial cuz both of them occur before the next loop and then the next if statment just updates the UI and watches for when timeVisible becomes greater than the initial count
             const updatePlaylistToast = timestamp =>  {
@@ -1598,7 +1597,7 @@ class _T_M_G_Video_Player {
                 if (!isPaused) {
                     timeVisible += timestamp - lastTime
                     constraint += timestamp - lastTime
-                    this.videoAutoPlaylistPosition = timeVisible / (count * 1000)
+                    this.videoCurrentAutoPlaylistPosition = timeVisible / (count * 1000)
                     if (constraint >= 1000) {
                         nextVideoCountdown--
                         playlistNextVideoCountdown.textContent = nextVideoCountdown
@@ -1910,9 +1909,9 @@ class _T_M_G_Video_Player {
         if (this.ui.dom.currentTimeElement) this.ui.dom.currentTimeElement.textContent = formattedTime
         if (this.ui.dom.playbackRateNotifier && this.speedCheck && this.speedToken === 1) this.ui.dom.playbackRateNotifier.dataset.currentTime = formattedTime
         this.skipVideoTime = this.video.currentTime
-        if (Math.floor((this.settings?.endTime || this.video.duration) - this.video.currentTime) <= this.autoPlaylistCountdown && Math.floor(this.video.duration - this.video.currentTime) > 1) this.autoMovePlaylist()
         if ((this.video.currentTime < this.video.duration) && this.ui.dom.videoContainer.classList.contains("T_M_G-video-replay")) this.ui.dom.videoContainer.classList.remove("T_M_G-video-replay")
         if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
+        if (Math.floor((this.settings?.endTime || this.video.duration) - this.video.currentTime) <= this.autoPlaylistCountdown && Math.round(this.video.duration - this.video.currentTime) >= 1) this.autoMovePlaylist()
     } catch(e) {
         this._log(e, "error", "swallow")
     }            
@@ -2234,7 +2233,6 @@ class _T_M_G_Video_Player {
         } else {
             if (screen.orientation && screen.orientation.lock) screen.orientation.unlock()
             this.ui.dom.fullScreenOrientationBtn.classList.add("T_M_G-video-control-hidden")
-            if (this.speedPointerCheck) this._handleSpeedPointerUp()
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2478,16 +2476,21 @@ class _T_M_G_Video_Player {
     _handlePointerDown(e) {
     try {
         if (e.target === this.ui.dom.videoControlsContainer || e.target === this.ui.dom.videoOverlayControlsContainer) {
-        if (!this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {
+        if (!this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {    
+            //conditions to cancel the speed timeout
+            //tm: if user moves finger before speedup is called like during scrolling
+            this.ui.dom.videoContainer.addEventListener("touchmove", this._handleSpeedPointerUp)     
             this.ui.dom.videoContainer.addEventListener("mouseup", this._handleSpeedPointerUp)
-            this.ui.dom.videoContainer.addEventListener("mouseleave", this._handleSpeedPointerOut)                
+            this.ui.dom.videoContainer.addEventListener("mouseleave", this._handleSpeedPointerOut)           
             this.ui.dom.videoContainer.addEventListener("touchend", this._handleSpeedPointerUp)
             this.speedPointerCheck = true
             const x = e.clientX ?? e.changedTouches[0].clientX
 	        const rect = this.video.getBoundingClientRect()
             this.speedPosition = x - rect.left >= this.video.offsetWidth * 0.5 ? "right" : "left"
             if (this.speedTimeoutId) clearTimeout(this.speedTimeoutId)
-            this.speedTimeoutId = setTimeout(() => {
+            this.speedTimeoutId = setTimeout(() => {   
+                //tm: removing listener since speedup is being called and user is not scrolling
+                this.ui.dom.videoContainer.removeEventListener("touchmove", this._handleSpeedPointerUp)     
                 if (this.settings.status.beta.rewind) {
                 this.ui.dom.videoContainer.addEventListener("mousemove", this._handleSpeedPointerMove)
                 this.ui.dom.videoContainer.addEventListener("touchmove", this._handleSpeedPointerMove, {passive: true})

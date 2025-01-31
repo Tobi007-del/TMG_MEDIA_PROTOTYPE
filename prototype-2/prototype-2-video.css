@@ -358,8 +358,8 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 }
 
 .T_M_G-video-settings-content {
-    width: 100%;
-    height: 100%;
+    width: inherit;
+    height: inherit;
     display: flex;
     flex-direction: column;
     border-radius: inherit;
