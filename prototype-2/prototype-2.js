@@ -2387,10 +2387,10 @@ class _T_M_G_Video_Player {
 
     _handleMiniPlayerPosition(e) {
     try {
+        e.preventDefault()
         if (this.miniPlayerThrottleId !== null) return
         this.miniPlayerThrottleId = setTimeout(() => this.miniPlayerThrottleId = null, this.miniPlayerThrottleDelay)
 
-        e.preventDefault()
         this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
         let {innerWidth: ww, innerHeight: wh} = window,
         {offsetWidth: w, offsetHeight: h} = this.ui.dom.videoContainer
