@@ -77,7 +77,6 @@ class _T_M_G_Video_Player {
         this.CSSCustomPropertiesCache = {}
         this.currentPlaylistIndex = this.#playlist ? 0 : null
         this.wasPaused = !this.video.autoplay
-        this.miniPlayerInMotion = false
         this.miniPlayerThrottleId = null
         this.miniPlayerThrottleDelay = 16
         this.previousRate = this.video.playbackRate
@@ -2359,8 +2358,6 @@ class _T_M_G_Video_Player {
     try {
         if (this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {
         if (!this.ui.dom.videoControlsContainer.contains(e.target)) {
-            this.miniPlayerInMotion = true
-            this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
             this.ui.dom.videoContainerContent.classList.add("T_M_G-video-cursor-auto")
             document.addEventListener("mousemove", this._handleMiniPlayerPosition)
             document.addEventListener("mouseup", this.emptyMiniPlayerListeners)
@@ -2376,7 +2373,6 @@ class _T_M_G_Video_Player {
 
     emptyMiniPlayerListeners() {
     try {
-        this.miniPlayerInMotion = false
         this.showVideoOverlay()
         this.ui.dom.videoContainerContent.classList.remove("T_M_G-video-cursor-auto")
         document.removeEventListener("mousemove", this._handleMiniPlayerPosition)
@@ -2392,6 +2388,8 @@ class _T_M_G_Video_Player {
     _handleMiniPlayerPosition(e) {
     try {
         e.preventDefault()
+        this.ui.dom.videoContainer.classList.remove("T_M_G-video-overlay")
+
         if (this.miniPlayerThrottleId !== null) return
         this.miniPlayerThrottleId = setTimeout(() => this.miniPlayerThrottleId = null, this.miniPlayerThrottleDelay)
 
@@ -2479,7 +2477,7 @@ class _T_M_G_Video_Player {
 
     showVideoOverlay() {
     try {
-        if (!this.miniPlayerInMotion) this.ui.dom.videoContainer.classList.add("T_M_G-video-overlay")
+        this.ui.dom.videoContainer.classList.add("T_M_G-video-overlay")
         this.overlayRestraint()
     } catch(e) {
         this._log(e, "error", "swallow")
