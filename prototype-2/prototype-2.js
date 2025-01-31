@@ -32,7 +32,7 @@ class _T_M_G_Video_Player {
                 return []
             }
         })
-        .filter(cssRule => cssRule instanceof CSSStyleRule && (cssRule.selectorText === ".T_M_G-video-container" || cssRule.selectorText === ":where(.T_M_G-video-container)"))
+        .filter(cssRule => cssRule instanceof CSSStyleRule && (cssRule.selectorText === ":root" || cssRule.selectorText === ":where(:root)"))
         .flatMap(cssRule => [...cssRule.style])
         .filter(style => style.startsWith("--T_M_G-video-"))
         .forEach(variable => {
@@ -981,7 +981,7 @@ class _T_M_G_Video_Player {
     initializeVideoControls() {
     try {     
         this.ui.dom.videoContainer.classList.remove("T_M_G-video-initial")
-        this.stall()
+        if (this.initialState) this.stall()
         this.enableFocusableControls("all")
         if (!this.loaded) this._handleLoadedMetadata()
         this.setInitialStates()
@@ -995,12 +995,10 @@ class _T_M_G_Video_Player {
 
     stall() {
     try {
-        if (this.initialState) {
-            this.showVideoOverlay()
-            this.ui.dom.playNotifier.classList.add("T_M_G-video-control-spin")
-            this.ui.dom.playNotifier.addEventListener("animationend", () => this.ui.dom.playNotifier.classList.remove("T_M_G-video-control-spin"), {once: true}) 
-            if (!this.video.paused) this._handlePlay()
-        }
+        this.showVideoOverlay()
+        this.ui.dom.playNotifier.classList.add("T_M_G-video-control-spin")
+        this.ui.dom.playNotifier.addEventListener("animationend", () => this.ui.dom.playNotifier.classList.remove("T_M_G-video-control-spin"), {once: true}) 
+        if (!this.video.paused) this._handlePlay()
     } catch(e) {
         this._log(e, "error", "swallow")
     }           
@@ -1503,9 +1501,7 @@ class _T_M_G_Video_Player {
 
     previousVideo() {
     try {
-        if (this.#playlist && this.currentPlaylistIndex > 0) {
-            this.movePlaylistTo(this.currentPlaylistIndex - 1)
-        }
+        if (this.#playlist && this.currentPlaylistIndex > 0) this.movePlaylistTo(this.currentPlaylistIndex - 1)
     } catch(e) {
         this._log(e, "error", "swallow")
     }                
@@ -1526,6 +1522,7 @@ class _T_M_G_Video_Player {
             this.#playlist[this.currentPlaylistIndex].settings.startTime = this.video.currentTime
         }
         if (this.#playlist) {
+            this.stall()
             this.currentPlaylistIndex = index
             const video = this.#playlist[index]
             if (video.media?.artwork) 
@@ -1907,13 +1904,15 @@ class _T_M_G_Video_Player {
 
     _handleTimeUpdate() {
     try {        
+        const formattedTime = tmg.formatDuration(this.video.currentTime)
         const percent = isNaN(this.video.currentTime / this.video.duration) ? 0 : this.video.currentTime / this.video.duration
         this.videoCurrentProgressPosition = percent
-        if (this.ui.dom.currentTimeElement) this.ui.dom.currentTimeElement.textContent = tmg.formatDuration(this.video.currentTime)
-        if (this.ui.dom.playbackRateNotifier && this.speedCheck && this.speedToken === 1) this.ui.dom.playbackRateNotifier.dataset.currentTime = tmg.formatDuration(this.video.currentTime)
+        if (this.ui.dom.currentTimeElement) this.ui.dom.currentTimeElement.textContent = formattedTime
+        if (this.ui.dom.playbackRateNotifier && this.speedCheck && this.speedToken === 1) this.ui.dom.playbackRateNotifier.dataset.currentTime = formattedTime
         this.skipVideoTime = this.video.currentTime
-        if (Math.floor((this.settings?.endTime || this.video.duration) - this.video.currentTime) <= this.autoPlaylistCountdown && Math.ceil(this.video.duration - this.video.currentTime) > 1) this.autoMovePlaylist()
+        if (Math.floor((this.settings?.endTime || this.video.duration) - this.video.currentTime) <= this.autoPlaylistCountdown && Math.floor(this.video.duration - this.video.currentTime) > 1) this.autoMovePlaylist()
         if ((this.video.currentTime < this.video.duration) && this.ui.dom.videoContainer.classList.contains("T_M_G-video-replay")) this.ui.dom.videoContainer.classList.remove("T_M_G-video-replay")
+        if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
     } catch(e) {
         this._log(e, "error", "swallow")
     }            
