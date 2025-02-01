@@ -191,11 +191,11 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     opacity: 1;
     transform: scale(var(--T_M_G-video-large-scale));
 }
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier svg,
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier svg {
+    animation: inherit;
+} 
 body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier.T_M_G-video-control-spin svg {
     transform: inherit;
-    transition: transform var(--T_M_G-video-transition-time) ease;
-    animation: inherit;
 }
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:hover,
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:focus-visible {
