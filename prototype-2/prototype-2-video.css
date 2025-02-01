@@ -689,6 +689,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     justify-content: center;
     gap: calc(var(--T_M_G-video-current-unit)/7.5);
     padding: calc(var(--T_M_G-video-current-unit)/7.5);
+    padding-inline: 0;
     text-align: left;
 }
 
@@ -699,7 +700,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 }
 
 .T_M_G-video-playlist-next-video-countdown {
-    -webkit-text-stroke: 1px var(--T_M_G-video-brand-color);
+    -webkit-text-stroke: 0.5px var(--T_M_G-video-brand-color);
     font-size: 120%;
 }
 
@@ -1739,6 +1740,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     white-space: nowrap;
     transition: transform var(--T_M_G-video-transition-time) ease, opacity var(--T_M_G-video-transition-time) ease;
     pointer-events: none;
+    /* z-index: 1; */
 }
 
 .T_M_G-video-volume-notifier-content {

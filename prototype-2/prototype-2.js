@@ -116,7 +116,7 @@ class _T_M_G_Video_Player {
         this.keyOverrideRegex = /(arrow|home|end)/i
         this.settingsView = false
         this.textTrackIndex = 0
-        this.autoMovePlaylistActive = false
+        this.canAutoMovePlaylist = true
         this.autoPlaylistCountdown = 10
         this.aspectRatio = null
         this.pseudoVideo = document.createElement("video")
@@ -1570,6 +1570,7 @@ class _T_M_G_Video_Player {
             if (this.settings.previewImages === false) videoContainer.setAttribute("data-previews", false) 
             this.setInitialStates()
             this.togglePlay(true)
+            this.autoMovePlaylistActive = true
         }        
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -1578,8 +1579,8 @@ class _T_M_G_Video_Player {
 
     autoMovePlaylist() {
     try {        
-        if (this.#playlist && !this.autoMovePlaylistActive && (this.currentPlaylistIndex < this.#playlist.length - 1) && !this.video.paused) {
-            this.autoMovePlaylistActive = true
+        if (this.#playlist && this.canAutoMovePlaylist && (this.currentPlaylistIndex < this.#playlist.length - 1) && !this.video.paused) {
+            this.canAutoMovePlaylist = false
             const count = Math.floor(this.video.duration - this.video.currentTime)
             const {src, media: {title}} = this.#playlist[this.currentPlaylistIndex + 1]
             const playlistToastContainer = document.createElement("div")
@@ -1653,10 +1654,9 @@ class _T_M_G_Video_Player {
                 this.video.removeEventListener("pause", cleanUpPlaylistToastWhenNeeded)
                 this.video.removeEventListener("waiting", cleanUpPlaylistToastWhenNeeded)
                 this.video.removeEventListener("timeupdate", autoCleanUpPlaylistToast)
-                if (e) {
-                    if (e.target.classList.contains("T_M_G-video-playlist-next-video-cancel-btn"))
-                        setTimeout(() => this.autoMovePlaylistActive = false, ((this.video.duration - this.video.currentTime) * 1000))
-                } else this.autoMovePlaylistActive = false
+                if (e) 
+                    if (!e.target.classList.contains("T_M_G-video-playlist-next-video-cancel-btn"))
+                        this.canAutoMovePlaylist = true
             }
 
             const playlistNextVideoPreviewWrapper = this.ui.dom.videoContainer.querySelector(".T_M_G-video-playlist-next-video-preview-wrapper"),
