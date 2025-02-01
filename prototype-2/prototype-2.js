@@ -1570,7 +1570,7 @@ class _T_M_G_Video_Player {
             if (this.settings.previewImages === false) videoContainer.setAttribute("data-previews", false) 
             this.setInitialStates()
             this.togglePlay(true)
-            this.autoMovePlaylistActive = true
+            this.canAutoMovePlaylist = true
         }        
     } catch(e) {
         this._log(e, "error", "swallow")
