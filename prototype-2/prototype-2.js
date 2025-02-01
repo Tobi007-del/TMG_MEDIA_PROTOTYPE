@@ -1655,8 +1655,8 @@ class _T_M_G_Video_Player {
                 this.video.removeEventListener("waiting", cleanUpPlaylistToastWhenNeeded)
                 this.video.removeEventListener("timeupdate", autoCleanUpPlaylistToast)
                 if (e) 
-                    if (!e.target.classList.contains("T_M_G-video-playlist-next-video-cancel-btn"))
-                        this.canAutoMovePlaylist = true
+                if (e.target.classList.contains("T_M_G-video-playlist-next-video-cancel-btn")) return
+                this.canAutoMovePlaylist = true
             }
 
             const playlistNextVideoPreviewWrapper = this.ui.dom.videoContainer.querySelector(".T_M_G-video-playlist-next-video-preview-wrapper"),
