@@ -32,7 +32,7 @@ class _T_M_G_Video_Player {
                 return []
             }
         })
-        .filter(cssRule => cssRule instanceof CSSStyleRule && (cssRule.selectorText === ":root" || cssRule.selectorText === ":where(:root)"))
+        .filter(cssRule => cssRule instanceof CSSStyleRule && (cssRule.selectorText === ".T_M_G-video-container" || cssRule.selectorText ===  ":where(.T_M_G-video-container)"))
         .flatMap(cssRule => [...cssRule.style])
         .filter(style => style.startsWith("--T_M_G-video-"))
         .forEach(variable => {
@@ -2358,7 +2358,7 @@ class _T_M_G_Video_Player {
     try {
         if (this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {
         if (!this.ui.dom.videoControlsContainer.contains(e.target)) {
-            this.ui.dom.videoContainerContent.classList.add("T_M_G-video-cursor-auto")
+            this.ui.dom.videoContainerContent.classList.add("T_M_G-video-cursor-grabbing")
             document.addEventListener("mousemove", this._handleMiniPlayerPosition)
             document.addEventListener("mouseup", this.emptyMiniPlayerListeners)
             document.addEventListener("mouseleave", this.emptyMiniPlayerListeners)
@@ -2374,7 +2374,7 @@ class _T_M_G_Video_Player {
     emptyMiniPlayerListeners() {
     try {
         this.showVideoOverlay()
-        this.ui.dom.videoContainerContent.classList.remove("T_M_G-video-cursor-auto")
+        this.ui.dom.videoContainerContent.classList.remove("T_M_G-video-cursor-grabbing")
         document.removeEventListener("mousemove", this._handleMiniPlayerPosition)
         document.removeEventListener("mouseup", this.emptyMiniPlayerListeners)
         document.removeEventListener("mouseleave", this.emptyMiniPlayerListeners)
@@ -2418,7 +2418,10 @@ class _T_M_G_Video_Player {
         if (tmg.queryMediaMobile() || this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) return
         if (this.playId) clearTimeout(this.playId)
         this.playId = setTimeout(() => {
-            if (!(this.speedCheck && this.playTriggerCounter < 1))  this.togglePlay()
+            if (!(this.speedCheck && this.playTriggerCounter < 1))  {
+                this.togglePlay()
+                this.video.paused ? this.fire("videopause") : this.fire("videoplay")
+            }
                 this.showVideoOverlay()
         }, 300)
         }
