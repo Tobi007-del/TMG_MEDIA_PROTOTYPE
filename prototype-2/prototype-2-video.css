@@ -1744,7 +1744,6 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     white-space: nowrap;
     transition: transform var(--T_M_G-video-transition-time) ease, opacity var(--T_M_G-video-transition-time) ease;
     pointer-events: none;
-    z-index: 1;
 }
 
 .T_M_G-video-volume-notifier-content {

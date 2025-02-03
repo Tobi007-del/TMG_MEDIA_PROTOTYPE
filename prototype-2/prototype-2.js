@@ -1937,7 +1937,7 @@ class _T_M_G_Video_Player {
         this.skipVideoTime = this.video.currentTime
         if ((this.video.currentTime < this.video.duration) && this.ui.dom.videoContainer.classList.contains("T_M_G-video-replay")) this.ui.dom.videoContainer.classList.remove("T_M_G-video-replay")
         if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
-        if (Math.floor((this.settings?.endTime || this.video.duration) - this.video.currentTime) <= this.autoPlaylistCountdown && Math.round(this.video.duration - this.video.currentTime) >= 1) this.autoMovePlaylist()
+        if (Math.floor((this.settings?.endTime || this.video.duration) - this.video.currentTime) <= this.autoPlaylistCountdown && Math.floor(this.video.duration - this.video.currentTime) > 1) this.autoMovePlaylist()
     } catch(e) {
         this._log(e, "error", "swallow")
     }            
