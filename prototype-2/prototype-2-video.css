@@ -115,7 +115,7 @@
 :where(.T_M_G-video-container) {
     --T_M_G-video-captions-font-family: var(--T_M_G-video-font-family);
     --T_M_G-video-captions-color: white;
-    --T_M_G-video-captions-font-size: calc(var(--T_M_G-video-current-unit)/1.2);
+    --T_M_G-video-captions-font-size: calc(var(--T_M_G-video-current-unit)/1.45);
     --T_M_G-video-captions-font-size-ratio: 1;
     --T_M_G-video-captions-font-weight: light;
     --T_M_G-video-captions-font-opacity: 1;
@@ -137,7 +137,6 @@
 }
 
 /* setting video initial state begins*/
-/* all initial video styles have to be important because they override every property no matter what */
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content {
     cursor: auto;
 }
@@ -214,6 +213,8 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 /* settings deactivated state */
 .T_M_G-video-container.T_M_G-video-unavailable {
     --T_M_G-video-icons-color: var(--T_M_G-video-controls-disabled-color)!important;
+    --T_M_G-video-controls-color: var(--T_M_G-video-disabled-color)!important;
+    --T_M_G-video-text-color: var(--T_M_G-video-disabled-color)!important;
     all: unset!important;
     pointer-events: none!important;
 }
@@ -419,6 +420,13 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     user-select: none;
 }
 
+:where(.T_M_G-video-container *),
+:where(.T_M_G-video-container *::after),
+:where(.T_M_G-video-container *::before) {
+    padding: 0;
+    margin: 0;
+}
+
 .T_M_G-video-playlist-title,
 .T_M_G-video-playlist-next-video-title,
 .T_M_G-video-container video::cue,
@@ -585,7 +593,6 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 
 .T_M_G-video-playlist-title {
     position: relative;
-    margin: 0;
     color: var(--T_M_G-video-text-color);
 }
 
@@ -699,7 +706,6 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 }
 
 .T_M_G-video-playlist-next-video-info h2 {
-    margin: 0;
     color: var(--T_M_G-video-text-color);
     font-size: calc(var(--T_M_G-video-current-unit)/1.5);
 }
@@ -710,7 +716,6 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 }
 
 .T_M_G-video-playlist-next-video-title {
-    margin: 0;
     color: var(--T_M_G-video-text-color);
     font-size: calc(var(--T_M_G-video-current-unit)/2);
 }
@@ -1279,7 +1284,6 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
 }
 
 .T_M_G-video-picture-in-picture-wrapper p {
-    margin: 0;
     text-align: center;
     font-size: calc(var(--T_M_G-video-current-unit)/1.5);
     font-weight: bold;
@@ -1462,7 +1466,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
 .T_M_G-video::cue {
     font-family: var(--T_M_G-video-captions-font-family);
     color: rgb(from var(--T_M_G-video-captions-color) r g b/var(--T_M_G-video-captions-font-opacity));
-    font-size: calc(clamp(0.25rem, calc(1.25vmin + 1.5vmax), var(--T_M_G-video-captions-font-size)) * var(--T_M_G-video-captions-font-size-ratio));
+    font-size: calc(var(--T_M_G-video-captions-font-size) * var(--T_M_G-video-captions-font-size-ratio));
     font-weight: var(--T_M_G-video-captions-font-weight);
     background: rgb(from var(--T_M_G-video-captions-background-color) r g b/var(--T_M_G-video-captions-background-opacity));
 }
@@ -1472,21 +1476,27 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
 }
 
 .T_M_G-video::-webkit-media-text-track-display {
-    transform-style: preserve-3d;
-    -webkit-transform: translateY(calc(var(--T_M_G-video-current-unit)/-2));
     transform: translateY(calc(var(--T_M_G-video-current-unit)/-2));
 }
 
 .T_M_G-video-container.T_M_G-video-overlay .T_M_G-video::-webkit-media-text-track-display,
 .T_M_G-video-container:has(:focus-visible) .T_M_G-video::-webkit-media-text-track-display {
-    -webkit-transform: translateY(calc(var(--T_M_G-video-current-unit)*-2.5));
     transform: translateY(calc(var(--T_M_G-video-current-unit)*-2.5));
+}
+
+.T_M_G-video-container[data-timeline-position="bottom"].T_M_G-video-overlay .T_M_G-video::-webkit-media-text-track-display,
+.T_M_G-video-container[data-timeline-position="bottom"]:has(:focus-visible) .T_M_G-video::-webkit-media-text-track-display {
+    transform: translateY(calc(var(--T_M_G-video-current-unit)*-2));
 }
 
 .T_M_G-video-container.T_M_G-video-mini-player.T_M_G-video-overlay .T_M_G-video::-webkit-media-text-track-display,
 .T_M_G-video-container.T_M_G-video-mini-player:has(:focus-visible) .T_M_G-video::-webkit-media-text-track-display {
-    -webkit-transform: translateY(calc(var(--T_M_G-video-current-unit)*-1.75));
     transform: translateY(calc(var(--T_M_G-video-current-unit)*-1.75));
+}
+
+.T_M_G-video-container[data-timeline-position="bottom"].T_M_G-video-mini-player.T_M_G-video-overlay .T_M_G-video::-webkit-media-text-track-display,
+.T_M_G-video-container[data-timeline-position="bottom"].T_M_G-video-mini-player:has(:focus-visible) .T_M_G-video::-webkit-media-text-track-display {
+    transform: translateY(calc(var(--T_M_G-video-current-unit)*-1.5));
 }
 
 .T_M_G-video-timeline-container {
