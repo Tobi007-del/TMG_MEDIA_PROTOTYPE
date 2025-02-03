@@ -1763,6 +1763,7 @@ class _T_M_G_Video_Player {
         if ('mediaSession' in navigator) {
             navigator.mediaSession.playbackState = "paused"
         }
+        if (this.buffering) this._handleBufferStop()
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
