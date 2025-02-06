@@ -687,7 +687,7 @@ class _T_M_G_Video_Player {
         ` : null,
         prevBtnHTML = this.settings.status.ui.prev ?
         `
-                <button type="button" class="T_M_G-video-prev-btn" title="Previous Video(Shift + p)" data-control-id="prev" data-focusable-control="false" tabindex="-1">
+                <button type="button" class="T_M_G-video-prev-btn" title="Previous Video(Shift + p)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="prev" data-focusable-control="false" tabindex="-1">
                     <svg class="T_M_G-video-prev-icon" data-tooltip-text="Previous Video(Shift + p)" data-tooltip-position="top">
                         <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                     </svg>
