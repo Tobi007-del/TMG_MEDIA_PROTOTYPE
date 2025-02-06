@@ -755,12 +755,23 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 }
 
 .T_M_G-video-overlay-main-controls-wrapper button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon)::after {
-    right: calc(var(--T_M_G-video-current-unit)/1.25);
     width: calc(var(--T_M_G-video-current-unit)/8.5);
     height: calc(var(--T_M_G-video-current-unit)/1.85);
 }
 
-.T_M_G-video-overlay-main-controls-wrapper button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
+.T_M_G-video-overlay-main-controls-wrapper button:has(.T_M_G-video-prev-icon)::after {
+    left: calc(var(--T_M_G-video-current-unit)/1.25);
+}
+
+.T_M_G-video-overlay-main-controls-wrapper button:has(.T_M_G-video-next-icon)::after {
+    right: calc(var(--T_M_G-video-current-unit)/1.25);
+}
+
+.T_M_G-video-overlay-main-controls-wrapper button:has(.T_M_G-video-prev-icon) svg {
+    right: calc(var(--T_M_G-video-current-unit)/-8.5);
+}
+
+.T_M_G-video-overlay-main-controls-wrapper button:has(.T_M_G-video-next-icon) svg {
     left: calc(var(--T_M_G-video-current-unit)/-8.5);
 }
 

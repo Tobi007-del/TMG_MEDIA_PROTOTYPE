@@ -2253,10 +2253,9 @@ class _T_M_G_Video_Player {
     _handleFullScreenChange() {
     try {
         this.ui.dom.videoContainer.classList.toggle("T_M_G-video-full-screen", this.inFullScreen())  
-        const lockOrientation = this.video.videoWidth > this.video.videoHeight ? "landscape" : "portrait"
         if (this.inFullScreen()) {
-            if (screen.orientation && screen.orientation.lock) screen.orientation.lock(lockOrientation).then(() => this.ui.dom.fullScreenOrientationBtn.classList.remove("T_M_G-video-control-hidden")).catch(e => this._log(e, "error", "swallow"))
             this.toggleMiniPlayerMode(false)
+            this.autoLockFullScreenOrientation()
         } else {
             if (screen.orientation && screen.orientation.lock) screen.orientation.unlock()
             this.ui.dom.fullScreenOrientationBtn.classList.add("T_M_G-video-control-hidden")
@@ -2264,7 +2263,18 @@ class _T_M_G_Video_Player {
     } catch(e) {
         this._log(e, "error", "swallow")
     }            
-    }        
+    }   
+    
+    autoLockFullScreenOrientation() {
+    try {
+        if (this.inFullScreen()) {
+            const lockOrientation = this.video.videoWidth > this.video.videoHeight ? "landscape" : "portrait"
+            if (screen.orientation && screen.orientation.lock) screen.orientation.lock(lockOrientation).then(() => this.ui.dom.fullScreenOrientationBtn.classList.remove("T_M_G-video-control-hidden")).catch(e => this._log(e, "error", "swallow"))
+        }
+    } catch {
+        this._log(e, "error", "swallow")
+    }
+    }
 
     changeFullScreenOrientation() {
     try {
@@ -2320,13 +2330,12 @@ class _T_M_G_Video_Player {
     if (this.settings.status.modes.miniPlayer) {
         const threshold = 240
         if (bool === false) {
-            if (behaviour) {
+            if (behaviour) 
                 window.scrollTo({
                     top: this.ui.dom.videoContainer.parentNode.offsetTop,
                     left: 0,
                     behavior: behaviour,
                 })      
-            }
             this.removeMiniPlayer()
             return
         }
