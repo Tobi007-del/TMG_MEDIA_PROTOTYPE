@@ -601,13 +601,13 @@ class _T_M_G_Video_Player {
         bwdNotiferHTML = this.settings.status.ui.notifiers ?
         `
             <div class="T_M_G-video-notifiers T_M_G-video-bwd-notifier">
-                <svg>
+                <svg style="transform: scaleX(-1);">
                     <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                 </svg>
-                <svg>
+                <svg style="transform: scaleX(-1);">
                     <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                 </svg>
-                <svg>
+                <svg style="transform: scaleX(-1);">
                     <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                 </svg>                
             </div>    
@@ -646,7 +646,7 @@ class _T_M_G_Video_Player {
         mainPrevBtnHTML = this.settings.status.ui.prev ?
         `
             <button type="button" class="T_M_G-video-main-prev-btn" title="Previous Video(Shift + p)" data-focusable-control="false" tabindex="-1">
-                <svg class="T_M_G-video-prev-icon" data-tooltip-text="Previous Video(Shift + p)" data-tooltip-position="top">
+                <svg class="T_M_G-video-prev-icon" data-tooltip-text="Previous Video(Shift + p)" data-tooltip-position="top" style="transform: scaleX(-1);">
                     <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                 </svg>
             </button>       
@@ -688,7 +688,7 @@ class _T_M_G_Video_Player {
         prevBtnHTML = this.settings.status.ui.prev ?
         `
                 <button type="button" class="T_M_G-video-prev-btn" title="Previous Video(Shift + p)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="prev" data-focusable-control="false" tabindex="-1">
-                    <svg class="T_M_G-video-prev-icon" data-tooltip-text="Previous Video(Shift + p)" data-tooltip-position="top">
+                    <svg class="T_M_G-video-prev-icon" data-tooltip-text="Previous Video(Shift + p)" data-tooltip-position="top" style="transform: scaleX(-1);">
                         <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                     </svg>
                 </button>       

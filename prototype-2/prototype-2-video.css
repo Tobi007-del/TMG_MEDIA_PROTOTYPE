@@ -1154,7 +1154,6 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon)::after {
     content: '';
     position: absolute;
-    right: calc(var(--T_M_G-video-current-unit)/4.25);
     width: calc(var(--T_M_G-video-current-unit)/10);
     height: calc(var(--T_M_G-video-current-unit)/1.75);
     display: block;
@@ -1164,12 +1163,23 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon)::after {
     transition: background-color var(--T_M_G-video-transition-time) ease;
 }
 
-button:has(.T_M_G-video-prev-icon) {
-    transform: scaleX(-1);
+button:has(.T_M_G-video-prev-icon)::after {
+    left: calc(var(--T_M_G-video-current-unit)/4.25);
+}
+
+button:has(.T_M_G-video-next-icon)::after {
+    right: calc(var(--T_M_G-video-current-unit)/4.25);
 }
 
 button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     position: relative;
+}
+
+button:has(.T_M_G-video-prev-icon) svg {
+    right: calc(var(--T_M_G-video-current-unit)/-10);
+}
+
+button:has(.T_M_G-video-next-icon) svg {
     left: calc(var(--T_M_G-video-current-unit)/-10);
 }
 
@@ -1985,10 +1995,6 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon) svg {
     100% {
         opacity: 1;
     }
-}
-
-.T_M_G-video-bwd-notifier svg {
-    transform: scaleX(-1);
 }
 
 .T_M_G-video-notifiers-container[data-current-notifier = "videoplay"] .T_M_G-video-play-notifier, 
