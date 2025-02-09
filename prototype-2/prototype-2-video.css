@@ -292,7 +292,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     position: absolute;
     inset: 0;
     color: white;
-    font-size: 25px;
+    font-size: 20px;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
@@ -782,7 +782,8 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 /* fullscreen, theater and miniplayer styles are arranged in the order of which the specificity is desired meaning theater is less specific among the three since it can be active at the same time with each of the other two */
 .T_M_G-video-container.T_M_G-video-theater,
 .T_M_G-video-container.T_M_G-video-full-screen,
-.T_M_G-pseudo-video-container:has(~ .T_M_G-video-container.T_M_G-video-theater, ~ .T_M_G-video-container.T_M_G-video-full-screen) {
+.T_M_G-pseudo-video-container.T_M_G-video-full-screen, 
+.T_M_G-pseudo-video-container.T_M_G-video-theater  {
     width: 100%;
     border-radius: 0;
 }
@@ -797,7 +798,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 }
 
 /* this style is important to ensure that the theater mode always takes the entire width of the window and overrides and flex, grid or width property that may interfere */
-*:has(.T_M_G-video-container.T_M_G-video-full-screen, .T_M_G-video-container.T_M_G-video-theater) {
+*:has(.T_M_G-video-full-screen, .T_M_G-video-theater) {
     flex: 0 0 100%!important;
     grid-column: 1 / -1!important;
     width: 100%!important;
