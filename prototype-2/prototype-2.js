@@ -2332,7 +2332,7 @@ class _T_M_G_Video_Player {
         if (bool === false) {
             if (behaviour) 
                 window.scrollTo({
-                    top: this.videoContainer.parentNode.offsetTop,
+                    top: this.pseudoVideoContainer.parentNode.offsetTop - ((window.innerHeight / 2) - (this.pseudoVideoContainer.offsetHeight / 2)),
                     left: 0,
                     behavior: behaviour,
                 })      
