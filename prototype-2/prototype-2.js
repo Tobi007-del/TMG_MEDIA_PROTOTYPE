@@ -78,7 +78,7 @@ class _T_M_G_Video_Player {
         this.currentPlaylistIndex = this.#playlist ? 0 : null
         this.wasPaused = !this.video.autoplay
         this.miniPlayerThrottleId = null
-        this.miniPlayerThrottleDelay = 16
+        this.miniPlayerThrottleDelay = 10
         this.previousRate = this.video.playbackRate
         this.isScrubbing = false
         this.parentIntersecting = true
@@ -2357,12 +2357,14 @@ class _T_M_G_Video_Player {
 
     removeMiniPlayer() {
         try {
+        if (this.ui.dom.videoContainer.classList.contains("T_M_G-video-mini-player")) {
             this.pseudoVideoContainer.className = "T_M_G-pseudo-video-container"
             this.pseudoVideoContainer.parentElement.insertBefore(this.videoContainer, this.pseudoVideoContainer)
             this.pseudoVideoContainer.remove()
             this.videoContainer.classList.remove("T_M_G-video-mini-player")
             this.videoContainer.removeEventListener("mousedown", this.moveMiniPlayer)
             this.videoContainer.removeEventListener("touchstart", this.moveMiniPlayer, {passive: false})
+        }
         } catch(e) {
             this._log(e, "error", "swallow")
         }
@@ -2526,7 +2528,7 @@ class _T_M_G_Video_Player {
         if (!this.videoContainer.classList.contains("T_M_G-video-mini-player")) {    
             //conditions to cancel the speed timeout
             //tm: if user moves finger before speedup is called like during scrolling
-            this.videoContainer.addEventListener("touchmove", this._handleSpeedPointerUp)     
+            this.videoContainer.addEventListener("touchmove", this._handleSpeedPointerUp, {passive: true})     
             this.videoContainer.addEventListener("mouseup", this._handleSpeedPointerUp)
             this.videoContainer.addEventListener("mouseleave", this._handleSpeedPointerOut)           
             this.videoContainer.addEventListener("touchend", this._handleSpeedPointerUp)
@@ -2537,7 +2539,7 @@ class _T_M_G_Video_Player {
             if (this.speedTimeoutId) clearTimeout(this.speedTimeoutId)
             this.speedTimeoutId = setTimeout(() => {   
                 //tm: removing listener since speedup is being called and user is not scrolling
-                this.videoContainer.removeEventListener("touchmove", this._handleSpeedPointerUp)     
+                this.videoContainer.removeEventListener("touchmove", this._handleSpeedPointerUp, {passive: true})     
                 if (this.settings.status.beta.rewind) {
                 this.videoContainer.addEventListener("mousemove", this._handleSpeedPointerMove)
                 this.videoContainer.addEventListener("touchmove", this._handleSpeedPointerMove, {passive: true})

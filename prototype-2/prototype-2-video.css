@@ -138,7 +138,11 @@
 
 /* setting video initial state begins*/
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content {
-    cursor: auto;
+    cursor: pointer;
+}
+
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-overlay-controls-container {
+    background-color: transparent;
 }
 
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-controls-container,
@@ -146,10 +150,6 @@ body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-w
 body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content:has(.T_M_G-video-play-notifier.T_M_G-video-control-spin) *:is(.T_M_G-video-main-play-pause-btn, .T_M_G-video-buffer) {
     opacity: 0;
     pointer-events: none;
-}
-
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-overlay-controls-container {
-    background-color: transparent;
 }
 
 body .T_M_G-video-container.T_M_G-video-initial > *:not(.T_M_G-video-notifiers-container) {
@@ -182,20 +182,19 @@ body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-w
         transform: scale(var(--T_M_G-video-large-scale));
     }    
 }
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:hover, 
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:focus-visible,
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:is(:hover, :focus-visible),
 body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier.T_M_G-video-control-spin {
     cursor: pointer;
     transition: all 500ms ease;
     opacity: 1;
     transform: scale(var(--T_M_G-video-large-scale));
 }
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier svg, body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier.T_M_G-video-control-spin svg {
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier svg, 
+body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier.T_M_G-video-control-spin svg {
     transform: inherit;
     transition: transform var(--T_M_G-video-transition-time) ease;
 }
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:hover,
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:focus-visible {
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:is(:hover, :focus-visible) {
     animation: none;
 }
 body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-notifiers-container .T_M_G-video-notifiers.T_M_G-video-play-notifier.T_M_G-video-control-spin {
@@ -479,7 +478,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     fill: none;
 }
 
-.T_M_G_video-container *:hover>svg path {
+.T_M_G_video-container *:is(:hover, :focus-visible) > svg path {
     fill: var(--T_M_G-video-icons-hover-color);
 }
 
@@ -519,7 +518,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     transition: opacity var(--T_M_G-video-fade-transition) ease-in-out;
 }
 
-:where(.T_M_G-video-container button):hover {
+:where(.T_M_G-video-container button):is(:hover, :focus-visible) {
     opacity: 1;
     cursor: pointer;
 }
@@ -1144,7 +1143,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     transition: fill var(--T_M_G-video-transition-time) ease;
 }
 
-.T_M_G-video-container-content button:hover {
+.T_M_G-video-container-content button:is(:hover, :focus-visible) {
     --T_M_G-video-current-controls-color: var(--T_M_G-video-controls-hover-color);
 }
 
@@ -1155,7 +1154,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     transition: background-color var(--T_M_G-video-transition-time) ease;
 }
 
-.T_M_G-video-controls-wrapper button:hover {
+.T_M_G-video-controls-wrapper button:is(:hover, :focus-visible) {
     background: var(--T_M_G-video-controls-hover-background);
 }
 
@@ -1427,8 +1426,7 @@ button:has(.T_M_G-video-next-icon) svg {
     display: block;
 }
 
-.T_M_G-video-volume-container.T_M_G-video-control-active:hover .T_M_G-video-volume-slider,
-.T_M_G-video-volume-slider:focus-visible {
+.T_M_G-video-volume-container.T_M_G-video-control-active:is(:hover, :focus-visible) {
     overflow: visible;
     width: calc(var(--T_M_G-video-current-unit)*2);
 }
