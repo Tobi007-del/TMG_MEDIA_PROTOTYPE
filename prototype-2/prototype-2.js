@@ -1470,7 +1470,9 @@ class _T_M_G_Video_Player {
 
     previousVideo() {
     try {
-        if (this.#playlist && this.currentPlaylistIndex > 0) this.movePlaylistTo(this.currentPlaylistIndex - 1)
+        if (this.#playlist && this.currentPlaylistIndex > 0) {
+            this.video.currentTime < 3 ? this.movePlaylistTo(this.currentPlaylistIndex - 1) : this.moveVideoTime({to: "start"})
+        }
     } catch(e) {
         this._log(e, "error", "swallow")
     }                
@@ -1886,7 +1888,7 @@ class _T_M_G_Video_Player {
         if (this.ui.dom.currentTimeElement) this.ui.dom.currentTimeElement.textContent = formattedTime
         if (this.ui.dom.playbackRateNotifier && this.speedCheck && this.speedToken === 1) this.ui.dom.playbackRateNotifier.dataset.currentTime = formattedTime
         this.skipVideoTime = this.video.currentTime
-        if (Math.floor((this.settings?.endTime || this.video.duration) - this.video.currentTime) <= this.autoPlaylistCountdown && Math.floor(this.video.duration - this.video.currentTime) > 1) this.autoMovePlaylist()
+        if (Math.floor((this.settings?.endTime || this.video.duration) - this.video.currentTime) <= this.autoPlaylistCountdown) this.autoMovePlaylist()
         if (this.videoContainer.classList.contains("T_M_G-video-replay")) this.videoContainer.classList.remove("T_M_G-video-replay")
         if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
     } catch(e) {
@@ -3335,7 +3337,7 @@ if (typeof window === "undefined") {
                             }              
                             if (v.tmgControllerStructure) {
                                 customOptions.settings.controllerStructure = v.tmgControllerStructure.replaceAll("'", "").replaceAll(" ", "").split(",")
-                                medium.removeAttribute("data-tmg-controller-interface")
+                                medium.removeAttribute("data-tmg-controller-structure")
                             }              
                             if (v.tmgStartTime) {
                                 customOptions.settings.startTime = JSON.parse(v.tmgStartTime)
