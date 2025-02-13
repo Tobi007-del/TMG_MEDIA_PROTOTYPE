@@ -51,7 +51,7 @@
     --T_M_G-video-fade-transition: 200ms;
     --T_M_G-video-timeline-fade-transition: 1s;
     --T_M_G-video-transition-time: 500ms;
-    --T_M_G-video-arrows-transition-time: 800ms;
+    --T_M_G-video-notifiers-animation-time: 1s;
     --T_M_G-video-loader-animation-time: 1250ms;
 }
 
@@ -170,6 +170,17 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     display: flex!important;
     outline-offset: 1px;
 }
+
+body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier svg,
+body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier.T_M_G-video-control-spin svg {
+    transform: inherit;
+    transition: inherit;
+}
+
+body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier.T_M_G-video-control-spin svg {
+    animation: none;
+}
+
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier {
     animation: beat 1s infinite ease-out;
 }
@@ -182,21 +193,19 @@ body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-w
         transform: scale(var(--T_M_G-video-large-scale));
     }    
 }
+
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:is(:hover, :focus-visible),
 body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier.T_M_G-video-control-spin {
     cursor: pointer;
-    transition: all 500ms ease;
     opacity: 1;
     transform: scale(var(--T_M_G-video-large-scale));
+    transition: all 500ms ease;
 }
-body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier svg, 
-body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier.T_M_G-video-control-spin svg {
-    transform: inherit;
-    transition: transform var(--T_M_G-video-transition-time) ease;
-}
+
 body .T_M_G-video-container.T_M_G-video-initial .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-play-notifier:is(:hover, :focus-visible) {
     animation: none;
 }
+
 body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-container-content .T_M_G-video-notifiers-container .T_M_G-video-notifiers.T_M_G-video-play-notifier.T_M_G-video-control-spin {
     animation: spin 1s ease-out;
 }
@@ -212,8 +221,8 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
 /* settings deactivated state */
 .T_M_G-video-container.T_M_G-video-unavailable {
     --T_M_G-video-icons-color: var(--T_M_G-video-controls-disabled-color)!important;
-    --T_M_G-video-controls-color: var(--T_M_G-video-disabled-color)!important;
-    --T_M_G-video-text-color: var(--T_M_G-video-disabled-color)!important;
+    --T_M_G-video-controls-color: var(--T_M_G-video-controlsdisabled-color)!important;
+    --T_M_G-video-text-color: var(--T_M_G-video-controls-disabled-color)!important;
     all: unset!important;
     pointer-events: none!important;
 }
@@ -533,7 +542,7 @@ body .T_M_G-video-container .T_M_G-video-container-content-wrapper .T_M_G-video-
     opacity: 0.5;
 }
 
-.T_M_G-video-volume-container:has(.T_M_G-video-control-dragging)>.T_M_G-video-volume-slider {
+.T_M_G-video-volume-container:has(.T_M_G-video-control-dragging) > .T_M_G-video-volume-slider {
     display: none;
 }
 
@@ -1221,13 +1230,23 @@ button:has(.T_M_G-video-next-icon) svg {
     display: none;
 }
 
-.T_M_G-video-container.T_M_G-video-theater .T_M_G-video-controls-wrapper .T_M_G-video-tall, 
-.T_M_G-video-container:not(.T_M_G-video-theater) .T_M_G-video-notifiers .T_M_G-video-tall {
+.T_M_G-video-container.T_M_G-video-full-screen .T_M_G-video-controls-wrapper .T_M_G-video-open {
     display: none;
 }
 
-.T_M_G-video-container:not(.T_M_G-video-theater) .T_M_G-video-controls-wrapper .T_M_G-video-wide, 
-.T_M_G-video-container.T_M_G-video-theater .T_M_G-video-notifiers .T_M_G-video-wide {
+.T_M_G-video-container:not(.T_M_G-video-full-screen) .T_M_G-video-controls-wrapper .T_M_G-video-close {
+    display: none;
+}
+
+.T_M_G-video-container.T_M_G-video-full-screen .T_M_G-video-theater-btn {
+    display: none;
+}
+
+.T_M_G-video-container.T_M_G-video-theater .T_M_G-video-controls-wrapper .T_M_G-video-tall {
+    display: none;
+}
+
+.T_M_G-video-container:not(.T_M_G-video-theater) .T_M_G-video-controls-wrapper .T_M_G-video-wide{
     display: none;
 }
 
@@ -1311,20 +1330,6 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-theater-btn {
-    display: none;
-}
-
-.T_M_G-video-container.T_M_G-video-full-screen .T_M_G-video-controls-wrapper .T_M_G-video-open, 
-.T_M_G-video-container:not(.T_M_G-video-full-screen) .T_M_G-video-notifiers .T_M_G-video-open {
-    display: none;
-}
-
-.T_M_G-video-container:not(.T_M_G-video-full-screen) .T_M_G-video-controls-wrapper .T_M_G-video-close, 
-.T_M_G-video-container.T_M_G-video-full-screen .T_M_G-video-notifiers .T_M_G-video-close {
-    display: none;
-}
-
-.T_M_G-video-container.T_M_G-video-full-screen .T_M_G-video-theater-btn {
     display: none;
 }
 
@@ -1419,16 +1424,17 @@ button:has(.T_M_G-video-next-icon) svg {
     gap: calc(var(--T_M_G-video-current-unit)/5);
 }
 
+.T_M_G-video-volume-container.T_M_G-video-control-active:hover .T_M_G-video-volume-slider,
+.T_M_G-video-volume-container:has(.T_M_G-video-volume-slider:focus-visible) .T_M_G-video-volume-slider {
+    overflow: visible;
+    width: calc(var(--T_M_G-video-current-unit)*2);
+}
+
 .T_M_G-video-volume-container.T_M_G-video-control-active .T_M_G-video-volume-slider::after, 
 .T_M_G-video-volume-container.T_M_G-video-control-active .T_M_G-video-volume-slider::before,
 .T_M_G-video-volume-slider:focus-visible::after, 
 .T_M_G-video-volume-slider:focus-visible::before {
     display: block;
-}
-
-.T_M_G-video-volume-container.T_M_G-video-control-active:is(:hover, :focus-visible) {
-    overflow: visible;
-    width: calc(var(--T_M_G-video-current-unit)*2);
 }
 
 .T_M_G-video-duration-container {
@@ -1772,8 +1778,80 @@ button:has(.T_M_G-video-next-icon) svg {
     border-radius: 50%;
     color: var(--T_M_G-video-text-color);
     white-space: nowrap;
-    transition: transform var(--T_M_G-video-transition-time) ease, opacity var(--T_M_G-video-transition-time) ease;
     pointer-events: none;
+    animation-duration: var(--T_M_G-video-notifiers-animation-time);
+    animation-timing-function: ease;
+    animation-fill-mode: forwards;
+}
+
+.T_M_G-video-notifiers svg {
+    animation: inherit;
+}
+
+.T_M_G-video-notifiers-container[data-current-notifier="videoplay"] .T_M_G-video-play-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="videopause"] .T_M_G-video-pause-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="volumeup"] .T_M_G-video-volume-up-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="volumedown"] .T_M_G-video-volume-down-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="volumemuted"] .T_M_G-video-volume-muted-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="captions"] .T_M_G-video-captions-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="theater"] .T_M_G-video-theater-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="fullScreen"] .T_M_G-video-full-screen-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="fwd"] .T_M_G-video-fwd-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="bwd"] .T_M_G-video-bwd-notifier {
+    animation-name: show;
+}
+
+.T_M_G-video-notifiers-container[data-current-notifier="videoplay"] .T_M_G-video-play-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="videopause"] .T_M_G-video-pause-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="volumeup"] .T_M_G-video-volume-up-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="volumedown"] .T_M_G-video-volume-down-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="volumemuted"] .T_M_G-video-volume-muted-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="captions"] .T_M_G-video-captions-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="theater"] .T_M_G-video-theater-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="fullScreen"] .T_M_G-video-full-screen-notifier {
+    animation-name: show, scaleUp;
+}
+
+@keyframes show {
+    from, 20% {
+        opacity: 1;
+    } to {
+        opacity: 0;
+    }
+}
+
+@keyframes scaleUp {
+    to {
+        transform: scale(var(--T_M_G-video-large-scale));
+    }
+}
+
+.T_M_G-video-notifiers-container[data-current-notifier="volumeup"] .T_M_G-video-volume-notifier-content,
+.T_M_G-video-notifiers-container[data-current-notifier="volumedown"] .T_M_G-video-volume-notifier-content {
+    animation-name: show-alt;
+}
+
+@keyframes show-alt {
+    0%, 60% {
+        opacity: 1;
+    } 90%, 100% {
+        opacity: 0;
+    }
+}
+
+.T_M_G-video-notifiers-container[data-current-notifier="playbackratechange"] .T_M_G-video-playback-rate-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="fwd"] .T_M_G-video-fwd-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="bwd"] .T_M_G-video-bwd-notifier,
+.T_M_G-video-notifiers-container .T_M_G-video-fwd-notifier.T_M_G-video-control-persist,
+.T_M_G-video-notifiers-container .T_M_G-video-bwd-notifier.T_M_G-video-control-persist {
+    animation-name: show-alt-2;
+    opacity: 1;
+}
+
+@keyframes show-alt-2 {
+    from, to {
+        opacity: 1;
+    }
 }
 
 .T_M_G-video-volume-notifier-content {
@@ -1799,7 +1877,6 @@ button:has(.T_M_G-video-next-icon) svg {
     font-size: calc(var(--T_M_G-video-current-unit)/2.4);
     font-weight: 700;
     border-radius: var(--T_M_G-video-current-unit);
-    transition: none;
 }
 
 .T_M_G-video-playback-rate-notifier:not(.T_M_G-video-rewind)::after, 
@@ -1877,19 +1954,10 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-bwd-notifier {
     align-items: start;
     transform: scale(var(--T_M_G-video-large-scale));
-    transition: none;
-}
-
-.T_M_G-video-notifiers-container[data-current-notifier = "fwd"] .T_M_G-video-fwd-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "bwd"] .T_M_G-video-bwd-notifier,
-.T_M_G-video-notifiers-container .T_M_G-video-fwd-notifier.T_M_G-video-control-persist, 
-.T_M_G-video-notifiers-container .T_M_G-video-bwd-notifier.T_M_G-video-control-persist {
-    transition: opacity var(--T_M_G-video-dbc-transition-time) ease;
 }
 
 .T_M_G-video-notifiers-container .T_M_G-video-fwd-notifier.T_M_G-video-control-persist, 
 .T_M_G-video-notifiers-container .T_M_G-video-bwd-notifier.T_M_G-video-control-persist {
-    opacity: 1;
     width: var(--T_M_G-video-dbc-backdrop-width);
     height: var(--T_M_G-video-dbc-backdrop-height);
     padding-inline: 6.5%;
@@ -1951,12 +2019,11 @@ button:has(.T_M_G-video-next-icon) svg {
 
 .T_M_G-video-fwd-notifier svg,
 .T_M_G-video-bwd-notifier svg {
-    opacity: 0.25;
+    opacity: 0;
     margin-top: 20%;
     width: calc(var(--T_M_G-video-current-unit)/2.25);
-    animation: none;
     animation-iteration-count: infinite;
-    animation-duration: var(--T_M_G-video-arrows-transition-time);
+    animation-duration: var(--T_M_G-video-notifiers-animation-time);
 }
 
 .T_M_G-video-notifiers-container[data-current-notifier = "fwd"] .T_M_G-video-fwd-notifier svg:nth-of-type(1), 
@@ -2005,33 +2072,6 @@ button:has(.T_M_G-video-next-icon) svg {
     100% {
         opacity: 1;
     }
-}
-
-.T_M_G-video-notifiers-container[data-current-notifier = "videoplay"] .T_M_G-video-play-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "videopause"] .T_M_G-video-pause-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "volumeup"] .T_M_G-video-volume-up-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "volumeup"] .T_M_G-video-volume-notifier-content,
-.T_M_G-video-notifiers-container[data-current-notifier = "volumedown"] .T_M_G-video-volume-down-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "volumedown"] .T_M_G-video-volume-notifier-content,
-.T_M_G-video-notifiers-container[data-current-notifier = "volumemuted"] .T_M_G-video-volume-muted-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "captions"] .T_M_G-video-captions-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "playbackratechange"] .T_M_G-video-playback-rate-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "theater"] .T_M_G-video-theater-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "fullScreen"] .T_M_G-video-full-screen-notifier,
-.T_M_G-video-notifiers-container[data-current-notifier = "fwd"] .T_M_G-video-fwd-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "bwd"] .T_M_G-video-bwd-notifier {
-    opacity: 1;
-} 
-
-.T_M_G-video-notifiers-container[data-current-notifier = "videoplay"] .T_M_G-video-play-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "videopause"] .T_M_G-video-pause-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "volumeup"] .T_M_G-video-volume-up-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "volumedown"] .T_M_G-video-volume-down-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "volumemuted"] .T_M_G-video-volume-muted-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "captions"] .T_M_G-video-captions-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "theater"] .T_M_G-video-theater-notifier, 
-.T_M_G-video-notifiers-container[data-current-notifier = "fullScreen"] .T_M_G-video-full-screen-notifier {
-    transform: scale(var(--T_M_G-video-large-scale));
 }
 
 @media(max-width: 780px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape) {

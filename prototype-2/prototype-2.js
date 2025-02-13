@@ -77,6 +77,8 @@ class _T_M_G_Video_Player {
         this.CSSCustomPropertiesCache = {}
         this.currentPlaylistIndex = this.#playlist ? 0 : null
         this.wasPaused = !this.video.autoplay
+        this.keyDownThrottleId = null
+        this.keyDownThrottleDelay = 20
         this.miniPlayerThrottleId = null
         this.miniPlayerThrottleDelay = 10
         this.previousRate = this.video.playbackRate
@@ -88,7 +90,7 @@ class _T_M_G_Video_Player {
         this.playId 
         this.overlayRestraintId
         this.timelineThrottleId = null
-        this.timelineThrottleDelay = 33
+        this.timelineThrottleDelay = 20
         this.lastVolume
         this.lastVolumeTimeoutId
         this.volumeActiveId 
@@ -113,7 +115,7 @@ class _T_M_G_Video_Player {
         this.overlayRestraintTime = 3000
         this.transitionId        
         this.dragging  
-        this.keyOverrideRegex = /(arrow|home|end)/i
+        this.keyOverrideRegex = /(arrow|home|end|)/i
         this.settingsView = false
         this.textTrackIndex = 0
         this.canAutoMovePlaylist = true
@@ -215,29 +217,25 @@ class _T_M_G_Video_Player {
         this.notifierEvents = this.settings.status.ui.notifiers ? ["videoplay","videopause","volumeup","volumedown","volumemuted","captions","playbackratechange","theater","fullScreen","fwd","bwd"] : null
         this.notify = this.settings.status.ui.notifiers ? {
             self: null,
-            init: function(self) {
+            init(self) {
             if (self.settings.notifiers) {
                 this.self = self
                 this.resetNotifiers = this.resetNotifiers.bind(this)
                 for(const notifier of this.self.ui.dom.notifiersContainer?.children) {
-                    notifier.addEventListener('transitionend', this.resetNotifiers)
+                    notifier.addEventListener('animationend', this.resetNotifiers)
                 }
                 for (const event of this.self.notifierEvents) {
                     this.self.ui.dom.notifiersContainer?.addEventListener(event, this)
                 }
             }
             },
-    
-            handleEvent: function(e) {
+            handleEvent(e) {
             if (this.self.settings.notifiers) {
-                const transitionTime = e.type === "fwd" || e.type === "bwd" ? Number(this.self.videoArrowsTransitionTime.replace('ms', '')) + 10 : Number(this.self.videoTransitionTime.replace('ms', '')) + 10
-                if (this.self.transitionId) clearTimeout(this.self.transitionId)
-                this.self.ui.dom.notifiersContainer.dataset.currentNotifier = e.type
-                this.self.transitionId = setTimeout(this.resetNotifiers.bind(this), transitionTime)
+                this.resetNotifiers()
+                setTimeout(() => this.self.ui.dom.notifiersContainer.dataset.currentNotifier = e.type, 10)
             }
             },
-    
-            resetNotifiers: function() {
+            resetNotifiers() {
                 this.self.ui.dom.notifiersContainer.dataset.currentNotifier = ''
             }
         } : null
@@ -537,34 +535,6 @@ class _T_M_G_Video_Player {
         `
             <div class="T_M_G-video-notifiers T_M_G-video-playback-rate-notifier"></div>
         ` : null,
-        theaterNotifierHTML = this.settings.status.ui.notifiers ?
-        `
-            <div class="T_M_G-video-notifiers T_M_G-video-theater-notifier">
-                <svg class="T_M_G-video-tall" data-tooltip-text="Theater Mode(t)" data-tooltip-position="top">
-                    <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M23 7C23 5.34315 21.6569 4 20 4H4C2.34315 4 1 5.34315 1 7V17C1 18.6569 2.34315 20 4 20H20C21.6569 20 23 18.6569 23 17V7ZM21 7C21 6.44772 20.5523 6 20 6H4C3.44772 6 3 6.44771 3 7V17C3 17.5523 3.44772 18 4 18H20C20.5523 18 21 17.5523 21 17V7Z"/>
-                </svg>
-                <svg class="T_M_G-video-wide" data-tooltip-text="Normal Mode(t)" data-tooltip-position="top">
-                    <path fill="currentColor" d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"></path>
-                </svg>
-            </div>
-        ` : null,
-        fullscreenNotifierHTML = this.settings.status.ui.notifiers ?
-        `
-            <div class="T_M_G-video-notifiers T_M_G-video-full-screen-notifier">
-                <svg class="T_M_G-video-open" data-tooltip-text="Enter Full Screen(f)" data-tooltip-position="top" transform="scale(.8)">
-                    <path d="M4 1.5C2.61929 1.5 1.5 2.61929 1.5 4V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H3.5C4.05228 9.5 4.5 9.05228 4.5 8.5V4.5H8.5C9.05228 4.5 9.5 4.05228 9.5 3.5V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H4Z" fill="currentColor" />
-                    <path d="M20 1.5C21.3807 1.5 22.5 2.61929 22.5 4V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H20.5C19.9477 9.5 19.5 9.05228 19.5 8.5V4.5H15.5C14.9477 4.5 14.5 4.05228 14.5 3.5V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H20Z" fill="currentColor" />
-                    <path d="M20 22.5C21.3807 22.5 22.5 21.3807 22.5 20V15.5C22.5 14.9477 22.0523 14.5 21.5 14.5H20.5C19.9477 14.5 19.5 14.9477 19.5 15.5V19.5H15.5C14.9477 19.5 14.5 19.9477 14.5 20.5V21.5C14.5 22.0523 14.9477 22.5 15.5 22.5H20Z" fill="currentColor" />
-                    <path d="M1.5 20C1.5 21.3807 2.61929 22.5 4 22.5H8.5C9.05228 22.5 9.5 22.0523 9.5 21.5V20.5C9.5 19.9477 9.05228 19.5 8.5 19.5H4.5V15.5C4.5 14.9477 4.05228 14.5 3.5 14.5H2.5C1.94772 14.5 1.5 14.9477 1.5 15.5V20Z" fill="currentColor" />
-                </svg>
-                <svg class="T_M_G-video-close" data-tooltip-text="Leave Full Screen(f)" data-tooltip-position="top" transform="scale(.8)">
-                    <path d="M7 9.5C8.38071 9.5 9.5 8.38071 9.5 7V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H7.5C6.94772 1.5 6.5 1.94772 6.5 2.5V6.5H2.5C1.94772 6.5 1.5 6.94772 1.5 7.5V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H7Z" fill="currentColor" />
-                    <path d="M17 9.5C15.6193 9.5 14.5 8.38071 14.5 7V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H16.5C17.0523 1.5 17.5 1.94772 17.5 2.5V6.5H21.5C22.0523 6.5 22.5 6.94772 22.5 7.5V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H17Z" fill="currentColor" />
-                    <path d="M17 14.5C15.6193 14.5 14.5 15.6193 14.5 17V21.5C14.5 22.0523 14.9477 22.5 15.5 22.5H16.5C17.0523 22.5 17.5 22.0523 17.5 21.5V17.5H21.5C22.0523 17.5 22.5 17.0523 22.5 16.5V15.5C22.5 14.9477 22.0523 14.5 21.5 14.5H17Z" fill="currentColor" />
-                    <path d="M9.5 17C9.5 15.6193 8.38071 14.5 7 14.5H2.5C1.94772 14.5 1.5 14.9477 1.5 15.5V16.5C1.5 17.0523 1.94772 17.5 2.5 17.5H6.5V21.5C6.5 22.0523 6.94772 22.5 7.5 22.5H8.5C9.05228 22.5 9.5 22.0523 9.5 21.5V17Z" fill="currentColor" />
-                </svg>
-            </div>      
-        ` : null,
         volumeNotifierHTML = this.settings.status.ui.notifiers ?
         `
             <div class="T_M_G-video-notifiers T_M_G-video-volume-notifier-content"></div>
@@ -598,7 +568,7 @@ class _T_M_G_Video_Player {
                 </svg>                
             </div>
         ` : null,
-        bwdNotiferHTML = this.settings.status.ui.notifiers ?
+        bwdNotifierHTML = this.settings.status.ui.notifiers ?
         `
             <div class="T_M_G-video-notifiers T_M_G-video-bwd-notifier">
                 <svg style="transform: scaleX(-1);">
@@ -817,7 +787,7 @@ class _T_M_G_Video_Player {
         if (this.settings.status.ui.notifiers || this.initialState) {
             notifiersContainerBuild.classList = "T_M_G-video-notifiers-container"
             notifiersContainerBuild.dataset.currentNotifier = ""
-            const notifiersContainerHTML =  ``.concat(playPauseNotifierHTML ?? "", captionsNotifierHTML ?? "", playbackRateNotifierHTML ?? "", theaterNotifierHTML ?? "", fullscreenNotifierHTML ?? "", volumeNotifierHTML ?? "", fwdNotifierHTML ?? "", bwdNotiferHTML ?? "")
+            const notifiersContainerHTML =  ``.concat(playPauseNotifierHTML ?? "", captionsNotifierHTML ?? "", playbackRateNotifierHTML ?? "", volumeNotifierHTML ?? "", fwdNotifierHTML ?? "", bwdNotifierHTML ?? "")
             notifiersContainerBuild.innerHTML += notifiersContainerHTML
             overlayControlsContainerBuild.append(notifiersContainerBuild)
         }
@@ -891,8 +861,6 @@ class _T_M_G_Video_Player {
                 pauseNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-pause-notifier") : null,
                 captionsNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-captions-notifier") : null,
                 playbackRateNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-playback-rate-notifier") : null,
-                theaterNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-theater-notifier") : null,
-                fullScreenNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-full-screen-notifier") : null,
                 volumeNotifierContent : this.settings.status.ui.notifiers ?  this.videoContainer.querySelector(".T_M_G-video-volume-notifier-content") : null,
                 volumeUpNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-volume-up-notifier") : null,
                 volumeDownNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-volume-down-notifier") : null,
@@ -1936,9 +1904,9 @@ class _T_M_G_Video_Player {
         if (this.ui.dom.currentTimeElement) this.ui.dom.currentTimeElement.textContent = formattedTime
         if (this.ui.dom.playbackRateNotifier && this.speedCheck && this.speedToken === 1) this.ui.dom.playbackRateNotifier.dataset.currentTime = formattedTime
         this.skipVideoTime = this.video.currentTime
-        if ((this.video.currentTime < this.video.duration) && this.videoContainer.classList.contains("T_M_G-video-replay")) this.videoContainer.classList.remove("T_M_G-video-replay")
-        if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
         if (Math.floor((this.settings?.endTime || this.video.duration) - this.video.currentTime) <= this.autoPlaylistCountdown && Math.floor(this.video.duration - this.video.currentTime) > 1) this.autoMovePlaylist()
+        if (this.videoContainer.classList.contains("T_M_G-video-replay")) this.videoContainer.classList.remove("T_M_G-video-replay")
+        if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
     } catch(e) {
         this._log(e, "error", "swallow")
     }            
@@ -1967,12 +1935,11 @@ class _T_M_G_Video_Player {
                 this.skipDuration = 0
                 notifier.classList.remove("T_M_G-video-control-persist")
                 this.removeOverlay() 
-            }, Number(this.videoArrowsTransitionTime.replace('ms', '')) + 10)
+            }, tmg.formatCSSTime(this.videoNotifiersAnimationTime))
             notifier.dataset.skip = this.skipDuration
             return
         } 
-        if ((this.video.currentTime === 0 && notifier.classList.contains("T_M_G-video-bwd-notifier")) || (this.video.currentTime === this.video.duration && notifier.classList.contains("T_M_G-video-fwd-notifier")))
-            duration = 0
+        if ((this.video.currentTime === 0 && notifier.classList.contains("T_M_G-video-bwd-notifier")) || (this.video.currentTime === this.video.duration && notifier.classList.contains("T_M_G-video-fwd-notifier"))) duration = 0
         notifier.dataset.skip = Math.abs(duration)
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2598,15 +2565,16 @@ class _T_M_G_Video_Player {
 
     _handleKeyDown(e) {
     try {
+        if ([...Object.values(this.settings.keyShortcuts)].some(key => this.keyOverrideRegex.test(key.toLowerCase())) && this.keyOverrideRegex.test(e.key.toString().toLowerCase())) e.preventDefault()
+
+        if (this.keyDownThrottleId !== null) return
+        this.keyDownThrottleId = setTimeout(() => this.keyDownThrottleId = null, this.keyDownThrottleDelay)
+
         const activeTagName = document.activeElement.tagName.toLowerCase()
-        //early key returns
         if (activeTagName === "input") return
 
         if (this.isTimelineFocused)
             if (e.key.toString().toLowerCase().startsWith("arrow")) return
-
-        //checking if the key is an arrow, home or end key
-        if ([...Object.values(this.settings.keyShortcuts)].some(key => this.keyOverrideRegex.test(key.toLowerCase())) && this.keyOverrideRegex.test(e.key.toString().toLowerCase())) e.preventDefault()
         
         switch (e.key.toString().toLowerCase()) {
             case " ":
@@ -2649,14 +2617,12 @@ class _T_M_G_Video_Player {
 
     _handleKeyUp(e) {
     try {
-        //early key returns
+        if ([...Object.values(this.settings.keyShortcuts)].some(key => this.keyOverrideRegex.test(key.toLowerCase())) && this.keyOverrideRegex.test(e.key.toString().toLowerCase())) e.preventDefault()
+
         if (document.activeElement.tagName.toLowerCase() === "input") return
 
         if (this.isTimelineFocused)
             if (e.key.toString().toLowerCase().startsWith("arrow")) return
-
-        //checking if the key is an arrow, home or end key
-        if ([...Object.values(this.settings.keyShortcuts)].some(key => this.keyOverrideRegex.test(key.toLowerCase())) && this.keyOverrideRegex.test(e.key.toString().toLowerCase())) e.preventDefault()
 
         switch (e.key.toString().toLowerCase()) {                         
             case this.settings.keyShortcuts["fullScreen"]?.toString()?.toLowerCase():
@@ -3121,10 +3087,17 @@ if (typeof window === "undefined") {
                 },
             },
         },
+        modeMatcher : {
+            normal: "normal",
+            fullScreen: "full-screen",
+            miniPlayer: "mini-player",
+            pictureInPicture: "picture-in-picture",
+            theater: "theater"
+        },
         altImgSrc : "/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png",
         _styleCache : {},
         _scriptCache : {},
-        loadResource : (src, type) => {
+        loadResource(src, type) {
         switch (type) {
             case "script":
                 tmg._scriptCache[src] = tmg._scriptCache[src] || new Promise(function (resolve, reject) {
@@ -3154,7 +3127,7 @@ if (typeof window === "undefined") {
                 return tmg._styleCache[src]
         }
         },
-        addSources : function(sources, medium) {
+        addSources(sources, medium) {
             const addSource = (source, medium) => {
                 const sourceElement = document.createElement("source")
                 this.putSourceDetails(source, sourceElement)
@@ -3166,12 +3139,12 @@ if (typeof window === "undefined") {
                 }
             else addSource(sources, medium)
         },
-        putSourceDetails: function(source, sourceElement) {
+        putSourceDetails(source, sourceElement) {
             if (source.src) sourceElement.src = source.src
             if (source.type) sourceElement.type = source.type
             if (source.media) sourceElement.media = source.media
         },
-        addTracks : function(tracks, medium) {
+        addTracks(tracks, medium) {
             const addTrack = (track, medium) => {
                 const trackElement = document.createElement("track")
                 this.putTrackDetails(track, trackElement)
@@ -3183,7 +3156,7 @@ if (typeof window === "undefined") {
                 }
             else addTrack(tracks, medium)
         },
-        putTrackDetails: function(track, trackElement) {
+        putTrackDetails(track, trackElement) {
             if (track.kind) trackElement.kind = track.kind
             if (track.label) trackElement.label = track.label
             if (track.srclang) trackElement.srclang = track.srclang
@@ -3191,31 +3164,23 @@ if (typeof window === "undefined") {
             if (track.default) trackElement.default = track.default
             if (track.id) trackElement.id = track.id
         },
-        removeSources: function(medium) {
+        removeSources(medium) {
             medium.querySelectorAll("source").forEach(source => source.remove())
         },
-        removeTracks: function(medium) {
+        removeTracks(medium) {
             medium.querySelectorAll("track").forEach(track => {
                 if (track.kind == "subtitles" || track.kind == "captions") track.remove()
             })
         },
-        //object deep clone
-        modeMatcher : {
-            normal: "normal",
-            fullScreen: "full-screen",
-            miniPlayer: "mini-player",
-            pictureInPicture: "picture-in-picture",
-            theater: "theater"
-        },
         //mobile devices media query
-        queryMediaMobile : () => {
+        queryMediaMobile() {
             return window.matchMedia('(max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape)').matches
         },
         //clamping values
-        clamp : (min, amount, max) => {
+        clamp(min, amount, max) {
             return Math.min(Math.max(amount, min), max)
         },
-        formatDuration(time) {    
+        formatDuration(time) {
             if (!isNaN(time ?? NaN) && time !== Infinity) {
                 const seconds = Math.floor(time % 60)
                 const minutes = Math.floor(time / 60) % 60
@@ -3224,8 +3189,11 @@ if (typeof window === "undefined") {
                 else return `${hours}:${tmg.leadingZeroFormatter.format(minutes)}:${tmg.leadingZeroFormatter.format(seconds)}`
             } else return '-:--'
         },
+        formatCSSTime(time) {
+            return time.endsWith("ms") ? Number(time.replace("ms", "")) : Number(time.replace("s", "")) * 1000
+        },
         leadingZeroFormatter : new Intl.NumberFormat(undefined, {minimumIntegerDigits: 2}),
-        isIterable : function(obj) { 
+        isIterable(obj) { 
             return obj !== null && obj !== undefined && typeof obj[Symbol.iterator] === 'function'
         },
         //camelizing strings
@@ -3242,12 +3210,9 @@ if (typeof window === "undefined") {
                 }
                 return null
             }
-            function isRelative(length) {
-                return length?.match?.(/%$/)
-            }
             function parsePositionAsPx(str, bboxSize, objectSize) {
                 const num = parseFloat(str)
-                if (isRelative(str)) {
+                if (str.endsWith("%")) {
                     const ratio = num / 100
                     return (bboxSize * ratio) - (objectSize * ratio)
                 }
@@ -3286,8 +3251,8 @@ if (typeof window === "undefined") {
                 // so we need to check here if it's relative or not
                 const {left, top} = parseObjectPosition(objectPosition, bbox, object)
                 return {
-                    left: isRelative(objectPosition.split(" ")[0]) ? 0 : left,
-                    top: isRelative(objectPosition.split(" ")[1]) ? 0 : top,
+                    left: objectPosition.split(" ")[0].endsWith("%") ? 0 : left,
+                    top: objectPosition.split(" ")[1].endsWith("%") ? 0 : top,
                     width: bbox.width,
                     height: bbox.height,
                 }
@@ -3306,7 +3271,7 @@ if (typeof window === "undefined") {
             }
         },
         //a wild card for deploying TMG controls to available media, returns a promise that resolves with an array referencing the media
-        launch : async function(medium) {
+        async launch(medium) {
             let promises = []
             if (arguments.length === 0) {
                 if (tmg.media) {
@@ -3533,7 +3498,7 @@ if (typeof window === "undefined") {
             }
         }, 
         //getting all methods of an object
-        getAllProps : function(obj) {
+        getAllProps(obj) {
             let props = []
             do {
                 const o = Object.getOwnPropertyNames(obj)
