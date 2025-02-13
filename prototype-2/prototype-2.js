@@ -384,11 +384,10 @@ class _T_M_G_Video_Player {
     
     //dom builder and retreiver functions
     buildVideoPlayerInterface() {
-    try {
-        if (this.initialState)             
-            if (this.media?.artwork) 
-                if (this.media.artwork[0]?.src) 
-                    this.video.poster = this.media.artwork[0]?.src
+    try {     
+        if (this.media?.artwork) 
+            if (this.media.artwork[0]?.src) 
+                this.video.poster = this.media.artwork[0]?.src
         this.videoContainer = this.videoContainer ?? document.createElement('div')
         this.videoContainer.classList.add("T_M_G-video-container")
         if (!this.video.autoplay) this.videoContainer.classList.add("T_M_G-video-paused")
@@ -455,7 +454,7 @@ class _T_M_G_Video_Player {
         //breaking HTML into smaller units to use as building blocks
         const overlayControlsContainerBuild = this.videoContainer.querySelector(".T_M_G-video-overlay-controls-container"),
         controlsContainerBuild = this.videoContainer.querySelector(".T_M_G-video-controls-container"),
-        notifiersContainerBuild = this.settings.status.ui.notifiers || this.initialState ? document.createElement("div") : null,
+        notifiersContainerBuild = this.settings.status.ui.notifiers ? document.createElement("div") : null,
         overlayMainControlsWrapperBuild = document.createElement("div"),
         controlsWrapperBuild = document.createElement("div"),
         leftSidedControlsWrapperBuild = this.settings.status.ui.leftSidedControls ? document.createElement("div") : null,
@@ -507,7 +506,7 @@ class _T_M_G_Video_Player {
         `
         ${this.settings.status.ui.previewImages ? `<img class="T_M_G-video-thumbnail-img" alt="movie-image" src="${tmg.altImgSrc}">` : '<canvas class="T_M_G-video-thumbnail-img"></canvas>'}
         `,
-        playPauseNotifierHTML = this.settings.status.ui.notifiers || this.initialState ?
+        playPauseNotifierHTML = this.settings.status.ui.notifiers ?
         `
             <div class="T_M_G-video-notifiers T_M_G-video-play-notifier">
                 <svg class="T_M_G-video-play-notifier-icon" data-tooltip-text="Play(k)" data-tooltip-position="top">
@@ -623,7 +622,7 @@ class _T_M_G_Video_Player {
         ` : null,
         mainPlayPauseBtnHTML = this.settings.status.ui.playPause ?
         `
-            <button type="button" class="T_M_G-video-main-play-pause-btn" title="Play/Pause(k)" data-focusable-control="false" tabindex="-1">
+            <button type="button" class="T_M_G-video-main-play-pause-btn" title="Play/Pause(k)" data-focusable-control="false" tabindex="${this.initialState ? "0" : "-1"}">
                 <svg class="T_M_G-video-play-icon" data-tooltip-text="Play(k)" data-tooltip-position="top">
                     <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                 </svg>
@@ -784,7 +783,7 @@ class _T_M_G_Video_Player {
         overlayControlsContainerBuild.innerHTML += pictureInPictureWrapperHTML
 
         //builidng and deploying Notifiers HTML
-        if (this.settings.status.ui.notifiers || this.initialState) {
+        if (this.settings.status.ui.notifiers) {
             notifiersContainerBuild.classList = "T_M_G-video-notifiers-container"
             notifiersContainerBuild.dataset.currentNotifier = ""
             const notifiersContainerHTML =  ``.concat(playPauseNotifierHTML ?? "", captionsNotifierHTML ?? "", playbackRateNotifierHTML ?? "", volumeNotifierHTML ?? "", fwdNotifierHTML ?? "", bwdNotifierHTML ?? "")
@@ -856,8 +855,8 @@ class _T_M_G_Video_Player {
                 playlistTitle: this.videoContainer.querySelector(".T_M_G-video-playlist-title"),
                 thumbnailImg : this.videoContainer.querySelector(".T_M_G-video-thumbnail-img"),
                 videoBuffer : this.videoContainer.querySelector(".T_M_G-video-buffer"),
-                notifiersContainer: this.settings.status.ui.notifiers || this.initialState ? this.videoContainer.querySelector(".T_M_G-video-notifiers-container") : null,
-                playNotifier : this.settings.status.ui.notifiers || this.initialState ? this.videoContainer.querySelector(".T_M_G-video-play-notifier") : null,
+                notifiersContainer: this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-notifiers-container") : null,
+                playNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-play-notifier") : null,
                 pauseNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-pause-notifier") : null,
                 captionsNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-captions-notifier") : null,
                 playbackRateNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-playback-rate-notifier") : null,
@@ -868,6 +867,7 @@ class _T_M_G_Video_Player {
                 fwdNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-fwd-notifier") : null,
                 bwdNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-bwd-notifier") : null,
                 videoOverlayControlsContainer: this.videoContainer.querySelector(".T_M_G-video-overlay-controls-container"),
+                videoOverlayMainControlsWrapper: this.videoContainer.querySelector(".T_M_G-video-overlay-main-controls-wrapper"),
                 videoControlsContainer : this.videoContainer.querySelector(".T_M_G-video-controls-container"),
                 leftSidedControlsWrapper : this.settings.status.ui.leftSidedControls ? this.videoContainer.querySelector(".T_M_G-video-left-side-controls-wrapper") : null,
                 rightSidedControlsWrapper : this.settings.status.ui.rightSidedControls ? this.videoContainer.querySelector(".T_M_G-video-right-side-controls-wrapper") : null,
@@ -918,32 +918,14 @@ class _T_M_G_Video_Player {
         }
         if (this.activated) {
             if (this.initialState) {
-                this.video.addEventListener("timeupdate", this.initializeVideoControls, {once:true})
-                const handleInitialStateFocus = e => {
-                    if (this.ui.dom.playNotifier.matches(":focus-visible")) document.addEventListener("keyup", handleInitialStateKeyUp)
-                }
-                const handleInitialStateBlur = () => document.removeEventListener("keyup", handleInitialStateKeyUp)
-                const handleInitialStateKeyUp = e => {
-                    if (document.activeElement.tagName.toLowerCase() === "input") return
-                    switch (e.key.toString().toLowerCase()) {
-                        case "enter":     
-                        case " ":
-                            e.preventDefault()
-                            removeInitialState()
-                            break
-                    }
-                }
                 const removeInitialState = () => {
                     this.togglePlay(true)
-                    this.ui.dom.playNotifier.blur()
-                    this.ui.dom.playNotifier.tabIndex = "-1"
-                    this.ui.dom.playNotifier.removeEventListener("focus", handleInitialStateFocus)
-                    this.ui.dom.playNotifier.removeEventListener("blur", handleInitialStateBlur)
+                    this.ui.dom.mainPlayPauseBtn.removeEventListener("click", removeInitialState)
+                    this.ui.dom.videoContainer.removeEventListener("click", removeInitialState)
                 }
-                this.ui.dom.playNotifier.tabIndex = "0"
-                this.ui.dom.playNotifier.addEventListener("focus", handleInitialStateFocus)
-                this.ui.dom.playNotifier.addEventListener("blur", handleInitialStateBlur)
-                this.ui.dom.notifiersContainer?.addEventListener("click", removeInitialState, {once:true})
+                this.video.addEventListener("timeupdate", this.initializeVideoControls, {once:true})
+                this.ui.dom.mainPlayPauseBtn.addEventListener("click", removeInitialState)
+                this.ui.dom.videoContainer.addEventListener("click", removeInitialState)
             } else this.initializeVideoControls()  
 
         } else {
@@ -956,8 +938,8 @@ class _T_M_G_Video_Player {
 
     initializeVideoControls() {
     try {     
-        this.videoContainer.classList.remove("T_M_G-video-initial")
         if (this.initialState) this.stall()
+        this.videoContainer.classList.remove("T_M_G-video-initial")
         this.enableFocusableControls("all")
         if (!this.loaded) this._handleLoadedMetadata()
         this.setInitialStates()
@@ -972,8 +954,8 @@ class _T_M_G_Video_Player {
     stall() {
     try {
         this.showVideoOverlay()
-        this.ui.dom.playNotifier.classList.add("T_M_G-video-control-spin")
-        this.ui.dom.playNotifier.addEventListener("animationend", () => this.ui.dom.playNotifier.classList.remove("T_M_G-video-control-spin"), {once: true}) 
+        this.ui.dom.mainPlayPauseBtn.classList.add("T_M_G-video-control-spin")
+        this.ui.dom.mainPlayPauseBtn.addEventListener("animationend", () => this.ui.dom.mainPlayPauseBtn.classList.remove("T_M_G-video-control-spin"), {once: true}) 
         if (!this.video.paused) this._handlePlay()
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -1450,7 +1432,7 @@ class _T_M_G_Video_Player {
 
     _handleLoadedMetadata() {
     try {
-        if (this.settings.status.allowOverride.startTime && this.loaded) this.video.currentTime = this.settings?.startTime || 0
+        if (this.settings.status.allowOverride.startTime && this.settings.startTime) this.video.currentTime = this.settings?.startTime
         if (this.ui.dom.totalTimeElement) this.ui.dom.totalTimeElement.textContent = tmg.formatDuration(this.video.duration)
         this.aspectRatio = this.video.videoWidth / this.video.videoHeight
         this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`
@@ -1534,7 +1516,7 @@ class _T_M_G_Video_Player {
             this.settings.startTime = video.settings?.startTime || null
             this.settings.endTime = video.settings?.endTime || null
             this.settings.previewImages = video.settings?.previewImages?.length > 0 ? {...this.settings.previewImages, ...video.settings.previewImages} : video.settings?.previewImages ?? null
-            this.settings.status.ui.previewImages = (this.settings.previewImages?.address && this.settings.previewImages.fps) ? true : false
+            this.settings.status.ui.previewImages = (this.settings.previewImages?.address && this.settings.previewImages?.fps) ? true : false
             if (this.settings.previewImages === false) videoContainer.setAttribute("data-previews", false) 
             this.setInitialStates()
             this.togglePlay(true)
