@@ -2019,7 +2019,7 @@ button:has(.T_M_G-video-next-icon) svg {
 
 .T_M_G-video-fwd-notifier svg,
 .T_M_G-video-bwd-notifier svg {
-    opacity: 0;
+    opacity: 0.25;
     margin-top: 20%;
     width: calc(var(--T_M_G-video-current-unit)/2.25);
     animation-iteration-count: infinite;
