@@ -377,6 +377,7 @@ class _T_M_G_Video_Player {
         if (this.settings.status.ui.timeline) this.videoContainer.setAttribute("data-timeline-position", `${this.settings.controllerStructure.find(c => c.startsWith("timeline"))?.replace("timeline", "").toLowerCase()}`)
         if (this.settings.progressBar) this.videoContainer.setAttribute("data-progress-bar", this.settings.progressBar)
         if (this.settings.previewImages === false) this.videoContainer.setAttribute("data-previews", false) 
+        this.videoContainer.setAttribute("data-object-fit", this.videoObjectFit)
 
         this.videoContainer.insertAdjacentHTML('beforeend', 
         `
@@ -1495,7 +1496,7 @@ class _T_M_G_Video_Player {
     previousVideo() {
     try {
         if (this._playlist && this.currentPlaylistIndex > 0) {
-            this.video.currentTime < 3 ? this.movePlaylistTo(--this.currentPlaylistIndex) : this.moveVideoTime({to: "start"})
+            this.video.currentTime < 3 ? this.movePlaylistTo(this.currentPlaylistIndex - 1) : this.moveVideoTime({to: "start"})
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -1504,7 +1505,7 @@ class _T_M_G_Video_Player {
 
     nextVideo() {
     try {
-        if (this._playlist && this.currentPlaylistIndex < this._playlist.length - 1) this.movePlaylistTo(++this.currentPlaylistIndex)
+        if (this._playlist && this.currentPlaylistIndex < this._playlist.length - 1) this.movePlaylistTo(this.currentPlaylistIndex + 1)
     } catch(e) {
         this._log(e, "error", "swallow")
     }                
@@ -2210,7 +2211,7 @@ class _T_M_G_Video_Player {
 
     _handleFullScreenChange() {
     try {
-        this.videoContainer.classList.toggle("T_M_G-video-full-screen", this.inFullScreen())  
+        this.videoContainer.classList.toggle("T_M_G-video-full-screen", this.inFullScreen())
         if (this.inFullScreen()) {
             this.toggleMiniPlayerMode(false)
             this.autoLockFullScreenOrientation()
@@ -2297,7 +2298,7 @@ class _T_M_G_Video_Player {
             this.removeMiniPlayer()
             return
         }
-        if ((!this.videoContainer.classList.contains("T_M_G-video-mini-player") && !this.videoContainer.classList.contains("T_M_G-video-mini-picture-in-picture") && !this.parentIntersecting && window.innerWidth >= threshold && !this.video.paused) || (bool === true)) {
+        if ((!this.videoContainer.classList.contains("T_M_G-video-mini-player") && !this.videoContainer.classList.contains("T_M_G-video-mini-picture-in-picture") && !this.videoContainer.classList.contains("T_M_G-video-full-screen") && !this.parentIntersecting && window.innerWidth >= threshold && !this.video.paused) || (bool === true)) {
             this.pseudoVideoContainer.className += this.videoContainer.className.replace("T_M_G-video-container", "")
             this.videoContainer.parentElement.insertBefore(this.pseudoVideoContainer, this.videoContainer)
             document.body.append(this.videoContainer)
