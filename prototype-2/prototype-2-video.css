@@ -250,13 +250,13 @@
     max-width: min(50dvw, 400px);
 }
 
-/* this style is important to ensure that the theater mode always takes the entire width of the window and overrides and flex, grid or width property that may interfere */
-*:has(.T_M_G-video-container:is(.T_M_G-video-full-screen, .T_M_G-video-theater)) {
-    flex: 0 0 100% !important;
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
-    max-width: unset !important;
-    max-height: unset !important;
+/* this style's specificity was raised to ensure that the theater mode always takes the entire width of the window and overrides any flex, grid or width property that may interfere. */
+:is(*:has(.T_M_G-video-container:is(.T_M_G-video-full-screen, .T_M_G-video-theater)), #-#-#-#-#-#-#-#-#-#-) {
+    flex: 0 0 100%;
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: unset;
+    max-height: unset;
 }
 
 .T_M_G-video-container,
@@ -336,6 +336,21 @@
     font-size: 20px;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
+
+/* settings deactivated state */
+:is(.T_M_G-video-container.T_M_G-video-unavailable, #-#-#-#-#-#-#-#-#-#-) {
+    --T_M_G-video-icons-color: var(--T_M_G-video-controls-disabled-color);
+    --T_M_G-video-controls-color: var(--T_M_G-video-controls-disabled-color);
+    --T_M_G-video-text-color: var(--T_M_G-video-controls-disabled-color);
+    all: unset;
+    pointer-events: none;
+}
+
+:is(.T_M_G-video-container.T_M_G-video-unavailable *, #-#-#-#-#-#-#-#-#-#-) {
+    pointer-events: none;
+    animation: none;
+}
+/* settings deactivated state ends */
 
 .T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-container-content-wrapper {
     transform: rotateY(180deg);
@@ -451,7 +466,6 @@
     color: var(--T_M_G-video-brand-accent-color);
 }
 
-/* utility styles */
 .T_M_G-video-container *,
 .T_M_G-video-container *::after, 
 .T_M_G-video-container *::before {
@@ -478,14 +492,15 @@
     user-select: text;
 }
 
-/* this style was made important to override the property if present so the desired dragging will be achievable*/
-.T_M_G-video-container [draggable="true"] {
-    -webkit-user-drag: element!important;
+/* this style's specifiicty was raised to override the property if present so the desired dragging will be achievable*/
+:is(.T_M_G-video-container [draggable="true"], #-#-#-#-#-#-#-#-#-#-) {
+    -webkit-user-drag: element;
 }
 
-.T_M_G-video-playlist-title,
+:is(.T_M_G-video-playlist-title,
 .T_M_G-video-playlist-title::before,
-.T_M_G-video-playlist-next-video-title {
+.T_M_G-video-playlist-next-video-title,
+#-#-#-#-#-#-#-#-#-#-) {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
@@ -530,18 +545,18 @@
     fill: var(--T_M_G-video-icons-hover-color);
 }
 
-/* utility styles have to be important for overrides */
-.T_M_G-video-control-hidden.T_M_G-video-control-hidden.T_M_G-video-control-hidden.T_M_G-video-control-hidden.T_M_G-video-control-hidden {
+/* utility styles specificity was raised for overrides */
+:is(.T_M_G-video-control-hidden, #-#-#-#-#-#-#-#-#-#-) {
     display: none;
     pointer-events: none;
 }
 
-.T_M_G-video-control-disabled.T_M_G-video-control-disabled.T_M_G-video-control-disabled.T_M_G-video-control-disabled.T_M_G-video-control-disabled {
+:is(.T_M_G-video-control-disabled, #-#-#-#-#-#-#-#-#-#-) {
     opacity: .75;
     cursor: default;
 }
 
-.T_M_G-video-control-disabled.T_M_G-video-control-disabled.T_M_G-video-control-disabled.T_M_G-video-control-disabled.T_M_G-video-control-disabled {
+:is(.T_M_G-video-control-disabled, #-#-#-#-#-#-#-#-#-#-) {
     --T_M_G-video-current-controls-color: var(--T_M_G-video-controls-disabled-color);
 }
 
@@ -1386,8 +1401,9 @@ button:has(.T_M_G-video-next-icon) svg {
     bottom: -1px;
 }
 
+.T_M_G-video-container.T_M_G-video-movement .T_M_G-video-timeline-container,
 .T_M_G-video-container[data-progress-bar="true"] .T_M_G-video-timeline-container {
-    opacity: .5;
+    opacity: 0.5;
 }
 
 .T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-timeline-container, 
@@ -1954,16 +1970,17 @@ button:has(.T_M_G-video-next-icon) svg {
         background-color: var(--T_M_G-video-current-curtain-color);
         transition: background-color var(--T_M_G-video-fade-transition) ease-in-out;      
     }
-    /* this style is here to override the display property in case of unpredictability in the UI */
-    .T_M_G-video-theater-btn,
+    /* this style's specificity was raised to override the display property in case of unpredictability in the UI */
+    :is(.T_M_G-video-theater-btn,
     .T_M_G-video-play-pause-btn,
     .T_M_G-video-prev-btn,
     .T_M_G-video-next-btn,
     .T_M_G-video-volume-slider,
     .T_M_G-video-play-notifier,
     .T_M_G-video-timeline::before,
-    .T_M_G-video-pause-notifier {
-        display: none!important;
+    .T_M_G-video-pause-notifier, 
+    #-#-#-#-#-#-#-#-#-#-) {
+        display: none;
     } 
     .T_M_G-video-container .T_M_G-video-overlay-main-controls-wrapper,
     .T_M_G-video-container .T_M_G-video-overlay-main-controls-wrapper > * {
@@ -2180,18 +2197,3 @@ button:has(.T_M_G-video-next-icon) svg {
     animation: spin 1s ease-out;
 }
 /* setting video initial state ends */
-
-/* settings deactivated state */
-.T_M_G-video-container.T_M_G-video-unavailable.T_M_G-video-unavailable.T_M_G-video-unavailable.T_M_G-video-unavailable.T_M_G-video-unavailable {
-    --T_M_G-video-icons-color: var(--T_M_G-video-controls-disabled-color);
-    --T_M_G-video-controls-color: var(--T_M_G-video-controls-disabled-color);
-    --T_M_G-video-text-color: var(--T_M_G-video-controls-disabled-color);
-    all: unset;
-    pointer-events: none;
-}
-
-.T_M_G-video-container.T_M_G-video-unavailable.T_M_G-video-unavailable.T_M_G-video-unavailable.T_M_G-video-unavailable.T_M_G-video-unavailable * {
-    pointer-events: none;
-    animation: none;
-}
-/* settings deactivated state ends */

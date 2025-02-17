@@ -2632,7 +2632,7 @@ class _T_M_G_Video_Player {
             case this.settings.keyShortcuts["playPause"]?.toString()?.toLowerCase():
                 this.playTriggerCounter ++
                 if (this.playTriggerCounter === 1) document.addEventListener("keyup", this._handlePlayTriggerUp)
-                if (this.playTriggerCounter === 2 && !this.speedPointerCheck) e.shiftKey ? this.speedUp("left") : this.speedUp("right")
+                if (this.playTriggerCounter === 2 && !this.speedPointerCheck) e.altKey ? this.speedUp("left") : this.speedUp("right")
                 break
             case this.settings.keyShortcuts["prev"]?.toString()?.toLowerCase():
                 this.previousVideo()
@@ -2649,10 +2649,10 @@ class _T_M_G_Video_Player {
                 this.fire("fwd")
                 break
             case this.settings.keyShortcuts["objectFit"]?.toString()?.toLowerCase():
-                e.shiftKey ? this.changeObjectFit("backwards") : this.changeObjectFit("forwards")
+                e.altKey ? this.changeObjectFit("backwards") : this.changeObjectFit("forwards")
                 break                
             case this.settings.keyShortcuts["playbackRate"]?.toString()?.toLowerCase(): 
-                e.shiftKey ? this.changePlaybackRate("backwards") : this.changePlaybackRate("forwards")
+                e.altKey ? this.changePlaybackRate("backwards") : this.changePlaybackRate("forwards")
                 this.fire("playbackratechange")
                 break
             case "arrowup":
@@ -2687,9 +2687,8 @@ class _T_M_G_Video_Player {
                 if (!window.tmg.queryMediaMobile() && !this.videoContainer.classList.contains("T_M_G-video-mini-player") && !this.videoContainer.classList.contains("T_M_G-video-full-screen")) this.toggleTheaterMode()
                 break
             case this.settings.keyShortcuts["expandMiniPlayer"]?.toString()?.toLowerCase():
-                if (this.videoContainer.classList.contains("T_M_G-video-mini-player")) {
-                e.shiftKey ? this.toggleMiniPlayerMode(false, "smooth") : this.toggleMiniPlayerMode(false, "instant")
-                }
+                if (this.videoContainer.classList.contains("T_M_G-video-mini-player")) 
+                this.toggleMiniPlayerMode(false, "instant")
                 break
             case this.settings.keyShortcuts["removeMiniPlayer"]?.toString()?.toLowerCase():
                 if (this.videoContainer.classList.contains("T_M_G-video-mini-player")) this.toggleMiniPlayerMode(false) 
