@@ -2332,7 +2332,6 @@ class _T_M_G_Video_Player {
     try {
         if (this.videoContainer.classList.contains("T_M_G-video-mini-player")) {
         if (!this.DOM.videoControlsContainer.contains(e.target)) {
-            this.videoContainer.classList.add("T_M_G-video-movement")
             document.addEventListener("mousemove", this._handleMiniPlayerPosition)
             document.addEventListener("mouseup", this.emptyMiniPlayerListeners)
             document.addEventListener("mouseleave", this.emptyMiniPlayerListeners)
@@ -2363,6 +2362,7 @@ class _T_M_G_Video_Player {
     try {
         e.preventDefault()
         this.videoContainer.classList.remove("T_M_G-video-overlay")
+	this.videoContainer.classList.add("T_M_G-video-movement")
 
         if (this.miniPlayerThrottleId !== null) return
         this.miniPlayerThrottleId = setTimeout(() => this.miniPlayerThrottleId = null, this.miniPlayerThrottleDelay)
