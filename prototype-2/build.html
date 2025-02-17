@@ -30,7 +30,7 @@
 <body>
     <!-- html build sample used during build process-->
     <div class="build container">
-        <div class="T_M_G-video-container T_M_G-video-overlay T_M_G-video-initial" data-timeline-position="bottom">
+        <div class="T_M_G-video-container T_M_G-video-overlay T_M_G-video-initial" data-timeline-position="bottom" data-object-fit="contain">
             <div class="T_M_G-video-container-content-wrapper">
                 <div class="T_M_G-video-container-content">
                     <div class="T_M_G-video-overlay-controls-container">
@@ -230,11 +230,15 @@
                                 </svg>
                             </button>           
                             <button type="button" class="T_M_G-video-object-fit-btn " title="Adjust Object Fit(a)" data-draggable-control="true" data-control-id="objectFit" data-focusable-control="true">
-                                <svg class="T_M_G-video-object-fit-contain" data-tooltip-text="Fit to Screen(a)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" data-no-resize="true" viewBox="0 0 512 512" stroke-width="15">
-                                    <path class=".T_M_G-video-no-fill-path T_M_G-video-stroke-path" fill="none" d="M468.32,53.08H43.68C19.595,53.08,0,72.675,0,96.76V415.24c0,24.085,19.595,43.68,43.68,43.68H468.32 c24.085,0,43.68-19.595,43.68-43.68V96.76C512,72.675,492.405,53.08,468.32,53.08z M495.413,415.24 c0,14.939-12.153,27.093-27.093,27.093H43.68c-14.94,0-27.093-12.154-27.093-27.093V96.76c0-14.939,12.153-27.093,27.093-27.093 H468.32c14.94,0,27.093,12.154,27.093,27.093V415.24z">
-                                    </path>
-                                    <path class=".T_M_G-video-no-fill-path T_M_G-video-stroke-path" fill="none" d="M459.473,166.981c4.581,0,8.294-3.713,8.294-8.294v-53.08c0-4.58-3.712-8.294-8.294-8.294h-53.08 c-4.581,0-8.294,3.713-8.294,8.294c0,4.58,3.712,8.294,8.294,8.294h33.935L256,245.802L71.672,113.901h33.935 c4.581,0,8.294-3.713,8.294-8.294c0-4.58-3.712-8.294-8.294-8.294h-53.08c-4.581,0-8.294,3.713-8.294,8.294v53.08 c0,4.58,3.712,8.294,8.294,8.294c4.581,0,8.294-3.713,8.294-8.294v-32.155L241.748,256L60.821,385.469v-32.155 c0-4.58-3.712-8.294-8.294-8.294c-4.581,0-8.294,3.713-8.294,8.294v53.08c0,4.58,3.712,8.294,8.294,8.294h53.08 c4.581,0,8.294-3.713,8.294-8.294c0-4.58-3.712-8.294-8.294-8.294H71.672L256,266.198l184.328,131.901h-33.935 c-4.581,0-8.294,3.713-8.294,8.294c0,4.58,3.712,8.294,8.294,8.294h53.08c4.581,0,8.294-3.713,8.294-8.294v-53.08 c0-4.58-3.712-8.294-8.294-8.294c-4.581,0-8.294,3.713-8.294,8.294v32.155L270.252,256l180.927-129.469v32.155 C451.179,163.267,454.892,166.981,459.473,166.981z">
-                                    </path>
+                                <svg class="T_M_G-video-object-fit-contain-icon" data-tooltip-text="Fit to Screen(a)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" data-no-resize="true" viewBox="0 0 512 512">
+                                    <rect x="5" y="5" width="90" height="90" fill="blue" />  
+                                    <rect x="0" y="0" width="100" height="100" fill="none" stroke="black" />  
+                                </svg>
+                                <svg class="T_M_G-video-object-fit-cover-icon" data-tooltip-text="Crop to Fit(a)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" data-no-resize="true" viewBox="0 0 512 512">
+
+                                </svg>
+                                <svg class="T_M_G-video-object-fit-fill-icon" data-tooltip-text="Stretch(a)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" data-no-resize="true" viewBox="0 0 512 512">
+
                                 </svg>
                             </button>                  
                             <div class="T_M_G-video-volume-container T_M_G-video-control-active" data-control-id="volume">

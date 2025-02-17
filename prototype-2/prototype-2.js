@@ -2297,7 +2297,7 @@ class _T_M_G_Video_Player {
             this.removeMiniPlayer()
             return
         }
-        if ((!this.videoContainer.classList.contains("T_M_G-video-mini-player") && !this.video.paused && window.innerWidth >= threshold && !document.pictureInPictureElement && !this.parentIntersecting && !this.inFullScreen()) || (bool === true)) {
+        if ((!this.videoContainer.classList.contains("T_M_G-video-mini-player") && !this.videoContainer.classList.contains("T_M_G-video-mini-picture-in-picture") && !this.parentIntersecting && window.innerWidth >= threshold && !this.video.paused) || (bool === true)) {
             this.pseudoVideoContainer.className += this.videoContainer.className.replace("T_M_G-video-container", "")
             this.videoContainer.parentElement.insertBefore(this.pseudoVideoContainer, this.videoContainer)
             document.body.append(this.videoContainer)
@@ -2332,7 +2332,7 @@ class _T_M_G_Video_Player {
     try {
         if (this.videoContainer.classList.contains("T_M_G-video-mini-player")) {
         if (!this.DOM.videoControlsContainer.contains(e.target)) {
-            this.DOM.videoContainerContent.classList.add("T_M_G-video-cursor-grabbing")
+            this.videoContainer.classList.add("T_M_G-video-movement")
             document.addEventListener("mousemove", this._handleMiniPlayerPosition)
             document.addEventListener("mouseup", this.emptyMiniPlayerListeners)
             document.addEventListener("mouseleave", this.emptyMiniPlayerListeners)
@@ -2347,8 +2347,8 @@ class _T_M_G_Video_Player {
 
     emptyMiniPlayerListeners() {
     try {
+        this.videoContainer.classList.remove("T_M_G-video-movement")
         this.showVideoOverlay()
-        this.DOM.videoContainerContent.classList.remove("T_M_G-video-cursor-grabbing")
         document.removeEventListener("mousemove", this._handleMiniPlayerPosition)
         document.removeEventListener("mouseup", this.emptyMiniPlayerListeners)
         document.removeEventListener("mouseleave", this.emptyMiniPlayerListeners)
@@ -2454,11 +2454,21 @@ class _T_M_G_Video_Player {
 
     showVideoOverlay() {
     try {
-        this.videoContainer.classList.add("T_M_G-video-overlay")
-        this.overlayRestraint()
+        if (this.shouldShowOverlay()) {
+            this.videoContainer.classList.add("T_M_G-video-overlay")
+            this.overlayRestraint()
+        }
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
+    }
+
+    shouldShowOverlay() {
+    try {
+        return !this.videoContainer.classList.contains("T_M_G-video-movement")
+    } catch(e) {
+        this._log(e, "error", "swallow")        
+    }
     }
     
     overlayRestraint() {
@@ -2725,7 +2735,7 @@ class _T_M_G_Video_Player {
 
     _handlePlayTriggerUp(e) {
     try {       
-        switch (key) {
+        switch (e.key.toString().toLowerCase()) {
             case " ":
             case this.settings.keyShortcuts["playPause"]?.toString()?.toLowerCase(): 
                 e.stopImmediatePropagation()
