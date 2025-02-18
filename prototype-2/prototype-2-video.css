@@ -234,14 +234,14 @@
 }
 
 /* this style's specifiicty was raised to override the property if present so the desired dragging will be achievable*/
-:is(.T_M_G-video-container [draggable="true"], #-#-#-#-#-#-#-#-#-#-) {
+.T_M_G-video-container :is([draggable="true"], #o#o#o#o#o#o#o#o#o#o) {
     -webkit-user-drag: element;
 }
 
-:is(.T_M_G-video-playlist-title,
+.T_M_G-video-container :is(.T_M_G-video-playlist-title,
 .T_M_G-video-playlist-title::before,
 .T_M_G-video-playlist-next-video-title,
-#-#-#-#-#-#-#-#-#-#-) {
+#o#o#o#o#o#o#o#o#o#o) {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
@@ -271,19 +271,16 @@
 .T_M_G-video-container svg {
     width: var(--T_M_G-video-current-unit);
     height: var(--T_M_G-video-current-unit);
-    fill: var(--T_M_G-video-icons-color);
+    color: var(--T_M_G-video-icons-color);
 }
 
 .T_M_G-video-container svg path {
-    fill: var(--T_M_G-video-icons-color);
+    fill: currentColor;
+    transition: fill var(--T_M_G-video-transition-time) ease;
 }
 
-.T_M_G-video-container svg path.T_M_G-video-no-fill-path {
-    fill: none;
-}
-
-.T_M_G_video-container *:is(:hover, :focus-visible) > svg path {
-    fill: var(--T_M_G-video-icons-hover-color);
+.T_M_G_video-container *:is(:hover, :focus-visible) > svg {
+    color: var(--T_M_G-video-icons-hover-color);
 }
 
 .T_M_G-video-container:has(img) img {
@@ -332,18 +329,22 @@
 }
 
 /* utility styles specificity was raised for overrides */
-:is(.T_M_G-video-control-hidden, #-#-#-#-#-#-#-#-#-#-) {
+.T_M_G-video-container :is(.T_M_G-video-control-hidden, #o#o#o#o#o#o#o#o#o#o) {
     display: none;
     pointer-events: none;
 }
 
-:is(.T_M_G-video-control-disabled, #-#-#-#-#-#-#-#-#-#-) {
+.T_M_G-video-container :is(.T_M_G-video-control-disabled, #o#o#o#o#o#o#o#o#o#o) {
     opacity: .75;
     cursor: default;
 }
 
-:is(.T_M_G-video-control-disabled, #-#-#-#-#-#-#-#-#-#-) {
+.T_M_G-video-container :is(.T_M_G-video-control-disabled, #o#o#o#o#o#o#o#o#o#o) {
     --T_M_G-video-current-controls-color: var(--T_M_G-video-controls-disabled-color);
+}
+
+.T_M_G-video-container :is(.T_M_G-video-no-fill, #o#o#o#o#o#o#o#o#o#o) {
+    fill: none;
 }
 
 .T_M_G-video-overlay-main-controls-wrapper,
@@ -407,7 +408,7 @@
 }
 
 /* this style's specificity was raised to ensure that the theater mode always takes the entire width of the window and overrides any flex, grid or width property that may interfere. */
-:is(*:has(.T_M_G-video-container:is(.T_M_G-video-full-screen, .T_M_G-video-theater)), #-#-#-#-#-#-#-#-#-#-) {
+:is(*:has(.T_M_G-video-container:is(.T_M_G-video-full-screen, .T_M_G-video-theater)), #o#o#o#o#o#o#o#o#o#o) {
     flex: 0 0 100%;
     grid-column: 1 / -1;
     width: 100%;
@@ -494,7 +495,7 @@
 }
 
 /* setting deactivated state */
-:is(.T_M_G-video-container.T_M_G-video-unavailable, #-#-#-#-#-#-#-#-#-#-) {
+.T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) {
     --T_M_G-video-icons-color: var(--T_M_G-video-controls-disabled-color);
     --T_M_G-video-controls-color: var(--T_M_G-video-controls-disabled-color);
     --T_M_G-video-text-color: var(--T_M_G-video-controls-disabled-color);
@@ -502,7 +503,7 @@
     pointer-events: none;
 }
 
-:is(.T_M_G-video-container.T_M_G-video-unavailable *, #-#-#-#-#-#-#-#-#-#-) {
+.T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) * {
     pointer-events: none;
     animation: none;
 }
@@ -1078,9 +1079,8 @@
     justify-content: end;
 }
 
-.T_M_G-video-container-content svg path {
-    fill: var(--T_M_G-video-current-controls-color);
-    transition: fill var(--T_M_G-video-transition-time) ease;
+.T_M_G-video-container-content svg {
+    color: var(--T_M_G-video-current-controls-color);
 }
 
 .T_M_G-video-container-content button:is(:hover, :focus-visible) {
@@ -1726,18 +1726,9 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 @supports not(-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='70' fill='white'><polygon points='0,0 50,35 0,70'/></svg>")) {
-    .T_M_G-video-playback-rate-notifier:not(.T_M_G-video-rewind)::after, 
-    .T_M_G-video-playback-rate-notifier.T_M_G-video-rewind::before {
-        content: '';
-        background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='70' fill='white'><polygon points='0,0 50,35 0,70'/></svg>") 0 center repeat-x;
-        background-size: calc(var(--T_M_G-video-current-unit)/5.9);
-        width: calc(var(--T_M_G-video-current-unit)/3);
-        height: calc(var(--T_M_G-video-current-unit)/2);
-    }
-    .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-playback-rate-notifier:not(.T_M_G-video-rewind)::after, 
-    .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-playback-rate-notifier.T_M_G-video-rewind::before {
-        background-size: calc(var(--T_M_G-video-current-unit)/4.25);
-        width: calc(var(--T_M_G-video-current-unit)/2.155);
+    .T_M_G-video-container :is(.T_M_G-video-playback-rate-notifier::after, 
+    .T_M_G-video-playback-rate-notifier::before, #o#o#o#o#o#o#o#o#o#o) {
+        display: none;
     }
 }
 
@@ -1971,7 +1962,7 @@ button:has(.T_M_G-video-next-icon) svg {
         transition: background-color var(--T_M_G-video-fade-transition) ease-in-out;      
     }
     /* this style's specificity was raised to override the display property in case of unpredictability in the UI */
-    :is(.T_M_G-video-theater-btn,
+    .T_M_G-video-container :is(.T_M_G-video-theater-btn,
     .T_M_G-video-play-pause-btn,
     .T_M_G-video-prev-btn,
     .T_M_G-video-next-btn,
@@ -1979,7 +1970,7 @@ button:has(.T_M_G-video-next-icon) svg {
     .T_M_G-video-play-notifier,
     .T_M_G-video-timeline::before,
     .T_M_G-video-pause-notifier, 
-    #-#-#-#-#-#-#-#-#-#-) {
+    #o#o#o#o#o#o#o#o#o#o) {
         display: none;
     } 
     .T_M_G-video-container .T_M_G-video-overlay-main-controls-wrapper,
@@ -2037,13 +2028,6 @@ button:has(.T_M_G-video-next-icon) svg {
         -webkit-mask-size: calc(var(--T_M_G-video-current-unit)/3.45) calc(var(--T_M_G-video-current-unit)/2.5);
         mask-size: calc(var(--T_M_G-video-current-unit)/3.45) calc(var(--T_M_G-video-current-unit)/2.5);
         width: calc(var(--T_M_G-video-current-unit)/1.75);
-    }
-    @supports not(-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='70' fill='white'><polygon points='0,0 50,35 0,70'/></svg>")) { 
-    .T_M_G-video-playback-rate-notifier:not(.T_M_G-video-rewind)::after,
-    .T_M_G-video-playback-rate-notifier.T_M_G-video-rewind::before {
-            background-size: calc(var(--T_M_G-video-current-unit)/4.15);
-            width: calc(var(--T_M_G-video-current-unit)/2.15);
-        }
     }
 }
 

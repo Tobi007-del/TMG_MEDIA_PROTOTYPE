@@ -276,17 +276,22 @@ class _T_M_G_Video_Player {
             }
         })
         .filter(cssRule => cssRule instanceof CSSStyleRule && (cssRule.selectorText === ".T_M_G-video-container" || cssRule.selectorText ===  ":where(.T_M_G-video-container)"))
-        .flatMap(cssRule => [...cssRule.style])
-        .filter(style => style.startsWith("--T_M_G-video-"))
-        .forEach(variable => {
-            const field = window.tmg.camelizeString(variable.replace("--T_M_G-", "").replaceAll("-", " "))
-            this.CSSCustomPropertiesCache[field] = getComputedStyle(this.videoContainer).getPropertyValue(variable)  
+        .flatMap(cssRule => {
+            return [...cssRule.style].map(property => {
+                const value = cssRule.style.getPropertyValue(property)
+                return {property, value}
+            })
+        })
+        .filter(style => style.property.startsWith("--T_M_G-video-"))
+        .forEach(({property, value}) => {
+            const field = window.tmg.camelizeString(property.replace("--T_M_G-", "").replaceAll("-", " "))
+            this.CSSCustomPropertiesCache[field] = value
             Object.defineProperty(this, field, {  
                 get() {  
-                    return getComputedStyle(this.videoContainer).getPropertyValue(variable)
+                    return getComputedStyle(this.videoContainer).getPropertyValue(property)
                 },  
                 set(value) {  
-                    this.videoContainer.style.setProperty(variable, value)  
+                    this.videoContainer.style.setProperty(property, value)  
                 },  
                 enumerable: true,  
                 configurable: true  
@@ -370,11 +375,12 @@ class _T_M_G_Video_Player {
             this.videoContainer = document.createElement('div')
             this.video.parentElement.insertBefore(this.videoContainer, this.video)
         }
+        this.initCSSVariablesManager()
         this.videoContainer.classList.add("T_M_G-video-container")
         if (!this.video.autoplay) this.videoContainer.classList.add("T_M_G-video-paused")
         if (this.initialState) this.videoContainer.classList.add("T_M_G-video-initial")
         if (this.initialMode) this.videoContainer.classList.add(`T_M_G-video-${window.tmg.uncamelizeString(this.initialMode, "-")}`)
-        if (this.settings.status.ui.timeline) this.videoContainer.setAttribute("data-timeline-position", `${this.settings.controllerStructure.find(c => c.startsWith("timeline"))?.replace("timeline", "").toLowerCase()}`)
+        if (this.settings.status.ui.timeline) this.videoContainer.setAttribute("data-timeline-position", `${this.settings.timelinePosition}`)
         if (this.settings.progressBar) this.videoContainer.setAttribute("data-progress-bar", this.settings.progressBar)
         if (this.settings.previewImages === false) this.videoContainer.setAttribute("data-previews", false) 
         this.videoContainer.setAttribute("data-object-fit", this.videoObjectFit)
@@ -411,7 +417,6 @@ class _T_M_G_Video_Player {
         `)    
 
         this.videoContainer.querySelector(".T_M_G-video-container-content").appendChild(this.video)
-        this.initCSSVariablesManager()
         this.buildVideoControllerStructure()
         this.retrieveVideoPlayerDOM()
         this.initializeVideoPlayer()
@@ -422,10 +427,9 @@ class _T_M_G_Video_Player {
 
     buildVideoControllerStructure() {  
     try {   
-        const controllerStructure = this.settings.controllerStructure.filter(c => !c.startsWith("timeline")),
-        spacerIndex = controllerStructure.indexOf("spacer"),
-        leftSidedControls = spacerIndex > -1 ? controllerStructure.slice(0, spacerIndex) : controllerStructure,
-        rightSidedControls = spacerIndex > -1 ? controllerStructure.slice(spacerIndex + 1) : null,
+        const spacerIndex = this.settings.controllerStructure.indexOf("spacer"),
+        leftSidedControls = spacerIndex > -1 ? this.settings.controllerStructure.slice(0, spacerIndex) : null,
+        rightSidedControls = spacerIndex > -1 ? this.settings.controllerStructure.slice(spacerIndex + 1) : null,
         //breaking HTML into smaller units to use as building blocks
         overlayControlsContainerBuild = this.videoContainer.querySelector(".T_M_G-video-overlay-controls-container"),
         controlsContainerBuild = this.videoContainer.querySelector(".T_M_G-video-controls-container"),
@@ -668,13 +672,30 @@ class _T_M_G_Video_Player {
             ` : null,
             objectFit : this.settings.status.ui.objectFit ?
             `
-                    <button type="button" class="T_M_G-video-object-fit-btn " title="Adjust Object Fit(a)" data-draggable-control="true" data-control-id="objectFit" data-focusable-control="true">
-                        <svg class="T_M_G-video-object-fit-contain" data-tooltip-text="Fit to Screen(a)" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" data-no-resize="true" viewBox="0 0 512 512" stroke-width="15">
-                            <path class=".T_M_G-video-no-fill-path T_M_G-video-stroke-path" fill="none" d="M468.32,53.08H43.68C19.595,53.08,0,72.675,0,96.76V415.24c0,24.085,19.595,43.68,43.68,43.68H468.32 c24.085,0,43.68-19.595,43.68-43.68V96.76C512,72.675,492.405,53.08,468.32,53.08z M495.413,415.24 c0,14.939-12.153,27.093-27.093,27.093H43.68c-14.94,0-27.093-12.154-27.093-27.093V96.76c0-14.939,12.153-27.093,27.093-27.093 H468.32c14.94,0,27.093,12.154,27.093,27.093V415.24z">
-                            </path>
-                            <path class=".T_M_G-video-no-fill-path T_M_G-video-stroke-path" fill="none" d="M459.473,166.981c4.581,0,8.294-3.713,8.294-8.294v-53.08c0-4.58-3.712-8.294-8.294-8.294h-53.08 c-4.581,0-8.294,3.713-8.294,8.294c0,4.58,3.712,8.294,8.294,8.294h33.935L256,245.802L71.672,113.901h33.935 c4.581,0,8.294-3.713,8.294-8.294c0-4.58-3.712-8.294-8.294-8.294h-53.08c-4.581,0-8.294,3.713-8.294,8.294v53.08 c0,4.58,3.712,8.294,8.294,8.294c4.581,0,8.294-3.713,8.294-8.294v-32.155L241.748,256L60.821,385.469v-32.155 c0-4.58-3.712-8.294-8.294-8.294c-4.581,0-8.294,3.713-8.294,8.294v53.08c0,4.58,3.712,8.294,8.294,8.294h53.08 c4.581,0,8.294-3.713,8.294-8.294c0-4.58-3.712-8.294-8.294-8.294H71.672L256,266.198l184.328,131.901h-33.935 c-4.581,0-8.294,3.713-8.294,8.294c0,4.58,3.712,8.294,8.294,8.294h53.08c4.581,0,8.294-3.713,8.294-8.294v-53.08 c0-4.58-3.712-8.294-8.294-8.294c-4.581,0-8.294,3.713-8.294,8.294v32.155L270.252,256l180.927-129.469v32.155 C451.179,163.267,454.892,166.981,459.473,166.981z">
-                            </path>
+                    <button type="button" class="T_M_G-video-object-fit-btn " title="Adjust Object Fit${keyShortcuts["objectFit"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="objectFit" data-focusable-control="false" tabindex="-1">
+                        <svg class="T_M_G-video-object-fit-contain-icon" data-tooltip-text="Fit to Screen${keyShortcuts["objectFit"]}" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16" data-no-resize="true" transform="scale(0.8)">
+                            <rect width="16" height="16" rx="4" ry="4" fill="none" stroke-width="2.25" stroke="currentColor" class="T_M_G-video-no-fill" />
+                            <g stroke-width="1" stroke="currentColor" fill="currentColor" transform="translate(3,3) scale(0.6)">
+                                <path d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520 -198)"/>
+                                <path d="M534.330152,212.999001 L532.488194,212.999001 C532.212773,212.999001 531.997715,213.222859 531.997715,213.499001 C531.997715,213.767068 532.21731,213.999001 532.488194,213.999001 L535.507237,213.999001 C535.643364,213.999001 535.764746,213.944316 535.852704,213.855661 C535.94109,213.763694 535.997715,213.642369 535.997715,213.508523 L535.997715,210.48948 C535.997715,210.214059 535.773858,209.999001 535.497715,209.999001 C535.229649,209.999001 534.997715,210.218596 534.997715,210.48948 L534.997715,212.252351 L530.217991,207.472627 C530.022487,207.277123 529.712749,207.283968 529.517487,207.47923 C529.327935,207.668781 529.319269,207.988118 529.510884,208.179734 L534.330152,212.999001 Z" transform="translate(-520 -198)"/>
+                                <path d="M521.667563,199 L523.509521,199 C523.784943,199 524,198.776142 524,198.5 C524,198.231934 523.780405,198 523.509521,198 L520.490479,198 C520.354351,198 520.232969,198.054685 520.145011,198.14334 C520.056625,198.235308 520,198.356632 520,198.490479 L520,201.509521 C520,201.784943 520.223858,202 520.5,202 C520.768066,202 521,201.780405 521,201.509521 L521,199.74665 L525.779724,204.526374 C525.975228,204.721878 526.284966,204.715034 526.480228,204.519772 C526.66978,204.33022 526.678447,204.010883 526.486831,203.819268 L521.667563,199 Z" transform="translate(-520 -198)"/>
+                                <path d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520 -198)"/>
+                            </g>
                         </svg>
+                        <svg class="T_M_G-video-object-fit-cover-icon" data-tooltip-text="Crop to Fit${keyShortcuts["objectFit"]}" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16" data-no-resize="true" transform="scale(0.8)">
+                            <rect width="16" height="16" rx="4" ry="4" fill="none" stroke-width="2.25" stroke="currentColor" class="T_M_G-video-no-fill" />
+                            <g stroke-width="1" stroke="currentColor" fill="currentColor" transform="translate(3,3) scale(0.6)">
+                                <path d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520 -198)"/>
+                                <path d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520 -198)"/>
+                            </g>
+                        </svg>
+                        <svg class="T_M_G-video-object-fit-fill-icon" data-tooltip-text="Stretch${keyShortcuts["objectFit"]}" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16" data-no-resize="true" transform="scale(0.8)">
+                            <rect x="4" y="4" width="8" height="8" rx="1" ry="1" fill="none" stroke-width="1.5" stroke="currentColor" class="T_M_G-video-no-fill" />
+                            <g stroke-width="1" stroke="currentColor" fill="currentColor" transform="translate(3, 3) scale(0.65)">  
+                                <path d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520, -198) translate(-3.25, 2.75)" />  
+                                <path d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520, -198) translate(2.5, -2.75)" />  
+                            </g> 
+                        </svg>                    
                     </button>               
             ` : null,
             volume : this.settings.status.ui.volume ?
@@ -729,11 +750,11 @@ class _T_M_G_Video_Player {
             `
                     <button type="button" class="T_M_G-video-picture-in-picture-btn" title="Toggle Picture-in-Picture${keyShortcuts["pictureInPicture"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="pictureInPicture">
                         <svg class="T_M_G-video-enter-picture-in-picture-icon" data-tooltip-text="Enter Picture-in-Picture${keyShortcuts["pictureInPicture"]}" data-tooltip-position="top">
-                            <path class="T_M_G-video-no-fill-path" fill="none" d="M0 0h24v24H0z" />
+                            <path class="T_M_G-video-no-fill" fill="none" d="M0 0h24v24H0z" />
                             <path fill="currentColor" fill-rule="nonzero" d="M21 3a1 1 0 0 1 1 1v7h-2V5H4v14h6v2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zm0 10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h8zM6.707 6.293l2.25 2.25L11 6.5V12H5.5l2.043-2.043-2.25-2.25 1.414-1.414z" />
                         </svg>
                         <svg class="T_M_G-video-leave-picture-in-picture-icon" data-tooltip-text="Leave Picture-in-Picture${keyShortcuts["pictureInPicture"]}" data-tooltip-position="top">
-                            <path class="T_M_G-video-no-fill-path" fill="none" d="M0 0h24v24H0z"></path>
+                            <path class="T_M_G-video-no-fill" fill="none" d="M0 0h24v24H0z"></path>
                             <path fill-rule="nonzero" d="M21 3a1 1 0 0 1 1 1v7h-2V5H4v14h6v2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zm0 10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h8zm-9.5-6L9.457 9.043l2.25 2.25-1.414 1.414-2.25-2.25L6 12.5V7h5.5z">
                             </path>
                         </svg>
@@ -2776,7 +2797,6 @@ class _T_M_G_Video_Player {
         this.showVideoOverlay()
         target.classList.remove("T_M_G-video-control-dragging")
         let controllerStructure = []
-        controllerStructure.push(this.settings.controllerStructure.find(c => c.startsWith("timeline")))
         const leftSideStructure = this.settings.status.ui.leftSidedControls && this.DOM.leftSidedControlsWrapper.children ? Array.from(this.DOM.leftSidedControlsWrapper.children, el => el.dataset.controlId) : []
         const rightSideStructure = this.settings.status.ui.rightSidedControls && this.DOM.leftSidedControlsWrapper.children ? Array.from(this.DOM.rightSidedControlsWrapper.children, el => el.dataset.controlId) : []
         controllerStructure = controllerStructure.concat(leftSideStructure, ["spacer"], rightSideStructure)
@@ -2917,16 +2937,13 @@ class _T_M_G_Media_Player {
             if (settings.playsInline) {
                 this.#medium.setAttribute("playsinline", "")
                 this.#medium.setAttribute("webkit-playsinline", "")
-            } else {
-                this.#medium.removeAttribute("playsinline")
-                this.#medium.removeAttribute("webkit-playsinline")
-            }
+            } else settings.playsInline = this.#medium.playsinline
             if (settings.autoplay) this.#medium.setAttribute("autoplay", '')
-            else this.#medium.removeAttribute("autoplay", "")
+            else settings.autoplay = this.#medium.autoplay
             if (settings.loop) this.#medium.setAttribute("loop", "")
-            else this.#medium.removeAttribute("loop")
+            else settings.loop = this.#medium.loop
             if (settings.muted) this.#medium.setAttribute("muted", "")
-            else this.#medium.removeAttribute("muted")
+            else settings.muted = this.#medium.muted
             
             //making some changes to the build based on the state of the playlist
             if (this.#build.playlist) {
@@ -2994,9 +3011,9 @@ class _T_M_G_Media_Player {
             settings.status.ui = {
                 //notifiers would be in the UI if specified in the settings or if not specified but override is allowed
                 notifiers: settings.notifiers || settings.status.allowOverride.notifiers,
+                timeline: (/top|bottom/).test(settings.timelinePosition),
                 prev: settings.controllerStructure.includes("prev"),
                 playPause: settings.controllerStructure.includes("playPause"),
-                timeline: settings.controllerStructure.some(c => c.startsWith("timeline")),
                 next: settings.controllerStructure.includes("next"),
                 objectFit: settings.controllerStructure.includes("objectFit"),
                 volume: settings.controllerStructure.includes("volume"),
@@ -3061,7 +3078,8 @@ class tmg {
             allowOverride: true,
             beta: true,
             modes: ["normal", "fullScreen", "theater", "pictureInPicture", "miniPlayer"],
-            controllerStructure: ["timelineBottom", "prev", "playPause", "next", "objectFit", "volume", "duration", "spacer", "playbackRate", "captions", "settings", "pictureInPicture", "theater", "fullScreen"],
+            controllerStructure: ["prev", "playPause", "next", "objectFit", "volume", "duration", "spacer", "playbackRate", "captions", "settings", "pictureInPicture", "theater", "fullScreen"],
+            timelinePosition: "bottom",
             notifiers: true,
             progressBar: false,
             persist: true,
@@ -3079,6 +3097,8 @@ class tmg {
             overlayRestraintTime: 3000,
             keyOverride: /(arrow|home|end)/,
             shiftKeys: ["prev", "next"],
+            altKeys: [],
+            ctrlKeys: [],
             keyShortcuts: {
                 prev: "p", 
                 next: "n",
@@ -3377,6 +3397,10 @@ class tmg {
                             customOptions.settings.controllerStructure = v.tmgControllerStructure.replaceAll("'", "").replaceAll(" ", "").split(",")
                             medium.removeAttribute("data-tmg-controller-structure")
                         }              
+                        if (v.tmgTimelinePosition) {
+                            customOptions.settings.timelinePosition = JSON.parse(v.tmgTimelinePosition)
+                            medium.removeAttribute("data-tmg-timeline-position")  
+                        }
                         if (v.tmgStartTime) {
                             customOptions.settings.startTime = JSON.parse(v.tmgStartTime)
                             medium.removeAttribute("data-tmg-start-time")
