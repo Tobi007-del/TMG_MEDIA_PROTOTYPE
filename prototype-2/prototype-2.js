@@ -50,10 +50,12 @@ class _T_M_G_Video_Player {
         this.speedToken = null
         this.speedTimeoutId = null
         this.speedIntervalId = null
+        this.speedIntervalTime = 0.08
+        this.speedIntervalDelay = 5
         this.speedVideoTime = null
         this.speedPosition = null
         this.speedThrottleId = null
-        this.speedThrottleDelay = 500
+        this.speedThrottleDelay = 100
         this.skipVideoTime = null
         this.skipDurationId = null
         this.skipDuration = 0
@@ -253,6 +255,14 @@ class _T_M_G_Video_Player {
         window.tmg.removeTracks(this.video)
         window.tmg.addTracks(value, this.video)
     }
+    }
+
+    get playbackQuality() {
+        return this.video.getVideoPlaybackQuality()
+    }
+
+    set playbackQuality(value) {
+        this._log("This is a read-only property", "error", "swallow")
     }
 
     _log(message, type, action) {
@@ -1985,13 +1995,12 @@ class _T_M_G_Video_Player {
     speedUp(pos) {
     try {        
         if (!this.speedCheck) {
-            const rect = this.video.getBoundingClientRect()
             this.speedCheck = true
             this.wasPaused = this.video.paused
             this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-rewind")
             this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-control-active")
             if (pos && this.settings.status.beta.rewind) {
-                pos === "left" ? this.rewind() : this.fastForward()
+                pos === "backwards" ? this.rewind() : this.fastForward()
             } else this.fastForward()
         }
     } catch(e) {
@@ -2018,7 +2027,7 @@ class _T_M_G_Video_Player {
             this.video.addEventListener("play", this.rewindReset)
             this.video.addEventListener("pause", this.rewindReset)
             this.speedVideoTime = this.video.currentTime
-            this.speedIntervalId = setInterval(this.rewindVideo.bind(this), 20)
+            this.speedIntervalId = setInterval(this.rewindVideo.bind(this), this.speedIntervalDelay)
             setTimeout(() => {
                 if (this.wasPaused) this.video.play()
             }, 1000)
@@ -2030,10 +2039,10 @@ class _T_M_G_Video_Player {
 
     rewindVideo() {
     try {        
-        this.speedVideoTime -= 0.04
+        this.speedVideoTime -= this.speedIntervalTime
         this.videoCurrentProgressPosition = this.speedVideoTime / this.video.duration
         if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.dataset.currentTime = window.tmg.formatDuration(Math.max(this.speedVideoTime, 0))
-        this.video.currentTime -= .04
+        this.video.currentTime -= this.speedIntervalTime
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
@@ -2042,7 +2051,7 @@ class _T_M_G_Video_Player {
     rewindReset() {
     try {
         clearInterval(this.speedIntervalId)
-        if(!this.video.paused) this.speedIntervalId = setInterval(this.rewindVideo.bind(this), 20)
+        if(!this.video.paused) this.speedIntervalId = setInterval(this.rewindVideo.bind(this), this.speedIntervalDelay)
     } catch(e) {
         this._log(e, "error", "swallow")
     }            
@@ -2531,7 +2540,7 @@ class _T_M_G_Video_Player {
             this.speedPointerCheck = true
             const x = e.clientX ?? e.changedTouches[0].clientX
 	        const rect = this.video.getBoundingClientRect()
-            this.speedPosition = x - rect.left >= this.video.offsetWidth * 0.5 ? "right" : "left"
+            this.speedPosition = x - rect.left >= this.video.offsetWidth * 0.5 ? "forwards" : "backwards"
             if (this.speedTimeoutId) clearTimeout(this.speedTimeoutId)
             this.speedTimeoutId = setTimeout(() => {   
                 //tm: removing listener since speedup is being called and user is not scrolling
@@ -2564,7 +2573,7 @@ class _T_M_G_Video_Player {
         
         const rect = this.video.getBoundingClientRect()
         const x = e.clientX ?? e.changedTouches[0].clientX
-        const currPos = x - rect.left >= this.video.offsetWidth * 0.5 ? "right" : "left"
+        const currPos = x - rect.left >= this.video.offsetWidth * 0.5 ? "forwards" : "backwards"
         if (currPos !== this.speedPosition) {
             this.speedPosition = currPos
             this.slowDown()
@@ -2651,7 +2660,7 @@ class _T_M_G_Video_Player {
             case this.settings.keyShortcuts["playPause"]?.toString()?.toLowerCase():
                 this.playTriggerCounter ++
                 if (this.playTriggerCounter === 1) document.addEventListener("keyup", this._handlePlayTriggerUp)
-                if (this.playTriggerCounter === 2 && !this.speedPointerCheck) e.altKey ? this.speedUp("left") : this.speedUp("right")
+                if (this.playTriggerCounter === 2 && !this.speedPointerCheck) e.shiftKey ? this.speedUp("backwards") : this.speedUp("forwards")
                 break
             case this.settings.keyShortcuts["prev"]?.toString()?.toLowerCase():
                 this.previousVideo()
@@ -2668,10 +2677,10 @@ class _T_M_G_Video_Player {
                 this.fire("fwd")
                 break
             case this.settings.keyShortcuts["objectFit"]?.toString()?.toLowerCase():
-                e.altKey ? this.changeObjectFit("backwards") : this.changeObjectFit("forwards")
+                e.shiftKey ? this.changeObjectFit("backwards") : this.changeObjectFit("forwards")
                 break                
             case this.settings.keyShortcuts["playbackRate"]?.toString()?.toLowerCase(): 
-                e.altKey ? this.changePlaybackRate("backwards") : this.changePlaybackRate("forwards")
+                e.shiftKey ? this.changePlaybackRate("backwards") : this.changePlaybackRate("forwards")
                 this.fire("playbackratechange")
                 break
             case "arrowup":

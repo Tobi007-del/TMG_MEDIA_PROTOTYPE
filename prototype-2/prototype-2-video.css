@@ -48,7 +48,6 @@
 /* time variables */
 :where(.T_M_G-video-container) {
     --T_M_G-video-fade-transition: 200ms;
-    --T_M_G-video-timeline-fade-transition: 1s;
     --T_M_G-video-transition-time: 500ms;
     --T_M_G-video-notifiers-animation-time: 1s;
     --T_M_G-video-loader-animation-time: 1250ms;
@@ -1389,7 +1388,7 @@ button:has(.T_M_G-video-next-icon) svg {
     margin-inline: calc(var(--T_M_G-video-current-unit)/1.75);
     transform: scaleY(0);
     pointer-events: all;
-    transition: opacity var(--T_M_G-video-timeline-fade-transition) ease, transform var(--T_M_G-video-fade-transition);
+    transition: transform var(--T_M_G-video-fade-transition);
 }
 
 .T_M_G-video-container[data-progress-bar="true"]:not(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-timeline-container, 
@@ -1410,6 +1409,7 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-container:has(:focus-visible) .T_M_G-video-timeline-container {
     transform: scaleY(1);
     opacity: 1;
+    transition: none;
 }
 
 .T_M_G-video-container.T_M_G-video-scrubbing .T_M_G-video-timeline-container {
