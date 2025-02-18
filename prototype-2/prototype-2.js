@@ -693,7 +693,7 @@ class _T_M_G_Video_Player {
                             <rect x="4" y="4" width="8" height="8" rx="1" ry="1" fill="none" stroke-width="1.5" stroke="currentColor" class="T_M_G-video-no-fill" />
                             <g stroke-width="1" stroke="currentColor" fill="currentColor" transform="translate(3, 3) scale(0.65)">  
                                 <path d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520, -198) translate(-3.25, 2.75)" />  
-                                <path d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520, -198) translate(2.5, -2.75)" />  
+                                <path d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520, -198) translate(2.5, -3.25)" />  
                             </g> 
                         </svg>                    
                     </button>               
@@ -2213,7 +2213,8 @@ class _T_M_G_Video_Player {
     try {
         if (this.settings.status.modes.fullScreen) {
         if(!this.inFullScreen()) {
-            if (document.pictureInPictureElement) document.exitPictureInPicture()
+            if (this.videoContainer.classList.contains("T_M_G-video-picture-in-picture")) document.exitPictureInPicture()
+            if (this.videoContainer.classList.contains("T_M_G-video-mini-player")) this.toggleMiniPlayerMode(false, "instant")
             if (this.videoContainer.requestFullscreen) this.videoContainer.requestFullscreen()
 			else if (this.videoContainer.mozRequestFullScreen) this.videoContainer.mozRequestFullScreen()
 			else if (this.videoContainer.webkitRequestFullScreen) video.webkitRequestFullScreen() || this.videoContainer.webkitRequestFullScreen()
@@ -2233,13 +2234,7 @@ class _T_M_G_Video_Player {
     _handleFullScreenChange() {
     try {
         this.videoContainer.classList.toggle("T_M_G-video-full-screen", this.inFullScreen())
-        if (this.inFullScreen()) {
-            this.toggleMiniPlayerMode(false)
-            this.autoLockFullScreenOrientation()
-        } else {
-            if (screen.orientation && screen.orientation.lock) screen.orientation.unlock()
-            this.DOM.fullScreenOrientationBtn.classList.add("T_M_G-video-control-hidden")
-        }
+        this.autoLockFullScreenOrientation()
     } catch(e) {
         this._log(e, "error", "swallow")
     }            
@@ -2250,6 +2245,9 @@ class _T_M_G_Video_Player {
         if (this.inFullScreen()) {
             const lockOrientation = this.video.videoWidth > this.video.videoHeight ? "landscape" : "portrait"
             if (screen.orientation && screen.orientation.lock) screen.orientation.lock(lockOrientation).then(() => this.DOM.fullScreenOrientationBtn.classList.remove("T_M_G-video-control-hidden")).catch(e => this._log(e, "error", "swallow"))
+        } else {
+            if (screen.orientation && screen.orientation.lock) screen.orientation.unlock()
+            this.DOM.fullScreenOrientationBtn.classList.add("T_M_G-video-control-hidden")
         }
     } catch {
         this._log(e, "error", "swallow")
@@ -2319,7 +2317,7 @@ class _T_M_G_Video_Player {
             this.removeMiniPlayer()
             return
         }
-        if ((!this.videoContainer.classList.contains("T_M_G-video-mini-player") && !this.videoContainer.classList.contains("T_M_G-video-mini-picture-in-picture") && !this.videoContainer.classList.contains("T_M_G-video-full-screen") && !this.parentIntersecting && window.innerWidth >= threshold && !this.video.paused) || (bool === true)) {
+        if ((!this.videoContainer.classList.contains("T_M_G-video-mini-player") && !this.videoContainer.classList.contains("T_M_G-video-picture-in-picture") && !this.videoContainer.classList.contains("T_M_G-video-full-screen") && !this.parentIntersecting && window.innerWidth >= threshold && !this.video.paused) || (bool === true)) {
             this.pseudoVideoContainer.className += this.videoContainer.className.replace("T_M_G-video-container", "")
             this.videoContainer.parentElement.insertBefore(this.pseudoVideoContainer, this.videoContainer)
             document.body.append(this.videoContainer)
