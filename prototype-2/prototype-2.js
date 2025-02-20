@@ -2334,9 +2334,13 @@ class _T_M_G_Video_Player {
 
     async _handleFullScreenChange() {
     try {
-        this.inFullScreen ? this.videoContainer.classList.add("T_M_G-video-full-screen") : this.videoContainer.classList.remove("T_M_G-video-full-screen")
+        if (this.inFullScreen) this.videoContainer.classList.add("T_M_G-video-full-screen")
+        if (!window.tmg.queryFullScreen()) {
+            this.videoContainer.classList.remove("T_M_G-video-full-screen")
+            window.tmg._CURRENT_FULL_SCREEN_PLAYER = null
+            this.inFullScreen = false
+        }
         await this.autoLockFullScreenOrientation()
-        if (!this.inFullScreen) window.tmg._CURRENT_FULL_SCREEN_PLAYER = null
     } catch(e) {
         this._log(e, "error", "swallow")
     }            
