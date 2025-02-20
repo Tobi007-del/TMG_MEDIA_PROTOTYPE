@@ -103,7 +103,8 @@
     --T_M_G-video-icons-hover-color: var(--T_M_G-video-icons-color);
     --T_M_G-video-controls-color: var(--T_M_G-video-icons-color);
     --T_M_G-video-controls-hover-color: var(--T_M_G-video-icons-hover-color);
-    --T_M_G-video-controls-disabled-color: gray;
+    --T_M_G-video-disabled-color: gray;
+    --T_M_G-video-disabled-background: rgb(55, 55, 55);
     --T_M_G-video-controls-background: transparent;
     --T_M_G-video-controls-hover-background: var(--T_M_G-video-controls-background);
     --T_M_G-video-controls-background-radius: 0;
@@ -344,7 +345,7 @@
 }
 
 .T_M_G-video-container :is(.T_M_G-video-control-disabled, #o#o#o#o#o#o#o#o#o#o) {
-    --T_M_G-video-current-controls-color: var(--T_M_G-video-controls-disabled-color);
+    --T_M_G-video-current-controls-color: var(--T_M_G-video-disabled-color);
 }
 
 .T_M_G-video-container :is(.T_M_G-video-no-fill, #o#o#o#o#o#o#o#o#o#o) {
@@ -435,9 +436,6 @@
 
 .T_M_G-pseudo-video-container {
     background: black;
-    display: flex;
-    justify-content: center;
-    align-content: center;
     overflow: hidden;
 }
 
@@ -490,9 +488,13 @@
 }
 
 .T_M_G-pseudo-video-container::before {
-    content: "Playing in mini player";
+    content: "Playing in mini player :)";
     position: absolute;
-    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     color: white;
     font-size: 20px;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -500,16 +502,36 @@
 
 /* setting deactivated state */
 .T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) {
-    --T_M_G-video-icons-color: var(--T_M_G-video-controls-disabled-color);
-    --T_M_G-video-controls-color: var(--T_M_G-video-controls-disabled-color);
-    --T_M_G-video-text-color: var(--T_M_G-video-controls-disabled-color);
-    all: unset;
-    pointer-events: none;
+    --T_M_G-video-icons-color: var(--T_M_G-video-disabled-color);
+    --T_M_G-video-controls-color: var(--T_M_G-video-disabled-color);
+    --T_M_G-video-text-color: var(--T_M_G-video-disabled-color);
+    --T_M_G-video-brand-color: var(--T_M_G-video-disabled-color);
+    cursor: not-allowed;
+}
+
+.T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content::after {
+    position: absolute;
+    content: "!";
+    font-size: calc(var(--T_M_G-video-relative-unit)*6);
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    color: red;
+    display: flex; 
+    align-items: center;
+    justify-content: center;
+}
+
+.T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content {
+    background: var(--T_M_G-video-disabled-background);
+}
+
+.T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video {
+    opacity: 0;
 }
 
 .T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) * {
     pointer-events: none;
-    animation: none;
 }
 /* setting deactivated state ends */
 
@@ -1152,6 +1174,8 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-next-btn,
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-theater-btn,
 .T_M_G-video-container.T_M_G-video-picture-in-picture button:has(.T_M_G-video-play-icon, .T_M_G-video-pause-icon, .T_M_G-video-prev-icon, .T_M_G-video-next-icon),
+.T_M_G-video-container.T_M_G-video-picture-in-picture .T_M_G-video-buffer,
+.T_M_G-video-container.T_M_G-video-picture-in-picture .T_M_G-video-object-fit-btn,
 .T_M_G-video-container.T_M_G-video-picture-in-picture .T_M_G-video-captions-btn {
     display: none;
 }
@@ -1201,18 +1225,14 @@ button:has(.T_M_G-video-next-icon) svg {
 
 .T_M_G-video-volume-boost-sign::after {
     display: none;
-    content: "+";
+    content: "x" attr(data-boost);
     position: absolute;
     bottom: var(--T_M_G-video-current-unit);
     left: var(--T_M_G-video-current-unit);
     translate: -70% 70%;
     color: var(--T_M_G-video-volume-slider-boost-color);
     font-weight: bolder;
-    font-size: var(--T_M_G-video-current-unit);
-}
-
-.T_M_G-video-volume-down-notifier .T_M_G-video-volume-boost-sign::after {
-    content: "-";
+    font-size: calc(var(--T_M_G-video-current-unit)/2.05);
 }
 
 .T_M_G-video-volume-container {
@@ -1967,6 +1987,7 @@ button:has(.T_M_G-video-next-icon) svg {
     }
     .T_M_G-video-container {
         --T_M_G-video-current-loader-thickness: calc(var(--T_M_G-video-current-unit)/12.75);
+        --T_M_G-video-dbc-backdrop-width: 80%;
     }
     .T_M_G-video-overlay-main-controls-wrapper > *,
     .T_M_G-video-notifiers {
@@ -2037,7 +2058,7 @@ button:has(.T_M_G-video-next-icon) svg {
     .T_M_G-video-notifiers-container .T_M_G-video-bwd-notifier.T_M_G-video-control-persist::after {
         content: attr(data-skip);
         margin-inline: calc(var(--T_M_G-video-current-unit)/2.5);
-        font-size: calc(var(--T_M_G-video-current-unit)/2.25);
+        font-size: calc(var(--T_M_G-video-current-unit)/2.5);
     }
     .T_M_G-video-playback-rate-notifier,
     .T_M_G-video-object-fit-notifier {

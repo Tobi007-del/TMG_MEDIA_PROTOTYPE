@@ -25,6 +25,7 @@ class _T_M_G_Video_Player {
         this.CSSCustomPropertiesCache = {}
         this.currentPlaylistIndex = this._playlist ? 0 : null
         this.playlistCurrentTime = null
+        this.inFullScreen = false
         this.wasPaused = !this.video.autoplay
         this.keyDownThrottleId = null
         this.keyDownThrottleDelay = 20
@@ -877,6 +878,7 @@ class _T_M_G_Video_Player {
             volumeUpNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-volume-up-notifier") : null,
             volumeDownNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-volume-down-notifier") : null,
             volumeMutedNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-volume-muted-notifier") : null,
+            volumeBoostSigns : this.settings.status.ui.notifiers || this.settings.status.ui.volume ? this.videoContainer.querySelectorAll(".T_M_G-video-volume-boost-sign") : null,
             fwdNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-fwd-notifier") : null,
             bwdNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-bwd-notifier") : null,
             videoOverlayControlsContainer: this.videoContainer.querySelector(".T_M_G-video-overlay-controls-container"),
@@ -1120,8 +1122,6 @@ class _T_M_G_Video_Player {
 
     setAllEventListeners() {
     try { 
-        this.setWindowEventListeners()
-        this.setDocumentEventListeners()
         this.setVideoContainerEventListeners()
         this.setVideoEventListeners()
         this.setControlsEventListeners()
@@ -1129,26 +1129,6 @@ class _T_M_G_Video_Player {
     } catch(e) {
         this._log(e, "error", "swallow")
     }                    
-    }
-
-    setWindowEventListeners() {
-    try {
-        window.addEventListener('resize', this._handleWindowResize)
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }            
-    }
-
-    setDocumentEventListeners() {
-    try {
-        document.addEventListener("visibilitychange", this._handleVisibilityChange)
-        document.addEventListener("fullscreenchange", this._handleFullScreenChange)
-        document.addEventListener("webkitfullscreenchange", this._handleFullScreenChange)
-        document.addEventListener("mozfullscreenchange", this._handleFullScreenChange)
-        document.addEventListener("msfullscreenchange", this._handleFullScreenChange)
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }            
     }
 
     setKeyEventListeners() {
@@ -1448,6 +1428,8 @@ class _T_M_G_Video_Player {
     try {
         this.videoContainer.classList.add("T_M_G-video-unavailable")
         this.disableFocusableControls("all")
+        this.unobservePosition()
+        this.removeKeyEventListeners()
     } catch(e) {
         this._log(e, "error", "swallow")
     } 
@@ -1458,10 +1440,32 @@ class _T_M_G_Video_Player {
         if (this.videoContainer.classList.contains("T_M_G-video-unavailable") && this.loaded) {
             this.videoContainer.classList.remove("T_M_G-video-unavailable")
             this.enableFocusableControls("all")
+            this.observePosition()
+            this.setKeyEventListeners()
         }
     } catch(e) {
         this._log(e, "error", "swallow")
     } 
+    }
+
+    isModeActive(mode) {
+    try {
+        switch (mode) {
+            case "miniPlayer":
+                return this.videoContainer.classList.contains("T_M_G-video-mini-player")
+            case "fullScreen":
+                return this.videoContainer.classList.contains("T_M_G-video-full-screen")
+            case "pictureInPicture":
+                return this.videoContainer.classList.contains("T_M_G-video-picture-in-picture")
+            case "theater":
+                return this.videoContainer.classList.contains("T_M_G-video-theater")
+            case "normal":
+            default:
+                return false
+        }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }         
     }
 
     _handleWindowResize() {
@@ -1880,7 +1884,7 @@ class _T_M_G_Video_Player {
             if (this.settings.previewImages !== false && !window.tmg.queryMediaMobile()) this.previewImgContext.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewImg.width, this.DOM.previewImg.height)
             if (this.isScrubbing) this.thumbnailImgContext.drawImage(this.pseudoVideo, 0, 0, this.DOM.thumbnailImg.width, this.DOM.thumbnailImg.height)
         }    
-        let arrowPosition, arrowPositionMin = (((this.videoContainer.classList.contains("T_M_G-video-theater") && !this.videoContainer.classList.contains("T_M_G-video-mini-player")) || (this.videoContainer.classList.contains("T_M_G-video-full-screen")) && this.settings.previewImages !== false)) && !window.tmg.queryMediaMobile() ? 10 : 16.5
+        let arrowPosition, arrowPositionMin = (((this.isModeActive("theater") && !this.isModeActive("miniPlayer")) || (this.isModeActive("fullScreen")) && this.settings.previewImages !== false)) && !window.tmg.queryMediaMobile() ? 10 : 16.5
         if (percent < previewImgMin) {
             arrowPosition = `${Math.max(percent * rect.width, arrowPositionMin)}px`
         } else if (percent > (1 - previewImgMin)) {
@@ -2224,6 +2228,7 @@ class _T_M_G_Video_Player {
                 this.videoCurrentVolumeSliderBoostPosition = 0
                 this.videoCurrentVolumeSliderPosition = (value-min) / (100 - min)
             } else if (value > 100) {
+                this.DOM.volumeBoostSigns?.forEach(sign => sign.dataset.boost = Math.round(value/10) / 10)
                 this.videoVolumeSliderBoostPercent = parseInt(this.videoVolumeSliderPercent) + 10
                 this.videoCurrentVolumeSliderBoostPosition = (value-100) / (max - 100)
             }
@@ -2300,23 +2305,26 @@ class _T_M_G_Video_Player {
     }        
     }
 
-    toggleFullScreenMode() {
+    async toggleFullScreenMode() {
     try {
         if (this.settings.status.modes.fullScreen) {
-        if (!this.videoContainer.classList.contains("T_M_G-video-full-screen")) {
-            if (this.videoContainer.classList.contains("T_M_G-video-picture-in-picture")) document.exitPictureInPicture()
-            if (this.videoContainer.classList.contains("T_M_G-video-mini-player")) this.toggleMiniPlayerMode(false, "instant")
-            if (this.videoContainer.requestFullscreen) this.videoContainer.requestFullscreen()
-			else if (this.videoContainer.mozRequestFullScreen) this.videoContainer.mozRequestFullScreen()
-			else if (this.videoContainer.webkitRequestFullScreen) video.webkitRequestFullScreen() || this.videoContainer.webkitRequestFullScreen()
-			else if (this.videoContainer.msRequestFullscreen) this.videoContainer.msRequestFullscreen()
-            this.videoContainer.classList.add("T_M_G-video-full-screen")
+        if (!this.isModeActive("fullScreen")) {
+        if (!window.tmg._CURRENT_FULL_SCREEN_PLAYER) {
+            if (this.isModeActive("pictureInPicture")) document.exitPictureInPicture()
+            if (this.isModeActive("miniPlayer")) this.toggleMiniPlayerMode(false, "instant")
+            window.tmg._CURRENT_FULL_SCREEN_PLAYER = this
+            if (this.videoContainer.requestFullscreen) await this.videoContainer.requestFullscreen()
+			else if (this.videoContainer.mozRequestFullScreen) await this.videoContainer.mozRequestFullScreen()
+			else if (this.videoContainer.webkitRequestFullScreen) await video.webkitRequestFullScreen() || await this.videoContainer.webkitRequestFullScreen()
+			else if (this.videoContainer.msRequestFullscreen) await this.videoContainer.msRequestFullscreen()
+            this.inFullScreen = true
+        }
         } else {
-            if (document.exitFullscreen) document.exitFullscreen()
-			else if (document.mozCancelFullScreen) document.mozCancelFullScreen()
-			else if (document.webkitCancelFullScreen) document.webkitCancelFullScreen()
-			else if (document.msExitFullscreen) document.msExitFullscreen()
-            this.videoContainer.classList.remove("T_M_G-video-full-screen")
+            if (document.exitFullscreen) await document.exitFullscreen()
+			else if (document.mozCancelFullScreen) await document.mozCancelFullScreen()
+			else if (document.webkitCancelFullScreen) await document.webkitCancelFullScreen()
+			else if (document.msExitFullscreen) await document.msExitFullscreen()
+            this.inFullScreen = false
         }
         }
     } catch(e) {
@@ -2324,24 +2332,27 @@ class _T_M_G_Video_Player {
     }        
     }
 
-    _handleFullScreenChange() {
+    async _handleFullScreenChange() {
     try {
-        this.autoLockFullScreenOrientation()
+        this.inFullScreen ? this.videoContainer.classList.add("T_M_G-video-full-screen") : this.videoContainer.classList.remove("T_M_G-video-full-screen")
+        await this.autoLockFullScreenOrientation()
+        if (!this.inFullScreen) window.tmg._CURRENT_FULL_SCREEN_PLAYER = null
     } catch(e) {
         this._log(e, "error", "swallow")
     }            
     }   
     
-    autoLockFullScreenOrientation() {
+    async autoLockFullScreenOrientation() {
     try {
-        if (this.videoContainer.classList.contains("T_M_G-video-full-screen")) {
+        if (this.isModeActive("fullScreen")) {
             const lockOrientation = this.video.videoWidth > this.video.videoHeight ? "landscape" : "portrait"
-            if (screen.orientation && screen.orientation.lock) screen.orientation.lock(lockOrientation).then(() => this.DOM.fullScreenOrientationBtn.classList.remove("T_M_G-video-control-hidden")).catch(e => this._log(e, "error", "swallow"))
+            if (screen.orientation && screen.orientation.lock) await screen.orientation.lock(lockOrientation)
+            this.DOM.fullScreenOrientationBtn.classList.remove("T_M_G-video-control-hidden")
         } else {
             if (screen.orientation && screen.orientation.lock) screen.orientation.unlock()
             this.DOM.fullScreenOrientationBtn.classList.add("T_M_G-video-control-hidden")
         }
-    } catch {
+    } catch(e) {
         this._log(e, "error", "swallow")
     }
     }
@@ -2359,7 +2370,7 @@ class _T_M_G_Video_Player {
     togglePictureInPictureMode() {
     try {
         if (this.settings.status.modes.pictureInPicture) {
-        !this.videoContainer.classList.contains("T_M_G-video-picture-in-picture") ? this.video.requestPictureInPicture() : document.exitPictureInPicture() 
+        !this.isModeActive("pictureInPicture") ? this.video.requestPictureInPicture() : document.exitPictureInPicture() 
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2371,6 +2382,7 @@ class _T_M_G_Video_Player {
         this.videoContainer.classList.add("T_M_G-video-picture-in-picture")
         this.showVideoOverlay()
         this.toggleMiniPlayerMode(false)
+        this.setMediaSession()
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
@@ -2409,7 +2421,7 @@ class _T_M_G_Video_Player {
             this.removeMiniPlayer()
             return
         }
-        if ((!this.videoContainer.classList.contains("T_M_G-video-mini-player") && !this.videoContainer.classList.contains("T_M_G-video-picture-in-picture") && !this.videoContainer.classList.contains("T_M_G-video-full-screen") && !this.parentIntersecting && window.innerWidth >= threshold && !this.video.paused) || (bool === true)) {
+        if ((!this.isModeActive("miniPlayer") && !this.isModeActive("pictureInPicture") && !this.isModeActive("fullScreen") && !this.parentIntersecting && window.innerWidth >= threshold && !this.video.paused) || (bool === true)) {
             this.pseudoVideoContainer.className += this.videoContainer.className.replace("T_M_G-video-container", "")
             this.videoContainer.parentElement.insertBefore(this.pseudoVideoContainer, this.videoContainer)
             document.body.append(this.videoContainer)
@@ -2418,7 +2430,7 @@ class _T_M_G_Video_Player {
             this.videoContainer.addEventListener("touchstart", this.moveMiniPlayer, {passive: false})
             return
         } 
-        if ((this.videoContainer.classList.contains("T_M_G-video-mini-player") && this.parentIntersecting) || (this.videoContainer.classList.contains("T_M_G-video-mini-player") && window.innerWidth < threshold)) this.removeMiniPlayer()
+        if ((this.isModeActive("miniPlayer") && this.parentIntersecting) || (this.isModeActive("miniPlayer") && window.innerWidth < threshold)) this.removeMiniPlayer()
     }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2442,7 +2454,7 @@ class _T_M_G_Video_Player {
 
     moveMiniPlayer(e){
     try {
-        if (this.videoContainer.classList.contains("T_M_G-video-mini-player")) {
+        if (this.isModeActive("miniPlayer")) {
         if (!this.DOM.videoControlsContainer.contains(e.target)) {
             document.addEventListener("mousemove", this._handleMiniPlayerPosition)
             document.addEventListener("mouseup", this.emptyMiniPlayerListeners)
@@ -2498,10 +2510,10 @@ class _T_M_G_Video_Player {
     _handleClick({target}) {
     try {
         if (target === this.DOM.videoControlsContainer || target === this.DOM.videoOverlayControlsContainer) {
-        if (window.tmg.queryMediaMobile() && !this.videoContainer.classList.contains("T_M_G-video-mini-player")) {
+        if (window.tmg.queryMediaMobile() && !this.isModeActive("miniPlayer")) {
             if (!this.buffering) this.videoContainer.classList.toggle("T_M_G-video-overlay")
         } 
-        if (window.tmg.queryMediaMobile() || this.videoContainer.classList.contains("T_M_G-video-mini-player")) return
+        if (window.tmg.queryMediaMobile() || this.isModeActive("miniPlayer")) return
         if (this.playId) clearTimeout(this.playId)
         this.playId = setTimeout(() => {
             if (!(this.speedCheck && this.playTriggerCounter < 1))  {
@@ -2533,7 +2545,9 @@ class _T_M_G_Video_Player {
             this.skip(this.settings.skipTime, true)
         } else if ((x-rect.left) < (this.video.offsetWidth*0.35)) {
             this.skip(-this.settings.skipTime, true)
-        } else this.toggleFullScreenMode()
+        } else {
+            window.tmg.queryMediaMobile() || this.isModeActive("miniPlayer") ? this.togglePlay() : this.toggleFullScreenMode()
+        }
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2542,7 +2556,7 @@ class _T_M_G_Video_Player {
 
     _handleHoverPointerMove() {
     try {
-        if (!(window.tmg.queryMediaMobile() && !this.videoContainer.classList.contains("T_M_G-video-mini-player"))) this.showVideoOverlay()
+        if (!(window.tmg.queryMediaMobile() && !this.isModeActive("miniPlayer"))) this.showVideoOverlay()
     } catch(e) {
         this._log(e, "error", "swallow")
     }                    
@@ -2596,7 +2610,7 @@ class _T_M_G_Video_Player {
 
     shouldRemoveOverlay() {
     try {
-        return !this.video.paused && !this.buffering && !this.videoContainer.classList.contains("T_M_G-video-picture-in-picture")
+        return !this.video.paused && !this.buffering && !this.isModeActive("pictureInPicture")
     } catch(e) {
         this._log(e, "error", "swallow")        
     }
@@ -2613,7 +2627,7 @@ class _T_M_G_Video_Player {
     _handlePointerDown(e) {
     try {
         if (e.target === this.DOM.videoControlsContainer || e.target === this.DOM.videoOverlayControlsContainer) {
-        if (!this.videoContainer.classList.contains("T_M_G-video-mini-player")) {    
+        if (!this.isModeActive("miniPlayer")) {    
             //conditions to cancel the speed timeout
             //tm: if user moves finger before speedup is called like during scrolling
             this.videoContainer.addEventListener("touchmove", this._handleSpeedPointerUp, {passive: true})     
@@ -2760,6 +2774,7 @@ class _T_M_G_Video_Player {
                 this.fire("fwd")
                 break
             case this.settings.keyShortcuts["objectFit"]?.toString()?.toLowerCase():
+                if (!this.isModeActive("pictureInPicture"))
                 e.shiftKey ? this.changeObjectFit("backwards") : this.changeObjectFit("forwards")
                 break                
             case this.settings.keyShortcuts["playbackRate"]?.toString()?.toLowerCase(): 
@@ -2795,14 +2810,14 @@ class _T_M_G_Video_Player {
                 this.toggleFullScreenMode()
                 break
             case this.settings.keyShortcuts["theater"]?.toString()?.toLowerCase():
-                if (!window.tmg.queryMediaMobile() && !this.videoContainer.classList.contains("T_M_G-video-mini-player") && !this.videoContainer.classList.contains("T_M_G-video-full-screen")) this.toggleTheaterMode()
+                if (!window.tmg.queryMediaMobile() && !this.isModeActive("miniPlayer") && !this.isModeActive("fullScreen")) this.toggleTheaterMode()
                 break
             case this.settings.keyShortcuts["expandMiniPlayer"]?.toString()?.toLowerCase():
-                if (this.videoContainer.classList.contains("T_M_G-video-mini-player")) 
+                if (this.isModeActive("miniPlayer")) 
                 this.toggleMiniPlayerMode(false, "instant")
                 break
             case this.settings.keyShortcuts["removeMiniPlayer"]?.toString()?.toLowerCase():
-                if (this.videoContainer.classList.contains("T_M_G-video-mini-player")) this.toggleMiniPlayerMode(false) 
+                if (this.isModeActive("miniPlayer")) this.toggleMiniPlayerMode(false) 
                 break
             case this.settings.keyShortcuts["pictureInPicture"]?.toString()?.toLowerCase():
                 if (this.settings.status.modes.pictureInPicture) this.togglePictureInPictureMode()
@@ -2816,7 +2831,7 @@ class _T_M_G_Video_Player {
                 this.video.muted ? this.fire("volumemuted") : this.fire("volumeup")
                 break
             case this.settings.keyShortcuts["captions"]?.toString()?.toLowerCase():
-                if (this.video.textTracks[this.textTrackIndex]) {
+                if (this.video.textTracks[this.textTrackIndex] && !this.isModeActive("pictureInPicture")) {
                 this.toggleCaptions()
                 this.fire("captions")
                 }
@@ -3167,7 +3182,7 @@ class tmg {
             controllerStructure: ["prev", "playPause", "next", "objectFit", "volume", "duration", "spacer", "playbackRate", "captions", "settings", "pictureInPicture", "theater", "fullScreen"],
             timelinePosition: "bottom",
             volumeBoost: true,
-            maxVolume: 200,
+            maxVolume: 300,
             notifiers: true,
             progressBar: false,
             persist: true,
@@ -3212,6 +3227,7 @@ class tmg {
     static _MAXIMUM_VOLUME = 100000
     static _AUDIO_CONTEXT = null
     static _CURRENT_AUDIO_GAIN_NODE = null
+    static _CURRENT_FULL_SCREEN_PLAYER = null
     static get userSettings() {
         if (localStorage.tmgUserVideoSettings) 
             return JSON.parse(localStorage.tmgUserVideoSettings)
@@ -3220,10 +3236,27 @@ class tmg {
     static set userSettings(customSettings) {
         localStorage._tmgUserVideoSettings = customSettings
     }
+    static init() {
+        window.addEventListener("resize", window.tmg._handleWindowResize)
+        document.addEventListener("fullscreenchange", window.tmg._handleFullScreenChange)
+        document.addEventListener("webkitfullscreenchange", window.tmg._handleFullScreenChange)
+        document.addEventListener("mozfullscreenchange", window.tmg._handleFullScreenChange)
+        document.addEventListener("msfullscreenchange", window.tmg._handleFullScreenChange)
+        document.addEventListener("visibilitychange", window.tmg._handleVisibilityChange)
+    }
+    static _handleWindowResize() {
+        window.tmg.Players?.forEach(Player => Player._handleWindowResize())
+    }
+    static _handleVisibilityChange() {
+        window.tmg.Players?.forEach(Player => Player._handleVisibilityChange())
+    }
+    static _handleFullScreenChange() {
+        window.tmg._CURRENT_FULL_SCREEN_PLAYER?._handleFullScreenChange()
+    }
     static initializeAudioManager(bool = true) {
         if (!window.tmg._AUDIO_CONTEXT && bool) {
             window.tmg._AUDIO_CONTEXT = new (window.AudioContext || window.webkitAudioContext)()
-            tmg.Players.forEach(player => player.manageAudio())
+            tmg.Players.forEach(Player => Player.manageAudio())
             document.addEventListener("visiblitychange", () => {
                 document.visiblityState === "visible" ? window.tmg.resumeAudioManager() : window.tmg.suspendAudioManager()
                 console.log(document.visibilityState)
@@ -3704,5 +3737,6 @@ if (typeof window === "undefined") {
     console.warn("Consider moving to a browser environment to use the TMG Media Player")
 } else {
     window.tmg = tmg
+    window.tmg.init()
     window.tmg.launch()
 }
