@@ -1481,7 +1481,7 @@ button:has(.T_M_G-video-next-icon) svg {
     z-index: 1;
 }
 
-.T_M_G-video-container.T_M_G-video-movement,
+.T_M_G-video-container.T_M_G-video-movement .T_M_G-video-loaded-timeline,
 .T_M_G-video-container.T_M_G-video-progress-bar:not(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-loaded-timeline {
     display: none;
 }
