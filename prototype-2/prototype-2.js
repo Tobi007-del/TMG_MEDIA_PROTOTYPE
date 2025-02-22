@@ -2335,7 +2335,7 @@ class _T_M_G_Video_Player {
     async _handleFullScreenChange() {
     try {
         if (this.inFullScreen) this.videoContainer.classList.add("T_M_G-video-full-screen")
-        if (!window.tmg.queryFullScreen()) {
+        if (!window.tmg.queryFullScreen() || !this.inFullScreen) {
             this.videoContainer.classList.remove("T_M_G-video-full-screen")
             window.tmg._CURRENT_FULL_SCREEN_PLAYER = null
             this.inFullScreen = false
@@ -2374,7 +2374,10 @@ class _T_M_G_Video_Player {
     togglePictureInPictureMode() {
     try {
         if (this.settings.status.modes.pictureInPicture) {
-        !this.isModeActive("pictureInPicture") ? this.video.requestPictureInPicture() : document.exitPictureInPicture() 
+        if (!this.isModeActive("pictureInPicture")) {
+            if (this.isModeActive("fullScreen")) this.toggleFullScreenMode()
+            this.video.requestPictureInPicture() 
+        } else document.exitPictureInPicture() 
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2415,16 +2418,6 @@ class _T_M_G_Video_Player {
     try {
     if (this.settings.status.modes.miniPlayer) {
         const threshold = 240
-        if (bool === false) {
-            if (behaviour) 
-                window.scrollTo({
-                    top: this.pseudoVideoContainer.parentNode.offsetTop - ((window.innerHeight / 2) - (this.pseudoVideoContainer.offsetHeight / 2)),
-                    left: 0,
-                    behavior: behaviour,
-                })      
-            this.removeMiniPlayer()
-            return
-        }
         if ((!this.isModeActive("miniPlayer") && !this.isModeActive("pictureInPicture") && !this.isModeActive("fullScreen") && !this.parentIntersecting && window.innerWidth >= threshold && !this.video.paused) || (bool === true)) {
             this.pseudoVideoContainer.className += this.videoContainer.className.replace("T_M_G-video-container", "")
             this.videoContainer.parentElement.insertBefore(this.pseudoVideoContainer, this.videoContainer)
@@ -2434,7 +2427,15 @@ class _T_M_G_Video_Player {
             this.videoContainer.addEventListener("touchstart", this.moveMiniPlayer, {passive: false})
             return
         } 
-        if ((this.isModeActive("miniPlayer") && this.parentIntersecting) || (this.isModeActive("miniPlayer") && window.innerWidth < threshold)) this.removeMiniPlayer()
+        if ((this.isModeActive("miniPlayer") && this.parentIntersecting) || (this.isModeActive("miniPlayer") && window.innerWidth < threshold) || (bool === false)) {
+            if (behaviour) 
+            window.scrollTo({
+                top: this.pseudoVideoContainer.parentNode.offsetTop - ((window.innerHeight / 2) - (this.pseudoVideoContainer.offsetHeight / 2)),
+                left: 0,
+                behavior: behaviour,
+            })  
+            this.removeMiniPlayer()
+        } 
     }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2738,9 +2739,9 @@ class _T_M_G_Video_Player {
                     if (!e.altKey) return false
                 }
             }
-        if (key === "i" && !this.settings.keyOverride.test(key))
+        if (key === "i" && !this.settings.keyOverrides.includes(key))
             if (e.ctrlKey && e.shiftKey) return false
-        if (this.settings.keyOverride.test(key)) e.preventDefault()
+        if (this.settings.keyOverrides.includes(key)) e.preventDefault()
         return true
     } catch(e) {
         this._log(e, "error", "swallow")                   
@@ -3017,7 +3018,7 @@ class _T_M_G_Media_Player {
         }
     }
 
-    attach(medium) {
+    async attach(medium) {
         if (window.tmg.isIterable(medium)) {
             console.error("Please provide a single media element to the TMG media player")
             console.warn("Consider looping the iterable argument to get a single argument and instantiate a new 'window.tmg.Player' for each of them")
@@ -3027,12 +3028,44 @@ class _T_M_G_Media_Player {
                 console.warn("Consider creating another instance of the 'TMG' class to attach your media")
             } else {
                 this.#medium = medium
-                this.#deploy()
+                await this.#fetchCustomOptions()
+                await this.#deploy()
             }
         }
     }
 
-    #deploy() {
+    async #fetchCustomOptions() {
+        let fetchedControls
+        if (this.#medium.getAttribute("tmg")?.includes('.json')) {
+            fetchedControls = fetch(v.window.tmg.toString()).then(res => {
+                if (!res.ok) throw new Error(`TMG could not find JSON file!. Status: ${res.status}`)
+                return res.json()
+            }).catch(({message}) => {
+                console.error(`${message}`)
+                console.warn("TMG requires a valid JSON file")
+                fetchedControls = undefined
+            })
+        }
+        const customOptions = await fetchedControls ??  {} 
+        if (customOptions && Object.keys(customOptions).length === 0) {
+            const attributes = this.#medium.getAttributeNames().filter(attr => attr.startsWith("tmg--"))
+            const specialProps = ["tmg--media--artwork", "tmg--playlist"]
+            attributes?.forEach(attr => {
+                if (!specialProps.some(sp => attr.includes(sp))) {
+                    window.tmg.putHTMLOption(attr, customOptions, this.#medium)
+                }
+            })
+            if (this.#medium.poster || attributes.includes("tmg--media-artwork")) {
+                customOptions.media ? customOptions.media.artwork = [{src: this.#medium.getAttribute("tmg--media-artwork") ?? this.#medium.poster}] : customOptions.media = {
+                    artwork: [{src: this.#medium.getAttribute("tmg--media-artwork") ?? this.#medium.poster}]
+                }
+                this.#medium.removeAttribute("tmg--media--artwork")
+            }                
+        }
+        this.builder(customOptions)
+    }
+
+    async #deploy() {
         if (this.#medium.tagName.toLowerCase() === "video") {
             if (this.#medium.controls) {
                 console.error("TMG refused to override default video controls")
@@ -3152,11 +3185,10 @@ class _T_M_G_Media_Player {
             this.#build.settings = {...window.tmg._DEFAULT_VIDEO_BUILD.settings, ...settings}
             this.#build.video = this.#medium
             //window.tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/drag-drop-touch-polyfill.js", "script")
-            window.tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css").then(() => {
-                this.Player = new _T_M_G_Video_Player(this.#build)
-                window.tmg.Players.push(this.Player)
-                this.#cleanUpBuild()
-            })
+            await window.tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css")
+            this.Player = new _T_M_G_Video_Player(this.#build)
+            window.tmg.Players.push(this.Player)
+            this.#cleanUpBuild()
         } else {
             console.error(`TMG could not deploy custom controls on the '${this.#medium.tagName}' element as it is not supported`)
             console.warn("TMG only supports the 'video' element currently")
@@ -3166,12 +3198,11 @@ class _T_M_G_Media_Player {
     #cleanUpBuild() {
         this.#active = true
         this.#medium = null
-        this.#build = null
+        Object.freeze(this.#build)
     }
 }
 
 class tmg {
-    static MEDIA = document.querySelectorAll("[tmgcontrols]")      
     static _DEFAULT_VIDEO_BUILD = {
         mediaPlayer: 'TMG',
         mediaType: 'video',
@@ -3191,8 +3222,6 @@ class tmg {
             progressBar: false,
             persist: true,
             skipTime: 10,
-            startTime: null,
-            endTime: null,
             automove: true,
             automoveCountdown: 10,
             autocaptions: false,
@@ -3202,10 +3231,8 @@ class tmg {
             playsInline: true,
             previewImages: true,
             overlayRestraintTime: 3000,
-            keyOverride: /(arrow|home|end)/,
+            keyOverrides: ["arrowdown", "arrowup", "arrowleft", "arrowright", "home", "end"],
             shiftKeys: ["prev", "next"],
-            altKeys: [],
-            ctrlKeys: [],
             keyShortcuts: {
                 prev: "p", 
                 next: "n",
@@ -3387,6 +3414,25 @@ class tmg {
             if (track.kind == "subtitles" || track.kind == "captions") track.remove()
         })
     }
+    static putHTMLOption(attr, optionsObject, medium) {
+        const prop = attr.replace("tmg--", "").replace(/(\w)(-)(\w)/, match => `${match[0]}${match[2].toUpperCase()}`)
+        const parts = prop.split("--")
+        let currObj = optionsObject
+        parts.forEach((part, index) => {
+            if (!currObj[part]) {
+                if (index === parts.length - 1) {
+                    let value = medium.getAttribute(attr)
+                    if (value.includes(",")) value = value.split(",")?.map(val => val.replace(/\s+/g, ""))
+                    else if ((/^(true|false|null|\d+)$/).test(value)) value = JSON.parse(value)
+                    currObj[part] = value
+                    medium.removeAttribute(attr)
+                } else {
+                    currObj[part] = {}
+                }
+            }
+            currObj = currObj[part]
+        })
+    }
     static queryMediaMobile() {
         return window.matchMedia('(max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape)').matches
     }
@@ -3422,7 +3468,7 @@ class tmg {
         return obj !== null && obj !== undefined && typeof obj[Symbol.iterator] === 'function'
     }
     static camelizeString(str) {  
-        return str .toLowerCase().replace(/^\w|\b\w/g, (match, index) => index === 0 ? match.toLowerCase() : match.toUpperCase()).replace(/\s+/g, "")  
+        return str.toLowerCase().replace(/^\w|\b\w/g, (match, index) => index === 0 ? match.toLowerCase() : match.toUpperCase()).replace(/\s+/g, "")  
     }
     static uncamelizeString(str, separator) {
         return str.replace(/(?:[a-z])(?:[A-Z])/g, match => `${match[0]}${separator ?? " "}${match[1].toLowerCase()}`)
@@ -3483,9 +3529,9 @@ class tmg {
         }
         if (objectFit === "cover") {
             const minRatio = Math.min(bbox.width / object.width, bbox.height / object.height)
-            let width  = object.width  * minRatio
+            let width = object.width  * minRatio
             let height = object.height * minRatio
-            let outRatio  = 1
+            let outRatio = 1
             if (width < bbox.width) outRatio = bbox.width / width
             if (Math.abs(outRatio - 1) < 1e-14 && height < bbox.height) outRatio = bbox.height / height
             width  *= outRatio
@@ -3496,238 +3542,19 @@ class tmg {
     }
     //a wild card for deploying TMG controls to available media, returns a promise that resolves with an array referencing the media
     static async launch(medium) {
-        let promises = []
         if (arguments.length === 0) {
-            if (window.tmg.MEDIA) {
-                for (const medium of window.tmg.MEDIA) {
-                    if (!(medium.dataset.tmgAutoLaunch === "false")) promises.push(window.tmg.launch(medium))
-                }
+            const media = document.querySelectorAll("[tmgcontrols]:not([tmgnoautolaunch])")    
+            let promises = []
+            if (media) {
+                media.forEach(medium => promises.push(window.tmg.launch(medium)))
                 return Promise.all(promises)
             }
         } else {
-            const v = medium.dataset, value = medium.getAttribute('tmgcontrols').toLowerCase()
-            //building controls object
-            let fetchedControls
-            if (v.tmg?.includes('.json')) {
-                fetchedControls = fetch(v.window.tmg.toString()).then(res => {
-                    if (!res.ok) throw new Error(`TMG could not find JSON file!. Status: ${res.status}`)
-                    return res.json()
-                }).catch(({message: mssg}) => {
-                    console.error(`${mssg} TMG requires a valid JSON file`)
-                    fetchedControls = undefined
-                })
-            } else if(v.tmg) {
-                console.error("File type must be in the '.json' format for TMG to read the custom settings")
-            }
-            return (async function buildControlOptions(v) {
-                const customOptions = await fetchedControls ??  {} 
-                if (customOptions && Object.keys(customOptions).length === 0) {
-                        customOptions.settings = {}
-                        // console.log(v)
-                        if (v.tmgMediaTitle) {
-                            customOptions.media ? customOptions.media.title = v.tmgMediaTitle : customOptions.media = {
-                                title: v.tmgMediaTitle
-                            }
-                            medium.removeAttribute("data-tmg-media-title")
-                        }
-                        if (v.tmgMediaArtwork ?? medium.poster) {
-                            customOptions.media ? customOptions.media.artwork = [{src: v.tmgMediaArtwork ?? medium.poster}] : customOptions.media = {
-                                artwork: [{src: v.tmgMediaArtwork ?? medium.poster}]
-                            }
-                            medium.removeAttribute("data-tmg-media-artwork")
-                        }                
-                        if (v.tmgMediaArtist) {
-                            customOptions.media ? customOptions.media.artist = v.tmgMediaArtist : customOptions.media = {
-                                artist: v.tmgMediaArtist
-                            }
-                            medium.removeAttribute("data-tmg-media-artist")
-                        }
-                        if (v.tmgMediaAlbum) {
-                            customOptions.media ? customOptions.media.album = v.tmgMediaAlbum : customOptions.media = {
-                                album: v.tmgMediaAulbum
-                            }
-                            medium.removeAttribute("data-tmg-media-album")
-                        }
-                        if (v.tmgActivated) {
-                            customOptions.activated = JSON.parse(v.tmgActivated)
-                            medium.removeAttribute("data-tmg-activated")
-                        }
-                        if (v.tmgInitialMode) {
-                            customOptions.initialMode = v.tmgInitialMode
-                            medium.removeAttribute("data-tmg-initial-mode")
-                        }                            
-                        if (v.tmgInitialState) {
-                            customOptions.initialState = JSON.parse(v.tmgInitialState)
-                            medium.removeAttribute("data-tmg-initial-state")
-                        }
-                        if (v.tmgDebug) {
-                            customOptions.debug = JSON.parse(v.tmgDebug)
-                            medium.removeAttribute("data-tmg-debug")
-                        }
-                        if (v.tmgAllowOverride) {
-                            customOptions.settings.allowOverride = /true|false/.test(v.tmgAllowOverride) ? JSON.parse(v.tmgAllowOverride) : v.tmgAllowOverride.replaceAll("'", "").replaceAll(" ", "").split(",")
-                            medium.removeAttribute("data-tmg-allow-override")
-                        }         
-                        if (v.tmgBeta) {
-                            customOptions.settings.beta = /true|false/.test(v.tmgBeta) ? JSON.parse(v.tmgBeta) : v.tmgBeta.replaceAll("'", "").replaceAll(" ", "").split(",")
-                            medium.removeAttribute("data-tmg-beta")
-                        }      
-                        if (v.tmgModes) {
-                            customOptions.settings.modes = v.tmgModes.replaceAll(" ", "").split(",")
-                            medium.removeAttribute("data-tmg-modes")
-                        }              
-                        if (v.tmgControllerStructure) {
-                            customOptions.settings.controllerStructure = v.tmgControllerStructure.replaceAll("'", "").replaceAll(" ", "").split(",")
-                            medium.removeAttribute("data-tmg-controller-structure")
-                        }              
-                        if (v.tmgTimelinePosition) {
-                            customOptions.settings.timelinePosition = JSON.parse(v.tmgTimelinePosition)
-                            medium.removeAttribute("data-tmg-timeline-position")  
-                        }
-                        if (v.tmgStartTime) {
-                            customOptions.settings.startTime = JSON.parse(v.tmgStartTime)
-                            medium.removeAttribute("data-tmg-start-time")
-                        }
-                        if (v.tmgStartTime) {
-                            customOptions.settings.endTime = JSON.parse(v.tmgEndTime)
-                            medium.removeAttribute("data-tmg-end-time")
-                        }
-                        if (v.tmgNotifiers) {
-                            customOptions.settings.notifiers = JSON.parse(v.tmgNotifiers)
-                            medium.removeAttribute("data-tmg-notifiers")
-                        }    
-                        if (v.tmgProgressBar) {
-                            customOptions.settings.progressBar =  JSON.parse(v.tmgProgressBar)
-                            medium.removeAttribute("data-tmg-progress-bar")
-                        }
-                        if (v.tmgPersist) {
-                            customOptions.settings.persist = JSON.parse(v.tmgPersist)
-                            medium.removeAttribute("data-tmg-persist")
-                        }
-                        if (v.tmgAutocaptions) {
-                            customOptions.settings.autocaptions = JSON.parse(v.tmgAutocaptions)
-                            medium.removeAttribute("data-tmg-autocaptions")
-                        }
-                        if (v.tmgAutoplay) {
-                            customOptions.settings.autoplay = JSON.parse(v.tmgAutoplay)
-                            medium.removeAttribute("data-tmg-autoplay")
-                        }
-                        if (v.tmgLoop) {
-                            customOptions.settings.loop = JSON.parse(v.tmgLoop)
-                            medium.removeAttribute("data-tmg-loop")
-                        }
-                        if (v.tmgMuted) {
-                            customOptions.settings.muted = JSON.parse(v.tmgMuted)
-                            medium.removeAttribute("data-tmg-muted")
-                        }
-                        if (v.tmgPreviewImagesAddress) {
-                            customOptions.settings.previewImages ? customOptions.settings.previewImages.address = v.tmgPreviewImagesAddress : customOptions.settings.previewImages = {
-                                address: v.tmgPreviewImagesAddress
-                            }
-                            medium.removeAttribute("data-tmg-preview-images-address")
-                        }
-                        if (v.tmgPreviewImagesFps) {
-                            customOptions.settings.previewImages ? customOptions.settings.previewImages.fps = v.tmgPreviewImagesFps : customOptions.settings.previewImages = {
-                                fps: Number(v.tmgPreviewImagesFps)
-                            }
-                            medium.removeAttribute("data-tmg-preview-images-fps")
-                        } 
-                        if (v.tmgPreviewImages) {
-                            customOptions.settings.previewImages = JSON.parse(v.tmgPreviewImages)
-                            medium.removeAttribute("data-tmg-preview-images")
-                        }
-                        if (v.tmgKeyShortcuts) {
-                            customOptions.settings.keyShortcuts = JSON.parse(v.tmgKeyShortcuts)
-                            medium.removeAttribute("data-tmg-key-shortcuts")
-                        } else {
-                            customOptions.settings.keyShortcuts = {}
-                            if (v.tmgKeyShortcutPrev) {
-                                customOptions.settings.keyShortcuts.prev = v.tmgKeyShortcutPrev
-                                medium.removeAttribute("data-tmg-key-shortcut-prev")
-                            }
-                            if (v.tmgKeyShortcutNext) {
-                                customOptions.settings.keyShortcuts.next = v.tmgKeyShortcutNext
-                                medium.removeAttribute("data-tmg-key-shortcut-next")
-                            }
-                            if (v.tmgKeyShortcutPlayPause) {
-                                customOptions.settings.keyShortcuts.playPause = v.tmgKeyShortcutPlayPause
-                                medium.removeAttribute("data-tmg-key-shortcut-play-pause")
-                            }
-                            if (v.tmgKeyShortcutSkipBwd) {
-                                customOptions.settings.keyShortcuts.skipBwd = v.tmgKeyShortcutSkipBwd
-                                medium.removeAttribute("data-tmg-key-shortcut-skip-bwd")
-                            }
-                            if (v.tmgKeyShortcutSkipFwd) {
-                                customOptions.settings.keyShortcuts.skipFwd = v.tmgKeyShortcutSkipFwd
-                                medium.removeAttribute("data-tmg-key-shortcut-skip-fwd")
-                            } 
-                            if (v.tmgKeyShortcutObjectFit) {
-                                customOptions.settings.keyShortcuts.objectFit = v.tmgKeyShortcutObjectFit
-                                medium.removeAttribute("data-tmg-key-shortcut-object-fit")
-                            }
-                            if (v.tmgKeyShortcutVolumeUp) {
-                                customOptions.settings.keyShortcuts.volumeUp = v.tmgKeyShortcutVolumeUp
-                                medium.removeAttribute("data-tmg-key-shortcut-volume-up")
-                            }
-                            if (v.tmgKeyShortcutVolumeUp) {
-                                customOptions.settings.keyShortcuts.volumeUp = v.tmgKeyShortcutVolumeUp
-                                medium.removeAttribute("data-tmg-key-shortcut-volume-up")
-                            }                                
-                            if (v.tmgKeyShortcutStart) {
-                                customOptions.settings.keyShortcuts.start = v.tmgKeyShortcutStart
-                                medium.removeAttribute("data-tmg-key-shortcut-start")
-                            }
-                            if (v.tmgKeyShortcutEnd) {
-                                customOptions.settings.keyShortcuts.end = v.tmgKeyShortcutEnd
-                                medium.removeAttribute("data-tmg-key-shortcut-end")
-                            }
-                            if (v.tmgKeyShortcutFullScreen) {
-                                customOptions.settings.keyShortcuts.fullScreen = v.tmgKeyShortcutFullScreen
-                                medium.removeAttribute("data-tmg-key-shortcut-full-screen")
-                            }
-                            if (v.tmgKeyShortcutTheater) {
-                                customOptions.settings.keyShortcuts.theater = v.tmgKeyShortcutTheater
-                                medium.removeAttribute("data-tmg-key-shortcut-theater")
-                            }
-                            if (v.tmgKeyShortcutExpandMiniPlayer) {
-                                customOptions.settings.keyShortcuts.expandMiniPlayer = v.tmgKeyShortcutExpandMiniPlayer
-                                medium.removeAttribute("data-tmg-key-shortcut-expand-mini-player")
-                            }
-                            if (v.tmgKeyShortcutRemoveMiniPlayer) {
-                                customOptions.settings.keyShortcuts.removeMiniPlayer = v.tmgKeyShortcutRemoveMiniPlayer
-                                medium.removeAttribute("data-tmg-key-shortcut-remove-mini-player")
-                            }
-                            if (v.tmgKeyShortcutPictureInPicture) {
-                                customOptions.settings.keyShortcuts.pictureInPicture = v.tmgKeyShortcutPictureInPicture
-                                medium.removeAttribute("data-tmg-key-shortcut-picture-in-picture")
-                            }
-                            if (v.tmgKeyShortcutMute) {
-                                customOptions.settings.keyShortcuts.mute = v.tmgKeyShortcutMute
-                                medium.removeAttribute("data-tmg-key-shortcut-mute")
-                            }
-                            if (v.tmgKeyShortcutPlaybackRate) {
-                                customOptions.settings.keyShortcuts.playbackRate = v.tmgKeyShortcutPlaybackRate
-                                medium.removeAttribute("data-tmg-key-shortcut-playback-rate")
-                            }
-                            if (v.tmgKeyShortcutCaptions) {
-                                customOptions.settings.keyShortcuts.captions = v.tmgKeyShortcutCaptions
-                                medium.removeAttribute("data-tmg-key-shortcut-captions")
-                            }
-                            if (v.tmgSettings) {
-                                customOptions.settings.keyShortcuts.settings = v.tmgKeyShortcutSettings 
-                                medium.removeAttribute("data-tmg-key-shortcut-settings")
-                            }
-                        }
-                }
-                if (value === '' || value === 'true') {
-                    const player = new window.tmg.Player(customOptions)
-                    player.attach(medium)
-                    return player
-                } else {
-                    console.error("TMG could not deploy custom controls so the Media Player was not rendered")
-                    console.warn(`Consider removing the '${value}' value from the 'tmgcontrols' attribute`)
-                }
-            })(v)
+            return (async function buildPlayers() {
+                const player = new window.tmg.Player()
+                await player.attach(medium)
+                return player.Player
+            })()
         }
     }
     //REFERENCES TO ALL THE DEPLOYED TMG MEDIA PLAYERS
