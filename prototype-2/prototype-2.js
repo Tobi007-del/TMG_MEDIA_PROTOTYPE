@@ -539,18 +539,14 @@ class _T_M_G_Video_Player {
             `
                 <div class="T_M_G-video-notifiers T_M_G-video-volume-notifier-content"></div>
                 <div class="T_M_G-video-notifiers T_M_G-video-volume-up-notifier">
-                    <g class="T_M_G-video-volume-boost-sign">
                     <svg class="T_M_G-video-volume-up-notifier-icon" >
                         <path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
                     </svg>  
-                    </g>
                 </div>
                 <div class="T_M_G-video-notifiers T_M_G-video-volume-down-notifier">
-                    <g class="T_M_G-video-volume-boost-sign">
                     <svg class="T_M_G-video-volume-down-notifier-icon">
                         <path fill="currentColor" d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z" />
                     </svg>
-                    </g>
                 </div>
                 <div class="T_M_G-video-notifiers T_M_G-video-volume-muted-notifier">
                     <svg class="T_M_G-video-volume-muted-notifier-icon">
@@ -878,7 +874,6 @@ class _T_M_G_Video_Player {
             volumeUpNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-volume-up-notifier") : null,
             volumeDownNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-volume-down-notifier") : null,
             volumeMutedNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-volume-muted-notifier") : null,
-            volumeBoostSigns : this.settings.status.ui.notifiers || this.settings.status.ui.volume ? this.videoContainer.querySelectorAll(".T_M_G-video-volume-boost-sign") : null,
             fwdNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-fwd-notifier") : null,
             bwdNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-bwd-notifier") : null,
             videoOverlayControlsContainer: this.videoContainer.querySelector(".T_M_G-video-overlay-controls-container"),
@@ -900,6 +895,7 @@ class _T_M_G_Video_Player {
             nextBtn : this.settings.status.ui.next ? this.videoContainer.querySelector(".T_M_G-video-next-btn") : null,
             objectFitBtn : this.settings.status.ui.objectFit ? this.videoContainer.querySelector(".T_M_G-video-object-fit-btn") : null,
             volumeContainer : this.settings.status.ui.volume ? this.videoContainer.querySelector(".T_M_G-video-volume-container") : null,
+            volumeBoostSign : this.settings.status.ui.volume ? this.videoContainer.querySelector(".T_M_G-video-volume-boost-sign") : null,
             volumeSlider : this.settings.status.ui.volume ? this.videoContainer.querySelector(".T_M_G-video-volume-slider") : null,
             durationContainer : this.settings.status.ui.duration ? this.videoContainer.querySelector(".T_M_G-video-duration-container") : null,
             currentTimeElement : this.settings.status.ui.duration ? this.videoContainer.querySelector(".T_M_G-video-current-time") : null,
@@ -2228,7 +2224,7 @@ class _T_M_G_Video_Player {
                 this.videoCurrentVolumeSliderBoostPosition = 0
                 this.videoCurrentVolumeSliderPosition = (value-min) / (100 - min)
             } else if (value > 100) {
-                this.DOM.volumeBoostSigns?.forEach(sign => sign.dataset.boost = Math.round(value/10) / 10)
+                this.DOM.volumeBoostSign?.setAttribute("data-boost", Math.round(value/10) / 10)
                 this.videoVolumeSliderBoostPercent = parseInt(this.videoVolumeSliderPercent) + 10
                 this.videoCurrentVolumeSliderBoostPosition = (value-100) / (max - 100)
             }
