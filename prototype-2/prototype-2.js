@@ -3415,7 +3415,7 @@ class tmg {
         })
     }
     static putHTMLOption(attr, optionsObject, medium) {
-        const prop = attr.replace("tmg--", "").replace(/(\w)(-)(\w)/, match => `${match[0]}${match[2].toUpperCase()}`)
+        const prop = attr.replace("tmg--", "").replace(/(\w)(-)(\w)/g, match => `${match[0]}${match[2].toUpperCase()}`)
         const parts = prop.split("--")
         let currObj = optionsObject
         parts.forEach((part, index) => {
