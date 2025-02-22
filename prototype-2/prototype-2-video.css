@@ -1451,12 +1451,12 @@ button:has(.T_M_G-video-next-icon) svg {
     bottom: -1px;
 }
 
-.T_M_G-video-container:is(.T_M_G-video-movement, :has(.T_M_G-video-notifiers.T_M_G-video-control-persist, .T_M_G-video-playback-rate-notifier.T_M_G-video-control-active)) .T_M_G-video-timeline-container {
+.T_M_G-video-container:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, .T_M_G-video-playback-rate-notifier.T_M_G-video-control-active) .T_M_G-video-timeline-container {
     opacity: 1;
 }
 
-.T_M_G-video-container.T_M_G-video-movement .T_M_G-video-timeline-container,
-.T_M_G-video-container.T_M_G-video-progress-bar .T_M_G-video-timeline-container {
+.T_M_G-video-container.T_M_G-video-movement .T_M_G-video-timeline-container, 
+.T_M_G-video-container.T_M_G-video-progress-bar:not(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-timeline-container {
     opacity: 0.5;
 }
 
@@ -1481,7 +1481,8 @@ button:has(.T_M_G-video-next-icon) svg {
     z-index: 1;
 }
 
-.T_M_G-video-container:is(.T_M_G-video-movement, :has(.T_M_G-video-notifiers.T_M_G-video-control-persist, .T_M_G-video-playback-rate-notifier.T_M_G-video-control-active)) .T_M_G-video-loaded-timeline {
+.T_M_G-video-container.T_M_G-video-movement,
+.T_M_G-video-container.T_M_G-video-progress-bar:not(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-loaded-timeline {
     display: none;
 }
 
