@@ -139,6 +139,8 @@ class _T_M_G_Video_Player {
         this.changeObjectFit = this.changeObjectFit.bind(this)
         this.previousVideo = this.previousVideo.bind(this)
         this.nextVideo = this.nextVideo.bind(this)
+        this.play = this.play.bind(this)
+        this.pause = this.pause.bind(this)
         this.togglePlay = this.togglePlay.bind(this)
         this.showVideoOverlay = this.showVideoOverlay.bind(this)
         this.showPreviewImages = this.showPreviewImages.bind(this)
@@ -925,20 +927,21 @@ class _T_M_G_Video_Player {
             this._handleLoadedError() 
             return
         } else {
+            this.setVideoEventListeners()
             this.fire("tmgready", this.video, {loaded: true})
-            this.video.addEventListener("loadedmetadata", this._handleLoadedMetadata, {once: true})
-            this.video.addEventListener("error", this._handleLoadedError, {once: true})
         }
         if (this.activated) {
             if (this.initialState) {
                 const removeInitialState = () => {
-                    this.togglePlay(true)
-                    this.DOM.mainPlayPauseBtn?.removeEventListener("click", removeInitialState)
-                    this.DOM.videoContainer.removeEventListener("click", removeInitialState)
+                    this.stall()
+                    this.videoContainer.classList.remove("T_M_G-video-initial")
+                    this.initializeVideoControls()
+                    this.DOM.mainPlayPauseBtn?.removeEventListener("click", this.play)
+                    this.DOM.videoContainer.removeEventListener("click", this.play)
                 }
-                this.video.addEventListener("timeupdate", this.initializeVideoControls, {once:true})
-                this.DOM.mainPlayPauseBtn?.addEventListener("click", removeInitialState)
-                this.DOM.videoContainer.addEventListener("click", removeInitialState)
+                this.video.addEventListener("play", removeInitialState, {once:true})
+                this.DOM.mainPlayPauseBtn?.addEventListener("click", this.play)
+                this.DOM.videoContainer.addEventListener("click", this.play)
             } else this.initializeVideoControls()  
         } else {
             console.warn("You have to activate the TMG controller to access the custom controls")
@@ -951,8 +954,6 @@ class _T_M_G_Video_Player {
     initializeVideoControls() {
     try {     
         this.initAudioManager()
-        if (this.initialState) this.stall()
-        this.videoContainer.classList.remove("T_M_G-video-initial")
         this.enableFocusableControls("all")
         if (!this.loaded) this._handleLoadedMetadata()
         this._handleVolumeChange()
@@ -970,7 +971,6 @@ class _T_M_G_Video_Player {
         this.showVideoOverlay()
         this.DOM.mainPlayPauseBtn?.classList.add("T_M_G-video-control-spin")
         this.DOM.mainPlayPauseBtn?.addEventListener("animationend", () => this.DOM.mainPlayPauseBtn?.classList.remove("T_M_G-video-control-spin"), {once: true}) 
-        if (!this.video.paused) this._handlePlay()
     } catch(e) {
         this._log(e, "error", "swallow")
     }           
@@ -1119,7 +1119,6 @@ class _T_M_G_Video_Player {
     setAllEventListeners() {
     try { 
         this.setVideoContainerEventListeners()
-        this.setVideoEventListeners()
         this.setControlsEventListeners()
         this.setSettingsEventListeners()
     } catch(e) {
@@ -1494,8 +1493,8 @@ class _T_M_G_Video_Player {
     _handleLoadedError(e) {
     try {
         if (e) this._log(e, "swallow")
-        this.deactivate()
         this.loaded = false
+        this.deactivate()
     } catch(e) {
         this._log(e, "error", "swallow")
     } 
@@ -1507,8 +1506,8 @@ class _T_M_G_Video_Player {
         if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatDuration(this.video.duration)
         this.aspectRatio = this.video.videoWidth / this.video.videoHeight
         this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`
-        this.reactivate()
         this.loaded = true
+        this.reactivate()
     } catch(e) {
         this._log(e, "error", "swallow")
     }                   
@@ -1711,6 +1710,22 @@ class _T_M_G_Video_Player {
     }
     }
 
+    play() {
+    try {
+        this.togglePlay(true)
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }
+
+    pause() {
+    try {
+        this.togglePlay(false)
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }
+
     togglePlay(bool) {
     try {        
         this.video.ended ? this.replay() : typeof bool == "boolean" ? bool ? this.video.play() : this.video.pause() : this.video.paused ? this.video.play() : this.video.pause()
@@ -1833,10 +1848,10 @@ class _T_M_G_Video_Player {
             this.DOM.thumbnailImg.height = height + 1
             this.DOM.thumbnailImg.width = width + 1
             this.wasPaused = this.video.paused
-            this.video.pause()
+            this.togglePlay(false)
         } else {
             this.video.currentTime = percent * this.video.duration
-            if (!this.wasPaused) this.video.play()
+            if (!this.wasPaused) this.togglePlay(true)
         }
         this._handleTimelineUpdate(e)
     } catch(e) {
@@ -2031,7 +2046,7 @@ class _T_M_G_Video_Player {
             this.speedToken = 1
             this.previousRate = this.video.playbackRate
             this.video.playbackRate = 2    
-            if (this.wasPaused) this.video.play()
+            if (this.wasPaused) this.togglePlay(true)
         } catch(e) {
             this._log(e, "error", "swallow")
         }
@@ -2047,7 +2062,7 @@ class _T_M_G_Video_Player {
             this.speedVideoTime = this.video.currentTime
             this.speedIntervalId = setInterval(this.rewindVideo.bind(this), this.speedIntervalDelay)
             setTimeout(() => {
-                if (this.wasPaused) this.video.play()
+                if (this.wasPaused) this.togglePlay(true)
             }, 1000)
         } catch(e) {
             this._log(e, "error", "swallow")
@@ -2079,7 +2094,7 @@ class _T_M_G_Video_Player {
     try {        
         if (this.speedCheck) {
             this.speedCheck = false
-            if (this.wasPaused) this.video.pause()
+            if (this.wasPaused) this.togglePlay(false)
             if (this.speedToken === 1) {
                 this.video.playbackRate = this.previousRate
             } else if (this.speedToken === 0) {
@@ -2110,10 +2125,8 @@ class _T_M_G_Video_Player {
 
     initAudioManager() {
     try {
-        this.updateAudioSettings()        
-        if (!this.audioSetup) {
-            window.tmg.initializeAudioManager(!this.video.autoplay)
-        }
+        this.updateAudioSettings() 
+        window.tmg._AUDIO_CONTEXT ? this.manageAudio() : window.tmg.initializeAudioManager(!this.video.autoplay)
     } catch(e) {
         this._log(e, "error", "swallow")
     }          
@@ -2130,6 +2143,7 @@ class _T_M_G_Video_Player {
 
     manageAudio() {
     try {
+        if (!this.audioSetup) {
         const {source, gainNode} = window.tmg.connectMediaToAudioManager(this.video)
         this.audioSource = source
         this.audioGainNode = gainNode
@@ -2137,6 +2151,7 @@ class _T_M_G_Video_Player {
         this.audioVolume = 100
         this.volumeTypeCounter = this.video.muted ? 1 : 0
         this.audioSetup = true
+        }
     } catch(e) {
         this._log(e, "error", "swallow")
     }  
@@ -2430,28 +2445,18 @@ class _T_M_G_Video_Player {
                 left: 0,
                 behavior: behaviour,
             })  
-            this.removeMiniPlayer()
-        } 
-    }
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }
-    }                  
-
-    removeMiniPlayer() {
-        try {
-        if (this.DOM.videoContainer.classList.contains("T_M_G-video-mini-player")) {
             this.pseudoVideoContainer.className = "T_M_G-pseudo-video-container"
             this.pseudoVideoContainer.parentElement.insertBefore(this.videoContainer, this.pseudoVideoContainer)
             this.pseudoVideoContainer.remove()
             this.videoContainer.classList.remove("T_M_G-video-mini-player")
             this.videoContainer.removeEventListener("mousedown", this.moveMiniPlayer)
             this.videoContainer.removeEventListener("touchstart", this.moveMiniPlayer, {passive: false})
-        }
-        } catch(e) {
-            this._log(e, "error", "swallow")
-        }
-    }                
+        } 
+    }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }                                 
 
     moveMiniPlayer(e){
     try {
@@ -3297,13 +3302,12 @@ class tmg {
         const source = window.tmg._AUDIO_CONTEXT.createMediaElementSource(medium)
         const gainNode = window.tmg._AUDIO_CONTEXT.createGain()
         source.connect(gainNode)
-        window.tmg.connectAudio(gainNode)
+        if (!medium.paused) window.tmg.connectAudio(gainNode)
         return {source, gainNode}
     }
     static connectAudio(gainNode) {
         if (gainNode && window.tmg._CURRENT_AUDIO_GAIN_NODE !== gainNode) {
-        if (window.tmg._CURRENT_AUDIO_GAIN_NODE) 
-            window.tmg._CURRENT_AUDIO_GAIN_NODE.disconnect()
+        if (window.tmg._CURRENT_AUDIO_GAIN_NODE) window.tmg._CURRENT_AUDIO_GAIN_NODE.disconnect()
         window.tmg._CURRENT_AUDIO_GAIN_NODE = gainNode
         window.tmg._CURRENT_AUDIO_GAIN_NODE.connect(window.tmg._AUDIO_CONTEXT.destination)
         }
