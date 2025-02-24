@@ -93,7 +93,8 @@ class _T_M_G_Video_Player {
         this._handlePause = this._handlePause.bind(this)
         this._handleBufferStart = this._handleBufferStart.bind(this)
         this._handleBufferStop = this._handleBufferStop.bind(this)
-        this._handlePlaybackChange = this._handlePlaybackChange.bind(this)
+	this._handleDurationChange = this._handleDurationChange.bind(this)
+        this._handlePlaybackRateChange = this._handlePlaybackRateChange.bind(this)
         this._handleTimeUpdate = this._handleTimeUpdate.bind(this)
         this._handleVolumeChange = this._handleVolumeChange.bind(this)
         this._handleLoadedError = this._handleLoadedError.bind(this)
@@ -138,8 +139,6 @@ class _T_M_G_Video_Player {
         this.changeObjectFit = this.changeObjectFit.bind(this)
         this.previousVideo = this.previousVideo.bind(this)
         this.nextVideo = this.nextVideo.bind(this)
-        this.play = this.play.bind(this)
-        this.pause = this.pause.bind(this)
         this.togglePlay = this.togglePlay.bind(this)
         this.showVideoOverlay = this.showVideoOverlay.bind(this)
         this.showPreviewImages = this.showPreviewImages.bind(this)
@@ -937,8 +936,8 @@ class _T_M_G_Video_Player {
         if (this.activated) {
             if (this.initialState) {
                 this.video.addEventListener("play", this.removeInitialState, {once:true})
-                this.DOM.mainPlayPauseBtn?.addEventListener("click", this.play)
-                this.DOM.videoContainer.addEventListener("click", this.play)
+                this.DOM.mainPlayPauseBtn?.addEventListener("click", this.removeInitialState)
+                this.DOM.videoContainer.addEventListener("click", this.removeInitialState)
             } else this.initializeVideoControls()  
         } else {
             console.warn("You have to activate the TMG controller to access the custom controls")
@@ -960,11 +959,15 @@ class _T_M_G_Video_Player {
 
     removeInitialState() {
     try {
+        if (this.initialState) {
+        this.initialState = false
+	this.togglePlay(true) 
         this.stall()
         this.videoContainer.classList.remove("T_M_G-video-initial")
         this.initializeVideoControls()
-        this.DOM.mainPlayPauseBtn?.removeEventListener("click", this.play)
-        this.DOM.videoContainer.removeEventListener("click", this.play)
+        this.DOM.mainPlayPauseBtn?.removeEventListener("click", this.removeInitialState)
+        this.DOM.videoContainer.removeEventListener("click", this.removeInitialState)
+        } 
     } catch(e) {
         this._log(e, "error", "swallow")
     }
@@ -1207,7 +1210,8 @@ class _T_M_G_Video_Player {
         this.video.addEventListener("pause", this._handlePause)        
         this.video.addEventListener("waiting", this._handleBufferStart)
         this.video.addEventListener("playing", this._handleBufferStop)
-        this.video.addEventListener("ratechange", this._handlePlaybackChange)      
+	this.video.addEventListener("durationchange", this._handleDurationChange)
+        this.video.addEventListener("ratechange", this._handlePlaybackRateChange)      
         this.video.addEventListener("timeupdate", this._handleTimeUpdate)
         this.video.addEventListener("progress", this._handleLoadedProgress)
         this.video.addEventListener("loadedmetadata", this._handleLoadedMetadata)
@@ -1747,22 +1751,6 @@ class _T_M_G_Video_Player {
     }
     }
 
-    play() {
-    try {
-        this.togglePlay(true)
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }
-    }
-
-    pause() {
-    try {
-        this.togglePlay(false)
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }
-    }
-
     togglePlay(bool) {
     try {        
         this.video.ended ? this.replay() : typeof bool == "boolean" ? bool ? this.video.play() : this.video.pause() : this.video.paused ? this.video.play() : this.video.pause()
@@ -1834,6 +1822,14 @@ class _T_M_G_Video_Player {
         this._log(e, "error", "swallow")
     }        
     }  
+
+    _handleDurationChange() {
+    try {
+         if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatDuration(this.video.duration)
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    } 
 
     moveVideoTime(details) {
     try {        
@@ -1996,7 +1992,6 @@ class _T_M_G_Video_Player {
         this.skipVideoTime = this.video.currentTime
         if (Math.floor((this.settings.endTime || this.video.duration) - this.video.currentTime) <= this.settings.automoveCountdown) this.automovePlaylist()
         if (this.videoContainer.classList.contains("T_M_G-video-replay")) this.videoContainer.classList.remove("T_M_G-video-replay")
-        if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatDuration(this.video.duration)
         this.video.removeAttribute("controls")
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2054,7 +2049,7 @@ class _T_M_G_Video_Player {
     }        
     }
     
-    _handlePlaybackChange() {
+    _handlePlaybackRateChange() {
     try {        
         if (this.DOM.playbackRateBtn) this.DOM.playbackRateBtn.textContent = `${this.video.playbackRate}x`
         if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.textContent = `${this.video.playbackRate}x`  
