@@ -1998,6 +1998,8 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 @media (max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape) {
+    .T_M_G-video, 
+    .T_M_G-pseudo-video,
     .T_M_G-video-container,
     .T_M_G-pseudo-video-container {
         width: 100%;
