@@ -1607,9 +1607,7 @@ class _T_M_G_Video_Player {
                 this.video.poster = video.media.artwork[0].src
             if (video.src) this.src = video.src
             else if (video.sources?.length > 0) this.sources = video.sources
-            else this.src = ""
             if (video.tracks?.length > 0) this.tracks = video.tracks
-            else this.tracks = {}
             this.media = video.media ? {...this.media, ...video.media} : video.media ?? null
             this.settings.startTime = video.settings?.startTime || null
             this.settings.endTime = video.settings?.endTime || null
