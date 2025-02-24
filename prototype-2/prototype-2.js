@@ -73,8 +73,8 @@ class _T_M_G_Video_Player {
         this.aspectRatio = null
         this.pseudoVideo = document.createElement("video")
         this.pseudoVideo.classList.add("T_M_G-pseudo-video")
-        this.previewCanvas = document.createElement("canvas")
-        this.previewContext = this.previewCanvas.getContext("2d")
+        this.contentCanvas = document.createElement("canvas")
+        this.contentContext = this.contentCanvas.getContext("2d")
         this.pseudoVideoContainer = document.createElement("div")
         this.pseudoVideoContainer.classList.add("T_M_G-pseudo-video-container")
         this.pseudoVideoContainer.append(this.pseudoVideo)
@@ -84,7 +84,6 @@ class _T_M_G_Video_Player {
         this._log = this._log.bind(this)
         this._handleWindowResize = this._handleWindowResize.bind(this)
         this._handleVisibilityChange = this._handleVisibilityChange.bind(this)
-        this._handleFullScreenChange = this._handleFullScreenChange.bind(this)
         this._handleFullScreenChange = this._handleFullScreenChange.bind(this)
         this._handleKeyDown = this._handleKeyDown.bind(this)
         this._handleKeyUp = this._handleKeyUp.bind(this)
@@ -164,6 +163,7 @@ class _T_M_G_Video_Player {
         this.toggleSettingsView = this.toggleSettingsView.bind(this)
         this.enterSettingsView = this.enterSettingsView.bind(this)
         this.leaveSettingsView = this.leaveSettingsView.bind(this)
+        this.removeInitialState = this.removeInitialState.bind(this)
         this.initializeVideoControls = this.initializeVideoControls.bind(this)
 
         this.notify = this.settings.status.ui.notifiers ? {
@@ -396,9 +396,8 @@ class _T_M_G_Video_Player {
         this.videoContainer.classList.add("T_M_G-video-container")
         if (!this.video.autoplay) this.videoContainer.classList.add("T_M_G-video-paused")
         if (this.initialState) this.videoContainer.classList.add("T_M_G-video-initial")
-        if (this.initialMode) this.videoContainer.classList.add(`T_M_G-video-${window.tmg.uncamelizeString(this.initialMode, "-")}`)
+        if (this.initialMode && this.initialMode !== "normal") this.videoContainer.classList.add(`T_M_G-video-${window.tmg.uncamelizeString(this.initialMode, "-")}`)
         if (this.settings.progressBar) this.videoContainer.classList.add("T_M_G-video-progress-bar")
-        if (this.settings.previewImages === false) this.videoContainer.classList.add("T_M_G-video-no-previews") 
         this.videoContainer.setAttribute("data-timeline-position", `${this.settings.timelinePosition}`)
         this.videoContainer.setAttribute("data-object-fit", this.videoObjectFit)
 
@@ -458,7 +457,7 @@ class _T_M_G_Video_Player {
         keyShortcuts = this.fetchKeyShortcuts(),
         HTML = (() => { 
         return {
-            pictureInPictureWrapper :
+            pictureinpicturewrapper :
             `
                 <div class="T_M_G-video-picture-in-picture-wrapper">
                 <span class="T_M_G-video-picture-in-picture-active-icon-wrapper">
@@ -490,22 +489,23 @@ class _T_M_G_Video_Player {
                     <p>Playing in picture-in-picture</p>
                 </div>        
             `,
-            playlistTitleWrapper : 
+            playlisttitle : 
             `
                 <div class="T_M_G-video-playlist-title-wrapper">
                     <p class="T_M_G-video-playlist-title"></p>
                 </div>        
             `,
-            videoBuffer : 
+            videobuffer : 
             `
             <div title="Video buffering" class="T_M_G-video-buffer">
             </div>
             `,
-            thumbnailImg :
+            thumbnail :
             `
-            ${this.settings.status.ui.previewImages ? `<img class="T_M_G-video-thumbnail-img" alt="movie-image" src="${window.tmg.ALT_IMG_SRC}">` : '<canvas class="T_M_G-video-thumbnail-img"></canvas>'}
+            <img class="T_M_G-video-thumbnail T_M_G-video-thumbnail-image" alt="movie-image" src="${window.tmg.ALT_IMG_SRC}">
+            <canvas class="T_M_G-video-thumbnail T_M_G-video-thumbnail-canvas"></canvas>
             `,
-            playPauseNotifier : this.settings.status.ui.notifiers ?
+            playpausenotifier : this.settings.status.ui.notifiers ?
             `
                 <div class="T_M_G-video-notifiers T_M_G-video-play-notifier">
                     <svg class="T_M_G-video-play-notifier-icon">
@@ -518,7 +518,7 @@ class _T_M_G_Video_Player {
                     </svg>
                 </div>    
             ` : null,
-            captionsNotifier : this.settings.status.ui.notifiers ?
+            captionsnotifier : this.settings.status.ui.notifiers ?
             `
                 <div class="T_M_G-video-notifiers T_M_G-video-captions-notifier">
                     <svg class="T_M_G-video-subtitles-icon">
@@ -529,15 +529,15 @@ class _T_M_G_Video_Player {
                     <svg>
                 </div>
             ` : null,
-            objectFitNotifier : this.settings.status.ui.notifiers ? 
+            objectfitnotifier : this.settings.status.ui.notifiers ? 
             `
                 <div class="T_M_G-video-notifiers T_M_G-video-object-fit-notifier"></div>
             ` : null,
-            playbackRateNotifier : this.settings.status.ui.notifiers ? 
+            playbackratenotifier : this.settings.status.ui.notifiers ? 
             `
                 <div class="T_M_G-video-notifiers T_M_G-video-playback-rate-notifier"></div>
             ` : null,
-            volumeNotifier : this.settings.status.ui.notifiers ?
+            volumenotifier : this.settings.status.ui.notifiers ?
             `
                 <div class="T_M_G-video-notifiers T_M_G-video-volume-notifier-content"></div>
                 <div class="T_M_G-video-notifiers T_M_G-video-volume-up-notifier">
@@ -556,7 +556,7 @@ class _T_M_G_Video_Player {
                     </svg>
                 </div>
             ` : null,
-            fwdNotifier : this.settings.status.ui.notifiers ? 
+            fwdnotifier : this.settings.status.ui.notifiers ? 
             `
                 <div class="T_M_G-video-notifiers T_M_G-video-fwd-notifier">
                     <svg>
@@ -570,7 +570,7 @@ class _T_M_G_Video_Player {
                     </svg>                
                 </div>
             ` : null,
-            bwdNotifier : this.settings.status.ui.notifiers ?
+            bwdnotifier : this.settings.status.ui.notifiers ?
             `
                 <div class="T_M_G-video-notifiers T_M_G-video-bwd-notifier">
                     <svg style="transform: scaleX(-1);">
@@ -584,7 +584,7 @@ class _T_M_G_Video_Player {
                     </svg>                
                 </div>    
             ` : null,
-            fullScreenOrientation : this.settings.status.modes.fullScreen ?
+            fullscreenorientation : this.settings.status.modes.fullScreen ?
             `
                 <div class="T_M_G-video-full-screen-orientation-btn-wrapper">
                     <button type="button" class="T_M_G-video-full-screen-orientation-btn T_M_G-video-control-hidden" title="Change Orientation" data-focusable-control="false" tabindex="-1"> 
@@ -595,7 +595,7 @@ class _T_M_G_Video_Player {
                     </button>
                 </div>                
             ` : null,
-            expandMiniPlayer : this.settings.status.modes.miniPlayer ?
+            expandminiplayer : this.settings.status.modes.miniPlayer ?
             `
             <div class="T_M_G-video-mini-player-expand-btn-wrapper">
                 <button type="button" class="T_M_G-video-mini-player-expand-btn" title="Expand mini-player${keyShortcuts["expandMiniPlayer"]}" data-focusable-control="false" tabindex="-1">
@@ -605,7 +605,7 @@ class _T_M_G_Video_Player {
                 </button>
             </div>    
             ` : null,
-            removeMiniPlayer : this.settings.status.modes.miniPlayer ?
+            removeminiplayer : this.settings.status.modes.miniPlayer ?
             `
             <div class="T_M_G-video-mini-player-cancel-btn-wrapper">
                 <button type="button" class="T_M_G-video-mini-player-cancel-btn" title="Remove Mini-player${keyShortcuts["removeMiniPlayer"]}" data-focusable-control="false" tabindex="-1">
@@ -615,7 +615,7 @@ class _T_M_G_Video_Player {
                 </button>
             </div>    
             ` : null,
-            mainPrevBtn : this.settings.status.ui.prev ?
+            mainprev : this.settings.status.ui.prev ?
             `
                 <button type="button" class="T_M_G-video-main-prev-btn" title="Previous Video${keyShortcuts["prev"]}" data-focusable-control="false" tabindex="-1">
                     <svg class="T_M_G-video-prev-icon" data-tooltip-text="Previous Video${keyShortcuts["prev"]}" data-tooltip-position="top" style="transform: scaleX(-1);">
@@ -623,7 +623,7 @@ class _T_M_G_Video_Player {
                     </svg>
                 </button>       
             ` : null,
-            mainPlayPauseBtn : this.settings.status.ui.playPause ?
+            mainplaypause : this.settings.status.ui.playPause ?
             `
                 <button type="button" class="T_M_G-video-main-play-pause-btn" title="Play/Pause${keyShortcuts["playPause"]}" data-focusable-control="false" tabindex="${this.initialState ? "0" : "-1"}">
                     <svg class="T_M_G-video-play-icon" data-tooltip-text="Play${keyShortcuts["playPause"]}" data-tooltip-position="top">
@@ -637,7 +637,7 @@ class _T_M_G_Video_Player {
                     </svg> 
                 </button>            
             ` : null,
-            mainNextBtn : this.settings.status.ui.next ?
+            mainnext : this.settings.status.ui.next ?
             `
                 <button type="button" class="T_M_G-video-main-next-btn" title="Next Video${keyShortcuts["next"]}" data-focusable-control="false" tabindex="-1">
                     <svg class="T_M_G-video-next-icon" data-tooltip-text="Next Video${keyShortcuts["next"]}" data-tooltip-position="top">
@@ -647,11 +647,12 @@ class _T_M_G_Video_Player {
             ` : null,
             timeline : this.settings.status.ui.timeline ?
             `
-                <div class="T_M_G-video-timeline-container" data-control-id="timeline" data-focusable-control="false">
+                <div class="T_M_G-video-timeline-container" data-focusable-control="false">
                     <div class="T_M_G-video-timeline">
                         <div class="T_M_G-video-loaded-timeline"></div>
-                        <div class="T_M_G-video-preview-img-container">
-                            ${this.settings.status.ui.previewImages ? `<img class="T_M_G-video-preview-img" alt="Preview image" src="${window.tmg.ALT_IMG_SRC}">` : '<canvas class="T_M_G-video-preview-img"></canvas>'}
+                        <div class="T_M_G-video-preview-container">
+                            <img class="T_M_G-video-preview T_M_G-video-preview-image" alt="Preview image" src="${window.tmg.ALT_IMG_SRC}">
+                            <canvas class="T_M_G-video-preview T_M_G-video-preview-canvas"></canvas>
                         </div>
                         <div class="T_M_G-video-thumb-indicator"></div>
                     </div>
@@ -665,9 +666,9 @@ class _T_M_G_Video_Player {
                         </svg>
                     </button>       
             ` : null,
-            playPause : this.settings.status.ui.playPause ?
+            playpause : this.settings.status.ui.playPause ?
             `
-                    <button type="button" class="T_M_G-video-play-pause-btn" title="Play/Pause${keyShortcuts["playPause"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="playPause" data-focusable-control="false" tabindex="-1">
+                    <button type="button" class="T_M_G-video-play-pause-btn" title="Play/Pause${keyShortcuts["playPause"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="playpause" data-focusable-control="false" tabindex="-1">
                         <svg class="T_M_G-video-play-icon" data-tooltip-text="Play${keyShortcuts["playPause"]}" data-tooltip-position="top">
                             <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
                         </svg>
@@ -687,9 +688,9 @@ class _T_M_G_Video_Player {
                         </svg>
                     </button>    
             ` : null,
-            objectFit : this.settings.status.ui.objectFit ?
+            objectfit : this.settings.status.ui.objectFit ?
             `
-                    <button type="button" class="T_M_G-video-object-fit-btn " title="Adjust Object Fit${keyShortcuts["objectFit"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="objectFit" data-focusable-control="false" tabindex="-1">
+                    <button type="button" class="T_M_G-video-object-fit-btn " title="Adjust Object Fit${keyShortcuts["objectFit"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="objectfit" data-focusable-control="false" tabindex="-1">
                         <svg class="T_M_G-video-object-fit-contain-icon" data-tooltip-text="Fit to Screen${keyShortcuts["objectFit"]}" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16" data-no-resize="true" transform="scale(0.81)">
                             <rect width="16" height="16" rx="4" ry="4" fill="none" stroke-width="2.25" stroke="currentColor" class="T_M_G-video-no-fill" />
                             <g stroke-width="1" stroke="currentColor" fill="currentColor" transform="translate(3,3) scale(0.6)">
@@ -761,13 +762,13 @@ class _T_M_G_Video_Player {
                         </svg>
                     </button>        
             ` : null,
-            playbackRate : this.settings.status.ui.playbackRate ? 
+            playbackrate : this.settings.status.ui.playbackRate ? 
             `
-                    <button type="button" class="T_M_G-video-playback-rate-btn T_M_G-video-wide-btn" title="Playback Rate(s)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="playbackRate">1x</button>
+                    <button type="button" class="T_M_G-video-playback-rate-btn T_M_G-video-wide-btn" title="Playback Rate(s)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="playbackrate">1x</button>
             ` : null,
-            pictureInPicture : this.settings.status.ui.pictureInPicture ? 
+            pictureinpicture : this.settings.status.ui.pictureInPicture ? 
             `
-                    <button type="button" class="T_M_G-video-picture-in-picture-btn" title="Toggle Picture-in-Picture${keyShortcuts["pictureInPicture"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="pictureInPicture">
+                    <button type="button" class="T_M_G-video-picture-in-picture-btn" title="Toggle Picture-in-Picture${keyShortcuts["pictureInPicture"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="pictureinpicture">
                         <svg class="T_M_G-video-enter-picture-in-picture-icon" data-tooltip-text="Enter Picture-in-Picture${keyShortcuts["pictureInPicture"]}" data-tooltip-position="top">
                             <path class="T_M_G-video-no-fill" fill="none" d="M0 0h24v24H0z" />
                             <path fill="currentColor" fill-rule="nonzero" d="M21 3a1 1 0 0 1 1 1v7h-2V5H4v14h6v2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zm0 10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h8zM6.707 6.293l2.25 2.25L11 6.5V12H5.5l2.043-2.043-2.25-2.25 1.414-1.414z" />
@@ -790,9 +791,9 @@ class _T_M_G_Video_Player {
                         </svg>
                     </button>
             ` : null,
-            fullScreen : this.settings.status.ui.fullScreen ?
+            fullscreen : this.settings.status.ui.fullScreen ?
             `
-                    <button type="button" class="T_M_G-video-full-screen-btn" title="Toggle Full Screen${keyShortcuts["fullScreen"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="fullScreen">
+                    <button type="button" class="T_M_G-video-full-screen-btn" title="Toggle Full Screen${keyShortcuts["fullScreen"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="fullscreen">
                         <svg class="T_M_G-video-enter-full-screen-icon" data-tooltip-text="Enter Full Screen${keyShortcuts["fullScreen"]}" data-tooltip-position="top" transform="scale(.8)">
                             <path d="M4 1.5C2.61929 1.5 1.5 2.61929 1.5 4V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H3.5C4.05228 9.5 4.5 9.05228 4.5 8.5V4.5H8.5C9.05228 4.5 9.5 4.05228 9.5 3.5V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H4Z" fill="currentColor" />
                             <path d="M20 1.5C21.3807 1.5 22.5 2.61929 22.5 4V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H20.5C19.9477 9.5 19.5 9.05228 19.5 8.5V4.5H15.5C14.9477 4.5 14.5 4.05228 14.5 3.5V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H20Z" fill="currentColor" />
@@ -815,21 +816,21 @@ class _T_M_G_Video_Player {
         controlsContainerBuild.innerHTML = ``
 
         //builiding overlay controls so order of insertioni matters because they are eall positioned absolutely
-        overlayControlsContainerBuild.innerHTML += HTML.pictureInPictureWrapper
+        overlayControlsContainerBuild.innerHTML += HTML.pictureinpicturewrapper
 
         //builidng and deploying Notifiers HTML
         if (this.settings.status.ui.notifiers) {
             notifiersContainerBuild.classList = "T_M_G-video-notifiers-container"
             notifiersContainerBuild.setAttribute("data-current-notifier", "")
-            notifiersContainerBuild.innerHTML += ``.concat(HTML.playPauseNotifier ?? "", HTML.captionsNotifier ?? "", HTML.objectFitNotifier ?? "", HTML.playbackRateNotifier ?? "", HTML.volumeNotifier ?? "", HTML.fwdNotifier ?? "", HTML.bwdNotifier ?? "")
+            notifiersContainerBuild.innerHTML += ``.concat(HTML.playpausenotifier ?? "", HTML.captionsnotifier ?? "", HTML.objectfitnotifier ?? "", HTML.playbackratenotifier ?? "", HTML.volumenotifier ?? "", HTML.fwdnotifier ?? "", HTML.bwdnotifier ?? "")
             overlayControlsContainerBuild.append(notifiersContainerBuild)
         }
     
         //building and deploying overlay general controls
-        overlayControlsContainerBuild.innerHTML += ``.concat(HTML.thumbnailImg ?? '', HTML.videoBuffer ?? '', HTML.playlistTitleWrapper ?? '', HTML.expandMiniPlayer ?? '', HTML.removeMiniPlayer ?? '', HTML.fullScreenOrientation ?? '')
+        overlayControlsContainerBuild.innerHTML += ``.concat(HTML.thumbnail ?? '', HTML.videobuffer ?? '', HTML.playlisttitle ?? '', HTML.expandminiplayer ?? '', HTML.removeminiplayer ?? '', HTML.fullscreenorientation ?? '')
     
         //building and deploying overlay main controls wrapper 
-        overlayMainControlsWrapperBuild.innerHTML += ``.concat(HTML.mainPrevBtn ?? '', HTML.mainPlayPauseBtn ?? '', HTML.mainNextBtn ?? '')
+        overlayMainControlsWrapperBuild.innerHTML += ``.concat(HTML.mainprev ?? '', HTML.mainplaypause ?? '', HTML.mainnext ?? '')
         overlayMainControlsWrapperBuild.classList = "T_M_G-video-overlay-main-controls-wrapper"
         overlayControlsContainerBuild.append(overlayMainControlsWrapperBuild)
 
@@ -864,7 +865,8 @@ class _T_M_G_Video_Player {
             videoContainerContent: this.videoContainer.querySelector(".T_M_G-video-container-content"),
             playlistTitleWrapper: this.videoContainer.querySelector(".T_M_G-video-playlist-title-wrapper"),
             playlistTitle: this.videoContainer.querySelector(".T_M_G-video-playlist-title"),
-            thumbnailImg : this.videoContainer.querySelector(".T_M_G-video-thumbnail-img"),
+            thumbnailImg : this.videoContainer.querySelector(".T_M_G-video-thumbnail-image"),
+            thumbnailCanvas : this.videoContainer.querySelector(".T_M_G-video-thumbnail-canvas"),
             videoBuffer : this.videoContainer.querySelector(".T_M_G-video-buffer"),
             notifiersContainer: this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-notifiers-container") : null,
             playNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-play-notifier") : null,
@@ -890,8 +892,9 @@ class _T_M_G_Video_Player {
             mainPlayPauseBtn : this.settings.status.ui.playPause ? this.videoContainer.querySelector(".T_M_G-video-main-play-pause-btn") : null,
             mainNextBtn : this.settings.status.ui.next ? this.videoContainer.querySelector(".T_M_G-video-main-next-btn") : null,
             timelineContainer : this.settings.status.ui.timeline ? this.videoContainer.querySelector(".T_M_G-video-timeline-container") : null,
-            previewImgContainer : this.settings.status.ui.timeline ? this.videoContainer.querySelector(".T_M_G-video-preview-img-container") : null,
-            previewImg : this.settings.status.ui.timeline ? this.videoContainer.querySelector(".T_M_G-video-preview-img") : null,
+            previewContainer : this.settings.status.ui.timeline ? this.videoContainer.querySelector(".T_M_G-video-preview-container") : null,
+            previewImg : this.settings.status.ui.timeline ? this.videoContainer.querySelector(".T_M_G-video-preview-image") : null,
+            previewCanvas : this.settings.status.ui.timeline ? this.videoContainer.querySelector(".T_M_G-video-preview-canvas") : null,
             prevBtn : this.settings.status.ui.prev ? this.videoContainer.querySelector(".T_M_G-video-prev-btn") : null,
             playPauseBtn : this.settings.status.ui.playPause ? this.videoContainer.querySelector(".T_M_G-video-play-pause-btn") : null,
             nextBtn : this.settings.status.ui.next ? this.videoContainer.querySelector(".T_M_G-video-next-btn") : null,
@@ -927,19 +930,13 @@ class _T_M_G_Video_Player {
             this._handleLoadedError() 
             return
         } else {
+            this.setTitleState()
             this.setVideoEventListeners()
             this.fire("tmgready", this.video, {loaded: true})
         }
         if (this.activated) {
             if (this.initialState) {
-                const removeInitialState = () => {
-                    this.stall()
-                    this.videoContainer.classList.remove("T_M_G-video-initial")
-                    this.initializeVideoControls()
-                    this.DOM.mainPlayPauseBtn?.removeEventListener("click", this.play)
-                    this.DOM.videoContainer.removeEventListener("click", this.play)
-                }
-                this.video.addEventListener("play", removeInitialState, {once:true})
+                this.video.addEventListener("play", this.removeInitialState, {once:true})
                 this.DOM.mainPlayPauseBtn?.addEventListener("click", this.play)
                 this.DOM.videoContainer.addEventListener("click", this.play)
             } else this.initializeVideoControls()  
@@ -949,21 +946,6 @@ class _T_M_G_Video_Player {
     } catch(e) {
         console.warn('TMG silenced a rendering error: ', e)
     }
-    }
-
-    initializeVideoControls() {
-    try {     
-        this.initAudioManager()
-        this.enableFocusableControls("all")
-        if (!this.loaded) this._handleLoadedMetadata()
-        this._handleVolumeChange()
-        this.setInitialStates()
-        this.setAllEventListeners()
-        this.observePosition()
-        this.cache()
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }        
     }
 
     stall() {
@@ -976,12 +958,59 @@ class _T_M_G_Video_Player {
     }           
     }
 
+    removeInitialState() {
+    try {
+        this.stall()
+        this.videoContainer.classList.remove("T_M_G-video-initial")
+        this.initializeVideoControls()
+        this.DOM.mainPlayPauseBtn?.removeEventListener("click", this.play)
+        this.DOM.videoContainer.removeEventListener("click", this.play)
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }
+
+    initializeVideoControls() {
+    try {     
+        this.initAudioManager()
+        this.enableFocusableControls("all")
+        this._handleLoadedMetadata()
+        this._handleVolumeChange()
+        this.setInitialStates()
+        this.setGeneralEventListeners()
+        this.observePosition()
+        this.cache()
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }        
+    }
+
     setInitialStates() {
-    try {        
+    try {     
+        this.showVideoOverlay()
+        this.setTitleState()
+        this.setCaptionsState()   
+        this.setPreviewImagesState()
+        this.setBtnsState()
+        this.pseudoVideo.src = this.video.src || this.video.currentSrc
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }    
+    }
+
+    setTitleState() {
+    try {
         if (this.media?.title) {
-            if (this.DOM.playlistTitle) this.DOM.playlistTitle.textContent = this.media.title
+            if (this.DOM.playlistTitle) this.DOM.playlistTitle.textContent = this.media.title || ""
             this.DOM.playlistTitle?.setAttribute("data-video-title", this.media.title || "")
         }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    } 
+    }
+
+    setCaptionsState() {
+    try {
         if (this.video.textTracks.length > 0) { 
             Array.from(this.video.textTracks).forEach((track, index) => {
                 if (track.mode === "showing") {
@@ -994,23 +1023,29 @@ class _T_M_G_Video_Player {
             this.videoContainer.classList.toggle("T_M_G-video-captions", this.settings.autocaptions)
             this.videoContainer.setAttribute("data-track-kind", this.video.textTracks[this.textTrackIndex].kind)
         }
-        if (!this.settings.status.ui.previewImages) {
-            this.previewImgContext = this.DOM.previewImg.getContext("2d")
-            this.thumbnailImgContext = this.DOM.thumbnailImg.getContext("2d")
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    } 
+    }
+
+    setPreviewImagesState() {
+    try {
+        this.videoContainer.classList.toggle("T_M_G-video-no-previews", !this.settings.previewImages)
+        this.videoContainer.setAttribute("data-preview-type", this.settings.status.ui.previewImages ? "image" : "canvas")
+        if (!this.settings.status.ui.previewImages && this.settings.previewImages) {
+            this.previewContext = this.DOM.previewCanvas.getContext("2d")
+            this.thumbnailContext = this.DOM.thumbnailCanvas.getContext("2d")
             let dummyImg = document.createElement("img")
             dummyImg.src = window.tmg.ALT_IMG_SRC
             dummyImg.onload = () => {
-                this.previewImgContext.drawImage(dummyImg, 0, 0, this.DOM.previewImg.width, this.DOM.previewImg.height)
-                this.thumbnailImgContext.drawImage(dummyImg, 0, 0, this.DOM.thumbnailImg.width, this.DOM.thumbnailImg.height)
+                this.previewContext.drawImage(dummyImg, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height)
+                this.thumbnailContext.drawImage(dummyImg, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height)
                 dummyImg = null
             }
         }
-        this.setBtnsState()
-        this.showVideoOverlay()
-        this.pseudoVideo.src = this.video.src || this.video.currentSrc
     } catch(e) {
         this._log(e, "error", "swallow")
-    }    
+    } 
     }
 
     setBtnsState() {
@@ -1116,7 +1151,7 @@ class _T_M_G_Video_Player {
     }                    
     }
 
-    setAllEventListeners() {
+    setGeneralEventListeners() {
     try { 
         this.setVideoContainerEventListeners()
         this.setControlsEventListeners()
@@ -1357,11 +1392,11 @@ class _T_M_G_Video_Player {
     getCurrentVideoFrame(type) {
     try {
         this.pseudoVideo.currentTime = this.video.currentTime
-        this.previewCanvas.width = this.video.videoWidth
-        this.previewCanvas.height = this.video.videoHeight
-        this.previewContext.drawImage(this.pseudoVideo, 0, 0, this.previewCanvas.width, this.previewCanvas.height)
-        if (type === "monochrome") this.convertToMonoChrome(this.previewCanvas)
-        return this.previewCanvas.toDataURL("image/png")
+        this.contentCanvas.width = this.video.videoWidth
+        this.contentCanvas.height = this.video.videoHeight
+        this.contentContext.drawImage(this.pseudoVideo, 0, 0, this.contentCanvas.width, this.contentCanvas.height)
+        if (type === "monochrome") this.convertToMonoChrome(this.contentCanvas)
+        return this.contentCanvas.toDataURL("image/png")
     } catch(e) {
         this._log(e, "error", "swallow")
     }                    
@@ -1502,12 +1537,14 @@ class _T_M_G_Video_Player {
 
     _handleLoadedMetadata() {
     try {
+        if (!this.loaded) {
         if (this.settings.startTime) this.video.currentTime = this.settings?.startTime
         if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatDuration(this.video.duration)
         this.aspectRatio = this.video.videoWidth / this.video.videoHeight
         this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`
         this.loaded = true
         this.reactivate()
+        }
     } catch(e) {
         this._log(e, "error", "swallow")
     }                   
@@ -1562,6 +1599,7 @@ class _T_M_G_Video_Player {
                 this._playlist[this.currentPlaylistIndex].settings.startTime = this.playlistCurrentTime
             }
             this.stall()
+            this.loaded = false
             this.currentPlaylistIndex = index
             const video = this._playlist[index]
             if (video.media?.artwork) 
@@ -1569,13 +1607,14 @@ class _T_M_G_Video_Player {
                 this.video.poster = video.media.artwork[0].src
             if (video.src) this.src = video.src
             else if (video.sources?.length > 0) this.sources = video.sources
+            else this.src = ""
             if (video.tracks?.length > 0) this.tracks = video.tracks
+            else this.tracks = {}
             this.media = video.media ? {...this.media, ...video.media} : video.media ?? null
             this.settings.startTime = video.settings?.startTime || null
             this.settings.endTime = video.settings?.endTime || null
-            this.settings.previewImages = video.settings?.previewImages?.length > 0 ? {...this.settings.previewImages, ...video.settings.previewImages} : video.settings?.previewImages ?? null
+            this.settings.previewImages = video.settings?.previewImages?.length > 0 ? {...this.settings.previewImages, ...video.settings.previewImages} : video.settings?.previewImages
             this.settings.status.ui.previewImages = this.settings.previewImages?.address && this.settings.previewImages?.fps ? true : false
-            this.videoContainer.classList.toggle("T_M_G-video-no-previews", this.settings.previewImages === false) 
             this.setInitialStates()
             this.togglePlay(true)
             this.canAutoMovePlaylist = true
@@ -1589,7 +1628,7 @@ class _T_M_G_Video_Player {
     try {        
         if (this._playlist && this.settings.automove && this.canAutoMovePlaylist && (this.currentPlaylistIndex < this._playlist.length - 1) && !this.video.paused) {
             this.canAutoMovePlaylist = false
-            const count = Math.floor(this.video.duration - this.video.currentTime)
+            const count = Math.floor((this.settings.endTime || this.video.duration) - this.video.currentTime)
             const {src, media: {title}} = this._playlist[this.currentPlaylistIndex + 1]
             const playlistToastContainer = document.createElement("div")
             playlistToastContainer.classList = "T_M_G-video-playlist-toast-container"
@@ -1648,7 +1687,7 @@ class _T_M_G_Video_Player {
                 if (!(this.video.currentTime === this.video.duration)) cleanUpPlaylistToast()
             },
             autoCleanUpPlaylistToast = () => {
-                if (Math.floor(this.video.duration - this.video.currentTime) > this.settings.automoveCountdown) cleanUpPlaylistToast()
+                if (Math.floor((this.settings.endTime || this.video.duration) - this.video.currentTime) > this.settings.automoveCountdown) cleanUpPlaylistToast()
             },
             cleanUpPlaylistToast = e => {
                 playlistToastContainer.remove()
@@ -1845,8 +1884,8 @@ class _T_M_G_Video_Player {
         this.videoContainer.classList.toggle("T_M_G-video-scrubbing", this.isScrubbing)
         if (this.isScrubbing) {
             const {width,height} = window.tmg.getRenderedBox(this.video)
-            this.DOM.thumbnailImg.height = height + 1
-            this.DOM.thumbnailImg.width = width + 1
+            this.DOM.thumbnailCanvas.height = this.DOM.thumbnailImg.height = height + 1
+            this.DOM.thumbnailCanvas.width = this.DOM.thumbnailImg.width = width + 1
             this.wasPaused = this.video.paused
             this.togglePlay(false)
         } else {
@@ -1875,11 +1914,11 @@ class _T_M_G_Video_Player {
         const rect = this.DOM.timelineContainer?.getBoundingClientRect()
         const percent = window.tmg.clamp(x - rect.x, 0, rect.width) / rect.width
         const previewTime = window.tmg.formatDuration(percent * this.video.duration)
-        const previewImgMin = (this.DOM.previewImgContainer.offsetWidth / 2) / rect.width
+        const previewImgMin = (this.DOM.previewContainer.offsetWidth / 2) / rect.width
         const previewImgPercent = window.tmg.clamp(previewImgMin, percent, (1 - previewImgMin))
         this.videoCurrentPreviewPosition = percent
         this.videoCurrentPreviewImgPosition = previewImgPercent
-        this.DOM.previewImgContainer?.setAttribute("data-preview-time", previewTime)  
+        this.DOM.previewContainer?.setAttribute("data-preview-time", previewTime)  
         if (this.isScrubbing) {
             this.videoCurrentProgressPosition =  percent
             this.overlayRestraint()
@@ -1888,18 +1927,18 @@ class _T_M_G_Video_Player {
         if (this.settings.status.ui.previewImages) {
             const previewImgNumber = Math.max(1, Math.floor((percent * this.video.duration) / this.settings.previewImages.fps))
             previewImgSrc = this.settings.previewImages.address.replace('$', previewImgNumber)
-            if (this.settings.previewImages !== false && !window.tmg.queryMediaMobile()) this.DOM.previewImg.src = previewImgSrc
-            if (this.isScrubbing) this.DOM.thumbnailImg.src = previewImgSrc
-        } else if (this.settings.previewImages !== false) {
+            if (this.settings.previewImages && !window.tmg.queryMediaMobile()) this.DOM.previewImg.src = previewImgSrc
+            if (this.isScrubbing) this.DOM.thumbnailCanvas.src = previewImgSrc
+        } else if (this.settings.previewImages) {
             this.pseudoVideo.currentTime = percent * this.video.duration
-            if (this.settings.previewImages !== false && !window.tmg.queryMediaMobile()) this.previewImgContext.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewImg.width, this.DOM.previewImg.height)
-            if (this.isScrubbing) this.thumbnailImgContext.drawImage(this.pseudoVideo, 0, 0, this.DOM.thumbnailImg.width, this.DOM.thumbnailImg.height)
+            if (this.settings.previewImages && !window.tmg.queryMediaMobile()) this.previewContext.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height)
+            if (this.isScrubbing) this.thumbnailContext.drawImage(this.pseudoVideo, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height)
         }    
-        let arrowPosition, arrowPositionMin = (((this.isModeActive("theater") && !this.isModeActive("miniPlayer")) || (this.isModeActive("fullScreen")) && this.settings.previewImages !== false)) && !window.tmg.queryMediaMobile() ? 10 : 16.5
+        let arrowPosition, arrowPositionMin = (((this.isModeActive("theater") && !this.isModeActive("miniPlayer")) || (this.isModeActive("fullScreen")) && this.settings.previewImages)) && !window.tmg.queryMediaMobile() ? 10 : 16.5
         if (percent < previewImgMin) {
             arrowPosition = `${Math.max(percent * rect.width, arrowPositionMin)}px`
         } else if (percent > (1 - previewImgMin)) {
-            arrowPosition = `${Math.min(((this.DOM.previewImgContainer.offsetWidth/2 + (percent * rect.width) - this.DOM.previewImgContainer.offsetLeft)), this.DOM.previewImgContainer.offsetWidth - arrowPositionMin)}px`
+            arrowPosition = `${Math.min(((this.DOM.previewContainer.offsetWidth/2 + (percent * rect.width) - this.DOM.previewContainer.offsetLeft)), this.DOM.previewContainer.offsetWidth - arrowPositionMin)}px`
         } else arrowPosition = "50%"
         this.videoCurrentPreviewImgArrowPosition = arrowPosition
     } catch(e) {
@@ -1957,9 +1996,10 @@ class _T_M_G_Video_Player {
         if (this.speedCheck && this.speedToken === 1) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", formattedTime)
         if (this._playlist && this.video.currentTime > 3) this.playlistCurrentTime = this.video.currentTime
         this.skipVideoTime = this.video.currentTime
-        if (Math.floor((this.settings?.endTime || this.video.duration) - this.video.currentTime) <= this.settings.automoveCountdown) this.automovePlaylist()
+        if (Math.floor((this.settings.endTime || this.video.duration) - this.video.currentTime) <= this.settings.automoveCountdown) this.automovePlaylist()
         if (this.videoContainer.classList.contains("T_M_G-video-replay")) this.videoContainer.classList.remove("T_M_G-video-replay")
         if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatDuration(this.video.duration)
+        this.video.removeAttribute("controls")
     } catch(e) {
         this._log(e, "error", "swallow")
     }    
@@ -2429,7 +2469,7 @@ class _T_M_G_Video_Player {
     try {
     if (this.settings.status.modes.miniPlayer) {
         const threshold = 240
-        if ((!this.isModeActive("miniPlayer") && !this.isModeActive("pictureInPicture") && !this.isModeActive("fullScreen") && !this.parentIntersecting && window.innerWidth >= threshold && !this.video.paused) || (bool === true)) {
+        if ((!this.isModeActive("miniPlayer") && !this.isModeActive("pictureInPicture") && !this.isModeActive("fullScreen") && !this.parentIntersecting && window.innerWidth >= threshold && !this.video.paused) || (bool === true && !this.isModeActive("miniPlayer"))) {
             this.pseudoVideoContainer.className += this.videoContainer.className.replace("T_M_G-video-container", "")
             this.videoContainer.parentElement.insertBefore(this.pseudoVideoContainer, this.videoContainer)
             document.body.append(this.videoContainer)
@@ -2438,7 +2478,7 @@ class _T_M_G_Video_Player {
             this.videoContainer.addEventListener("touchstart", this.moveMiniPlayer, {passive: false})
             return
         } 
-        if ((this.isModeActive("miniPlayer") && this.parentIntersecting) || (this.isModeActive("miniPlayer") && window.innerWidth < threshold) || (bool === false)) {
+        if ((this.isModeActive("miniPlayer") && this.parentIntersecting) || (this.isModeActive("miniPlayer") && window.innerWidth < threshold) || (bool === false && this.isModeActive("miniPlayer"))) {
             if (behaviour) 
             window.scrollTo({
                 top: this.pseudoVideoContainer.parentNode.offsetTop - ((window.innerHeight / 2) - (this.pseudoVideoContainer.offsetHeight / 2)),
@@ -2715,7 +2755,7 @@ class _T_M_G_Video_Player {
                 mods += "alt + "
             if (this.settings.shiftKeys?.includes(String(key)))
                 mods += "shift + "
-            shortcuts[key] = this.settings.keyShortcuts[key]?.toString()?.toLowerCase()?.replace(/^(.*)$/, `(${mods}$1)`) ?? ""
+            shortcuts[key] = this.settings.keyShortcuts[key]?.toString()?.toLowerCase()?.replace(/^(\w*)$/, `(${mods}$1)`) ?? ""
         })
         return shortcuts
     } catch(e) {
@@ -3085,7 +3125,7 @@ class _T_M_G_Media_Player {
                 this.#medium.setAttribute("playsinline", "")
                 this.#medium.setAttribute("webkit-playsinline", "")
             } else settings.playsInline = this.#medium.playsinline
-            if (settings.autoplay) this.#medium.setAttribute("autoplay", '')
+            if (settings.autoplay) this.#medium.setAttribute("autoplay", "")
             else settings.autoplay = this.#medium.autoplay
             if (settings.loop) this.#medium.setAttribute("loop", "")
             else settings.loop = this.#medium.loop
@@ -3160,27 +3200,27 @@ class _T_M_G_Media_Player {
                 notifiers: settings.notifiers || settings.status.allowOverride.notifiers,
                 timeline: (/top|bottom/).test(settings.timelinePosition),
                 prev: settings.controllerStructure.includes("prev"),
-                playPause: settings.controllerStructure.includes("playPause"),
+                playPause: settings.controllerStructure.includes("playpause"),
                 next: settings.controllerStructure.includes("next"),
-                objectFit: settings.controllerStructure.includes("objectFit"),
+                objectFit: settings.controllerStructure.includes("objectfit"),
                 volume: settings.controllerStructure.includes("volume"),
                 duration: settings.controllerStructure.includes("duration"),
                 captions: settings.controllerStructure.includes("captions"),
                 settings: settings.controllerStructure.includes("settings"),
-                playbackRate: settings.controllerStructure.includes("playbackRate"),
-                pictureInPicture: settings.controllerStructure.includes("pictureInPicture"),
+                playbackRate: settings.controllerStructure.includes("playbackrate"),
+                pictureInPicture: settings.controllerStructure.includes("pictureinpicture"),
                 theater: settings.controllerStructure.includes("theater"),
-                fullScreen: settings.controllerStructure.includes("fullScreen"),
+                fullScreen: settings.controllerStructure.includes("fullscreen"),
                 previewImages: settings.previewImages?.address && settings.previewImages?.fps ? true : false,
                 leftSidedControls: settings.controllerStructure.indexOf("spacer") > -1 ? settings.controllerStructure.slice(0, settings.controllerStructure.indexOf("spacer")).length > 0 : false,
                 rightSidedControls: settings.controllerStructure.indexOf("spacer") > -1 ? settings.controllerStructure.slice(settings.controllerStructure.indexOf("spacer") + 1).length > 0 : false,
                 draggableControls: !!(settings.controllerStructure && settings.status.allowOverride.controllerStructure)
             }
             settings.status.modes = {
-                fullScreen: settings.modes.includes("fullScreen") && window.tmg.supportsFullScreen(),
+                fullScreen: settings.modes.includes("fullscreen") && window.tmg.supportsFullScreen(),
                 theater: settings.modes.includes("theater"),
-                pictureInPicture: settings.modes.includes("pictureInPicture") && window.tmg.supportsPictureInPicture(),
-                miniPlayer: settings.modes.includes("miniPlayer")
+                pictureInPicture: settings.modes.includes("pictureinpicture") && window.tmg.supportsPictureInPicture(),
+                miniPlayer: settings.modes.includes("miniplayer")
             }  
             //Updating the build settings after the cleanup and modifications
             this.#build.settings = {...window.tmg._DEFAULT_VIDEO_BUILD.settings, ...settings}
@@ -3214,8 +3254,8 @@ class tmg {
         settings: {
             allowOverride: true,
             beta: true,
-            modes: ["normal", "fullScreen", "theater", "pictureInPicture", "miniPlayer"],
-            controllerStructure: ["prev", "playPause", "next", "objectFit", "volume", "duration", "spacer", "playbackRate", "captions", "settings", "pictureInPicture", "theater", "fullScreen"],
+            modes: ["normal", "fullscreen", "theater", "pictureinpicture", "miniplayer"],
+            controllerStructure: ["prev", "playpause", "next", "objectfit", "volume", "duration", "spacer", "playbackrate", "captions", "settings", "pictureinpicture", "theater", "fullscreen"],
             timelinePosition: "bottom",
             volumeBoost: true,
             maxVolume: 300,
@@ -3230,7 +3270,7 @@ class tmg {
             loop: false,
             muted: false,
             playsInline: true,
-            previewImages: true,
+            previewImages: false,
             overlayRestraintTime: 3000,
             keyOverrides: ["arrowdown", "arrowup", "arrowleft", "arrowright", "home", "end"],
             shiftKeys: ["prev", "next"],

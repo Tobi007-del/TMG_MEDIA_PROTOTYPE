@@ -29,7 +29,7 @@ const _VIDEO_BUILD_TEMPLATE = {
             previewImages: {
                 address: "", 
                 fps: 0
-            },
+            } || true,
             startTime: 0,
             endTime: 0,
         }
@@ -40,7 +40,7 @@ const _VIDEO_BUILD_TEMPLATE = {
         previewImages: {
             address: "", 
             fps: 0
-        },
+        } || true,
         beta: [],
         modes: [],
         controllerStructure: [] || true,
