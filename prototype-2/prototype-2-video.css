@@ -527,7 +527,7 @@
 }
 
 .T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content {
-    background: url("/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png") cover, var(--T_M_G-video-disabled-background);
+    background: var(--T_M_G-video-disabled-background);
 }
 
 .T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video {

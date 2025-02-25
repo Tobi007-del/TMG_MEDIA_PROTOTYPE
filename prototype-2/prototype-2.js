@@ -93,7 +93,7 @@ class _T_M_G_Video_Player {
         this._handlePause = this._handlePause.bind(this)
         this._handleBufferStart = this._handleBufferStart.bind(this)
         this._handleBufferStop = this._handleBufferStop.bind(this)
-	this._handleDurationChange = this._handleDurationChange.bind(this)
+	    this._handleDurationChange = this._handleDurationChange.bind(this)
         this._handlePlaybackRateChange = this._handlePlaybackRateChange.bind(this)
         this._handleTimeUpdate = this._handleTimeUpdate.bind(this)
         this._handleVolumeChange = this._handleVolumeChange.bind(this)
@@ -269,6 +269,18 @@ class _T_M_G_Video_Player {
 
     set playbackQuality(value) {
         this._log("This is a read-only property", "error", "swallow")
+    }
+
+    get duration() {
+        return window.tmg.formatTime(this.video.duration)
+    }
+
+    set currentTime(value) {
+        if (this.video.currentTime) this.video.currentTime = value
+    }
+
+    get currentTime() {
+        return window.tmg.formatTime(this.video.currentTime)
     }
 
     _log(message, type, action) {
@@ -931,7 +943,6 @@ class _T_M_G_Video_Player {
         } else {
             this.setTitleState()
             this.setVideoEventListeners()
-            this.fire("tmgready", this.video, {loaded: true})
         }
         if (this.activated) {
             if (this.initialState) {
@@ -1210,7 +1221,7 @@ class _T_M_G_Video_Player {
         this.video.addEventListener("pause", this._handlePause)        
         this.video.addEventListener("waiting", this._handleBufferStart)
         this.video.addEventListener("playing", this._handleBufferStop)
-	this.video.addEventListener("durationchange", this._handleDurationChange)
+	    this.video.addEventListener("durationchange", this._handleDurationChange)
         this.video.addEventListener("ratechange", this._handlePlaybackRateChange)      
         this.video.addEventListener("timeupdate", this._handleTimeUpdate)
         this.video.addEventListener("progress", this._handleLoadedProgress)
@@ -1395,7 +1406,7 @@ class _T_M_G_Video_Player {
 
     getCurrentVideoFrame(type) {
     try {
-        this.pseudoVideo.currentTime = this.video.currentTime
+        this.pseudoVideo.currentTime = this.currentTime
         this.contentCanvas.width = this.video.videoWidth
         this.contentCanvas.height = this.video.videoHeight
         this.contentContext.drawImage(this.pseudoVideo, 0, 0, this.contentCanvas.width, this.contentCanvas.height)
@@ -1542,7 +1553,7 @@ class _T_M_G_Video_Player {
     _handleLoadedMetadata() {
     try {
         if (!this.loaded) {
-        if (this.settings.startTime) this.video.currentTime = this.settings?.startTime
+        if (this.settings.startTime) this.currentTime = this.settings?.startTime
         if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatDuration(this.video.duration)
         this.aspectRatio = this.video.videoWidth / this.video.videoHeight
         this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`
@@ -1564,13 +1575,11 @@ class _T_M_G_Video_Player {
 
     _handleLoadedProgress() {
     try {
-        if (this.video.duration > 0) {
         for (let i = 0; i < this.video.buffered.length; i++) {
-            if (this.video.buffered.start(this.video.buffered.length - 1 - i) < this.video.currentTime) {
-                this.videoCurrentLoadedPosition = (this.video.buffered.end(this.video.buffered.length - 1 - i) * 100) / this.video.duration
+            if (this.video.buffered.start(this.video.buffered.length - 1 - i) < this.currentTime) {
+                this.videoCurrentLoadedPosition = (this.video.buffered.end(this.video.buffered.length - 1 - i) * 100) / this.duration
                 break
             }
-        }
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -1580,7 +1589,7 @@ class _T_M_G_Video_Player {
     previousVideo() {
     try {
         if (this._playlist && this.currentPlaylistIndex > 0) {
-            this.video.currentTime < 3 ? this.movePlaylistTo(this.currentPlaylistIndex - 1) : this.moveVideoTime({to: "start"})
+            this.currentTime < 3 ? this.movePlaylistTo(this.currentPlaylistIndex - 1) : this.moveVideoTime({to: "start"})
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -1598,7 +1607,7 @@ class _T_M_G_Video_Player {
     movePlaylistTo(index) {
     try {
         if (this._playlist) {
-            if (this.settings.status.allowOverride.startTime && this.video.currentTime < (this.video.duration - this.settings.endTime ?? 0)) {
+            if (this.settings.status.allowOverride.startTime && this.currentTime < (this.duration - this.settings.endTime ?? 0)) {
                 this._playlist[this.currentPlaylistIndex].settings = this._playlist[this.currentPlaylistIndex].settings ?? {}
                 this._playlist[this.currentPlaylistIndex].settings.startTime = this.playlistCurrentTime
             }
@@ -1628,9 +1637,9 @@ class _T_M_G_Video_Player {
 
     automovePlaylist() {
     try {        
-        if (this._playlist && this.settings.automove && this.canAutoMovePlaylist && (this.currentPlaylistIndex < this._playlist.length - 1) && !this.video.paused) {
+        if (this._playlist && this.settings.automove && this.canAutoMovePlaylist && (this.currentPlaylistIndex < this._playlist.length - 1) && !this.video.paused && this.video.duration) {
             this.canAutoMovePlaylist = false
-            const count = Math.floor((this.settings.endTime || this.video.duration) - this.video.currentTime)
+            const count = Math.floor((this.settings.endTime || this.duration) - this.currentTime)
             const {src, media: {title}} = this._playlist[this.currentPlaylistIndex + 1]
             const playlistToastContainer = document.createElement("div")
             playlistToastContainer.classList = "T_M_G-video-playlist-toast-container"
@@ -1686,10 +1695,10 @@ class _T_M_G_Video_Player {
                 setTimeout(() => this.nextVideo())
             },
             cleanUpPlaylistToastWhenNeeded = () => {
-                if (!(this.video.currentTime === this.video.duration)) cleanUpPlaylistToast()
+                if (!(this.currentTime === this.duration)) cleanUpPlaylistToast()
             },
             autoCleanUpPlaylistToast = () => {
-                if (Math.floor((this.settings.endTime || this.video.duration) - this.video.currentTime) > this.settings.automoveCountdown) cleanUpPlaylistToast()
+                if (Math.floor((this.settings.endTime || this.duration) - this.currentTime) > this.settings.automoveCountdown) cleanUpPlaylistToast()
             },
             cleanUpPlaylistToast = e => {
                 playlistToastContainer.remove()
@@ -1825,7 +1834,7 @@ class _T_M_G_Video_Player {
 
     _handleDurationChange() {
     try {
-         if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatDuration(this.video.duration)
+        if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatDuration(this.video.duration)
     } catch(e) {
         this._log(e, "error", "swallow")
     }
@@ -1835,13 +1844,13 @@ class _T_M_G_Video_Player {
     try {        
         switch(details.to) {
             case "start":
-                this.video.currentTime = 0
+                this.currentTime = 0
                 break
             case "end":
-                this.video.currentTime = this.video.duration
+                this.currentTime = this.duration
                 break
             default:                        
-                this.video.currentTime = (Number(details.to)/Number(details.max)) * this.video.duration
+                this.currentTime = (Number(details.to)/Number(details.max)) * this.duration
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -1878,12 +1887,12 @@ class _T_M_G_Video_Player {
         this.videoContainer.classList.toggle("T_M_G-video-scrubbing", this.isScrubbing)
         if (this.isScrubbing) {
             const {width,height} = window.tmg.getRenderedBox(this.video)
-            this.DOM.thumbnailCanvas.height = this.DOM.thumbnailImg.height = height + 1
-            this.DOM.thumbnailCanvas.width = this.DOM.thumbnailImg.width = width + 1
+            this.DOM.thumbnailCanvas.height = this.DOM.thumbnailImg.height = height ?? this.videoContainer.offsetHeight + 1
+            this.DOM.thumbnailCanvas.width = this.DOM.thumbnailImg.width = width ?? this.videoContainer.offsetWidth + 1
             this.wasPaused = this.video.paused
             this.togglePlay(false)
         } else {
-            this.video.currentTime = percent * this.video.duration
+            this.currentTime = percent * this.duration
             if (!this.wasPaused) this.togglePlay(true)
         }
         this._handleTimelineUpdate(e)
@@ -1907,24 +1916,23 @@ class _T_M_G_Video_Player {
 
         const rect = this.DOM.timelineContainer?.getBoundingClientRect()
         const percent = window.tmg.clamp(x - rect.x, 0, rect.width) / rect.width
-        const previewTime = window.tmg.formatDuration(percent * this.video.duration)
         const previewImgMin = (this.DOM.previewContainer.offsetWidth / 2) / rect.width
         const previewImgPercent = window.tmg.clamp(previewImgMin, percent, (1 - previewImgMin))
         this.videoCurrentPreviewPosition = percent
         this.videoCurrentPreviewImgPosition = previewImgPercent
-        this.DOM.previewContainer?.setAttribute("data-preview-time", previewTime)  
+        this.DOM.previewContainer?.setAttribute("data-preview-time", window.tmg.formatDuration(percent * this.video.duration))  
         if (this.isScrubbing) {
             this.videoCurrentProgressPosition =  percent
             this.overlayRestraint()
         } 
         let previewImgSrc
         if (this.settings.status.ui.previewImages) {
-            const previewImgNumber = Math.max(1, Math.floor((percent * this.video.duration) / this.settings.previewImages.fps))
+            const previewImgNumber = Math.max(1, Math.floor((percent * this.duration) / this.settings.previewImages.fps))
             previewImgSrc = this.settings.previewImages.address.replace('$', previewImgNumber)
             if (this.settings.previewImages && !window.tmg.queryMediaMobile()) this.DOM.previewImg.src = previewImgSrc
             if (this.isScrubbing) this.DOM.thumbnailCanvas.src = previewImgSrc
         } else if (this.settings.previewImages) {
-            this.pseudoVideo.currentTime = percent * this.video.duration
+            this.pseudoVideo.currentTime = percent * this.duration
             if (this.settings.previewImages && !window.tmg.queryMediaMobile()) this.previewContext.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height)
             if (this.isScrubbing) this.thumbnailContext.drawImage(this.pseudoVideo, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height)
         }    
@@ -1958,13 +1966,13 @@ class _T_M_G_Video_Player {
             case "arrowdown":
                 e.preventDefault()
                 e.stopImmediatePropagation()
-                this.video.currentTime -= e.shiftKey ? 5 : 1
+                this.currentTime -= e.shiftKey ? 5 : 1
             break
             case "arrowright":
             case "arrowup":
                 e.preventDefault()
                 e.stopImmediatePropagation()
-                this.video.currentTime += e.shiftKey ? 5 : 1
+                this.currentTime += e.shiftKey ? 5 : 1
             break
         }
     } catch(e) {
@@ -1983,16 +1991,16 @@ class _T_M_G_Video_Player {
 
     _handleTimeUpdate() {
     try {        
+        this.video.removeAttribute("controls")
         const formattedTime = window.tmg.formatDuration(this.video.currentTime)
-        const percent = isNaN(this.video.currentTime / this.video.duration) ? 0 : this.video.currentTime / this.video.duration
+        const percent = window.tmg.formatTime(this.video.currentTime / this.video.duration)
         this.videoCurrentProgressPosition = percent
         if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = formattedTime
         if (this.speedCheck && this.speedToken === 1) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", formattedTime)
-        if (this._playlist && this.video.currentTime > 3) this.playlistCurrentTime = this.video.currentTime
-        this.skipVideoTime = this.video.currentTime
-        if (Math.floor((this.settings.endTime || this.video.duration) - this.video.currentTime) <= this.settings.automoveCountdown) this.automovePlaylist()
+        if (this._playlist && this.currentTime > 3) this.playlistCurrentTime = this.currentTime
+        this.skipVideoTime = this.currentTime
+        if (Math.floor((this.settings.endTime || this.duration) - this.currentTime) <= this.settings.automoveCountdown) this.automovePlaylist()
         if (this.videoContainer.classList.contains("T_M_G-video-replay")) this.videoContainer.classList.remove("T_M_G-video-replay")
-        this.video.removeAttribute("controls")
     } catch(e) {
         this._log(e, "error", "swallow")
     }    
@@ -2000,12 +2008,13 @@ class _T_M_G_Video_Player {
     
     skip(duration, persist = false) {
     try {
+        if (this.video.duration) {
         const notifier = duration > 0 ? this.DOM.fwdNotifier : this.DOM.bwdNotifier
-        duration = Math.sign(duration) === 1 ? this.video.duration - this.video.currentTime > duration ? duration : this.video.duration - this.video.currentTime : Math.sign(duration) === -1 ? this.video.currentTime > Math.abs(duration) ? duration : -this.video.currentTime : 0
+        duration = Math.sign(duration) === 1 ? this.duration - this.currentTime > duration ? duration : this.duration - this.currentTime : Math.sign(duration) === -1 ? this.currentTime > Math.abs(duration) ? duration : -this.currentTime : 0
         duration = Math.trunc(duration)
         this.skipVideoTime += duration
-        this.videoCurrentProgressPosition = this.skipVideoTime / this.video.duration
-        this.video.currentTime += duration
+        this.videoCurrentProgressPosition = this.skipVideoTime / this.duration
+        this.currentTime += duration
         if (persist) {
             if (notifier != this.currentNotifier) {
                 this.skipDuration = 0
@@ -2024,8 +2033,9 @@ class _T_M_G_Video_Player {
             notifier.setAttribute("data-skip", this.skipDuration)
             return
         } 
-        if ((this.video.currentTime === 0 && notifier.classList.contains("T_M_G-video-bwd-notifier")) || (this.video.currentTime === this.video.duration && notifier.classList.contains("T_M_G-video-fwd-notifier"))) duration = 0
+        if ((this.currentTime === 0 && notifier.classList.contains("T_M_G-video-bwd-notifier")) || (this.currentTime === this.duration && notifier.classList.contains("T_M_G-video-fwd-notifier"))) duration = 0
         notifier.setAttribute("data-skip", Math.abs(duration))
+        }
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
@@ -2092,7 +2102,7 @@ class _T_M_G_Video_Player {
             this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-rewind")
             this.video.addEventListener("play", this.rewindReset)
             this.video.addEventListener("pause", this.rewindReset)
-            this.speedVideoTime = this.video.currentTime
+            this.speedVideoTime = this.currentTime
             this.speedIntervalId = setInterval(this.rewindVideo.bind(this), this.speedIntervalDelay)
             setTimeout(() => {
                 if (this.wasPaused) this.togglePlay(true)
@@ -2106,9 +2116,9 @@ class _T_M_G_Video_Player {
     rewindVideo() {
     try {        
         this.speedVideoTime -= this.speedIntervalTime
-        this.videoCurrentProgressPosition = this.speedVideoTime / this.video.duration
+        this.videoCurrentProgressPosition = this.speedVideoTime / this.duration
         if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.setAttribute("data-current-time", window.tmg.formatDuration(Math.max(this.speedVideoTime, 0)))
-        this.video.currentTime -= this.speedIntervalTime
+        this.currentTime -= this.speedIntervalTime
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
@@ -3016,7 +3026,7 @@ class _T_M_G_Media_Player {
     #medium
     #build
     constructor(customOptions) {
-        this.player = null
+        this.Player = null
         this.#build = window.tmg._DEFAULT_VIDEO_BUILD
         this.builder(customOptions)
     }
@@ -3222,6 +3232,7 @@ class _T_M_G_Media_Player {
             await window.tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css")
             this.Player = new _T_M_G_Video_Player(this.#build)
             window.tmg.Players.push(this.Player)
+            this.Player.fire("tmgready", this.#medium, {loaded: true})
             this.#cleanUpBuild()
         } else {
             console.error(`TMG could not deploy custom controls on the '${this.#medium.tagName}' element as it is not supported`)
@@ -3492,6 +3503,11 @@ class tmg {
             if (hours === 0) return `${minutes}:${window.tmg.leadingZeroFormatter.format(seconds)}`
             else return `${hours}:${window.tmg.leadingZeroFormatter.format(minutes)}:${window.tmg.leadingZeroFormatter.format(seconds)}`
         } else return '-:--'
+    }
+    static formatTime(time) {
+        if (!isNaN(time ?? NaN) && time !== Infinity) {
+            return time
+        } else return 0
     }
     static formatCSSTime(time) {
         return time.endsWith("ms") ? Number(time.replace("ms", "")) : Number(time.replace("s", "")) * 1000
