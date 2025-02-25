@@ -509,11 +509,10 @@
     --T_M_G-video-icons-color: var(--T_M_G-video-disabled-color);
     --T_M_G-video-controls-color: var(--T_M_G-video-disabled-color);
     --T_M_G-video-text-color: var(--T_M_G-video-disabled-color);
-    --T_M_G-video-brand-color: var(--T_M_G-video-disabled-color);
     cursor: not-allowed;
 }
 
-.T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content::after {
+/* .T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content::after {
     position: absolute;
     content: "!";
     font-size: calc(var(--T_M_G-video-relative-unit)*6);
@@ -524,7 +523,7 @@
     display: flex; 
     align-items: center;
     justify-content: center;
-}
+} */
 
 .T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content {
     background: var(--T_M_G-video-disabled-background);
@@ -535,7 +534,7 @@
 }
 
 .T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) * {
-    pointer-events: none;
+    /* pointer-events: none; */
 }
 /* setting deactivated state ends */
 
@@ -1335,8 +1334,8 @@ button:has(.T_M_G-video-next-icon) svg {
     display: none;
 }
 
-.T_M_G-video-volume-container:is(:focus-visible, .T_M_G-video-control-active) .T_M_G-video-volume-slider::after, 
-.T_M_G-video-volume-container:is(:focus-visible, .T_M_G-video-control-active) .T_M_G-video-volume-slider::before {
+.T_M_G-video-volume-container:is(:has(:focus-visible), .T_M_G-video-control-active) .T_M_G-video-volume-slider::after, 
+.T_M_G-video-volume-container:is(:has(:focus-visible), .T_M_G-video-control-active) .T_M_G-video-volume-slider::before {
     display: block;
 }
 
@@ -2048,8 +2047,7 @@ button:has(.T_M_G-video-next-icon) svg {
     }
     .T_M_G-video-container.T_M_G-video-overlay, 
     .T_M_G-video-container:has(:focus-visible),
-    .T_M_G-video-container.T_M_G-video-scrubbing, 
-    .T_M_G-video-container.T_M_G-video-previewing {
+    .T_M_G-video-container.T_M_G-video-scrubbing {
         --T_M_G-video-current-thumb-indicator-scale: 1.5;
     } 
     .T_M_G-video-container .T_M_G-video-controls-container .T_M_G-video-preview-container {
@@ -2070,9 +2068,6 @@ button:has(.T_M_G-video-next-icon) svg {
         --T_M_G-video-preview-border-color: var(--T_M_G-video-brand-translucent-color);
     }
     .T_M_G-video-container .T_M_G-video-preview {
-        display: none;
-    }
-    .T_M_G-video-container.T_M_G-video-previewing .T_M_G-video-preview-container {
         display: none;
     }
     .T_M_G-video-container.T_M_G-video-scrubbing .T_M_G-video-preview-container {
