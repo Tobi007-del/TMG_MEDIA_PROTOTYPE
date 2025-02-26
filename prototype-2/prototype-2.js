@@ -162,6 +162,7 @@ class _T_M_G_Video_Player {
         this.toggleSettingsView = this.toggleSettingsView.bind(this)
         this.enterSettingsView = this.enterSettingsView.bind(this)
         this.leaveSettingsView = this.leaveSettingsView.bind(this)
+        this.showMessage = this.showMessage.bind(this)
         this.removeInitialState = this.removeInitialState.bind(this)
         this.initializeVideoControls = this.initializeVideoControls.bind(this)
 
@@ -946,7 +947,7 @@ class _T_M_G_Video_Player {
             console.warn("You have to activate the TMG controller to access the custom controls")
         }
     } catch(e) {
-        console.warn('TMG silenced a rendering error: ', e)
+        this._log(e, "error", "swallow")
     }
     }
 
@@ -980,8 +981,6 @@ class _T_M_G_Video_Player {
     try {     
         this.initAudioManager()
         this.enableFocusableControls("all")
-        this._handleLoadedMetadata()
-        this._handleVolumeChange()
         this.setInitialStates()
         this.setGeneralEventListeners()
         this.observePosition()
@@ -1462,10 +1461,10 @@ class _T_M_G_Video_Player {
 
     deactivate() {
     try {
+        this.showVideoOverlay()
         this.videoContainer.classList.add("T_M_G-video-unavailable")
-        this.disableFocusableControls("all")
-        this.unobservePosition()
-        this.removeKeyEventListeners()
+        // this.disableFocusableControls("all")
+        // this.removeKeyEventListeners()
     } catch(e) {
         this._log(e, "error", "swallow")
     } 
@@ -1475,9 +1474,8 @@ class _T_M_G_Video_Player {
     try {
         if (this.videoContainer.classList.contains("T_M_G-video-unavailable") && this.loaded) {
             this.videoContainer.classList.remove("T_M_G-video-unavailable")
-            this.enableFocusableControls("all")
-            this.observePosition()
-            this.setKeyEventListeners()
+            // this.enableFocusableControls("all")
+            // this.setKeyEventListeners()
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -1531,9 +1529,18 @@ class _T_M_G_Video_Player {
     }                        
     }        
 
+    showMessage(message) {
+    try {
+        if (message) this.DOM.videoContainerContent?.setAttribute("data-message", e.message)
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }             
+    }
+
     _handleLoadedError(e) {
     try {
         if (e) this._log(e, "swallow")
+        this.showMessage(e?.message)
         this.loaded = false
         this.deactivate()
     } catch(e) {
@@ -1548,6 +1555,7 @@ class _T_M_G_Video_Player {
         if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatDuration(this.video.duration)
         this.aspectRatio = this.video.videoWidth / this.video.videoHeight
         this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`
+        this.videoCurrentProgressPosition = this.videoCurrentLoadedPosition = 0
         this.loaded = true
         this.reactivate()
         }
@@ -2184,6 +2192,7 @@ class _T_M_G_Video_Player {
         this.audioVolume = 100
         this.volumeTypeCounter = this.video.muted ? 1 : 0
         this.audioSetup = true
+        this._handleVolumeChange()
         }
     } catch(e) {
         this._log(e, "error", "swallow")
