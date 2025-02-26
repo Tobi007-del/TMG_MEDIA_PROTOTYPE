@@ -269,7 +269,7 @@ class _T_M_G_Video_Player {
     }
 
     set currentTime(value) {
-        if (this.video.currentTime) this.video.currentTime = value
+        this.video.currentTime = value
     }
 
     get currentTime() {
@@ -3266,6 +3266,8 @@ class tmg {
             progressBar: false,
             persist: true,
             skipTime: 10,
+            startTime: null,
+            endTime: null,
             automove: true,
             automoveCountdown: 10,
             autocaptions: false,
@@ -3277,6 +3279,8 @@ class tmg {
             overlayRestraintTime: 3000,
             keyOverrides: ["arrowdown", "arrowup", "arrowleft", "arrowright", "home", "end"],
             shiftKeys: ["prev", "next"],
+            ctrlKeys: [],
+            altKeys: [],
             keyShortcuts: {
                 prev: "p", 
                 next: "n",

@@ -537,21 +537,21 @@
 }
 /* setting deactivated state ends */
 
-.T_M_G-video-container:not(.T_M_G-video-unavailable).T_M_G-video-settings-view .T_M_G-video-container-content-wrapper {
+.T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-container-content-wrapper {
     transform: rotateY(180deg);
 }
 
-.T_M_G-video-container:not(.T_M_G-video-unavailable).T_M_G-video-settings-view .T_M_G-video-settings {
+.T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-settings {
     pointer-events: all;
     opacity: 1;
     transition: opacity var(--T_M_G-video-settings-view-transition-time) ease;
 }
 
-.T_M_G-video-container:not(.T_M_G-video-unavailable).T_M_G-video-settings-view .T_M_G-video-container-content video {
+.T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-container-content video {
     filter: blur(10px);
 }
 
-.T_M_G-video-container:not(.T_M_G-video-unavailable).T_M_G-video-settings-view .T_M_G-video-settings-btn svg {
+.T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-settings-btn svg {
     rotate: 30deg;
 }
 
