@@ -979,6 +979,7 @@ class _T_M_G_Video_Player {
 
     initializeVideoControls() {
     try {     
+        this._handleLoadedMetadata()
         this.initAudioManager()
         this.enableFocusableControls("all")
         this.setInitialStates()
