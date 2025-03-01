@@ -501,13 +501,13 @@ class _T_M_G_Video_Player {
             `,
             videobuffer : 
             `
-            <div title="Video buffering" class="T_M_G-video-buffer">
-            </div>
+                <div title="Video buffering" class="T_M_G-video-buffer">
+                </div>
             `,
             thumbnail :
             `
-            <img class="T_M_G-video-thumbnail T_M_G-video-thumbnail-image" alt="movie-image" src="${window.tmg.ALT_IMG_SRC}">
-            <canvas class="T_M_G-video-thumbnail T_M_G-video-thumbnail-canvas"></canvas>
+                <img class="T_M_G-video-thumbnail T_M_G-video-thumbnail-image" alt="movie-image" src="${window.tmg.ALT_IMG_SRC}">
+                <canvas class="T_M_G-video-thumbnail T_M_G-video-thumbnail-canvas"></canvas>
             `,
             playpausenotifier : this.settings.status.ui.notifiers ?
             `
@@ -601,23 +601,23 @@ class _T_M_G_Video_Player {
             ` : null,
             expandminiplayer : this.settings.status.modes.miniPlayer ?
             `
-            <div class="T_M_G-video-mini-player-expand-btn-wrapper">
-                <button type="button" class="T_M_G-video-mini-player-expand-btn" title="Expand mini-player${keyShortcuts["expandMiniPlayer"]}" data-focusable-control="false" tabindex="-1">
-                    <svg class="T_M_G-video-mini-player-expand-icon" viewBox="0 -960 960 960" data-tooltip-text="Expand Mini Player${keyShortcuts["expandMiniPlayer"]}" data-tooltip-position="top" data-no-resize="true">
-                        <path d="M120-120v-320h80v184l504-504H520v-80h320v320h-80v-184L256-200h184v80H120Z"/>
-                    </svg>
-                </button>
-            </div>    
+                <div class="T_M_G-video-mini-player-expand-btn-wrapper">
+                    <button type="button" class="T_M_G-video-mini-player-expand-btn" title="Expand mini-player${keyShortcuts["expandMiniPlayer"]}" data-focusable-control="false" tabindex="-1">
+                        <svg class="T_M_G-video-mini-player-expand-icon" viewBox="0 -960 960 960" data-tooltip-text="Expand Mini Player${keyShortcuts["expandMiniPlayer"]}" data-tooltip-position="top" data-no-resize="true">
+                            <path d="M120-120v-320h80v184l504-504H520v-80h320v320h-80v-184L256-200h184v80H120Z"/>
+                        </svg>
+                    </button>
+                </div>    
             ` : null,
             removeminiplayer : this.settings.status.modes.miniPlayer ?
             `
-            <div class="T_M_G-video-mini-player-cancel-btn-wrapper">
-                <button type="button" class="T_M_G-video-mini-player-cancel-btn" title="Remove Mini-player${keyShortcuts["removeMiniPlayer"]}" data-focusable-control="false" tabindex="-1">
-                    <svg class="T_M_G-video-mini-player-cancel-icon" viewBox="0 -960 960 960" data-tooltip-text="Remove Mini Player${keyShortcuts["removeMiniPlayer"]}" data-tooltip-position="top" data-no-resize="true">
-                        <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
-                    </svg>
-                </button>
-            </div>    
+                <div class="T_M_G-video-mini-player-cancel-btn-wrapper">
+                    <button type="button" class="T_M_G-video-mini-player-cancel-btn" title="Remove Mini-player${keyShortcuts["removeMiniPlayer"]}" data-focusable-control="false" tabindex="-1">
+                        <svg class="T_M_G-video-mini-player-cancel-icon" viewBox="0 -960 960 960" data-tooltip-text="Remove Mini Player${keyShortcuts["removeMiniPlayer"]}" data-tooltip-position="top" data-no-resize="true">
+                            <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
+                        </svg>
+                    </button>
+                </div>    
             ` : null,
             mainprev : this.settings.status.ui.prev ?
             `
@@ -749,11 +749,11 @@ class _T_M_G_Video_Player {
             ` : null,
             captions : this.settings.status.ui.captions ?
             `
-                    <button type="button" class="T_M_G-video-captions-btn" title="Toggle Captions/Subtitles(c)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="captions">
-                        <svg data-tooltip-text="Toggle Subtitles(c)" data-tooltip-position="top" class="T_M_G-video-subtitles-icon">
+                    <button type="button" class="T_M_G-video-captions-btn" title="Toggle Captions/Subtitles${keyShortcuts["captions"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="captions">
+                        <svg data-tooltip-text="Toggle Subtitles${keyShortcuts["captions"]}" data-tooltip-position="top" class="T_M_G-video-subtitles-icon">
                             <path fill="currentColor" transform="scale(0.5)" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" />
                         </svg>
-                        <svg data-tooltip-text="Toggle Captions(c)" data-tooltip-position="top" class="T_M_G-video-captions-icon" transform="scale(1.15)">
+                        <svg data-tooltip-text="Toggle Captions${keyShortcuts["captions"]}" data-tooltip-position="top" class="T_M_G-video-captions-icon" transform="scale(1.15)">
                             <path fill="currentColor" d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z"></path>
                         <svg>
                     </button>
@@ -768,7 +768,7 @@ class _T_M_G_Video_Player {
             ` : null,
             playbackrate : this.settings.status.ui.playbackRate ? 
             `
-                    <button type="button" class="T_M_G-video-playback-rate-btn T_M_G-video-wide-btn" title="Playback Rate(s)" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="playbackrate">1x</button>
+                    <button type="button" class="T_M_G-video-playback-rate-btn T_M_G-video-wide-btn" title="Playback Rate${keyShortcuts["playbackRate"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="playbackrate">1x</button>
             ` : null,
             pictureinpicture : this.settings.status.ui.pictureInPicture ? 
             `
@@ -2750,7 +2750,7 @@ class _T_M_G_Video_Player {
     fetchKeyShortcuts() {
     try {
         const shortcuts = {}
-        Object.keys(window.tmg._DEFAULT_VIDEO_BUILD.settings.keyShortcuts ?? {}).forEach(key => {
+        Object.keys(window.tmg._DEFAULT_VIDEO_BUILD.settings.keyShortcuts).forEach(key => {
             let mods = ""
             if (this.settings.ctrlKeys?.includes(String(key)))
                 mods += "ctrl + "
@@ -2758,7 +2758,7 @@ class _T_M_G_Video_Player {
                 mods += "alt + "
             if (this.settings.shiftKeys?.includes(String(key)))
                 mods += "shift + "
-            shortcuts[key] = this.settings.keyShortcuts[key]?.toString()?.toLowerCase()?.replace(/^(\w*)$/, `(${mods}$1)`) ?? ""
+            shortcuts[key] = this.settings.keyShortcuts[key]?.toString()?.toLowerCase()?.replace(/^(.+)$/, `(${mods}$1)`) ?? ""
         })
         return shortcuts
     } catch(e) {
@@ -2954,11 +2954,10 @@ class _T_M_G_Video_Player {
     try {
         this.showVideoOverlay()
         target.classList.remove("T_M_G-video-control-dragging")
-        let controllerStructure = []
+        this.dragging = null
         const leftSideStructure = this.settings.status.ui.leftSidedControls && this.DOM.leftSidedControlsWrapper.children ? Array.from(this.DOM.leftSidedControlsWrapper.children, el => el.dataset.controlId) : []
-        const rightSideStructure = this.settings.status.ui.rightSidedControls && this.DOM.leftSidedControlsWrapper.children ? Array.from(this.DOM.rightSidedControlsWrapper.children, el => el.dataset.controlId) : []
-        controllerStructure = controllerStructure.concat(leftSideStructure, ["spacer"], rightSideStructure)
-        this.settings.controllerStructure = controllerStructure
+        const rightSideStructure = this.settings.status.ui.rightSidedControls && this.DOM.rightSidedControlsWrapper.children ? Array.from(this.DOM.rightSidedControlsWrapper.children, el => el.dataset.controlId) : []
+        this.settings.controllerStructure = [].concat(leftSideStructure, ["spacer"], rightSideStructure)
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
@@ -2966,7 +2965,7 @@ class _T_M_G_Video_Player {
 
     _handleDragEnter({target}) {
     try {
-        if (target.dataset.dropzone) {
+        if (target.dataset.dropzone && this.dragging) {
             target.classList.add("T_M_G-video-dragover")
         }
     } catch(e) {
@@ -2976,8 +2975,8 @@ class _T_M_G_Video_Player {
 
     _handleDragOver(e) {
     try {
-        e.preventDefault()
-        if (e.target.dataset.dropzone) {
+        if (e.target.dataset.dropzone && this.dragging) {
+            e.preventDefault()
             e.dataTransfer.dropEffect = "move"
             const afterControl = this.getControlAfterDragging(e.target, e.clientX)
             if (afterControl) e.target.insertBefore(this.dragging, afterControl) 
@@ -2990,8 +2989,8 @@ class _T_M_G_Video_Player {
 
     _handleDrop(e) {
     try {        
-        e.preventDefault()
         if (e.target.dataset.dropzone) {
+            e.preventDefault()
             e.target.classList.remove("T_M_G-video-dragover")
         }
     } catch(e) {
@@ -3013,10 +3012,8 @@ class _T_M_G_Video_Player {
         return draggableControls.reduce((closest, child) => {
             const box = child.getBoundingClientRect()
             const offset = x - box.left - (box.width / 2)
-            if (offset < 0 && offset > closest.offset) 
-                return {offset: offset, element: child}
-            else 
-                return closest
+            if (offset < 0 && offset > closest.offset) return {offset: offset, element: child}
+            else return closest
         }, {offset: Number.NEGATIVE_INFINITY}).element
     }
 }
