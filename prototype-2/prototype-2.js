@@ -163,7 +163,6 @@ class _T_M_G_Video_Player {
         this.enterSettingsView = this.enterSettingsView.bind(this)
         this.leaveSettingsView = this.leaveSettingsView.bind(this)
         this.showMessage = this.showMessage.bind(this)
-        this.removeInitialState = this.removeInitialState.bind(this)
         this.initializeVideoControls = this.initializeVideoControls.bind(this)
 
         this.notify = this.settings.status.ui.notifiers ? {
@@ -694,7 +693,7 @@ class _T_M_G_Video_Player {
             ` : null,
             objectfit : this.settings.status.ui.objectFit ?
             `
-                    <button type="button" class="T_M_G-video-object-fit-btn " title="Adjust Object Fit${keyShortcuts["objectFit"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="objectfit" data-focusable-control="false" tabindex="-1">
+                    <button type="button" class="T_M_G-video-object-fit-btn " title="Change Object Fit${keyShortcuts["objectFit"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="objectfit" data-focusable-control="false" tabindex="-1">
                         <svg class="T_M_G-video-object-fit-contain-icon" data-tooltip-text="Fit to Screen${keyShortcuts["objectFit"]}" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16" data-no-resize="true" transform="scale(0.81)">
                             <rect width="16" height="16" rx="4" ry="4" fill="none" stroke-width="2.25" stroke="currentColor" class="T_M_G-video-no-fill" />
                             <g stroke-width="1" stroke="currentColor" fill="currentColor" transform="translate(3,3) scale(0.6)">
@@ -939,9 +938,18 @@ class _T_M_G_Video_Player {
         }
         if (this.activated) {
             if (this.initialState) {
-                this.video.addEventListener("play", this.removeInitialState, {once:true})
-                this.DOM.mainPlayPauseBtn?.addEventListener("click", this.removeInitialState)
-                this.DOM.videoContainer.addEventListener("click", this.removeInitialState)
+                const removeInitialState = () => {
+                    this.stall()
+                    this.videoContainer.classList.remove("T_M_G-video-initial")
+                    this.initialState = false
+                    this.togglePlay(true) 
+                    this.initializeVideoControls()
+                    this.DOM.mainPlayPauseBtn?.removeEventListener("click", removeInitialState)
+                    this.DOM.videoContainer.removeEventListener("click", removeInitialState)
+                }
+                this.video.addEventListener("play", removeInitialState, {once:true})
+                this.DOM.mainPlayPauseBtn?.addEventListener("click", removeInitialState)
+                this.DOM.videoContainer.addEventListener("click", removeInitialState)
             } else this.initializeVideoControls()  
         } else {
             console.warn("You have to activate the TMG controller to access the custom controls")
@@ -959,22 +967,6 @@ class _T_M_G_Video_Player {
     } catch(e) {
         this._log(e, "error", "swallow")
     }           
-    }
-
-    removeInitialState() {
-    try {
-        if (this.initialState) {
-        this.initialState = false
-	    this.togglePlay(true) 
-        this.stall()
-        this.videoContainer.classList.remove("T_M_G-video-initial")
-        this.initializeVideoControls()
-        this.DOM.mainPlayPauseBtn?.removeEventListener("click", this.removeInitialState)
-        this.DOM.videoContainer.removeEventListener("click", this.removeInitialState)
-        } 
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }
     }
 
     initializeVideoControls() {
@@ -2451,7 +2443,8 @@ class _T_M_G_Video_Player {
 
     _handleLeavePictureInPicture() {
     try {
-        this.videoContainer.classList.remove("T_M_G-video-picture-in-picture")
+        //the video takes a while before it enters back into the player so a timeout is used to prevent the user from seeing the default ui
+        setTimeout(() => this.videoContainer.classList.remove("T_M_G-video-picture-in-picture"), 180)
         this.overlayRestraint()
         this.toggleMiniPlayerMode()
     } catch(e) {

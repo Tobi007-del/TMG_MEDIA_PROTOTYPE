@@ -1432,7 +1432,6 @@ button:has(.T_M_G-video-next-icon) svg {
 
 .T_M_G-video-timeline-container {
     z-index: 1;
-    cursor: grab;
     display: flex;
     align-items: center;
     touch-action: none;
@@ -1463,7 +1462,11 @@ button:has(.T_M_G-video-next-icon) svg {
     opacity: 0.5;
 }
 
-.T_M_G-video-container.T_M_G-video-scrubbing .T_M_G-video-timeline-container {
+.T_M_G-video-timeline-container:hover {
+    cursor: pointer;
+}
+
+.T_M_G-video-container.T_M_G-video-scrubbing .T_M_G-video-timeline-container:hover {
     cursor: grabbing;
 }
 
@@ -1511,7 +1514,7 @@ button:has(.T_M_G-video-next-icon) svg {
     z-index: 2;
 }
 
-.T_M_G-video-timeline .T_M_G-video-thumb-indicator {
+.T_M_G-video-thumb-indicator {
     z-index: 3;
     position: absolute;
     aspect-ratio: 1 / 1;
@@ -1522,6 +1525,10 @@ button:has(.T_M_G-video-next-icon) svg {
     border-radius: 50%;
     transition: transform 150ms ease-in-out;
     transform: translateX(-50%) scale(var(--T_M_G-video-current-thumb-indicator-scale));
+}
+
+.T_M_G-video-thumb-indicator:hover {
+    cursor: grab;
 }
 
 .T_M_G-video-preview-container {
