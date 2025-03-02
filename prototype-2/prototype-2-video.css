@@ -1343,7 +1343,11 @@ button:has(.T_M_G-video-next-icon) svg {
     align-items: center;
     gap: calc(var(--T_M_G-video-current-unit)/10);
     color: var(--T_M_G-video-text-color);
-    font-size: calc(var(--T_M_G-video-current-unit)/1.65);
+    font-size: calc(var(--T_M_G-video-current-unit)/1.75);
+}
+
+.T_M_G-video-duration-container:hover {
+    cursor: pointer;
 }
 
 .T_M_G-video-container.T_M_G-video-scrubbing .T_M_G-video-current-time {

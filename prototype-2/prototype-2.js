@@ -45,8 +45,6 @@ class _T_M_G_Video_Player {
         this.lastAudioVolume = 100
         this.shouldSetLastAudioVolume = false
         this.volumeTypeCounter = 0
-        this.audioSliderVolumeTimeoutId = null
-        this.volumeActiveId = null 
         this.volumeActiveRestraintId = null
         this.playTriggerCounter = 0
         this.speedUpThreshold = 1000
@@ -65,7 +63,6 @@ class _T_M_G_Video_Player {
         this.skipDurationId = null
         this.skipDuration = 0
         this.currentNotifier = null
-        this.transitionId = null
         this.dragging = null
         this.settingsView = false
         this.textTrackIndex = 0
@@ -123,7 +120,6 @@ class _T_M_G_Video_Player {
         this._handleVolumeSliderMouseDown = this._handleVolumeSliderMouseDown.bind(this)
         this._handleVolumeSliderMouseUp = this._handleVolumeSliderMouseUp.bind(this)
         this._handleVolumeContainerMouseMove = this._handleVolumeContainerMouseMove.bind(this)
-        this._handleVolumeContainerMouseUp = this._handleVolumeContainerMouseUp.bind(this)
         this._handleImgBreak = this._handleImgBreak.bind(this)
         this._handleMiniPlayerPosition = this._handleMiniPlayerPosition.bind(this)
         this._handleDragStart = this._handleDragStart.bind(this)
@@ -137,6 +133,7 @@ class _T_M_G_Video_Player {
         this.enableFocusableControls = this.enableFocusableControls.bind(this)
         this.disableFocusableControls = this.disableFocusableControls.bind(this)
         this.changeObjectFit = this.changeObjectFit.bind(this)
+        this.changeTimeFormat = this.changeTimeFormat.bind(this)
         this.previousVideo = this.previousVideo.bind(this)
         this.nextVideo = this.nextVideo.bind(this)
         this.togglePlay = this.togglePlay.bind(this)
@@ -740,7 +737,7 @@ class _T_M_G_Video_Player {
             ` : null,
             duration : this.settings.status.ui.duration ?
             `
-                    <div class="T_M_G-video-duration-container" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="duration">
+                    <div class="T_M_G-video-duration-container" title="Change Time Format${keyShortcuts["timeFormat"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-control-id="duration">
                         <div class="T_M_G-video-current-time">0:00</div>
                         /
                         <div class="T_M_G-video-total-time">-:--</div>
@@ -1230,6 +1227,7 @@ class _T_M_G_Video_Player {
         this.DOM.nextBtn?.addEventListener("click", this.nextVideo)
         this.DOM.playPauseBtn?.addEventListener("click", this.togglePlay)
         this.DOM.mainPlayPauseBtn?.addEventListener("click", this.togglePlay)
+        this.DOM.durationContainer?.addEventListener("click", this.changeTimeFormat)
         this.DOM.playbackRateBtn?.addEventListener("click", this.changePlaybackRate)
         this.DOM.captionsBtn?.addEventListener("click", this.toggleCaptions)
         this.DOM.muteBtn?.addEventListener("click", this.toggleMute)
@@ -1253,7 +1251,6 @@ class _T_M_G_Video_Player {
         this.DOM.volumeSlider?.addEventListener("mousedown", this. _handleVolumeSliderMouseDown)
         this.DOM.volumeSlider?.addEventListener("mouseup", this._handleVolumeSliderMouseUp)
         this.DOM.volumeContainer?.addEventListener("mousemove", this._handleVolumeContainerMouseMove)
-        this.DOM.volumeContainer?.addEventListener("mouseup", this._handleVolumeContainerMouseUp)
 
         //drag event listeners
         this.setDragEventListeners()
@@ -1545,7 +1542,7 @@ class _T_M_G_Video_Player {
     try {
         if (!this.loaded) {
         if (this.settings.startTime) this.currentTime = this.settings?.startTime
-        if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatDuration(this.video.duration)
+        if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatTime(this.video.duration)
         this.aspectRatio = this.video.videoWidth / this.video.videoHeight
         this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`
         this.videoCurrentProgressPosition = this.videoCurrentLoadedPosition = 0
@@ -1559,11 +1556,19 @@ class _T_M_G_Video_Player {
 
     _handleLoadedData() {
     try {
-        if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatDuration(this.video.duration)
+        if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatTime(this.video.duration)
     } catch(e) {
         this._log(e, "error", "swallow")
     }                
     }
+
+    _handleDurationChange() {
+    try {
+        if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatTime(this.video.duration)
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    } 
 
     _handleLoadedProgress() {
     try {
@@ -1824,14 +1829,6 @@ class _T_M_G_Video_Player {
     }        
     }  
 
-    _handleDurationChange() {
-    try {
-        if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatDuration(this.video.duration)
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }
-    } 
-
     moveVideoTime(details) {
     try {        
         switch(details.to) {
@@ -1913,7 +1910,7 @@ class _T_M_G_Video_Player {
         const previewImgPercent = window.tmg.clamp(previewImgMin, percent, (1 - previewImgMin))
         this.videoCurrentPreviewPosition = percent
         this.videoCurrentPreviewImgPosition = previewImgPercent
-        this.DOM.previewContainer?.setAttribute("data-preview-time", window.tmg.formatDuration(percent * this.video.duration))  
+        this.DOM.previewContainer?.setAttribute("data-preview-time", window.tmg.formatTime(percent * this.video.duration))  
         if (this.isScrubbing) {
             this.videoCurrentProgressPosition =  percent
             this.overlayRestraint()
@@ -1985,11 +1982,10 @@ class _T_M_G_Video_Player {
     _handleTimeUpdate() {
     try {    
         this.video.removeAttribute("controls")
-        const formattedTime = window.tmg.formatDuration(this.video.currentTime)
         const percent = window.tmg.formatNumber(this.video.currentTime / this.video.duration)
         this.videoCurrentProgressPosition = percent
-        if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = formattedTime
-        if (this.speedCheck && this.speedToken === 1) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", formattedTime)
+        if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.timeFormat !== "spent" ? window.tmg.formatTime(this.video.currentTime) : `-${window.tmg.formatTime(this.video.duration - this.video.currentTime)}`
+        if (this.speedCheck && this.speedToken === 1) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", window.tmg.formatTime(this.video.currentTime))
         if (this._playlist && this.currentTime > 3) this.playlistCurrentTime = this.currentTime
         this.skipVideoTime = this.currentTime
         if (Math.floor((this.settings.endTime || this.duration) - this.currentTime) <= this.settings.automoveCountdown) this.automovePlaylist()
@@ -1997,7 +1993,18 @@ class _T_M_G_Video_Player {
     } catch(e) {
         this._log(e, "error", "swallow")
     }    
-    }        
+    }
+    
+    changeTimeFormat() {
+    try {
+        if (this.settings.status.allowOverride.timeFormat) {
+            this.settings.timeFormat = this.settings.timeFormat !== "spent" ? "spent" : "left"
+            if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.timeFormat !== "spent" ? window.tmg.formatTime(this.video.currentTime) : `-${window.tmg.formatTime(this.video.duration - this.video.currentTime)}`
+        }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }      
+    }
     
     skip(duration, persist = false) {
     try {
@@ -2108,7 +2115,7 @@ class _T_M_G_Video_Player {
     try {        
         this.speedVideoTime -= this.speedIntervalTime
         this.videoCurrentProgressPosition = this.speedVideoTime / this.duration
-        if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.setAttribute("data-current-time", window.tmg.formatDuration(Math.max(this.speedVideoTime, 0)))
+        if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.setAttribute("data-current-time", window.tmg.formatTime(Math.max(this.speedVideoTime, 0)))
         this.currentTime -= this.speedIntervalTime
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2230,8 +2237,7 @@ class _T_M_G_Video_Player {
         this.audioVolume = target.value
         this.video.muted = this.audioVolume === 0
         this.volumeTypeCounter = this.video.muted ? 1 : 0
-        if (this.audioSliderVolumeTimeoutId) clearTimeout(this.audioSliderVolumeTimeoutId)
-        if (this.audioVolume > 0) this.audioSliderVolumeTimeoutId = setTimeout(() => this.audioSliderVolume = this.audioVolume, 250)
+        if (this.audioVolume > 5) this.audioSliderVolume = this.audioVolume
         this.volumeActiveRestraint()            
         this.overlayRestraint()
     } catch(e) {
@@ -2299,8 +2305,9 @@ class _T_M_G_Video_Player {
                 if (this.audioVolume > 0) {
                     this.audioVolume -= (this.audioVolume%value) ? (this.audioVolume%n) : n   
                 } 
-                if (this.audioVolume == 0) {
+                if (this.audioVolume === 0) {
                     this.audioVolume = 0
+                    this.video.muted = true
                     this.fire("volumemuted")
                     break
                 }
@@ -2314,13 +2321,10 @@ class _T_M_G_Video_Player {
 
     _handleVolumeContainerMouseMove() {
     try {        
-        if (this.volumeActiveId) clearTimeout(this.volumeActiveId)
-        this.volumeActiveId = setTimeout(() => {
-            if (this.DOM.volumeSlider?.parentElement.matches(':hover')) {
-                this.DOM.volumeSlider?.parentElement.classList.add("T_M_G-video-control-active")
-                this.volumeActiveRestraint()
-            }
-        }, 250)
+        if (this.DOM.volumeSlider?.parentElement.matches(':hover')) {
+            this.DOM.volumeSlider?.parentElement.classList.add("T_M_G-video-control-active")
+            this.volumeActiveRestraint()
+        }
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
@@ -2333,14 +2337,6 @@ class _T_M_G_Video_Player {
     } catch(e) {
         this._log(e, "error", "swallow")
     }
-    }
-
-    _handleVolumeContainerMouseUp() {
-    try {
-        if (this.volumeActiveId) clearTimeout(this.volumeActiveId)
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }            
     }
 
     toggleTheaterMode() {
@@ -2823,6 +2819,14 @@ class _T_M_G_Video_Player {
                 e.shiftKey ? this.changePlaybackRate("backwards") : this.changePlaybackRate("forwards")
                 this.fire("playbackratechange")
                 break
+            case this.settings.keyShortcuts["timeFormat"]?.toString()?.toLowerCase(): 
+                this.changeTimeFormat()
+                break
+            case this.settings.keyShortcuts["mute"]?.toString()?.toLowerCase():
+                if (this.audioVolume === 0) this.audioVolume = 5
+                this.toggleMute()
+                this.video.muted ? this.fire("volumemuted") : this.fire("volumeup")
+                break                
             case "arrowup":
                 e.shiftKey ? this.changeVolume("increment", 10) : this.changeVolume("increment", 5)
                 break
@@ -2863,14 +2867,6 @@ class _T_M_G_Video_Player {
                 break
             case this.settings.keyShortcuts["pictureInPicture"]?.toString()?.toLowerCase():
                 if (this.settings.status.modes.pictureInPicture) this.togglePictureInPictureMode()
-                break
-            case this.settings.keyShortcuts["mute"]?.toString()?.toLowerCase():
-                if (this.audioVolume === 0) {
-                    this.video.muted = true
-                    this.audioVolume = 5
-                }
-                this.toggleMute()
-                this.video.muted ? this.fire("volumemuted") : this.fire("volumeup")
                 break
             case this.settings.keyShortcuts["captions"]?.toString()?.toLowerCase():
                 if (this.video.textTracks[this.textTrackIndex] && !this.isModeActive("pictureInPicture")) {
@@ -3256,6 +3252,7 @@ class tmg {
             notifiers: true,
             progressBar: false,
             persist: true,
+            timeFormat: "left",
             skipTime: 10,
             startTime: null,
             endTime: null,
@@ -3276,6 +3273,7 @@ class tmg {
                 prev: "p", 
                 next: "n",
                 playPause: "k",
+                timeFormat: "q",
                 skipBwd: "j",
                 skipFwd: "l",
                 objectFit: "a",
@@ -3489,7 +3487,7 @@ class tmg {
     static clamp(min, amount, max) {
         return Math.min(Math.max(amount, min), max)
     }
-    static formatDuration(time) {
+    static formatTime(time) {
         if (!isNaN(time ?? NaN) && time !== Infinity) {
             const seconds = Math.floor(time % 60)
             const minutes = Math.floor(time / 60) % 60
@@ -3498,10 +3496,9 @@ class tmg {
             else return `${hours}:${window.tmg.leadingZeroFormatter.format(minutes)}:${window.tmg.leadingZeroFormatter.format(seconds)}`
         } else return '-:--'
     }
-    static formatNumber(time) {
-        if (!isNaN(time ?? NaN) && time !== Infinity) {
-            return time
-        } else return 0
+    static formatNumber(number) {
+        if (!isNaN(number ?? NaN) && number !== Infinity) return number
+        else return 0
     }
     static formatCSSTime(time) {
         return time.endsWith("ms") ? Number(time.replace("ms", "")) : Number(time.replace("s", "")) * 1000
