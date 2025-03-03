@@ -2547,6 +2547,7 @@ class _T_M_G_Video_Player {
     //Keyboard and General Accessibility Functions
     _handleClick({target}) {
     try {
+	if (target === this.DOM.videoOverlayControlsContainer) {
         if (this.clickId) clearTimeout(this.clickId)
         this.clickId = setTimeout(() => {
 	    if (window.tmg.queryMediaMobile() && !this.isModeActive("miniPlayer")) {
@@ -2559,6 +2560,7 @@ class _T_M_G_Video_Player {
             }
                 this.showVideoOverlay()
         }, 300)
+        } 
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
