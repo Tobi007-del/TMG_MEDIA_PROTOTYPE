@@ -2576,8 +2576,8 @@ class _T_M_G_Video_Player {
 
     _handleDoubleClick({clientX: x, target}) {
     try {
-        if (target === this.DOM.videoControlsContainer || target === this.DOM.videoOverlayControlsContainer) {
-        if (this.playId) clearTimeout(this.playId)
+        if (target === this.DOM.videoOverlayControlsContainer) {
+        if (this.clickId) clearTimeout(this.clickId)
         const rect = this.video.getBoundingClientRect()
         if (((x-rect.left) > (this.video.offsetWidth*0.65))) {
             this.skip(this.settings.skipTime, true)
