@@ -2547,7 +2547,7 @@ class _T_M_G_Video_Player {
     //Keyboard and General Accessibility Functions
     _handleClick({target}) {
     try {
-        if (this.clickId) clearTimeout(this.playId)
+        if (this.clickId) clearTimeout(this.clickId)
         this.clickId = setTimeout(() => {
 	    if (window.tmg.queryMediaMobile() && !this.isModeActive("miniPlayer")) {
                 if (!this.buffering) this.videoContainer.classList.toggle("T_M_G-video-overlay")
