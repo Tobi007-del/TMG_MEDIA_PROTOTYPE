@@ -2550,7 +2550,7 @@ class _T_M_G_Video_Player {
         if (this.clickId) clearTimeout(this.clickId)
         this.clickId = setTimeout(() => {
 	    if (window.tmg.queryMediaMobile() && !this.isModeActive("miniPlayer")) {
-                if (!this.buffering) this.videoContainer.classList.toggle("T_M_G-video-overlay")
+                if (!this.buffering && !this.isModeActive("pictureInPicture")) this.videoContainer.classList.toggle("T_M_G-video-overlay")
             } 
             if (window.tmg.queryMediaMobile() || this.isModeActive("miniPlayer")) return
             if (!(this.speedCheck && this.playTriggerCounter < 1))  {
