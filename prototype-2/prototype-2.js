@@ -37,7 +37,7 @@ class _T_M_G_Video_Player {
         this.isIntersecting = true
         this.isTimelineFocused = false
         this.buffering = false
-        this.playId = null 
+        this.clickId = null 
         this.overlayRestraintId = null
         this.timelineThrottleId = null
         this.timelineThrottleDelay = 50
@@ -1202,7 +1202,7 @@ class _T_M_G_Video_Player {
         this.video.addEventListener("pause", this._handlePause)        
         this.video.addEventListener("waiting", this._handleBufferStart)
         this.video.addEventListener("playing", this._handleBufferStop)
-	    this.video.addEventListener("durationchange", this._handleDurationChange)
+	this.video.addEventListener("durationchange", this._handleDurationChange)
         this.video.addEventListener("ratechange", this._handlePlaybackRateChange)      
         this.video.addEventListener("timeupdate", this._handleTimeUpdate)
         this.video.addEventListener("progress", this._handleLoadedProgress)
@@ -2547,20 +2547,18 @@ class _T_M_G_Video_Player {
     //Keyboard and General Accessibility Functions
     _handleClick({target}) {
     try {
-        if (target === this.DOM.videoControlsContainer || target === this.DOM.videoOverlayControlsContainer) {
-        if (window.tmg.queryMediaMobile() && !this.isModeActive("miniPlayer")) {
-            if (!this.buffering) this.videoContainer.classList.toggle("T_M_G-video-overlay")
-        } 
-        if (window.tmg.queryMediaMobile() || this.isModeActive("miniPlayer")) return
-        if (this.playId) clearTimeout(this.playId)
-        this.playId = setTimeout(() => {
+        if (this.clickId) clearTimeout(this.playId)
+        this.clickId = setTimeout(() => {
+	    if (window.tmg.queryMediaMobile() && !this.isModeActive("miniPlayer")) {
+                if (!this.buffering) this.videoContainer.classList.toggle("T_M_G-video-overlay")
+            } 
+            if (window.tmg.queryMediaMobile() || this.isModeActive("miniPlayer")) return
             if (!(this.speedCheck && this.playTriggerCounter < 1))  {
                 this.togglePlay()
                 this.video.paused ? this.fire("videopause") : this.fire("videoplay")
             }
                 this.showVideoOverlay()
         }, 300)
-        }
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
