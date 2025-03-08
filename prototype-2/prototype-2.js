@@ -2782,7 +2782,7 @@ class _T_M_G_Video_Player {
         if (!this.isModeActive("miniPlayer") && !this.speedCheck) {           
             this.touchTimelineCheck = true
             this.wasPaused = this.video.paused
-            this.togglePlay(false)
+            if (!this.wasPaused) this.togglePlay(false)
             this.DOM.timelineNotifier.classList.add("T_M_G-video-control-active")
             this.videoContainer.addEventListener("touchmove", this._handleTouchTimelineUpdate, {passive: true})
         }
@@ -2796,7 +2796,7 @@ class _T_M_G_Video_Player {
             this.touchTimelineCheck = false
             this.DOM.timelineNotifier.classList.remove("T_M_G-video-control-active")
             this.video.currentTime = this.nextTouchTime
-            if (!this.wasPaused) this.togglePlay(true)
+            if (!this.wasPaused && !this.video.ended) this.togglePlay(true)
             this.videoContainer.removeEventListener("touchmove", this._handleTouchTimelineUpdate, {passive: true})
         }
         this.videoContainer.removeEventListener("touchmove", this._handleTouchTimelineInit, {once: true, passive: true})
