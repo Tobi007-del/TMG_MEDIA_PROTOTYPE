@@ -45,7 +45,7 @@ class _T_M_G_Video_Player {
         this.timelineThrottleDelay = 50
         this.lastTouchTimelineX = null
         this.lastTouchTimelineY = null
-        this.touchTimelineYThreshold = 15
+        this.touchTimelineYThreshold = 5
         this.touchTimelineTime = null
         this.touchTimelineCheck = false
         this.audioSliderVolume = 5
