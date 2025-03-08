@@ -2200,7 +2200,8 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-full-screen-orientation-btn-wrapper,
 .T_M_G-video-mini-player-expand-btn-wrapper,
 .T_M_G-video-mini-player-cancel-btn-wrapper,
-.T_M_G-video::-webkit-media-text-track-display) {
+.T_M_G-video::-webkit-media-text-track-display), 
+.T_M_G-video-container:has(.T_M_G-video-timeline-notifier.T_M_G-video-control-active, .T_M_G-video-notifiers-container[data-current-notifier="objectfitchange"]) .T_M_G-video-overlay-main-controls-wrapper {
     opacity: 0;
     pointer-events: none;
 }
