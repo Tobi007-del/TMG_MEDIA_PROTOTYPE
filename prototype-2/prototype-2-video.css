@@ -244,9 +244,9 @@
 }
 
 .T_M_G-video-container :is(.T_M_G-video-playlist-title,
-.T_M_G-video-playlist-title::before,
 .T_M_G-video-playlist-next-video-title,
-#o#o#o#o#o#o#o#o#o#o) {
+#o#o#o#o#o#o#o#o#o#o),
+.T_M_G-video-container .T_M_G-video-playlist-title::before {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
@@ -355,6 +355,7 @@
 .T_M_G-video-overlay-main-controls-wrapper,
 .T_M_G-video-thumbnail,
 .T_M_G-video-object-fit-notifier,
+.T_M_G-video-timeline-notifier,
 .T_M_G-video-container .T_M_G-video-captions-btn::after,
 .T_M_G-video-captions-notifier::after {
     position: absolute;
@@ -723,7 +724,6 @@
     position: absolute;
     top: 0;
     left: 0;
-    padding-inline: calc(var(--T_M_G-video-current-unit)/1.25);
     padding-block: calc(var(--T_M_G-video-current-unit)/1.5);
     font-size: calc(var(--T_M_G-video-current-unit)/1.35);
     width: 100%;
@@ -732,14 +732,9 @@
     pointer-events: none;
 }
 
-.T_M_G-video-container.T_M_G-video-full-screen:has(.T_M_G-video-full-screen-orientation-btn:not(.T_M_G-video-control-hidden)) .T_M_G-video-playlist-title-wrapper {
-    padding-inline-end: calc(var(--T_M_G-video-current-unit)*2.5);
-}
-
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-playlist-title-wrapper {
     height: calc(var(--T_M_G-video-current-unit)*2.5);
     padding-block: 0;
-    padding-inline: calc(var(--T_M_G-video-current-unit)*2.5);
     font-size: calc(var(--T_M_G-video-current-unit)/1.5);
     text-align: center;
     justify-content: center;
@@ -757,6 +752,18 @@
     color: transparent;
     -webkit-text-stroke: .15px var(--T_M_G-video-brand-color);
     transform: translate(1px, 1px);
+}
+
+.T_M_G-video-playlist-title {
+    margin-inline: calc(var(--T_M_G-video-current-unit)/1.25);
+}
+
+.T_M_G-video-container.T_M_G-video-full-screen:has(.T_M_G-video-full-screen-orientation-btn:not(.T_M_G-video-control-hidden)) .T_M_G-video-playlist-title {
+    margin-inline-end: calc(var(--T_M_G-video-current-unit)*2.5);
+}
+
+.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-playlist-title {
+    margin-inline: calc(var(--T_M_G-video-current-unit)*2.5);
 }
 
 .T_M_G-video-playlist-toast-container {
@@ -1020,7 +1027,7 @@
     display: block;
 }
 
-.T_M_G-video-container:is(.T_M_G-video-movement, :has(.T_M_G-video-notifiers.T_M_G-video-control-persist, .T_M_G-video-playback-rate-notifier.T_M_G-video-control-active, .T_M_G-video-notifiers-container[data-current-notifier="objectfitchange"])) .T_M_G-video-buffer {
+.T_M_G-video-container:is(.T_M_G-video-movement, :has(.T_M_G-video-notifiers.T_M_G-video-control-persist, .T_M_G-video-playback-rate-notifier.T_M_G-video-control-active, .T_M_G-video-timeline-notifier.T_M_G-video-control-active, .T_M_G-video-notifiers-container[data-current-notifier="objectfitchange"])) .T_M_G-video-buffer {
     display: none;
 }
 
@@ -1343,7 +1350,7 @@ button:has(.T_M_G-video-next-icon) svg {
     align-items: center;
     gap: calc(var(--T_M_G-video-current-unit)/10);
     color: var(--T_M_G-video-text-color);
-    font-size: calc(var(--T_M_G-video-current-unit)/1.75);
+    font-size: calc(var(--T_M_G-video-current-unit)/1.7);
 }
 
 .T_M_G-video-duration-container:hover {
@@ -1614,7 +1621,6 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-thumbnail {
     display: none;
     filter: brightness(75%);
-    border-radius: inherit;
 }
 
 .T_M_G-video-container.T_M_G-video-scrubbing .T_M_G-video-thumbnail,
@@ -1757,7 +1763,8 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 .T_M_G-video-object-fit-notifier,
-.T_M_G-video-playback-rate-notifier {
+.T_M_G-video-playback-rate-notifier,
+.T_M_G-video-timeline-notifier {
     width: fit-content;
     height: fit-content;
     padding: calc(var(--T_M_G-video-current-unit)/7.5) calc(var(--T_M_G-video-current-unit)/2.5);
@@ -1769,6 +1776,10 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-playback-rate-notifier {
     top: 5%;
     min-width: calc(var(--T_M_G-video-current-unit)*1.3);
+}
+
+.T_M_G-video-timeline-notifier {
+    font-size: calc(var(--T_M_G-video-current-unit)/1.5);
 }
 
 .T_M_G-video-playback-rate-notifier:not(.T_M_G-video-rewind)::after, 
@@ -1825,7 +1836,8 @@ button:has(.T_M_G-video-next-icon) svg {
     transform: scaleX(-1);
 }
 
-.T_M_G-video-notifiers-container .T_M_G-video-playback-rate-notifier.T_M_G-video-control-active {
+.T_M_G-video-notifiers-container .T_M_G-video-playback-rate-notifier.T_M_G-video-control-active,
+.T_M_G-video-notifiers-container .T_M_G-video-timeline-notifier.T_M_G-video-control-active {
     opacity: 1;
 }
 
@@ -1846,7 +1858,7 @@ button:has(.T_M_G-video-next-icon) svg {
 
 .T_M_G-video-notifiers-container .T_M_G-video-fwd-notifier.T_M_G-video-control-persist, 
 .T_M_G-video-notifiers-container .T_M_G-video-bwd-notifier.T_M_G-video-control-persist {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.35);
     width: var(--T_M_G-video-dbc-backdrop-width);
     height: var(--T_M_G-video-dbc-backdrop-height);
     padding-inline: 6.5%;
@@ -2042,9 +2054,9 @@ button:has(.T_M_G-video-next-icon) svg {
     .T_M_G-video-next-btn,
     .T_M_G-video-volume-slider,
     .T_M_G-video-play-notifier,
-    .T_M_G-video-timeline::before,
     .T_M_G-video-pause-notifier, 
-    #o#o#o#o#o#o#o#o#o#o) {
+    #o#o#o#o#o#o#o#o#o#o),
+    .T_M_G-video-timeline::before {
         display: none;
     } 
     .T_M_G-video-container .T_M_G-video-overlay-main-controls-wrapper,
@@ -2092,6 +2104,9 @@ button:has(.T_M_G-video-next-icon) svg {
         content: attr(data-skip);
         margin-inline: calc(var(--T_M_G-video-current-unit)/2.5);
         font-size: calc(var(--T_M_G-video-current-unit)/2.25);
+    }
+    .T_M_G-video-timeline-notifier {
+        font-size: calc(var(--T_M_G-video-current-unit)*1.15);
     }
     .T_M_G-video-playback-rate-notifier,
     .T_M_G-video-object-fit-notifier {
@@ -2181,7 +2196,7 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-mini-player-expand-btn-wrapper,
 .T_M_G-video-mini-player-cancel-btn-wrapper,
 .T_M_G-video::-webkit-media-text-track-display),
-.T_M_G-video-container:is(:has(.T_M_G-video-notifiers-container[data-current-notifier="objectfitchange"])) .T_M_G-video-overlay-main-controls-wrapper {
+.T_M_G-video-container:has(.T_M_G-video-timeline-notifier.T_M_G-video-control-active, .T_M_G-video-notifiers-container[data-current-notifier="objectfitchange"]) .T_M_G-video-overlay-main-controls-wrapper {
     opacity: 0;
     pointer-events: none;
 }
