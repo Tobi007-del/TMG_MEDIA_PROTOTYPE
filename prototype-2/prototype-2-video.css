@@ -2110,6 +2110,13 @@ button:has(.T_M_G-video-next-icon) svg {
     .T_M_G-video-object-fit-notifier {
         font-size: calc(var(--T_M_G-video-current-unit)/1.6);
     }
+    .T_M_G-video-timeline-notifier {
+        font-size: calc(var(--T_M_G-video-current-unit)*1.05);
+    }
+    .T_M_G-video-playback-rate-notifier,
+    .T_M_G-video-object-fit-notifier {
+        font-size: calc(var(--T_M_G-video-current-unit)/1.6);
+    }
     .T_M_G-video-playback-rate-notifier:not(.T_M_G-video-rewind)::after,
     .T_M_G-video-playback-rate-notifier.T_M_G-video-rewind::before {
         -webkit-mask-size: calc(var(--T_M_G-video-current-unit)/3.45) calc(var(--T_M_G-video-current-unit)/2.5);
