@@ -43,9 +43,11 @@ class _T_M_G_Video_Player {
         this.overlayRestraintId = null
         this.timelineThrottleId = null
         this.timelineThrottleDelay = 50
+        this.lastTouchTimelineX = null
+        this.lastTouchTimelineY = null
+        this.touchTimelineYThreshold = 15
+        this.touchTimelineTime = null
         this.touchTimelineCheck = false
-        this.lastTouchX = null
-        this.nextTouchTime = null
         this.audioSliderVolume = 5
         this.lastAudioVolume = 100
         this.shouldSetLastAudioVolume = false
@@ -2029,13 +2031,13 @@ class _T_M_G_Video_Player {
         try {
             const x = e.clientX ?? e.changedTouches[0].clientX
             const rect = this.DOM.videoContainer.getBoundingClientRect()
-            const sign = x - this.lastTouchX >= 0 ? 1 : 0
-            const percent = window.tmg.clamp(0, Math.abs(x - this.lastTouchX), rect.width) / rect.width
+            const sign = x - this.lastTouchTimelineX >= 0 ? 1 : 0
+            const percent = window.tmg.clamp(0, Math.abs(x - this.lastTouchTimelineX), rect.width) / rect.width
             let newTime = sign ? this.currentTime + (percent * this.duration) : this.currentTime - (percent * this.duration)
             newTime = window.tmg.clamp(0, Math.floor(newTime), this.duration)
             const timeChange = (sign ? "+" : "-") + window.tmg.formatTime(Math.abs(newTime - this.currentTime))
             if (this.DOM.timelineNotifier) this.DOM.timelineNotifier.textContent = `${timeChange} (${window.tmg.formatTime(newTime)})`
-            this.nextTouchTime = newTime
+            this.touchTimelineTime = newTime
         } catch(e) {
             this._log(e, "error", "swallow")
         }        
@@ -2767,7 +2769,8 @@ class _T_M_G_Video_Player {
     try {
         if (e.target === this.DOM.videoControlsContainer || e.target === this.DOM.videoOverlayControlsContainer) {
         if (!this.isModeActive("miniPlayer") && !this.speedCheck) {            
-            this.lastTouchX = e.clientX ?? e.changedTouches[0].clientX
+            this.lastTouchTimelineX = e.clientX ?? e.changedTouches[0].clientX
+	    this.lastTouchTimelineY = e.clientY ?? e.changedTouches[0].clientY
             this.videoContainer.addEventListener("touchmove", this._handleTouchTimelineInit, {once: true, passive: true})
             this.videoContainer.addEventListener("touchend", this._handleTouchTimelinePointerUp)
         }
@@ -2777,14 +2780,16 @@ class _T_M_G_Video_Player {
     }               
     }
 
-    _handleTouchTimelineInit() {
+    _handleTouchTimelineInit(e) {
     try {
-        if (!this.isModeActive("miniPlayer") && !this.speedCheck) {           
+        if (!this.isModeActive("miniPlayer") && !this.speedCheck) {
+            if (Math.abs(this.lastTouchTimelineY - (e.clientY ?? e.changedTouches[0].clientY)) < this.touchTimelineYThreshold) {
             this.touchTimelineCheck = true
             this.wasPaused = this.video.paused
             if (!this.wasPaused) this.togglePlay(false)
             this.DOM.timelineNotifier.classList.add("T_M_G-video-control-active")
             this.videoContainer.addEventListener("touchmove", this._handleTouchTimelineUpdate, {passive: true})
+            } 
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2795,7 +2800,7 @@ class _T_M_G_Video_Player {
         if (this.touchTimelineCheck) {
             this.touchTimelineCheck = false
             this.DOM.timelineNotifier.classList.remove("T_M_G-video-control-active")
-            this.video.currentTime = this.nextTouchTime
+            this.video.currentTime = this.touchTimelineTime
             if (!this.wasPaused && !this.video.ended) this.togglePlay(true)
             this.videoContainer.removeEventListener("touchmove", this._handleTouchTimelineUpdate, {passive: true})
         }
