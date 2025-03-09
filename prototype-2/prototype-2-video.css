@@ -2206,7 +2206,8 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-mini-player-expand-btn-wrapper,
 .T_M_G-video-mini-player-cancel-btn-wrapper,
 .T_M_G-video::-webkit-media-text-track-display) {
-    display: none;
+    opacity: 0;
+    pointer-events: none;
 }
 
 /* setting video initial state begins*/
