@@ -53,13 +53,15 @@ class _T_M_G_Video_Player {
         this.lastAdvanedTouchX = null
         this.lastAdvanedTouchY = null
         this.advancedTouchZone = null
-        this.advancedTimelineTime = null
+        this.currentTime = null
+        this.advancedNextTime = null
         this.advancedTouchXCheck = false
         this.advancedTouchYCheck = false
         this.advancedWheelZone = null
         this.advancedWheelXCheck = false
         this.advancedWheelYCheck = false
         this.advancedWheelTimeout = null
+        this.advancedWheelTimePercent = 0
         this.audioSliderVolume = 5
         this.lastAudioVolume = 100
         this.shouldSetLastAudioVolume = false
@@ -76,7 +78,6 @@ class _T_M_G_Video_Player {
         this.speedIntervalDelay = 5
         this.speedVideoTime = null
         this.speedDirection = null
-        this.skipVideoTime = null
         this.skipDurationId = null
         this.skipDuration = 0
         this.skipPersistPosition = null
@@ -2014,11 +2015,11 @@ class _T_M_G_Video_Player {
     }        
     }
 
-    _handleTouchTimelineInput({sign, percent}) {
+    _handleAdvancedTimelineInput({sign, percent}) {
         try {   
-            const time = sign === "+" ? this.currentTime + (percent * this.duration) : this.currentTime - (percent * this.duration)
-            this.advancedTimelineTime = window.tmg.clamp(0, Math.floor(time), this.duration)
-            if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${window.tmg.formatTime(Math.abs(this.advancedTimelineTime - this.currentTime))} (${window.tmg.formatTime(this.advancedTimelineTime)})`
+            const time = sign === "+" ? this.currentTime + (percent * this.duration) : this.currentTime- (percent * this.duration)
+            this.advancedNextTime = window.tmg.clamp(0, Math.floor(time), this.duration)
+            if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${window.tmg.formatTime(Math.abs(this.advancedNextTime - this.currentTime))} (${window.tmg.formatTime(this.advancedNextTime)})`
         } catch(e) {
             this._log(e, "error", "swallow")
         }        
@@ -2095,8 +2096,7 @@ class _T_M_G_Video_Player {
         const notifier = duration > 0 ? this.DOM.fwdNotifier : this.DOM.bwdNotifier
         duration = Math.sign(duration) === 1 ? this.duration - this.currentTime > duration ? duration : this.duration - this.currentTime : Math.sign(duration) === -1 ? this.currentTime > Math.abs(duration) ? duration : -this.currentTime : 0
         duration = Math.trunc(duration)
-        this.skipVideoTime = (this.currentTime += duration)
-        this.videoCurrentProgressPosition = this.skipVideoTime / this.duration
+        this.videoCurrentProgressPosition = (this.currentTime += duration) / this.duration
         if (this.skipPersist) {
             if (this.currentNotifier && notifier !== this.currentNotifier) {
                 this.skipDuration = 0
@@ -2412,6 +2412,15 @@ class _T_M_G_Video_Player {
     }        
     }
 
+    volumeActiveRestraint() {
+    try {
+        if (this.volumeActiveRestraintId) clearTimeout(this.volumeActiveRestraintId)
+        this.volumeActiveRestraintId = setTimeout(() => this.DOM.volumeSlider?.parentElement.classList.remove("T_M_G-video-control-active"), this.settings.overlayRestraintTime)  
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }
+
     updateBrightnessSettings() {
     try {
         this.settings.maxBrightness = this.settings.brightnessBoost ? Math.max(100, this.settings.maxBrightness) : 100
@@ -2462,15 +2471,6 @@ class _T_M_G_Video_Player {
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
-    }
-
-    volumeActiveRestraint() {
-    try {
-        if (this.volumeActiveRestraintId) clearTimeout(this.volumeActiveRestraintId)
-        this.volumeActiveRestraintId = setTimeout(() => this.DOM.volumeSlider?.parentElement.classList.remove("T_M_G-video-control-active"), this.settings.overlayRestraintTime)  
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }
     }
 
     toggleTheaterMode() {
@@ -2660,6 +2660,7 @@ class _T_M_G_Video_Player {
 
     _handleMiniPlayerPosition(e) {
     try {
+        if (e.touches?.length > 1) return 
         e.preventDefault()
         this.videoContainer.classList.remove("T_M_G-video-overlay")
 	    this.videoContainer.classList.add("T_M_G-video-movement")
@@ -2831,50 +2832,6 @@ class _T_M_G_Video_Player {
     }                    
     }
 
-    _handleAdvancedTouchStart(e) {
-    try {
-        if (e.touches?.length > 1) return 
-        if (e.target === this.DOM.videoControlsContainer || e.target === this.DOM.videoOverlayControlsContainer) {
-        if (this.settings.status.beta.advancedTouchControls && !this.isModeActive("miniPlayer") && !this.speedCheck) {       
-            this._handleAdvancedTouchEnd()
-            this.lastAdvanedTouchX = e.clientX ?? e.targetTouches[0].clientX
-	        this.lastAdvanedTouchY = e.clientY ?? e.targetTouches[0].clientY
-            this.videoContainer.addEventListener("touchmove", this._handleAdvancedTouchInit, {once: true, passive: false})
-            this.videoContainer.addEventListener("touchend", this._handleAdvancedTouchEnd)
-        }
-        }
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }               
-    }
-
-    _handleAdvancedTouchInit(e) {
-    try {
-        if (e.touches?.length > 1) return 
-        if (this.settings.status.beta.advancedTouchControls && !this.isModeActive("miniPlayer") && !this.speedCheck) {  
-            e.preventDefault()
-            const rect = this.videoContainer.getBoundingClientRect(),
-            x = e.clientX ?? e.targetTouches[0].clientX,
-            y = e.clientY ?? e.targetTouches[0].clientY
-            this.advancedTouchZone = {
-                x : x - rect.left > rect.width/2 ? "right" : "left",
-                y : y - rect.left > rect.height/2 ? "bottom" : "top"
-            }
-            if (Math.abs(this.lastAdvanedTouchY - y) < 5) {
-                this.advancedTouchXCheck = true
-                this.videoContainer.addEventListener("touchmove", this._handleAdvancedTouchXMove, {passive: false})
-                this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
-            } else if (Math.abs(this.lastAdvanedTouchX - x) < 5) {
-                this.advancedTouchYCheck = true
-                this.videoContainer.addEventListener("touchmove", this._handleAdvancedTouchYMove, {passive: false})
-                this.advancedTouchZone.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
-            }
-        }
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }
-    }
-
     setAdvancedWheelListeners() {
     try {
         window.addEventListener("wheel", this._handleAdvancedWheel, {passive: false})
@@ -2893,40 +2850,49 @@ class _T_M_G_Video_Player {
 
     _handleAdvancedWheel(e) {
     try {
-        if (this.advancedTouchXCheck || this.advancedTouchYCheck) return
-        if (this.settings.status.beta.advancedTouchControls) {
+        if (!this.advancedTouchXCheck && !this.advancedTouchYCheck && this.settings.status.beta.advancedControls && !this.speedCheck) {
             e.preventDefault()
             if (this.advancedWheelTimeout) clearTimeout(this.advancedWheelTimeout)
+            else this._handleAdvancedWheelInit(e)
             this.advancedWheelTimeout = setTimeout(this._handleAdvancedWheelStop, 500)
-            this._handleAdvancedWheelStart(e)
+            this._handleAdvancedWheelMove(e)
         }
     } catch(e) {
         this._log(e, "error", "swallow")
     }
     }
 
-    _handleAdvancedWheelStart({clientX, clientY, deltaX, deltaY}) {
+    _handleAdvancedWheelInit({clientX: x, clientY: y}) {
     try {
         this.advancedWheelZone = {
-            x : clientX > this.videoContainer.offsetWidth/2 ? "right" : "left",
-            y : clientY > this.videoContainer.offsetHeight/2 ? "bottom" : "top"
+            x : x > this.videoContainer.offsetWidth/2 ? "right" : "left",
+            y : y > this.videoContainer.offsetHeight/2 ? "bottom" : "top"
         }
+        this.advancedWheelTimePercent = 0
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }
+
+    _handleAdvancedWheelMove({deltaX, deltaY}) {
+    try {
         if (deltaX) {
             this.advancedWheelXCheck = true
             this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
             const sign = deltaX >= 0 ? "+" : "-"
             const width = this.videoContainer.offsetWidth 
-            const percent = window.tmg.clamp(0, Math.abs(deltaX), width) / width
-            this._handleTouchTimelineInput({sign, percent})
-        }
+            let percent = window.tmg.clamp(0, Math.abs(deltaX), (width*5)) / (width*5)
+            percent = sign === "+" ? this.advancedWheelTimePercent += percent : this.advancedWheelTimePercent -= percent
+            percent = Math.abs(percent)
+            this._handleAdvancedTimelineInput({sign, percent})
+        } 
         if (deltaY) {
             this.advancedWheelYCheck = true
             this.advancedWheelZone?.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
             const sign = deltaY >= 0 ? "+" : "-"
             const height = this.advancedWheelZone?.x === "right" ? ((this.videoContainer.offsetHeight * 0.7) * this.volumeBoostValue) : (this.videoContainer.offsetHeight * this.brightnessBoostValue)
             const percent = window.tmg.clamp(0, Math.abs(deltaY),  height) / height
-            this.advancedWheelZone?.x === "right" ? this._handleTouchVolumeSliderInput({sign, percent}) : this._handleTouchBrightnessSliderInput({sign, percent})
-            this.video.currentTime = this.advancedTimelineTime
+            this.advancedWheelZone?.x === "right" ? this._handleAdvancedVolumeSliderInput({sign, percent}) : this._handleAdvancedBrightnessSliderInput({sign, percent})
         } 
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2935,6 +2901,7 @@ class _T_M_G_Video_Player {
 
     _handleAdvancedWheelStop() {
     try {
+        this.advancedWheelTimeout = null
         if (this.advancedWheelYCheck) {
             this.advancedWheelYCheck = false
             this.removeOverlay()
@@ -2944,11 +2911,77 @@ class _T_M_G_Video_Player {
         if (this.advancedWheelXCheck) {
             this.advancedWheelXCheck = false
             this.DOM.touchTimelineNotifier?.classList.remove("T_M_G-video-control-active")
+            this.currentTime = this.advancedNextTime
         }
     } catch(e) {
         this._log(e, "error", "swallow")
     }
     }    
+
+    _handleAdvancedVolumeSliderInput({sign, percent}) {
+    try {
+        if (this.video.muted) this.volume = 0
+        const volume = sign === "+" ? this.volume + (percent * this.settings.maxVolume) : this.volume - (percent * this.settings.maxVolume)
+        this.volume = window.tmg.clamp(0, Math.floor(volume), this.settings.maxVolume)
+        this.video.muted = this.volume === 0
+        this.volumeTypeCounter = this.video.muted ? 1 : 0
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }
+
+    _handleAdvancedBrightnessSliderInput({sign, percent}) {
+    try {
+        const brightness = sign === "+" ? this.brightness + (percent * this.settings.maxBrightness) : this.brightness - (percent * this.settings.maxBrightness)
+        this.brightness = window.tmg.clamp(0, Math.floor(brightness), this.settings.maxBrightness)
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }
+
+    _handleAdvancedTouchStart(e) {
+    try {
+        if (e.touches?.length > 1) return 
+        if (e.target === this.DOM.videoControlsContainer || e.target === this.DOM.videoOverlayControlsContainer) {
+        if (this.settings.status.beta.advancedControls && !this.isModeActive("miniPlayer") && !this.speedCheck) {       
+            this._handleAdvancedTouchEnd()
+            this.lastAdvanedTouchX = e.clientX ?? e.targetTouches[0].clientX
+	        this.lastAdvanedTouchY = e.clientY ?? e.targetTouches[0].clientY
+            this.videoContainer.addEventListener("touchmove", this._handleAdvancedTouchInit, {once: true, passive: false})
+            this.videoContainer.addEventListener("touchend", this._handleAdvancedTouchEnd)
+        }
+        }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }               
+    }
+
+    _handleAdvancedTouchInit(e) {
+    try {
+        if (e.touches?.length > 1) return 
+        if (this.settings.status.beta.advancedControls && !this.isModeActive("miniPlayer") && !this.speedCheck) {  
+            e.preventDefault()
+            const rect = this.videoContainer.getBoundingClientRect(),
+            x = e.clientX ?? e.targetTouches[0].clientX,
+            y = e.clientY ?? e.targetTouches[0].clientY
+            this.advancedTouchZone = {
+                x : x - rect.left > rect.width/2 ? "right" : "left",
+                y : y - rect.left > rect.height/2 ? "bottom" : "top"
+            }
+            if (Math.abs(this.lastAdvanedTouchY - y) < 5) {
+                this.advancedTouchXCheck = true
+                this.videoContainer.addEventListener("touchmove", this._handleAdvancedTouchXMove, {passive: false})
+                this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
+            } else if (Math.abs(this.lastAdvanedTouchX - x) < 10) {
+                this.advancedTouchYCheck = true
+                this.videoContainer.addEventListener("touchmove", this._handleAdvancedTouchYMove, {passive: false})
+                this.advancedTouchZone.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
+            }
+        }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }
 
     _handleAdvancedTouchXMove(e) {
     try {
@@ -2962,7 +2995,7 @@ class _T_M_G_Video_Player {
         const sign = deltaX >= 0 ? "+" : "-"
         const width = this.videoContainer.offsetWidth
         const percent = window.tmg.clamp(0, Math.abs(deltaX), width) / width
-        this._handleTouchTimelineInput({sign, percent})
+        this._handleAdvancedTimelineInput({sign, percent})
     } catch(e) {
         this._log(e, "error", "swallow")
     }
@@ -2981,28 +3014,7 @@ class _T_M_G_Video_Player {
         const height = this.advancedTouchZone?.x === "right" ? (this.videoContainer.offsetHeight * 0.7) * this.volumeBoostValue : this.videoContainer.offsetHeight * this.brightnessBoostValue
         const percent = window.tmg.clamp(0, Math.abs(deltaY), height) / height
         this.lastAdvanedTouchY = y
-        this.advancedTouchZone?.x === "right" ? this._handleTouchVolumeSliderInput({sign, percent}) : this._handleTouchBrightnessSliderInput({sign, percent})
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }
-    }
-
-    _handleTouchVolumeSliderInput({sign, percent}) {
-    try {
-        if (this.video.muted) this.volume = 0
-        const volume = sign === "+" ? this.volume + (percent * this.settings.maxVolume) : this.volume - (percent * this.settings.maxVolume)
-        this.volume = window.tmg.clamp(0, Math.floor(volume), this.settings.maxVolume)
-        this.video.muted = this.volume === 0
-        this.volumeTypeCounter = this.video.muted ? 1 : 0
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }
-    }
-
-    _handleTouchBrightnessSliderInput({sign, percent}) {
-    try {
-        const brightness = sign === "+" ? this.brightness + (percent * this.settings.maxBrightness) : this.brightness - (percent * this.settings.maxBrightness)
-        this.brightness = window.tmg.clamp(0, Math.floor(brightness), this.settings.maxBrightness)
+        this.advancedTouchZone?.x === "right" ? this._handleAdvancedVolumeSliderInput({sign, percent}) : this._handleAdvancedBrightnessSliderInput({sign, percent})
     } catch(e) {
         this._log(e, "error", "swallow")
     }
@@ -3013,7 +3025,7 @@ class _T_M_G_Video_Player {
             this.advancedTouchXCheck = false
             this.videoContainer.removeEventListener("touchmove", this._handleAdvancedTouchXMove, {passive: false})
             this.DOM.touchTimelineNotifier?.classList.remove("T_M_G-video-control-active")
-            this.video.currentTime = this.advancedTimelineTime
+            this.video.currentTime = this.advancedNextTime
         } 
         if (this.advancedTouchYCheck) {
             this.advancedTouchYCheck = false
@@ -3067,6 +3079,7 @@ class _T_M_G_Video_Player {
     
     _handleSpeedPointerMove(e) {
     try {
+        if (e.touches?.length > 1) return 
         if (this.speedThrottleId !== null) return
         this.speedThrottleId = setTimeout(() => this.speedThrottleId = null, this.speedThrottleDelay)
         
@@ -3552,7 +3565,7 @@ class _T_M_G_Media_Player {
             settings.status.beta = {
                 rewind: false,
                 draggableControls: false,
-                advancedTouchControls: false
+                advancedControls: false
             }          
             if (settings.allowOverride) {
                 if (settings.allowOverride === true) {
@@ -3574,7 +3587,7 @@ class _T_M_G_Media_Player {
                     settings.status.beta = {
                         rewind: settings.beta.includes("rewind"),
                         draggableControls: settings.beta.includes("draggablecontrols"),
-                        advancedTouchControls: settings.beta.includes("advancedtouchcontrols")
+                        advancedControls: settings.beta.includes("advancedcontrols")
                     }
                 }
             }
@@ -3631,7 +3644,7 @@ class tmg {
         debug: true,
         settings: {
             allowOverride: true,
-            beta: ["rewind", "draggablecontrols", "advancedtouchcontrols"],
+            beta: ["rewind", "draggablecontrols", "advancedcontrols"],
             modes: ["normal", "fullscreen", "theater", "pictureinpicture", "miniplayer"],
             controllerStructure: ["prev", "playpause", "next", "objectfit", "volume", "duration", "spacer", "playbackrate", "captions", "settings", "pictureinpicture", "theater", "fullscreen"],
             timelinePosition: "bottom",

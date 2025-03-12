@@ -26,7 +26,7 @@
     --T_M_G-video-brightness-slider-percent: 0%;
     --T_M_G-video-volume-slider-boost-percent: 0%;
     --T_M_G-video-brightness-slider-boost-percent: 0%;
-    --T_M_G-video-max-touch-slider-height: 90%;
+    --T_M_G-video-max-touch-slider-height: 70%;
 }
 
 .T_M_G-video-container {
@@ -35,7 +35,7 @@
     --T_M_G-video-current-loader-thickness: calc(var(--T_M_G-video-current-unit)/7.5);
     --T_M_G-video-current-thumb-indicator-scale: 0;
     --T_M_G-video-current-touch-slider-width: var(--T_M_G-video-current-unit);
-    --T_M_G-video-current-touch-slider-height: calc(var(--T_M_G-video-current-unit)*8.5);
+    --T_M_G-video-current-touch-slider-height: calc(var(--T_M_G-video-current-unit)*12.5);
     --T_M_G-video-current-touch-slider-border-radius: 0;
 }
 
@@ -1048,8 +1048,7 @@
     cursor: none;
 }
 
-.T_M_G-video-container.T_M_G-video-overlay .T_M_G-video-container-content,
-.T_M_G-video-container:has(:focus-visible) .T_M_G-video-container-content,
+.T_M_G-video-container:is(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-container-content,
 .T_M_G-video-container:is(:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-brightness-notifier, .T_M_G-video-touch-volume-notifier).T_M_G-video-control-active)) .T_M_G-video-container-content {
     cursor: auto;
 }
@@ -2103,6 +2102,7 @@ button:has(.T_M_G-video-next-icon) svg {
         --T_M_G-video-current-loader-thickness: calc(var(--T_M_G-video-current-unit)/12.75);
         --T_M_G-video-dbc-backdrop-width: 80%;
         --T_M_G-video-current-touch-slider-width: calc(var(--T_M_G-video-current-unit)/2);
+        --T_M_G-video-current-touch-slider-height: calc(var(--T_M_G-video-current-unit)*8.5);
         --T_M_G-video-current-touch-slider-border-radius: calc(var(--T_M_G-video-current-touch-slider-width)/2);
     }
     .T_M_G-video-overlay-main-controls-wrapper > *,
@@ -2268,15 +2268,16 @@ button:has(.T_M_G-video-next-icon) svg {
     pointer-events: all;
 }
 
-.T_M_G-video-container:is(:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-brightness-notifier, .T_M_G-video-touch-volume-notifier).T_M_G-video-control-active)) :is(
+.T_M_G-video-container:is(:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-brightness-notifier, .T_M_G-video-touch-volume-notifier, .T_M_G-video-touch-brightness-notifier,
+.T_M_G-video-touch-volume-notifier).T_M_G-video-control-active)) :is(
 .T_M_G-video-controls-container > *:not(.T_M_G-video-timeline-container),
-.T_M_G-video-container:has(:is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-brightness-notifier, .T_M_G-video-touch-volume-notifier)) .T_M_G-video-timeline-container,
 .T_M_G-video-playlist-title-wrapper,
 .T_M_G-video-overlay-main-controls-wrapper,
 .T_M_G-video-full-screen-orientation-btn-wrapper,
 .T_M_G-video-mini-player-expand-btn-wrapper,
 .T_M_G-video-mini-player-cancel-btn-wrapper,
-.T_M_G-video::-webkit-media-text-track-display) {
+.T_M_G-video::-webkit-media-text-track-display),
+.T_M_G-video-container:has(:is(.T_M_G-video-touch-brightness-notifier, .T_M_G-video-touch-volume-notifier).T_M_G-video-control-active) .T_M_G-video-timeline-container {
     opacity: 0;
     pointer-events: none;
 }
