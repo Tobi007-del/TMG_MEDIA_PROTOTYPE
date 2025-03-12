@@ -32,6 +32,16 @@ class _T_M_G_Video_Player {
         this.keyDownThrottleDelay = 20
         this.miniPlayerThrottleId = null
         this.miniPlayerThrottleDelay = 10
+        this.timelineThrottleId = null
+        this.timelineThrottleDelay = 50
+        this.advancedTouchXMoveThrottleId = null
+        this.advancedTouchXMoveThrottleDelay = 20
+        this.advancedTouchYMoveThrottleId = null
+        this.advancedTouchYMoveThrottleDelay = 20
+        this.speedThrottleId = null
+        this.speedThrottleDelay = 100
+        this.dragOverThrottleId = null
+        this.dragOverThrottleDelay = 20
         this.previousRate = this.video.playbackRate
         this.isScrubbing = false
         this.parentIntersecting = true
@@ -40,14 +50,16 @@ class _T_M_G_Video_Player {
         this.buffering = false
         this.clickId = null 
         this.overlayRestraintId = null
-        this.timelineThrottleId = null
-        this.timelineThrottleDelay = 50
-        this.lastTouchX = null
-        this.lastTouchY = null
-        this.touchZone = null
-        this.touchXCheck = true
-        this.touchTimelineTime = null
-        this.touchYCheck = false
+        this.lastAdvanedTouchX = null
+        this.lastAdvanedTouchY = null
+        this.advancedTouchZone = null
+        this.advancedTimelineTime = null
+        this.advancedTouchXCheck = false
+        this.advancedTouchYCheck = false
+        this.advancedWheelZone = null
+        this.advancedWheelXCheck = false
+        this.advancedWheelYCheck = false
+        this.advancedWheelTimeout = null
         this.audioSliderVolume = 5
         this.lastAudioVolume = 100
         this.shouldSetLastAudioVolume = false
@@ -64,8 +76,6 @@ class _T_M_G_Video_Player {
         this.speedIntervalDelay = 5
         this.speedVideoTime = null
         this.speedDirection = null
-        this.speedThrottleId = null
-        this.speedThrottleDelay = 100
         this.skipVideoTime = null
         this.skipDurationId = null
         this.skipDuration = 0
@@ -134,9 +144,17 @@ class _T_M_G_Video_Player {
     }
 
     set playlist(value) {
-        this._playlist = value
-        if (!this.currentPlaylistIndex) this.currentPlaylistIndex = 0
-        if (this.options) this.setPlaylistBtnsState()
+        if (typeof value === "object") {
+            for (const val of value) {
+                val.settings = val.settings ?? {}
+                val.settings.previewImages = val.settings.previewImages ?? false
+                val.settings.startTime = val.settings.startTime ?? null
+                val.settings.endTime = val.settings.endTime ?? null
+            }
+            this._playlist = value
+            if (!this.currentPlaylistIndex) this.currentPlaylistIndex = 0
+            if (this.options) this.setPlaylistBtnsState()
+        }
     }
 
     get src() {
@@ -502,7 +520,7 @@ class _T_M_G_Video_Player {
             ` : null,
             touchtimelinenotifier : this.settings.status.ui.notifiers ? 
             `
-                <div class="T_M_G-video-notifiers T_M_G-video-touch-timeline-notifier"></div>
+                <div class="T_M_G-video-notifiers T_M_G-video-touch-timeline-notifier T_M_G-video-touch-notifier"></div>
             ` : null,
             touchvolumenotifier : this.settings.status.ui.notifiers ?
             `
@@ -542,7 +560,7 @@ class _T_M_G_Video_Player {
                             </path>
                         </svg>
                         <svg class="T_M_G-video-brightness-dark-icon">
-                            <path transform="scale(1.25) translate(1.4, 1.4)" d="M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM8.5 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm0 11a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm5-5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm-11 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9.743-4.036a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm-7.779 7.779a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm7.072 0a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707zM3.757 4.464a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707z">
+                            <path transform="scale(1.2) translate(2, 2.5)" d="M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM8.5 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm0 11a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm5-5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm-11 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9.743-4.036a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm-7.779 7.779a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm7.072 0a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707zM3.757 4.464a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707z">
                             </path>
                         </svg>
                     </span>
@@ -949,7 +967,7 @@ class _T_M_G_Video_Player {
         this.videoContainer.classList.add("T_M_G-video-initial")
         this.video.addEventListener("play", this.removeInitialState, {once:true})
         this.DOM.mainPlayPauseBtn?.addEventListener("click", this.removeInitialState)
-        this.DOM.videoContainer.addEventListener("click", this.removeInitialState)
+        this.videoContainer.addEventListener("click", this.removeInitialState)
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -965,7 +983,7 @@ class _T_M_G_Video_Player {
         this.togglePlay(true) 
         this.initializeVideoControls()
         this.DOM.mainPlayPauseBtn?.removeEventListener("click", this.removeInitialState)
-        this.DOM.videoContainer.removeEventListener("click", this.removeInitialState)
+        this.videoContainer.removeEventListener("click", this.removeInitialState)
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -1208,6 +1226,7 @@ class _T_M_G_Video_Player {
         this.DOM.videoOverlayControlsContainer.addEventListener("mousedown", this._handleSpeedPointerDown, true)
         this.DOM.videoOverlayControlsContainer.addEventListener("touchstart", this._handleSpeedPointerDown, {passive:true, useCapture:true})
         this.DOM.videoOverlayControlsContainer.addEventListener("touchstart", this._handleAdvancedTouchStart, {passive:false, useCapture:true})
+
     } catch(e) {
         this._log(e, "error", "swallow")
     }            
@@ -1659,9 +1678,8 @@ class _T_M_G_Video_Player {
     movePlaylistTo(index) {
     try {
         if (this._playlist) {
-            if (this.settings.status.allowOverride.startTime && this.currentTime < (this.duration - this.settings.endTime ?? 0)) {
-                this._playlist[this.currentPlaylistIndex].settings = this._playlist[this.currentPlaylistIndex].settings ?? {}
-                this._playlist[this.currentPlaylistIndex].settings.startTime = this.playlistCurrentTime
+            if (this.settings.status.allowOverride.startTime) {
+                this._playlist[this.currentPlaylistIndex].settings.startTime = ((this.currentTime > 3) && (this.currentTime < (this.duration - this.settings.endTime ?? 0))) ? this.playlistCurrentTime : null
             }
             this.stall()
             this.loaded = false
@@ -1674,10 +1692,11 @@ class _T_M_G_Video_Player {
             else if (video.sources?.length > 0) this.sources = video.sources
             if (video.tracks?.length > 0) this.tracks = video.tracks
             this.media = video.media ? {...this.media, ...video.media} : video.media ?? null
-            this.settings.startTime = video.settings?.startTime || null
-            this.settings.endTime = video.settings?.endTime || null
-            this.settings.previewImages = video.settings?.previewImages?.length > 0 ? {...this.settings.previewImages, ...video.settings.previewImages} : video.settings?.previewImages
+            this.settings.startTime = video.settings.startTime
+            this.settings.endTime = video.settings.endTime
+            this.settings.previewImages = video.settings.previewImages?.length > 0 ? {...this.settings.previewImages, ...video.settings.previewImages} : video.settings.previewImages
             this.settings.status.ui.previewImages = this.settings.previewImages?.address && this.settings.previewImages?.fps ? true : false
+            this.playlistCurrentTime = null
             this.setInitialStates()
             this.togglePlay(true)
             this.canAutoMovePlaylist = true
@@ -1977,7 +1996,7 @@ class _T_M_G_Video_Player {
             const previewImgNumber = Math.max(1, Math.floor((percent * this.duration) / this.settings.previewImages.fps))
             previewImgSrc = this.settings.previewImages.address.replace('$', previewImgNumber)
             if (this.settings.previewImages && !window.tmg.queryMediaMobile()) this.DOM.previewImg.src = previewImgSrc
-            if (this.isScrubbing) this.DOM.thumbnailCanvas.src = previewImgSrc
+            if (this.isScrubbing) this.DOM.thumbnailImg.src = previewImgSrc
         } else if (this.settings.previewImages) {
             this.pseudoVideo.currentTime = percent * this.duration
             if (this.settings.previewImages && !window.tmg.queryMediaMobile()) this.previewContext.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height)
@@ -1998,8 +2017,8 @@ class _T_M_G_Video_Player {
     _handleTouchTimelineInput({sign, percent}) {
         try {   
             const time = sign === "+" ? this.currentTime + (percent * this.duration) : this.currentTime - (percent * this.duration)
-            this.touchTimelineTime = window.tmg.clamp(0, Math.floor(time), this.duration)
-            if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${window.tmg.formatTime(Math.abs(this.touchTimelineTime - this.currentTime))} (${window.tmg.formatTime(this.touchTimelineTime)})`
+            this.advancedTimelineTime = window.tmg.clamp(0, Math.floor(time), this.duration)
+            if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${window.tmg.formatTime(Math.abs(this.advancedTimelineTime - this.currentTime))} (${window.tmg.formatTime(this.advancedTimelineTime)})`
         } catch(e) {
             this._log(e, "error", "swallow")
         }        
@@ -2052,7 +2071,7 @@ class _T_M_G_Video_Player {
         this.videoCurrentProgressPosition = window.tmg.formatNumber(this.video.currentTime / this.video.duration)
         if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.timeFormat !== "spent" ? window.tmg.formatTime(this.video.currentTime) : `-${window.tmg.formatTime(this.video.duration - this.video.currentTime)}`
         if (this.speedCheck && this.speedToken === 1) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", window.tmg.formatTime(this.video.currentTime))
-        if (this._playlist && this.currentTime > 3) this.playlistCurrentTime = this.currentTime
+        if (this._playlist) this.playlistCurrentTime = this.currentTime
         if (Math.floor((this.settings.endTime || this.duration) - this.currentTime) <= this.settings.automoveCountdown) this.automovePlaylist()
         if (this.videoContainer.classList.contains("T_M_G-video-replay")) this.videoContainer.classList.remove("T_M_G-video-replay")
     } catch(e) {
@@ -2491,11 +2510,15 @@ class _T_M_G_Video_Player {
 
     async _handleFullScreenChange() {
     try {
-        if (this.inFullScreen) this.videoContainer.classList.add("T_M_G-video-full-screen")
-        if (!window.tmg.queryFullScreen() || !this.inFullScreen) {
+        if (this.inFullScreen) {
+            this.videoContainer.classList.add("T_M_G-video-full-screen")
+            this.setAdvancedWheelListeners()
+        }
+        if (!this.inFullScreen || !window.tmg.queryFullScreen()) {
             this.videoContainer.classList.remove("T_M_G-video-full-screen")
             window.tmg._CURRENT_FULL_SCREEN_PLAYER = null
             this.inFullScreen = false
+            this.removeAdvancedWheelListeners()
         }
         await this.autoLockFullScreenOrientation()
     } catch(e) {
@@ -2694,8 +2717,8 @@ class _T_M_G_Video_Player {
         //this function triggers the forward and backward skip, they then assign the function to the click event, when the trigger is pulled, skipPersist is set to true and the skip is handled by only the click event, if the position of the click changes within the skip interval and when the 'skipPosition' prop is still available, the click event assignment is revoked
         if (target === this.DOM.videoOverlayControlsContainer) {
         if (this.clickId) clearTimeout(this.clickId)
-        const rect = this.video.getBoundingClientRect()
-        let pos = ((x-rect.left) > (this.video.offsetWidth*0.65)) ? "right" : ((x-rect.left) < (this.video.offsetWidth*0.35)) ? "left" : "center"
+        const rect = this.videoContainer.getBoundingClientRect()
+        let pos = ((x-rect.left) > (rect.width*0.65)) ? "right" : ((x-rect.left) < (rect.width*0.35)) ? "left" : "center"
         if (this.skipPersist && (pos !== this.skipPersistPosition)) {
             this.deactivateSkipPersist()
             if (detail == 1) return
@@ -2810,11 +2833,12 @@ class _T_M_G_Video_Player {
 
     _handleAdvancedTouchStart(e) {
     try {
+        if (e.touches?.length > 1) return 
         if (e.target === this.DOM.videoControlsContainer || e.target === this.DOM.videoOverlayControlsContainer) {
-        if (this.settings.status.beta.advancedTouchControls && e.touches.length < 2 && !this.isModeActive("miniPlayer") && !this.speedCheck) {            
+        if (this.settings.status.beta.advancedTouchControls && !this.isModeActive("miniPlayer") && !this.speedCheck) {       
             this._handleAdvancedTouchEnd()
-            this.lastTouchX = e.clientX ?? e.targetTouches[0].clientX
-	        this.lastTouchY = e.clientY ?? e.targetTouches[0].clientY
+            this.lastAdvanedTouchX = e.clientX ?? e.targetTouches[0].clientX
+	        this.lastAdvanedTouchY = e.clientY ?? e.targetTouches[0].clientY
             this.videoContainer.addEventListener("touchmove", this._handleAdvancedTouchInit, {once: true, passive: false})
             this.videoContainer.addEventListener("touchend", this._handleAdvancedTouchEnd)
         }
@@ -2826,24 +2850,24 @@ class _T_M_G_Video_Player {
 
     _handleAdvancedTouchInit(e) {
     try {
-        if (e.touches.length < 2 && !this.isModeActive("miniPlayer") && !this.speedCheck) {
+        if (e.touches?.length > 1) return 
+        if (this.settings.status.beta.advancedTouchControls && !this.isModeActive("miniPlayer") && !this.speedCheck) {  
             e.preventDefault()
-            const x = e.clientX ?? e.targetTouches[0].clientX
-            const y = e.clientY ?? e.targetTouches[0].clientY
-            this.touchZone = {
-                x: x > this.videoContainer.offsetWidth/2 ? "right" : "left",
-                y: y > this.videoContainer.offsetHeight/2 ? "bottom" : "top"
+            const rect = this.videoContainer.getBoundingClientRect(),
+            x = e.clientX ?? e.targetTouches[0].clientX,
+            y = e.clientY ?? e.targetTouches[0].clientY
+            this.advancedTouchZone = {
+                x : x - rect.left > rect.width/2 ? "right" : "left",
+                y : y - rect.left > rect.height/2 ? "bottom" : "top"
             }
-            if (Math.abs(this.lastTouchY - y) < 5) {
-                this.touchXCheck = true
+            if (Math.abs(this.lastAdvanedTouchY - y) < 5) {
+                this.advancedTouchXCheck = true
                 this.videoContainer.addEventListener("touchmove", this._handleAdvancedTouchXMove, {passive: false})
                 this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
-                this.wasPaused = this.video.paused
-                if (!this.wasPaused) this.togglePlay(false)
-            } else if (Math.abs(this.lastTouchX - x) < 10) {
-                this.touchYCheck = true
+            } else if (Math.abs(this.lastAdvanedTouchX - x) < 5) {
+                this.advancedTouchYCheck = true
                 this.videoContainer.addEventListener("touchmove", this._handleAdvancedTouchYMove, {passive: false})
-                this.touchZone.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
+                this.advancedTouchZone.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
             }
         }
     } catch(e) {
@@ -2851,13 +2875,93 @@ class _T_M_G_Video_Player {
     }
     }
 
+    setAdvancedWheelListeners() {
+    try {
+        window.addEventListener("wheel", this._handleAdvancedWheel, {passive: false})
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }
+
+    removeAdvancedWheelListeners() {
+    try {
+        window.removeEventListener("wheel", this._handleAdvancedWheel, {passive: false})
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }
+
+    _handleAdvancedWheel(e) {
+    try {
+        if (this.advancedTouchXCheck || this.advancedTouchYCheck) return
+        if (this.settings.status.beta.advancedTouchControls) {
+            e.preventDefault()
+            if (this.advancedWheelTimeout) clearTimeout(this.advancedWheelTimeout)
+            this.advancedWheelTimeout = setTimeout(this._handleAdvancedWheelStop, 500)
+            this._handleAdvancedWheelStart(e)
+        }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }
+
+    _handleAdvancedWheelStart({clientX, clientY, deltaX, deltaY}) {
+    try {
+        this.advancedWheelZone = {
+            x : clientX > this.videoContainer.offsetWidth/2 ? "right" : "left",
+            y : clientY > this.videoContainer.offsetHeight/2 ? "bottom" : "top"
+        }
+        if (deltaX) {
+            this.advancedWheelXCheck = true
+            this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
+            const sign = deltaX >= 0 ? "+" : "-"
+            const width = this.videoContainer.offsetWidth 
+            const percent = window.tmg.clamp(0, Math.abs(deltaX), width) / width
+            this._handleTouchTimelineInput({sign, percent})
+        }
+        if (deltaY) {
+            this.advancedWheelYCheck = true
+            this.advancedWheelZone?.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
+            const sign = deltaY >= 0 ? "+" : "-"
+            const height = this.advancedWheelZone?.x === "right" ? ((this.videoContainer.offsetHeight * 0.7) * this.volumeBoostValue) : (this.videoContainer.offsetHeight * this.brightnessBoostValue)
+            const percent = window.tmg.clamp(0, Math.abs(deltaY),  height) / height
+            this.advancedWheelZone?.x === "right" ? this._handleTouchVolumeSliderInput({sign, percent}) : this._handleTouchBrightnessSliderInput({sign, percent})
+            this.video.currentTime = this.advancedTimelineTime
+        } 
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    } 
+
+    _handleAdvancedWheelStop() {
+    try {
+        if (this.advancedWheelYCheck) {
+            this.advancedWheelYCheck = false
+            this.removeOverlay()
+            this.DOM.touchVolumeNotifier?.classList.remove("T_M_G-video-control-active") 
+            this.DOM.touchBrightnessNotifier?.classList.remove("T_M_G-video-control-active")
+        } 
+        if (this.advancedWheelXCheck) {
+            this.advancedWheelXCheck = false
+            this.DOM.touchTimelineNotifier?.classList.remove("T_M_G-video-control-active")
+        }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }
+    }    
+
     _handleAdvancedTouchXMove(e) {
     try {
         e.preventDefault()
+
+        if (this.advancedTouchXMoveThrottleId !== null) return
+        this.advancedTouchXMoveThrottleId = setTimeout(() => this.advancedTouchXMoveThrottleId = null, this.timelineThrottleDelay)
+
         const x = e.clientX ?? e.targetTouches[0].clientX
-        const rect = this.DOM.videoContainer.getBoundingClientRect()
-        const sign = x - this.lastTouchX >= 0 ? "+" : "-"
-        const percent = window.tmg.clamp(0, Math.abs(x - this.lastTouchX), rect.width) / rect.width
+        const deltaX = x - this.lastAdvanedTouchX
+        const sign = deltaX >= 0 ? "+" : "-"
+        const width = this.videoContainer.offsetWidth
+        const percent = window.tmg.clamp(0, Math.abs(deltaX), width) / width
         this._handleTouchTimelineInput({sign, percent})
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2867,19 +2971,17 @@ class _T_M_G_Video_Player {
     _handleAdvancedTouchYMove(e) {
     try {
         e.preventDefault()
-        this.videoContainer.classList.remove("T_M_G-video-overlay")
+
+        if (this.advancedTouchYMoveThrottleId !== null) return
+        this.advancedTouchYMoveThrottleId = setTimeout(() => this.advancedTouchYMoveThrottleId = null, this.timelineThrottleDelay)
+
         const y = e.clientY ?? e.targetTouches[0].clientY
-        const x = e.clientX ?? e.targetTouches[0].clientX
-        const posX = x > this.videoContainer.offsetWidth/2 ? "right" : "left"
-        if (posX !== this.touchZone.x) {
-            this._handleAdvancedTouchEnd()
-            return
-        }
-        const sign = y - this.lastTouchY >= 0 ? "-" : "+"
-        const rect = this.DOM.videoContainer.getBoundingClientRect()
-        const percent = this.touchZone.x === "right" ? window.tmg.clamp(0, Math.abs(y - this.lastTouchY), ((rect.height*0.7) * this.volumeBoostValue)) / ((rect.height*0.7) * this.volumeBoostValue) : window.tmg.clamp(0, Math.abs(y - this.lastTouchY), (rect.height * this.brightnessBoostValue)) / (rect.height * this.brightnessBoostValue)
-        this.touchZone.x === "right" ? this._handleTouchVolumeSliderInput({sign, percent}) : this._handleTouchBrightnessSliderInput({sign, percent})
-        this.lastTouchY = y
+        const deltaY = y - this.lastAdvanedTouchY
+        const sign = y - this.lastAdvanedTouchY >= 0 ? "-" : "+"
+        const height = this.advancedTouchZone?.x === "right" ? (this.videoContainer.offsetHeight * 0.7) * this.volumeBoostValue : this.videoContainer.offsetHeight * this.brightnessBoostValue
+        const percent = window.tmg.clamp(0, Math.abs(deltaY), height) / height
+        this.lastAdvanedTouchY = y
+        this.advancedTouchZone?.x === "right" ? this._handleTouchVolumeSliderInput({sign, percent}) : this._handleTouchBrightnessSliderInput({sign, percent})
     } catch(e) {
         this._log(e, "error", "swallow")
     }
@@ -2907,16 +3009,18 @@ class _T_M_G_Video_Player {
     }
 
     _handleAdvancedTouchEnd() {
-        if (this.touchXCheck) {
-            this.touchXCheck = false
+        if (this.advancedTouchXCheck) {
+            this.advancedTouchXCheck = false
             this.videoContainer.removeEventListener("touchmove", this._handleAdvancedTouchXMove, {passive: false})
             this.DOM.touchTimelineNotifier?.classList.remove("T_M_G-video-control-active")
-            this.video.currentTime = this.touchTimelineTime
-            if (!this.wasPaused && !this.video.ended) this.togglePlay(true)
-        } else if (this.touchYCheck) {
-            this.touchYCheck = false
+            this.video.currentTime = this.advancedTimelineTime
+        } 
+        if (this.advancedTouchYCheck) {
+            this.advancedTouchYCheck = false
+            this.removeOverlay()
             this.videoContainer.removeEventListener("touchmove", this._handleAdvancedTouchYMove, {passive: false})
-            this.touchZone.x === "right" ? this.DOM.touchVolumeNotifier?.classList.remove("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.remove("T_M_G-video-control-active")
+            this.DOM.touchVolumeNotifier?.classList.remove("T_M_G-video-control-active")
+            this.DOM.touchBrightnessNotifier?.classList.remove("T_M_G-video-control-active")
         }
         this.videoContainer.removeEventListener("touchmove", this._handleAdvancedTouchInit, {once: true, passive: false})
         this.videoContainer.removeEventListener("touchend", this._handleAdvancedTouchEnd)
@@ -2938,8 +3042,8 @@ class _T_M_G_Video_Player {
                 this.videoContainer.removeEventListener("touchmove", this._handleSpeedPointerUp, {passive: true})   
                 this.speedPointerCheck = true
                 const x = e.clientX ?? e.changedTouches[0].clientX
-                const rect = this.video.getBoundingClientRect()
-                this.speedDirection = x - rect.left >= this.video.offsetWidth * 0.5 ? "forwards" : "backwards"  
+                const rect = this.videoContainer.getBoundingClientRect()
+                this.speedDirection = x - rect.left >= rect.width * 0.5 ? "forwards" : "backwards"  
                 if (this.settings.status.beta.rewind) {
                 this.videoContainer.addEventListener("mousemove", this._handleSpeedPointerMove)
                 this.videoContainer.addEventListener("touchmove", this._handleSpeedPointerMove, {passive: true})
@@ -2966,9 +3070,9 @@ class _T_M_G_Video_Player {
         if (this.speedThrottleId !== null) return
         this.speedThrottleId = setTimeout(() => this.speedThrottleId = null, this.speedThrottleDelay)
         
-        const rect = this.video.getBoundingClientRect()
+        const rect = this.videoContainer.getBoundingClientRect()
         const x = e.clientX ?? e.changedTouches[0].clientX
-        const currPos = x - rect.left >= this.video.offsetWidth * 0.5 ? "forwards" : "backwards"
+        const currPos = x - rect.left >= rect.width * 0.5 ? "forwards" : "backwards"
         if (currPos !== this.speedDirection) {
             this.speedDirection = currPos
             this.slowDown()
@@ -3230,6 +3334,10 @@ class _T_M_G_Video_Player {
     try {
         if (e.target.dataset.dropzone && this.dragging) {
             e.preventDefault()
+
+            if (this.dragOverThrottleId !== null) return
+            this.dragOverThrottleId = setTimeout(() => this.dragOverThrottleId = null, this.dragOverThrottleDelay)
+
             e.dataTransfer.dropEffect = "move"
             const afterControl = this.getControlAfterDragging(e.target, e.clientX)
             if (afterControl) e.target.insertBefore(this.dragging, afterControl) 
@@ -3528,7 +3636,7 @@ class tmg {
             controllerStructure: ["prev", "playpause", "next", "objectfit", "volume", "duration", "spacer", "playbackrate", "captions", "settings", "pictureinpicture", "theater", "fullscreen"],
             timelinePosition: "bottom",
             brightnessBoost: true,
-            maxBrightness: 120,
+            maxBrightness: 150,
             volumeBoost: true,
             maxVolume: 300,
             notifiers: true,
