@@ -1680,7 +1680,7 @@ class _T_M_G_Video_Player {
     try {
         if (this._playlist) {
             if (this.settings.status.allowOverride.startTime) {
-                this._playlist[this.currentPlaylistIndex].settings.startTime = ((this.currentTime > 3) && (this.currentTime < (this.duration - this.settings.endTime ?? 0))) ? this.playlistCurrentTime : null
+                this._playlist[this.currentPlaylistIndex].settings.startTime = this.currentTime < (this.duration - this.settings.endTime ?? 0) ? this.playlistCurrentTime : null
             }
             this.stall()
             this.loaded = false
@@ -2072,7 +2072,7 @@ class _T_M_G_Video_Player {
         this.videoCurrentProgressPosition = window.tmg.formatNumber(this.video.currentTime / this.video.duration)
         if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.timeFormat !== "spent" ? window.tmg.formatTime(this.video.currentTime) : `-${window.tmg.formatTime(this.video.duration - this.video.currentTime)}`
         if (this.speedCheck && this.speedToken === 1) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", window.tmg.formatTime(this.video.currentTime))
-        if (this._playlist) this.playlistCurrentTime = this.currentTime
+        if (this._playlist && this.currentTime > 3) this.playlistCurrentTime = this.currentTime
         if (Math.floor((this.settings.endTime || this.duration) - this.currentTime) <= this.settings.automoveCountdown) this.automovePlaylist()
         if (this.videoContainer.classList.contains("T_M_G-video-replay")) this.videoContainer.classList.remove("T_M_G-video-replay")
     } catch(e) {
