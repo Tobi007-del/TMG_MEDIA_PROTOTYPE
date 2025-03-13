@@ -1783,8 +1783,8 @@ button:has(.T_M_G-video-next-icon) svg {
     animation-name: show, scaleUp;
 }
 
-.T_M_G-video-notifiers-container[data-current-notifier="volumeup"] .T_M_G-video-touch-brightness-notifier-content,
-.T_M_G-video-notifiers-container[data-current-notifier="volumedown"] .T_M_G-video-touch-brightness-notifier-content {
+.T_M_G-video-notifiers-container[data-current-notifier="volumeup"] .T_M_G-video-volume-notifier-content,
+.T_M_G-video-notifiers-container[data-current-notifier="volumedown"] .T_M_G-video-volume-notifier-content {
     animation-name: show-alt;
 }
 
@@ -1803,7 +1803,7 @@ button:has(.T_M_G-video-next-icon) svg {
     display: none;
 }
 
-.T_M_G-video-touch-brightness-notifier-content {
+.T_M_G-video-volume-notifier-content {
     position: absolute;
     width: fit-content;
     height: fit-content;
@@ -1811,10 +1811,6 @@ button:has(.T_M_G-video-next-icon) svg {
     padding: calc(var(--T_M_G-video-current-unit)/4) calc(var(--T_M_G-video-current-unit)/2);
     font-size: calc(var(--T_M_G-video-current-unit)/1.75);
     border-radius: calc(var(--T_M_G-video-current-unit)/10);
-}
-
-.T_M_G-video-touch-brightness-notifier-content::after {
-    content: attr(data-volume) '%';
 }
 
 .T_M_G-video-object-fit-notifier,

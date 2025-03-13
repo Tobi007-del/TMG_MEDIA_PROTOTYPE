@@ -2340,7 +2340,7 @@ class _T_M_G_Video_Player {
     _handleVolumeUpdate() {
     try {
         let value = this.volume
-        this.DOM.volumeNotifierContent?.setAttribute("data-volume", value)
+        if (this.DOM.volumeNotifierContent) this.DOM.volumeNotifierContent.textContent = value + "%"
         let volumeLevel = ""
         if (this.video.muted || value == 0) {
             value = 0
@@ -2351,11 +2351,11 @@ class _T_M_G_Video_Player {
             volumeLevel = "high"
         else if (value > 100) 
             volumeLevel = "boost"
+        const volumePercent = (value - 0) / (this.settings.maxVolume - 0)
         this.videoContainer.setAttribute("data-volume-level", volumeLevel)
         if (this.DOM.volumeSlider) this.DOM.volumeSlider.value = value
         this.DOM.volumeSlider?.setAttribute("data-volume", value)
         if (this.DOM.touchVolumeContent) this.DOM.touchVolumeContent.textContent = value + "%"
-        let volumePercent = (value - 0) / (this.settings.maxVolume - 0)
         this.videoCurrentVolumeValuePosition = `${12 + (volumePercent * 77)}%`
         if (this.settings.volumeBoost) {
             if (value <= 100) {
