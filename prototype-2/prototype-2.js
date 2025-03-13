@@ -2850,11 +2850,11 @@ class _T_M_G_Video_Player {
 
     _handleAdvancedWheel(e) {
     try {
-        if (!this.advancedTouchXCheck && !this.advancedTouchYCheck && this.settings.status.beta.advancedControls && !this.speedCheck) {
+        if (!this.advancedTouchXCheck && !this.advancedTouchYCheck && this.settings.status.beta.advancedControls && !this.speedCheck && !this.settingsView) {
             e.preventDefault()
             if (this.advancedWheelTimeout) clearTimeout(this.advancedWheelTimeout)
             else this._handleAdvancedWheelInit(e)
-            this.advancedWheelTimeout = setTimeout(this._handleAdvancedWheelStop, 500)
+            this.advancedWheelTimeout = setTimeout(this._handleAdvancedWheelStop, 1000)
             this._handleAdvancedWheelMove(e)
         }
     } catch(e) {
@@ -2878,16 +2878,19 @@ class _T_M_G_Video_Player {
     try {
         if (deltaX) {
             this.advancedWheelXCheck = true
+            this.DOM.touchVolumeNotifier?.classList.remove("T_M_G-video-control-active") 
+            this.DOM.touchBrightnessNotifier?.classList.remove("T_M_G-video-control-active")
             this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
-            const sign = deltaX >= 0 ? "+" : "-"
             const width = this.videoContainer.offsetWidth 
-            let percent = window.tmg.clamp(0, Math.abs(deltaX), (width*5)) / (width*5)
-            percent = sign === "+" ? this.advancedWheelTimePercent += percent : this.advancedWheelTimePercent -= percent
+            let percent = deltaX / (width*10)
+            percent = this.advancedWheelTimePercent += percent
+            const sign = Math.sign(percent) === 1 ? "+" : "-"
             percent = Math.abs(percent)
             this._handleAdvancedTimelineInput({sign, percent})
         } 
         if (deltaY) {
             this.advancedWheelYCheck = true
+            this.DOM.touchTimelineNotifier?.classList.remove("T_M_G-video-control-active")
             this.advancedWheelZone?.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
             const sign = deltaY >= 0 ? "+" : "-"
             const height = this.advancedWheelZone?.x === "right" ? ((this.videoContainer.offsetHeight * 0.7) * this.volumeBoostValue) : (this.videoContainer.offsetHeight * this.brightnessBoostValue)
@@ -2990,10 +2993,10 @@ class _T_M_G_Video_Player {
         if (this.advancedTouchXMoveThrottleId !== null) return
         this.advancedTouchXMoveThrottleId = setTimeout(() => this.advancedTouchXMoveThrottleId = null, this.timelineThrottleDelay)
 
+        const width = this.videoContainer.offsetWidth
         const x = e.clientX ?? e.targetTouches[0].clientX
         const deltaX = x - this.lastAdvanedTouchX
         const sign = deltaX >= 0 ? "+" : "-"
-        const width = this.videoContainer.offsetWidth
         const percent = window.tmg.clamp(0, Math.abs(deltaX), width) / width
         this._handleAdvancedTimelineInput({sign, percent})
     } catch(e) {
@@ -3008,10 +3011,10 @@ class _T_M_G_Video_Player {
         if (this.advancedTouchYMoveThrottleId !== null) return
         this.advancedTouchYMoveThrottleId = setTimeout(() => this.advancedTouchYMoveThrottleId = null, this.timelineThrottleDelay)
 
+        const height = this.advancedTouchZone?.x === "right" ? (this.videoContainer.offsetHeight * 0.7) * this.volumeBoostValue : this.videoContainer.offsetHeight * this.brightnessBoostValue
         const y = e.clientY ?? e.targetTouches[0].clientY
         const deltaY = y - this.lastAdvanedTouchY
-        const sign = y - this.lastAdvanedTouchY >= 0 ? "-" : "+"
-        const height = this.advancedTouchZone?.x === "right" ? (this.videoContainer.offsetHeight * 0.7) * this.volumeBoostValue : this.videoContainer.offsetHeight * this.brightnessBoostValue
+        const sign = deltaY >= 0 ? "-" : "+"
         const percent = window.tmg.clamp(0, Math.abs(deltaY), height) / height
         this.lastAdvanedTouchY = y
         this.advancedTouchZone?.x === "right" ? this._handleAdvancedVolumeSliderInput({sign, percent}) : this._handleAdvancedBrightnessSliderInput({sign, percent})
