@@ -64,7 +64,7 @@ class _T_M_G_Video_Player {
         this.advancedWheelTimePercent = 0
         this.lastVolume = this.lastBrightness = 100
         this.volumeSliderVolume = this.brightnessSliderBrightness = 5
-        this.shouldSetLastVolume = this.shouldSetLastBrightness = true
+        this.shouldSetLastVolume = this.shouldSetLastBrightness = false
         this.volumeActiveRestraintId = null
         this.brightnessActiveRestraintId = null
         this.playTriggerCounter = 0
@@ -3874,7 +3874,7 @@ class tmg {
             allowOverride: true,
             beta: ["rewind", "draggablecontrols", "advancedcontrols"],
             modes: ["normal", "fullscreen", "theater", "pictureinpicture", "miniplayer"],
-            controllerStructure: ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "playbackrate", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"],
+            controllerStructure: ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"],
             timelinePosition: "bottom",
             timeFormat: "timeleft",
             startTime: null,

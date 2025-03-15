@@ -395,7 +395,7 @@
 }
 
 .T_M_G-video {
-    filter: brightness(calc(max(var(--T_M_G-video-brightness), 5) / 100 * 100%));
+    filter: brightness(calc(((var(--T_M_G-video-brightness)/100) * 90%) + 10%));
     transition: filter var(--T_M_G-video-settings-view-transition-time) ease;
 }
 
