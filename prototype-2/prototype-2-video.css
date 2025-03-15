@@ -276,7 +276,7 @@
     outline-offset: .5px;
 }
 
-.T_M_G-video-volume-slider:focus-visible {
+.T_M_G-video-vb-slider:focus-visible {
     outline-offset: calc(var(--T_M_G-video-current-unit)/3.57);
 }
 
@@ -336,7 +336,7 @@
     opacity: 0.5;
 }
 
-.T_M_G-video-volume-container:has(.T_M_G-video-control-dragging) > *:not(.T_M_G-video-mute-btn) {
+.T_M_G-video-vb-container:has(.T_M_G-video-control-dragging) > *:not(.T_M_G-video-vb-btn) {
     display: none;
 }
 
@@ -384,10 +384,10 @@
     aspect-ratio: var(--T_M_G-video-aspect-ratio);
     object-fit: var(--T_M_G-video-object-fit);
     border-radius: inherit;
+    width: 500px;
     width: 90dvw;
     max-width: 700px;
     max-height: 80lvh;
-    min-height: 215px;
 }
 
 .T_M_G-pseudo-video {
@@ -395,7 +395,7 @@
 }
 
 .T_M_G-video {
-    filter: brightness(calc(max(var(--T_M_G-video-brightness), 10) / 100 * 100%));
+    filter: brightness(calc(max(var(--T_M_G-video-brightness), 5) / 100 * 100%));
     transition: filter var(--T_M_G-video-settings-view-transition-time) ease;
 }
 
@@ -492,7 +492,7 @@
 
 .T_M_G-video-container.T_M_G-video-mini-player.T_M_G-video-previewing,
 .T_M_G-video-container.T_M_G-video-scrubbing,
-.T_M_G-video-container:is(:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-brightness-notifier, .T_M_G-video-touch-volume-notifier).T_M_G-video-control-active)) {
+.T_M_G-video-container:is(:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-vb-notifier).T_M_G-video-control-active)) {
     --T_M_G-video-current-curtain-color: transparent;
 }
 
@@ -561,7 +561,7 @@
 }
 
 .T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-container-content video {
-    filter: blur(10px);
+    filter: brightness(calc(max(var(--T_M_G-video-brightness), 10) / 100 * 100%)) blur(10px);
 }
 
 .T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-settings-btn svg {
@@ -1040,7 +1040,7 @@
     display: block;
 }
 
-.T_M_G-video-container:is(.T_M_G-video-movement, :has(.T_M_G-video-notifiers.T_M_G-video-control-persist, :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-brightness-notifier, .T_M_G-video-touch-volume-notifier).T_M_G-video-control-active, .T_M_G-video-touch-timeline-notifier.T_M_G-video-control-active, .T_M_G-video-notifiers-container[data-current-notifier="objectfitchange"])) .T_M_G-video-buffer {
+.T_M_G-video-container:is(.T_M_G-video-movement, :has(.T_M_G-video-notifiers.T_M_G-video-control-persist, :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-vb-notifier).T_M_G-video-control-active, .T_M_G-video-touch-timeline-notifier.T_M_G-video-control-active, .T_M_G-video-notifiers-container[data-current-notifier="objectfitchange"])) .T_M_G-video-buffer {
     display: none;
 }
 
@@ -1049,7 +1049,7 @@
 }
 
 .T_M_G-video-container:is(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-container-content,
-.T_M_G-video-container:is(:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-brightness-notifier, .T_M_G-video-touch-volume-notifier).T_M_G-video-control-active)) .T_M_G-video-container-content {
+.T_M_G-video-container:is(:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-vb-notifier).T_M_G-video-control-active)) .T_M_G-video-container-content {
     cursor: auto;
 }
 
@@ -1242,15 +1242,16 @@ button:has(.T_M_G-video-next-icon) svg {
     display: block;
 }
 
-.T_M_G-video-container[data-volume-level="boost"] .T_M_G-video-volume-boost-sign::after {
+.T_M_G-video-container[data-volume-level="boost"] .T_M_G-video-volume-boost-sign::after,
+.T_M_G-video-container[data-brightness-level="boost"] .T_M_G-video-brightness-boost-sign::after {
     display: block;
 }
 
-.T_M_G-video-volume-boost-sign {
+.T_M_G-video-vb-boost-sign {
     position: relative;
 }
 
-.T_M_G-video-volume-boost-sign::after {
+.T_M_G-video-vb-boost-sign::after {
     display: none;
     content: "x" attr(data-boost);
     position: absolute;
@@ -1262,12 +1263,12 @@ button:has(.T_M_G-video-next-icon) svg {
     font-size: calc(var(--T_M_G-video-current-unit)/2.05);
 }
 
-.T_M_G-video-volume-container {
+.T_M_G-video-vb-container {
     display: flex;
     align-items: center;
 }
 
-.T_M_G-video-right-side-controls-wrapper .T_M_G-video-volume-container {
+.T_M_G-video-right-side-controls-wrapper .T_M_G-video-vb-container {
     flex-direction: row-reverse;    
 }
 
@@ -1293,7 +1294,7 @@ button:has(.T_M_G-video-next-icon) svg {
     appearance: none;
 }
 
-.T_M_G-video-volume-slider {
+.T_M_G-video-vb-slider {
     --T_M_G-video-current-slider-gradient-direction: to right;
     cursor: grab;
     position: relative;
@@ -1305,8 +1306,8 @@ button:has(.T_M_G-video-next-icon) svg {
     box-shadow: 1px 1px 10px black;
 }
 
-.T_M_G-video-volume-container.T_M_G-video-control-active:hover .T_M_G-video-volume-slider,
-.T_M_G-video-volume-container:has(.T_M_G-video-volume-slider:focus-visible) .T_M_G-video-volume-slider {
+.T_M_G-video-vb-container.T_M_G-video-control-active:hover .T_M_G-video-vb-slider,
+.T_M_G-video-vb-container:has(.T_M_G-video-vb-slider:focus-visible) .T_M_G-video-vb-slider {
     margin-left: calc(var(--T_M_G-video-current-unit)/5);
     width: calc(var(--T_M_G-video-current-unit)*2);
     opacity: 1;
@@ -1314,14 +1315,13 @@ button:has(.T_M_G-video-next-icon) svg {
     transition: opacity 150ms ease-in-out, width 150ms ease-in-out;
 }
 
-.T_M_G-video-volume-slider,
-.T_M_G-video-touch-volume-slider,
-.T_M_G-video-touch-brightness-slider {
+.T_M_G-video-vb-slider,
+.T_M_G-video-touch-vb-slider {
     background: linear-gradient(var(--T_M_G-video-current-slider-gradient-direction), var(--T_M_G-video-slider-color) calc(var(--T_M_G-video-current-slider-position) * 100%), var(--T_M_G-video-slider-base-color) 0%);
 }
 
 .T_M_G-video-container.T_M_G-video-volume-boost :is(.T_M_G-video-volume-slider, .T_M_G-video-touch-volume-slider),
-.T_M_G-video-container.T_M_G-video-brightness-boost .T_M_G-video-touch-brightness-slider {
+.T_M_G-video-container.T_M_G-video-brightness-boost :is(.T_M_G-video-brightness-slider, .T_M_G-video-touch-brightness-slider) {
     background: linear-gradient(var(--T_M_G-video-current-slider-gradient-direction), var(--T_M_G-video-slider-color) calc(var(--T_M_G-video-current-slider-position) * (var(--T_M_G-video-slider-percent)*1%)), var(--T_M_G-video-slider-boost-color) calc(var(--T_M_G-video-slider-boost-percent)*1%), var(--T_M_G-video-slider-boost-color) calc((var(--T_M_G-video-slider-boost-percent)*1%) + (var(--T_M_G-video-current-slider-boost-position) * (100% - (var(--T_M_G-video-slider-boost-percent)*1%)))), transparent 0%), linear-gradient(var(--T_M_G-video-current-slider-gradient-direction), var(--T_M_G-video-slider-base-color) calc(var(--T_M_G-video-slider-percent)*1%), var(--T_M_G-video-slider-base-boost-color) 0%);
 }
 
@@ -1333,6 +1333,7 @@ button:has(.T_M_G-video-next-icon) svg {
     --T_M_G-video-current-slider-boost-position: var(--T_M_G-video-current-volume-slider-boost-position);
 }
 
+.T_M_G-video-brightness-slider,
 .T_M_G-video-touch-brightness-slider {
     --T_M_G-video-slider-percent: var(--T_M_G-video-brightness-slider-percent);
     --T_M_G-video-current-slider-position: var(--T_M_G-video-current-brightness-slider-position);
@@ -1340,15 +1341,15 @@ button:has(.T_M_G-video-next-icon) svg {
     --T_M_G-video-current-slider-boost-position: var(--T_M_G-video-current-brightness-slider-boost-position);
 }
 
-.T_M_G-video-volume-slider.T_M_G-video-control-active {
+.T_M_G-video-vb-slider.T_M_G-video-control-active {
     cursor: grabbing;
 }
 
-.T_M_G-video-volume-slider::-webkit-slider-runnable-track {
+.T_M_G-video-vb-slider::-webkit-slider-runnable-track {
     height: calc(var(--T_M_G-video-current-unit)/7);
 }
 
-.T_M_G-video-volume-slider::-webkit-slider-thumb {
+.T_M_G-video-vb-slider::-webkit-slider-thumb {
     position: relative;
     top: calc(var(--T_M_G-video-current-unit)/-7.15);
     background: var(--T_M_G-video-volume-slider-thumb-background);
@@ -1357,12 +1358,10 @@ button:has(.T_M_G-video-next-icon) svg {
     border-radius: 50%;
 }
 
-.T_M_G-video-volume-slider::after {
-    content: attr(data-volume);
+.T_M_G-video-vb-slider::after {
     position: absolute;
     display: none;
     top: calc(var(--T_M_G-video-current-unit)/2);
-    left: var(--T_M_G-video-current-volume-value-position);
     min-width: calc(var(--T_M_G-video-current-unit)/1.5);
     transform: translateX(-50%);
     border-radius: var(--T_M_G-video-current-unit);
@@ -1373,28 +1372,45 @@ button:has(.T_M_G-video-next-icon) svg {
     font-weight: bolder;
 }
 
-.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-volume-slider::after {
+.T_M_G-video-volume-slider::after {
+    content: attr(data-volume);
+    left: var(--T_M_G-video-current-volume-value-position);
+}
+
+.T_M_G-video-brightness-slider::after {
+    content: attr(data-brightness);
+    left: var(--T_M_G-video-current-brightness-value-position);
+}
+
+.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-vb-slider::after {
     top: calc(var(--T_M_G-video-current-unit)/3);
 }
 
-.T_M_G-video-volume-slider::before {
+.T_M_G-video-vb-slider::before {
     content: '';
     position: absolute;
     display: none;
     top: calc(var(--T_M_G-video-current-unit)/4);
-    left: var(--T_M_G-video-current-volume-value-position);
     transform: translateX(-50%);
     border-width: calc(var(--T_M_G-video-current-unit)/8);
     border-style: solid;
     border-color: transparent transparent var(--T_M_G-video-volume-slider-content-pointer-background) transparent;
 }
 
-.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-volume-slider::before {
+.T_M_G-video-volume-slider::before {
+    left: var(--T_M_G-video-current-volume-value-position);
+}
+
+.T_M_G-video-brightness-slider::before {
+    left: var(--T_M_G-video-current-brightness-value-position);
+}
+
+.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-vb-slider::before {
     display: none;
 }
 
-.T_M_G-video-volume-container:is(:has(:focus-visible), .T_M_G-video-control-active) .T_M_G-video-volume-slider::after, 
-.T_M_G-video-volume-container:is(:has(:focus-visible), .T_M_G-video-control-active) .T_M_G-video-volume-slider::before {
+.T_M_G-video-vb-container:is(:has(:focus-visible), .T_M_G-video-control-active) .T_M_G-video-vb-slider::after, 
+.T_M_G-video-vb-container:is(:has(:focus-visible), .T_M_G-video-control-active) .T_M_G-video-vb-slider::before {
     display: block;
 }
 
@@ -1759,14 +1775,6 @@ button:has(.T_M_G-video-next-icon) svg {
     opacity: 1;
 }
 
-.T_M_G-video-notifiers-container[data-current-notifier="videoplay"] .T_M_G-video-play-notifier,
-.T_M_G-video-notifiers-container[data-current-notifier="videopause"] .T_M_G-video-pause-notifier,
-.T_M_G-video-notifiers-container[data-current-notifier="volumeup"] .T_M_G-video-volume-up-notifier,
-.T_M_G-video-notifiers-container[data-current-notifier="volumedown"] .T_M_G-video-volume-down-notifier,
-.T_M_G-video-notifiers-container[data-current-notifier="volumemuted"] .T_M_G-video-volume-muted-notifier,
-.T_M_G-video-notifiers-container[data-current-notifier="captions"] .T_M_G-video-captions-notifier,
-.T_M_G-video-notifiers-container[data-current-notifier="theater"] .T_M_G-video-theater-notifier,
-.T_M_G-video-notifiers-container[data-current-notifier="fullScreen"] .T_M_G-video-full-screen-notifier,
 .T_M_G-video-notifiers-container[data-current-notifier="fwd"] .T_M_G-video-fwd-notifier,
 .T_M_G-video-notifiers-container[data-current-notifier="bwd"] .T_M_G-video-bwd-notifier {
     animation-name: show;
@@ -1777,6 +1785,9 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-notifiers-container[data-current-notifier="volumeup"] .T_M_G-video-volume-up-notifier,
 .T_M_G-video-notifiers-container[data-current-notifier="volumedown"] .T_M_G-video-volume-down-notifier,
 .T_M_G-video-notifiers-container[data-current-notifier="volumemuted"] .T_M_G-video-volume-muted-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="brightnessup"] .T_M_G-video-brightness-up-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="brightnessdown"] .T_M_G-video-brightness-down-notifier,
+.T_M_G-video-notifiers-container[data-current-notifier="brightnessdark"] .T_M_G-video-brightness-dark-notifier,
 .T_M_G-video-notifiers-container[data-current-notifier="captions"] .T_M_G-video-captions-notifier,
 .T_M_G-video-notifiers-container[data-current-notifier="theater"] .T_M_G-video-theater-notifier,
 .T_M_G-video-notifiers-container[data-current-notifier="fullScreen"] .T_M_G-video-full-screen-notifier {
@@ -1784,7 +1795,9 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 .T_M_G-video-notifiers-container[data-current-notifier="volumeup"] .T_M_G-video-volume-notifier-content,
-.T_M_G-video-notifiers-container[data-current-notifier="volumedown"] .T_M_G-video-volume-notifier-content {
+.T_M_G-video-notifiers-container[data-current-notifier="volumedown"] .T_M_G-video-volume-notifier-content,
+.T_M_G-video-notifiers-container,[data-current-notifier="brightnessup"] .T_M_G-video-brightness-notifier-content,
+.T_M_G-video-notifiers-container[data-current-notifier="brightnessdown"] .T_M_G-video-brightness-notifier-content  {
     animation-name: show-alt;
 }
 
@@ -1803,7 +1816,8 @@ button:has(.T_M_G-video-next-icon) svg {
     display: none;
 }
 
-.T_M_G-video-volume-notifier-content {
+.T_M_G-video-volume-notifier-content,
+ .T_M_G-video-brightness-notifier-content {
     position: absolute;
     width: fit-content;
     height: fit-content;
@@ -1851,7 +1865,7 @@ button:has(.T_M_G-video-next-icon) svg {
 
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-playback-rate-notifier:not(.T_M_G-video-rewind)::after,
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-playback-rate-notifier.T_M_G-video-rewind::before {
-    -webkit-mask-size: calc(var(--T_M_G-video-current-unit)/3.75) calc(var(--T_M_G-video-current-unit)/2.5);
+    -webkit-mask-size: calc(var(--T_M_G-video-current-unit)/3.5) calc(var(--T_M_G-video-current-unit)/2.5);
     mask-size: calc(var(--T_M_G-video-current-unit)/3.5) calc(var(--T_M_G-video-current-unit)/2.5);
     width: calc(var(--T_M_G-video-current-unit)/1.775);
 }
@@ -1887,7 +1901,7 @@ button:has(.T_M_G-video-next-icon) svg {
     transform: scaleX(-1);
 }
 
-.T_M_G-video-notifiers-container :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-timeline-notifier, .T_M_G-video-touch-brightness-notifier, .T_M_G-video-touch-volume-notifier).T_M_G-video-control-active {
+.T_M_G-video-notifiers-container :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-timeline-notifier, .T_M_G-video-touch-vb-notifier).T_M_G-video-control-active {
     opacity: 1;
 }
 
@@ -2006,8 +2020,7 @@ button:has(.T_M_G-video-next-icon) svg {
     animation-name: arrow-3;
 }
 
-.T_M_G-video-touch-volume-notifier,
-.T_M_G-video-touch-brightness-notifier {
+.T_M_G-video-touch-vb-notifier {
     background-color: transparent;
     height: min(var(--T_M_G-video-max-touch-slider-height), var(--T_M_G-video-current-touch-slider-height));
     width: var(--T_M_G-video-current-touch-slider-width);
@@ -2024,8 +2037,7 @@ button:has(.T_M_G-video-next-icon) svg {
     right: 15%;
 }
 
-.T_M_G-video-touch-volume-slider,
-.T_M_G-video-touch-brightness-slider {
+.T_M_G-video-touch-vb-slider {
     --T_M_G-video-current-slider-gradient-direction: to top;
     border-radius: var(--T_M_G-video-current-touch-slider-border-radius);
     width: 100%;
@@ -2119,7 +2131,7 @@ button:has(.T_M_G-video-next-icon) svg {
     .T_M_G-video-play-pause-btn,
     .T_M_G-video-prev-btn,
     .T_M_G-video-next-btn,
-    .T_M_G-video-volume-slider,
+    .T_M_G-video-vb-slider,
     .T_M_G-video-play-notifier,
     .T_M_G-video-pause-notifier, 
     #o#o#o#o#o#o#o#o#o#o),
@@ -2264,8 +2276,7 @@ button:has(.T_M_G-video-next-icon) svg {
     pointer-events: all;
 }
 
-.T_M_G-video-container:is(:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-brightness-notifier, .T_M_G-video-touch-volume-notifier, .T_M_G-video-touch-brightness-notifier,
-.T_M_G-video-touch-volume-notifier).T_M_G-video-control-active)) :is(
+.T_M_G-video-container:is(:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-vb-notifier).T_M_G-video-control-active)) :is(
 .T_M_G-video-controls-container > *:not(.T_M_G-video-timeline-container),
 .T_M_G-video-playlist-title-wrapper,
 .T_M_G-video-overlay-main-controls-wrapper,
@@ -2273,7 +2284,7 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-mini-player-expand-btn-wrapper,
 .T_M_G-video-mini-player-cancel-btn-wrapper,
 .T_M_G-video::-webkit-media-text-track-display),
-.T_M_G-video-container:has(:is(.T_M_G-video-touch-brightness-notifier, .T_M_G-video-touch-volume-notifier).T_M_G-video-control-active) .T_M_G-video-timeline-container {
+.T_M_G-video-container:has(.T_M_G-video-touch-vb-notifier.T_M_G-video-control-active) .T_M_G-video-timeline-container {
     opacity: 0;
     pointer-events: none;
 }
