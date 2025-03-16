@@ -455,8 +455,8 @@ class _T_M_G_Video_Player {
             `,
             playlisttitle : 
             `
-                <div class="T_M_G-video-playlist-title-wrapper">
-                    <p class="T_M_G-video-playlist-title"></p>
+                <div class="T_M_G-video-title-wrapper">
+                    <p class="T_M_G-video-title"></p>
                 </div>        
             `,
             videobuffer : 
@@ -916,8 +916,8 @@ class _T_M_G_Video_Player {
             videoContainer : this.videoContainer,
             videoContainerContentWrapper: this.videoContainer.querySelector(".T_M_G-video-container-content-wrapper"),
             videoContainerContent: this.videoContainer.querySelector(".T_M_G-video-container-content"),
-            playlistTitleWrapper: this.videoContainer.querySelector(".T_M_G-video-playlist-title-wrapper"),
-            playlistTitle: this.videoContainer.querySelector(".T_M_G-video-playlist-title"),
+            videoTitleWrapper: this.videoContainer.querySelector(".T_M_G-video-title-wrapper"),
+            videoTitle: this.videoContainer.querySelector(".T_M_G-video-title"),
             thumbnailImg : this.videoContainer.querySelector(".T_M_G-video-thumbnail-image"),
             thumbnailCanvas : this.videoContainer.querySelector(".T_M_G-video-thumbnail-canvas"),
             videoBuffer : this.videoContainer.querySelector(".T_M_G-video-buffer"),
@@ -1082,8 +1082,8 @@ class _T_M_G_Video_Player {
     setVideoTitleState() {
     try {
         if (this.media?.title) {
-            if (this.DOM.playlistTitle) this.DOM.playlistTitle.textContent = this.media.title || ""
-            this.DOM.playlistTitle?.setAttribute("data-video-title", this.media.title || "")
+            if (this.DOM.videoTitle) this.DOM.videoTitle.textContent = this.media.title || ""
+            this.DOM.videoTitle?.setAttribute("data-video-title", this.media.title || "")
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -1651,7 +1651,7 @@ class _T_M_G_Video_Player {
 
     showMessage(message) {
     try {
-        if (message) this.DOM.videoContainerContent?.setAttribute("data-message", e.message)
+        if (message) this.DOM.videoContainerContent?.setAttribute("data-message", message)
     } catch(e) {
         this._log(e, "error", "swallow")
     }             
@@ -2343,7 +2343,8 @@ class _T_M_G_Video_Player {
     initAudioManager() {
     try {
         this.updateAudioSettings() 
-        window.tmg._AUDIO_CONTEXT ? this.manageAudio() : window.tmg.initializeAudioManager(!this.video.autoplay)
+        if (!window.tmg._AUDIO_CONTEXT) window.tmg.initializeAudioManager(!this.video.autoplay)
+        if (window.tmg._AUDIO_CONTEXT) this.manageAudio()
     } catch(e) {
         this._log(e, "error", "swallow")
     }          
@@ -2376,12 +2377,10 @@ class _T_M_G_Video_Player {
 
     removeAudio() {
     try {
-        if (this.audioSetup) {
-        this.audioSource.disconnect()
-        this.audioGainNode.disconnect()
+        this.audioSource?.disconnect()
+        this.audioGainNode?.disconnect()
         this.audioSource = this.audioGainNode = null
         this.audioSetup = false
-        }
     } catch(e) {
         this._log(e, "error", "swallow")
     }       
@@ -2393,7 +2392,7 @@ class _T_M_G_Video_Player {
         this.videoContainer.classList.toggle("T_M_G-video-volume-boost", this.volumeBoost)
         if (this.DOM.volumeSlider) this.DOM.volumeSlider.max = this.settings.maxVolume
         this.videoVolumeSliderPercent = Math.round((100 / this.settings.maxVolume) * 100)
-        this.maxVolumeRatio = this.settings.maxVolume / 100
+        this.videoMaxVolumeRatio = this.maxVolumeRatio = this.settings.maxVolume / 100
         this.shouldSetLastVolume = this.video.muted
         this._handleVolumeChange()
     } catch(e) {
@@ -2547,7 +2546,7 @@ class _T_M_G_Video_Player {
         this.brightnessBoost = this.settings.maxBrightness > 100
         if (this.DOM.brightnessSlider) this.DOM.brightnessSlider.max = this.settings.maxBrightness
         this.videoBrightnessSliderPercent = Math.round((100 / this.settings.maxBrightness) * 100)
-        this.maxBrightnessRatio = this.settings.maxBrightness / 100
+        this.videoMaxBrightnessRatio = this.maxBrightnessRatio = this.settings.maxBrightness / 100
         this.videoContainer.classList.toggle("T_M_G-video-brightness-boost", this.brightnessBoost)
         this._handleBrightnessChange()
     } catch(e) {
@@ -2757,7 +2756,7 @@ class _T_M_G_Video_Player {
     async autoLockFullScreenOrientation() {
     try {
         if (this.isModeActive("fullScreen")) {
-            const lockOrientation = this.video.videoWidth > this.video.videoHeight ? "landscape" : "portrait"
+            const lockOrientation = this.video.videoHeight > this.video.videoWidth ? "portrait" : "landscape"
             if (screen.orientation && screen.orientation.lock) await screen.orientation.lock(lockOrientation)
             this.DOM.fullScreenOrientationBtn.classList.remove("T_M_G-video-control-hidden")
         } else {
@@ -2925,7 +2924,7 @@ class _T_M_G_Video_Player {
                 this.togglePlay()
                 this.video.paused ? this.fire("videopause") : this.fire("videoplay")
             }
-                this.showVideoOverlay()
+            this.showVideoOverlay()
         }, 300)
         } 
     } catch(e) {
@@ -3885,7 +3884,7 @@ class tmg {
             playbackRateSkip: 0.25,
             maxBrightness: 150,
             maxVolume: 300,
-            maxPlaybackRate: 21,
+            maxPlaybackRate: 16,
             notifiers: true,
             progressBar: false,
             persist: true,
@@ -3898,7 +3897,7 @@ class tmg {
             playsInline: true,
             previewImages: false,
             overlayRestraintTime: 3000,
-            keyOverrides: ["arrowdown", "arrowup", "arrowleft", "arrowright", "home", "end"],
+            keyOverrides: [" ", "arrowdown", "arrowup", "arrowleft", "arrowright", "home", "end"],
             shiftKeys: ["prev", "next"],
             ctrlKeys: [],
             altKeys: [],
