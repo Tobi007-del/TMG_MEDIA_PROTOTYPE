@@ -3685,6 +3685,9 @@ class _T_M_G_Media_Player {
             this.Player?._destroy()
             if (window.tmg.Players.indexOf(this.Player) !== -1) window.tmg.Players?.splice(window.tmg.Players.indexOf(this.Player), 1)
             this.Player = null
+            delete this.#build.src
+            delete this.#build.sources
+            delete this.#build.tracks
             this.#active = false
         }
     }
@@ -3712,7 +3715,6 @@ class _T_M_G_Media_Player {
                 customOptions.media ? customOptions.media.artwork = [{src: this.#medium.getAttribute("tmg--media-artwork") ?? this.#medium.poster}] : customOptions.media = {
                     artwork: [{src: this.#medium.getAttribute("tmg--media-artwork") ?? this.#medium.poster}]
                 }
-                this.#medium.removeAttribute("tmg--media--artwork")
             }                
         }
         if (this.#active) {
@@ -4163,7 +4165,6 @@ class tmg {
                     if (value.includes(",")) value = value.split(",")?.map(val => val.replace(/\s+/g, ""))
                     else if ((/^(true|false|null|\d+)$/).test(value)) value = JSON.parse(value)
                     currObj[part] = value
-                    medium.removeAttribute(attr)
                 } else currObj[part] = {}
             }
             currObj = currObj[part]
