@@ -386,7 +386,6 @@
     aspect-ratio: var(--T_M_G-video-aspect-ratio);
     object-fit: var(--T_M_G-video-object-fit);
     border-radius: inherit;
-    width: 500px;
     width: 90dvw;
     max-width: 700px;
     max-height: 80lvh;

@@ -215,6 +215,7 @@ class _T_M_G_Video_Player {
     }
 
     _destroy() {        
+        this.removeAudio()
         this.leaveSettingsView()
         this.unobserveIntersection()
         this.removeKeyEventListeners()
@@ -227,7 +228,6 @@ class _T_M_G_Video_Player {
             this.pseudoVideoContainer.remove()
         } else this.videoContainer.parentElement.insertBefore(this.video, this.videoContainer)
         this.videoContainer.remove()
-        this.removeAudio()
     }
 
     bindMethods() {
@@ -351,8 +351,7 @@ class _T_M_G_Video_Player {
     buildVideoPlayerInterface() {
     try {     
         if (this.media?.artwork) 
-            if (this.media.artwork[0]?.src) 
-                this.video.poster = this.media.artwork[0]?.src
+            if (this.media.artwork[0]?.src !== this.video.poster) this.video.poster = this.media.artwork[0].src
         if (!this.videoContainer) {
             this.videoContainer = document.createElement('div')
             this.video.parentElement.insertBefore(this.videoContainer, this.video)
@@ -741,7 +740,7 @@ class _T_M_G_Video_Player {
             brightness: this.settings.status.ui.brightness ? 
             `
                 <div class="T_M_G-video-brightness-container T_M_G-video-vb-container" data-control-id="brightness">
-                    <button type="button" class="T_M_G-video-dark-btn T_M_G-video-vb-btn" title="Toggle Brightness${keyShortcuts["dark"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1">
+                    <button type="button" class="T_M_G-video-dark-btn T_M_G-video-vb-btn" title="Toggle Dark${keyShortcuts["dark"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1">
                     <g class="T_M_G-video-brightness-boost-sign T_M_G-video-vb-boost-sign">
                         <svg class="T_M_G-video-brightness-high-icon" data-tooltip-text="Dark${keyShortcuts["dark"]}" data-tooltip-position="top">
                             <path transform="scale(1.05) translate(1.5, 1.5)"  d="M10 14.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h3a1 1 0 0 1 0 2h-3a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm0-15a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm-9 9h3a1 1 0 1 1 0 2H1a1 1 0 0 1 0-2zm13.95 4.535l2.121 2.122a1 1 0 0 1-1.414 1.414l-2.121-2.121a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-2.12 2.12a1 1 0 1 1-1.415-1.413l2.121-2.122a1 1 0 0 1 1.414 0zM17.071 3.787a1 1 0 0 1 0 1.414L14.95 7.322a1 1 0 0 1-1.414-1.414l2.12-2.121a1 1 0 0 1 1.415 0zm-12.728 0l2.121 2.121A1 1 0 1 1 5.05 7.322L2.93 5.201a1 1 0 0 1 1.414-1.414z">
@@ -1043,7 +1042,7 @@ class _T_M_G_Video_Player {
 
     stall() {
     try {
-        this.showVideoOverlay()
+        this.showOverlay()
         this.DOM.mainPlayPauseBtn?.classList.add("T_M_G-video-control-spin")
         this.DOM.mainPlayPauseBtn?.addEventListener("animationend", () => this.DOM.mainPlayPauseBtn?.classList.remove("T_M_G-video-control-spin"), {once: true}) 
     } catch(e) {
@@ -1068,7 +1067,7 @@ class _T_M_G_Video_Player {
 
     setInitialStates() {
     try {     
-        this.showVideoOverlay()
+        this.showOverlay()
         this.setVideoTitleState()
         this.setCaptionsState()   
         this.setPreviewImagesState()
@@ -1268,8 +1267,10 @@ class _T_M_G_Video_Player {
         this.DOM.videoOverlayControlsContainer.addEventListener("contextmenu", this._handleRightClick)
         this.DOM.videoOverlayControlsContainer.addEventListener("click", this._handleHoverPointerDown, true)
         this.DOM.videoControlsContainer.addEventListener("click", this._handleHoverPointerDown, true)
-        this.DOM.videoOverlayControlsContainer.addEventListener("pointermove", this._handleHoverPointerMove, true)
-        this.DOM.videoControlsContainer.addEventListener("pointermove", this._handleHoverPointerMove, true)
+        this.DOM.videoOverlayControlsContainer.addEventListener("pointerover", this._handleHoverPointerActive, true)
+        this.DOM.videoControlsContainer.addEventListener("pointerover", this._handleHoverPointerActive, true)
+        this.DOM.videoOverlayControlsContainer.addEventListener("pointermove", this._handleHoverPointerActive, true)
+        this.DOM.videoControlsContainer.addEventListener("pointermove", this._handleHoverPointerActive, true)
         this.DOM.videoOverlayControlsContainer.addEventListener("mouseleave", this._handleHoverPointerOut, true)
         this.DOM.videoControlsContainer.addEventListener("mouseleave", this._handleHoverPointerOut, true)
         this.DOM.videoOverlayControlsContainer.addEventListener("click", this._handleClick, true)
@@ -1581,7 +1582,7 @@ class _T_M_G_Video_Player {
 
     deactivate() {
     try {
-        this.showVideoOverlay()
+        this.showOverlay()
         this.videoContainer.classList.add("T_M_G-video-unavailable")
         // this.disableFocusableControls("all")
         // this.removeKeyEventListeners()
@@ -1757,8 +1758,7 @@ class _T_M_G_Video_Player {
             this.currentPlaylistIndex = index
             const video = this._playlist[index]
             if (video.media?.artwork) 
-            if (video.media.artwork[0]?.src) 
-                this.video.poster = video.media.artwork[0].src
+            if (video.media.artwork[0]?.src !== this.video.poster) this.video.poster = video.media.artwork[0].src
             if (video.src) this.src = video.src
             else if (video.sources?.length > 0) this.sources = video.sources
             if (video.tracks?.length > 0) this.tracks = video.tracks
@@ -1921,7 +1921,7 @@ class _T_M_G_Video_Player {
     _handleBufferStart() {
     try {
         this.buffering = true
-        this.showVideoOverlay()
+        this.showOverlay()
         this.videoContainer.classList.add("T_M_G-video-buffering")
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -1957,7 +1957,7 @@ class _T_M_G_Video_Player {
     _handlePause() {
     try {        
         this.videoContainer.classList.add("T_M_G-video-paused")
-        this.showVideoOverlay()
+        this.showOverlay()
         if (this.buffering) this._handleBufferStop()
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2153,6 +2153,7 @@ class _T_M_G_Video_Player {
     changeTimeFormat() {
     try {
         if (this.settings.status.allowOverride.timeFormat) {
+            this.showOverlay()
             this.settings.timeFormat = this.settings.timeFormat !== "timespent" ? "timespent" : "timeleft"
             if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.timeFormat !== "timespent" ? window.tmg.formatTime(this.video.currentTime) : `-${window.tmg.formatTime(this.video.duration - this.video.currentTime)}`
         }
@@ -2251,8 +2252,7 @@ class _T_M_G_Video_Player {
             this.wasPaused = this.video.paused
             this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-rewind")
             this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-control-active")
-            if (pos && this.settings.status.beta.rewind) pos === "backwards" ? this.rewind() : this.fastForward()
-            else this.fastForward()
+            pos === "backwards" && this.settings.status.beta?.rewind ? this.rewind() : this.fastForward()
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2362,9 +2362,9 @@ class _T_M_G_Video_Player {
     manageAudio() {
     try {
         if (!this.audioSetup) {
-        const {source, gainNode} = window.tmg.connectMediaToAudioManager(this.video)
-        this.audioSource = source
-        this.audioGainNode = gainNode
+        window.tmg.connectMediaToAudioManager(this.video)
+        this.audioSourceNode = this.video.tmgSourceNode
+        this.audioGainNode = this.video.tmgGainNode
         this.video.volume = 1
         this.volume = this.video.muted ? 0 : this.volume
         this.volumeTypeCounter = this.volume === 0 ? 1 : 0
@@ -2377,9 +2377,9 @@ class _T_M_G_Video_Player {
 
     removeAudio() {
     try {
-        this.audioSource?.disconnect()
+        this.audioSourceNode?.disconnect()
         this.audioGainNode?.disconnect()
-        this.audioSource = this.audioGainNode = null
+        this.audioSourceNode = this.audioGainNode = null
         this.audioSetup = false
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2499,23 +2499,25 @@ class _T_M_G_Video_Player {
                     volume -= (volume%value) ? (volume%value) : value
                 } 
                 if (volume === 0) {
-                    this.video.muted = true
                     this.fire("volumemuted")
                     break
                 }
-                if (this.DOM.volumeNotifierContent) this.DOM.volumeNotifierContent.textContent = volume + "%"
                 this.fire("volumedown")
                 break
             default:
                 if (volume < this.settings.maxVolume) {
                     volume += (volume%value) ? (value - volume%value) : value 
                 }
-                if (this.DOM.volumeNotifierContent) this.DOM.volumeNotifierContent.textContent = volume + "%"
                 this.fire("volumeup")
                 break                
         }
-        if (this.shouldSetLastVolume) this.lastVolume = volume
-        else this.volume = volume
+        if (this.shouldSetLastVolume) {
+            if (this.DOM.volumeNotifierContent) this.DOM.volumeNotifierContent.textContent = volume + "%"
+            this.lastVolume = volume
+        } else {
+            this.video.muted = volume === 0
+            this.volume = volume
+        }
     } catch(e) {
         this._log(e, "error", "swallow")
     }
@@ -2535,7 +2537,7 @@ class _T_M_G_Video_Player {
     volumeActiveRestraint() {
     try {
         if (this.volumeActiveRestraintId) clearTimeout(this.volumeActiveRestraintId)
-        this.volumeActiveRestraintId = setTimeout(() => this.DOM.volumeSlider?.parentElement.classList.remove("T_M_G-video-control-active"), this.settings.overlayRestraintTime)  
+        this.volumeActiveRestraintId = setTimeout(() => this.DOM.volumeSlider?.parentElement.classList.remove("T_M_G-video-control-active"), this.settings.overlayRestraint)  
     } catch(e) {
         this._log(e, "error", "swallow")
     }
@@ -2662,19 +2664,19 @@ class _T_M_G_Video_Player {
                     this.fire("brightnessdark")
                     break
                 }
-                if (this.DOM.brightnessNotifierContent) this.DOM.brightnessNotifierContent.textContent = brightness + "%"
                 this.fire("brightnessdown")
                 break
             default:
                 if (brightness < this.settings.maxBrightness) {
                     brightness += (brightness%value) ? (value - brightness%value) : value 
                 }
-                if (this.DOM.brightnessNotifierContent) this.DOM.brightnessNotifierContent.textContent = brightness + "%"
                 this.fire("brightnessup")
                 break                
         }
-        if (this.shouldSetLastBrightness) this.lastBrightness = brightness
-        else this.brightness = brightness
+        if (this.shouldSetLastBrightness) {
+            if (this.DOM.brightnessNotifierContent) this.DOM.brightnessNotifierContent.textContent = brightness + "%"
+            this.lastBrightness = brightness
+        } else this.brightness = brightness
     } catch(e) {
         this._log(e, "error", "swallow")
     }
@@ -2694,7 +2696,7 @@ class _T_M_G_Video_Player {
     brightnessActiveRestraint() {
     try {
         if (this.brightnessActiveRestraintId) clearTimeout(this.brightnessActiveRestraintId)
-        this.brightnessActiveRestraintId = setTimeout(() => this.DOM.brightnessSlider?.parentElement.classList.remove("T_M_G-video-control-active"), this.settings.overlayRestraintTime)  
+        this.brightnessActiveRestraintId = setTimeout(() => this.DOM.brightnessSlider?.parentElement.classList.remove("T_M_G-video-control-active"), this.settings.overlayRestraint)  
     } catch(e) {
         this._log(e, "error", "swallow")
     }
@@ -2794,7 +2796,7 @@ class _T_M_G_Video_Player {
     _handleEnterPictureInPicture() {
     try {
         this.videoContainer.classList.add("T_M_G-video-picture-in-picture")
-        this.showVideoOverlay()
+        this.showOverlay()
         this.toggleMiniPlayerMode(false)
         this.setMediaSession()
     } catch(e) {
@@ -2874,7 +2876,7 @@ class _T_M_G_Video_Player {
     emptyMiniPlayerListeners() {
     try {
         this.videoContainer.classList.remove("T_M_G-video-movement")
-        this.showVideoOverlay()
+        this.showOverlay()
         document.removeEventListener("mousemove", this._handleMiniPlayerPosition)
         document.removeEventListener("mouseup", this.emptyMiniPlayerListeners)
         document.removeEventListener("mouseleave", this.emptyMiniPlayerListeners)
@@ -2924,7 +2926,7 @@ class _T_M_G_Video_Player {
                 this.togglePlay()
                 this.video.paused ? this.fire("videopause") : this.fire("videoplay")
             }
-            this.showVideoOverlay()
+            this.showOverlay()
         }, 300)
         } 
     } catch(e) {
@@ -2989,9 +2991,9 @@ class _T_M_G_Video_Player {
     }   
     }
 
-    _handleHoverPointerMove() {
+    _handleHoverPointerActive() {
     try {
-        if (!(window.tmg.queryMediaMobile() && !this.isModeActive("miniPlayer"))) this.showVideoOverlay()
+        if (!(window.tmg.queryMediaMobile() && !this.isModeActive("miniPlayer"))) this.showOverlay()
     } catch(e) {
         this._log(e, "error", "swallow")
     }                    
@@ -3013,7 +3015,7 @@ class _T_M_G_Video_Player {
     }                    
     }
 
-    showVideoOverlay() {
+    showOverlay() {
     try {
         if (this.shouldShowOverlay()) {
             this.videoContainer.classList.add("T_M_G-video-overlay")
@@ -3036,7 +3038,7 @@ class _T_M_G_Video_Player {
     try {        
         if (this.overlayRestraintId) clearTimeout(this.overlayRestraintId)
         if (this.shouldRemoveOverlay()) {
-            this.overlayRestraintId = setTimeout(this.removeOverlay, this.settings.overlayRestraintTime)
+            this.overlayRestraintId = setTimeout(this.removeOverlay, this.settings.overlayRestraint)
         }
     } catch(e) {
         this._log(e, "error", "swallow")        
@@ -3262,7 +3264,7 @@ class _T_M_G_Video_Player {
                 //tm: removing listener since speedup is being called and user is not scrolling
                 this.videoContainer.removeEventListener("touchmove", this._handleSpeedPointerUp, {passive: true})   
                 this.speedPointerCheck = true
-                const x = e.clientX ?? e.changedTouches[0].clientX
+                const x = e.clientX ?? e.targetTouches[0].clientX
                 const rect = this.videoContainer.getBoundingClientRect()
                 this.speedDirection = x - rect.left >= rect.width * 0.5 ? "forwards" : "backwards"  
                 if (this.settings.status.beta.rewind) {
@@ -3293,7 +3295,7 @@ class _T_M_G_Video_Player {
         this.speedThrottleId = setTimeout(() => this.speedThrottleId = null, this.speedThrottleDelay)
         
         const rect = this.videoContainer.getBoundingClientRect()
-        const x = e.clientX ?? e.changedTouches[0].clientX
+        const x = e.clientX ?? e.targetTouches[0].clientX
         const currPos = x - rect.left >= rect.width * 0.5 ? "forwards" : "backwards"
         if (currPos !== this.speedDirection) {
             this.speedDirection = currPos
@@ -3548,7 +3550,7 @@ class _T_M_G_Video_Player {
 
     _handleDragEnd({target}) {
     try {
-        this.showVideoOverlay()
+        this.showOverlay()
         target.classList.remove("T_M_G-video-control-dragging")
         this.dragging = null
         const leftSideStructure = this.settings.status.ui.leftSidedControls && this.DOM.leftSidedControlsWrapper.children ? Array.from(this.DOM.leftSidedControlsWrapper.children, el => el.dataset.controlId) : []
@@ -3896,7 +3898,7 @@ class tmg {
             muted: false,
             playsInline: true,
             previewImages: false,
-            overlayRestraintTime: 3000,
+            overlayRestraint: 3000,
             keyOverrides: [" ", "arrowdown", "arrowup", "arrowleft", "arrowright", "home", "end"],
             shiftKeys: ["prev", "next"],
             ctrlKeys: [],
@@ -4036,11 +4038,10 @@ class tmg {
         return !!window.tmg._AUDIO_CONTEXT
     }
     static connectMediaToAudioManager(medium) {
-        const source = window.tmg._AUDIO_CONTEXT.createMediaElementSource(medium)
-        const gainNode = window.tmg._AUDIO_CONTEXT.createGain()
-        source.connect(gainNode)
-        if (!medium.paused) window.tmg.connectAudio(gainNode)
-        return {source, gainNode}
+        medium.tmgSourceNode = medium.tmgSourceNode || window.tmg._AUDIO_CONTEXT.createMediaElementSource(medium)
+        medium.tmgGainNode = medium.tmgGainNode || window.tmg._AUDIO_CONTEXT.createGain()
+        medium.tmgSourceNode.connect(medium.tmgGainNode)
+        if (!medium.paused) window.tmg.connectAudio(medium.tmgGainNode)
     }
     static connectAudio(gainNode) {
         if (gainNode && window.tmg._CURRENT_AUDIO_GAIN_NODE !== gainNode) {
