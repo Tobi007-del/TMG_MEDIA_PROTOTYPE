@@ -11,15 +11,11 @@ typeof window !== "undefined" ? console.log("%cTMG Media Player Available", "col
 class _T_M_G_Video_Player {
     constructor(videoOptions) {
     try {
-        //build properties unset
-        this.options = false
         //turning the video build into the Video Player Instance
         for (const [key, value] of Object.entries(videoOptions)) {
           this[key] = value
         }                
         this._log(videoOptions)
-        //build properties set
-        this.options = true
         //some general variables
         this.audioSetup = false
         this.loaded = false
@@ -53,14 +49,15 @@ class _T_M_G_Video_Player {
         this.lastAdvanedTouchX = null
         this.lastAdvanedTouchY = null
         this.advancedTouchZone = null
-        this.currentTime = null
         this.advancedNextTime = null
+        this.advancedTouchTimeoutId = null
+        this.advancedTouchThreshold = 150
         this.advancedTouchXCheck = false
         this.advancedTouchYCheck = false
         this.advancedWheelZone = null
         this.advancedWheelXCheck = false
         this.advancedWheelYCheck = false
-        this.advancedWheelTimeout = null
+        this.advancedWheelTimeoutId = null
         this.advancedWheelTimePercent = 0
         this.lastVolume = this.lastBrightness = 100
         this.volumeSliderVolume = this.brightnessSliderBrightness = 5
@@ -154,7 +151,7 @@ class _T_M_G_Video_Player {
             }
             this._playlist = value
             if (!this.currentPlaylistIndex) this.currentPlaylistIndex = 0
-            if (this.options) this.setPlaylistBtnsState()
+            this.setPlaylistBtnsState()
         }
     }
 
@@ -163,10 +160,8 @@ class _T_M_G_Video_Player {
     }
 
     set src(value) {
-    if (this.options) {
         window.tmg.removeSources(this.video)
         this.video.src = value
-    }
     }
 
     get sources() {
@@ -174,11 +169,9 @@ class _T_M_G_Video_Player {
     }
 
     set sources(value) {
-    if (this.options) {
         this.video.src = ""
         window.tmg.removeSources(this.video)
         window.tmg.addSources(value, this.video) 
-    }
     }
 
     get tracks() {
@@ -186,10 +179,8 @@ class _T_M_G_Video_Player {
     }
 
     set tracks(value) {
-    if (this.options) {
         window.tmg.removeTracks(this.video)
         window.tmg.addTracks(value, this.video)
-    }
     }
 
     get duration() {
@@ -1080,10 +1071,8 @@ class _T_M_G_Video_Player {
 
     setVideoTitleState() {
     try {
-        if (this.media?.title) {
-            if (this.DOM.videoTitle) this.DOM.videoTitle.textContent = this.media.title || ""
-            this.DOM.videoTitle?.setAttribute("data-video-title", this.media.title || "")
-        }
+        if (this.DOM.videoTitle) this.DOM.videoTitle.textContent = this.media?.title || ""
+        this.DOM.videoTitle?.setAttribute("data-video-title", this.media?.title || "")
     } catch(e) {
         this._log(e, "error", "swallow")
     } 
@@ -1190,6 +1179,7 @@ class _T_M_G_Video_Player {
 
     setPlaylistBtnsState() {
     try {
+        if (!this.DOM) return
         if (this._playlist) {
             this.DOM.mainPrevBtn?.classList.remove
             ("T_M_G-video-control-hidden")
@@ -2252,7 +2242,7 @@ class _T_M_G_Video_Player {
             this.wasPaused = this.video.paused
             this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-rewind")
             this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-control-active")
-            pos === "backwards" && this.settings.status.beta?.rewind ? this.rewind() : this.fastForward()
+            pos === "backwards" && this.settings.status.beta?.rewind ? setTimeout(this.rewind) : setTimeout(this.fastForward)
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -3081,9 +3071,9 @@ class _T_M_G_Video_Player {
     try {
         if (!this.advancedTouchXCheck && !this.advancedTouchYCheck && this.settings.status.beta.advancedControls && !this.speedCheck && !this.settingsView) {
             e.preventDefault()
-            if (this.advancedWheelTimeout) clearTimeout(this.advancedWheelTimeout)
+            if (this.advancedWheelTimeoutId) clearTimeout(this.advancedWheelTimeoutId)
             else this._handleAdvancedWheelInit(e)
-            this.advancedWheelTimeout = setTimeout(this._handleAdvancedWheelStop, 1000)
+            this.advancedWheelTimeoutId = setTimeout(this._handleAdvancedWheelStop, 1000)
             this._handleAdvancedWheelMove(e)
         }
     } catch(e) {
@@ -3133,7 +3123,7 @@ class _T_M_G_Video_Player {
 
     _handleAdvancedWheelStop() {
     try {
-        this.advancedWheelTimeout = null
+        this.advancedWheelTimeoutId = null
         if (this.advancedWheelYCheck) {
             this.advancedWheelYCheck = false
             this.removeOverlay()
@@ -3158,7 +3148,17 @@ class _T_M_G_Video_Player {
             this._handleAdvancedTouchEnd()
             this.lastAdvanedTouchX = e.clientX ?? e.targetTouches[0].clientX
 	        this.lastAdvanedTouchY = e.clientY ?? e.targetTouches[0].clientY
-            this.videoContainer.addEventListener("touchmove", this._handleAdvancedTouchInit, {once: true, passive: false})
+            if (this.isModeActive("fullScreen")) {
+                this.videoContainer.addEventListener("touchmove", this._handleAdvancedTouchInit, {once: true, passive: false})
+            } else {
+                //tm: if user moves finger before advanced touchmove listener is attached like during scrolling
+                this.videoContainer.addEventListener("touchmove", this._handleAdvancedTouchEnd, {passive: true})
+                this.advancedTouchTimeoutId = setTimeout(() => {
+                    //tm:  removing listener since timeout reached and user is not scrolling
+                    this.videoContainer.removeEventListener("touchmove", this._handleAdvancedTouchEnd, {passive: true})
+                    this.videoContainer.addEventListener("touchmove", this._handleAdvancedTouchInit, {once: true, passive: false})
+                }, this.advancedTouchThreshold)
+            }
             this.videoContainer.addEventListener("touchend", this._handleAdvancedTouchEnd)
         }
         }
@@ -3245,6 +3245,7 @@ class _T_M_G_Video_Player {
             this.DOM.touchVolumeNotifier?.classList.remove("T_M_G-video-control-active")
             this.DOM.touchBrightnessNotifier?.classList.remove("T_M_G-video-control-active")
         }
+        if (this.advancedTouchTimeoutId) clearTimeout(this.advancedTouchTimeoutId)
         this.videoContainer.removeEventListener("touchmove", this._handleAdvancedTouchInit, {once: true, passive: false})
         this.videoContainer.removeEventListener("touchend", this._handleAdvancedTouchEnd)
     }
@@ -3261,7 +3262,7 @@ class _T_M_G_Video_Player {
             this.videoContainer.addEventListener("touchend", this._handleSpeedPointerUp)
             if (this.speedTimeoutId) clearTimeout(this.speedTimeoutId)
             this.speedTimeoutId = setTimeout(() => {   
-                //tm: removing listener since speedup is being called and user is not scrolling
+                //tm: removing listener since timeout reached and user is not scrolling
                 this.videoContainer.removeEventListener("touchmove", this._handleSpeedPointerUp, {passive: true})   
                 this.speedPointerCheck = true
                 const x = e.clientX ?? e.targetTouches[0].clientX
@@ -3300,7 +3301,7 @@ class _T_M_G_Video_Player {
         if (currPos !== this.speedDirection) {
             this.speedDirection = currPos
             this.slowDown()
-            setTimeout(this.speedUp, 0, this.speedDirection)
+            this.speedUp(this.speedDirection)
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -3673,8 +3674,9 @@ class _T_M_G_Media_Player {
             console.error("Please provide a single media element to the TMG media player")
             console.warn("Consider looping the iterable argument to get a single argument and instantiate a new 'window.tmg.Player' for each of them")
         } else if (!this.#active) { 
+            if (medium.tmgPlayer) medium.tmgPlayer.detach()
+            medium.tmgPlayer = this
             this.#medium = medium
-            this.#medium.tmgPlayer = this
             await this.fetchCustomOptions()
             await this.#deploy()
         }
@@ -3685,9 +3687,6 @@ class _T_M_G_Media_Player {
             this.Player?._destroy()
             if (window.tmg.Players.indexOf(this.Player) !== -1) window.tmg.Players?.splice(window.tmg.Players.indexOf(this.Player), 1)
             this.Player = null
-            delete this.#build.src
-            delete this.#build.sources
-            delete this.#build.tracks
             this.#active = false
         }
     }
@@ -3765,8 +3764,6 @@ class _T_M_G_Media_Player {
                 if (video.settings?.previewImages) settings.previewImages = video.settings.previewImages
                 }
             }
-            const sources = this.#medium.querySelectorAll("source")
-            const tracks = this.#medium.querySelectorAll("track[kind='captions'], track[kind='subtitles']")
             if (this.#build.src) {
                 window.tmg.removeSources(this.#medium)
                 this.#medium.src = this.#build.src
@@ -3774,16 +3771,10 @@ class _T_M_G_Media_Player {
                 this.#medium.src = ""
                 window.tmg.removeSources(this.#medium)
                 window.tmg.addSources(this.#build.sources, this.#medium)
-            } else if (this.#medium.src) {
-                this.#build.src = this.#medium.src
-            } else if (sources.length > 0) {
-                this.#build.sources = window.tmg.getSources(this.#medium)
             }
             if (this.#build.tracks) {
                 window.tmg.removeTracks(this.#medium)
                 window.tmg.addTracks(this.#build.tracks, this.#medium)
-            } else if (tracks.length > 0) {
-                this.#build.tracks = window.tmg.getTracks(this.#medium)
             }
             //doing some more work setting boolean values to indicate the status of the player
             settings.status = {}

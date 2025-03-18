@@ -233,6 +233,7 @@
     font-kerning: normal;
     -webkit-user-select: none;
     user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 :where(.T_M_G-video-container) *,
@@ -2267,7 +2268,7 @@ button:has(.T_M_G-video-next-icon) svg {
     transition: opacity var(--T_M_G-video-fade-transition) ease;
 }
 
-.T_M_G-video-container:is(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-title-wrapper:not([data-title=""]),
+.T_M_G-video-container:is(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-title-wrapper:has(.T_M_G-video-title:not([data-video-title=""])),
 .T_M_G-video-container:is(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-controls-container > *,
 .T_M_G-video-container:is(.T_M_G-video-overlay, :has(:focus-visible)) :is(
 .T_M_G-video-overlay-main-controls-wrapper,
