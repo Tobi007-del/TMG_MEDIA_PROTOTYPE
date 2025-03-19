@@ -1197,6 +1197,7 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-next-btn,
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-theater-btn,
 .T_M_G-video-container.T_M_G-video-picture-in-picture button:has(.T_M_G-video-play-icon, .T_M_G-video-pause-icon, .T_M_G-video-prev-icon, .T_M_G-video-next-icon),
+.T_M_G-video-container.T_M_G-video-picture-in-picture .T_M_G-video-brightness-container,
 .T_M_G-video-container.T_M_G-video-picture-in-picture .T_M_G-video-buffer,
 .T_M_G-video-container.T_M_G-video-picture-in-picture .T_M_G-video-object-fit-btn,
 .T_M_G-video-container.T_M_G-video-picture-in-picture .T_M_G-video-captions-btn {

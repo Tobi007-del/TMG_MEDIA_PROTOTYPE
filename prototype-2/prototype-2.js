@@ -2063,7 +2063,7 @@ class _T_M_G_Video_Player {
             if (this.settings.previewImages && !window.tmg.queryMediaMobile()) this.previewContext.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height)
             if (this.isScrubbing) this.thumbnailContext.drawImage(this.pseudoVideo, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height)
         }    
-        let arrowPosition, arrowPositionMin = (((this.isModeActive("theater") && !this.isModeActive("miniPlayer")) || (this.isModeActive("fullScreen")) && this.settings.previewImages)) && !window.tmg.queryMediaMobile() ? 10 : 16.5
+        let arrowPosition, arrowPositionMin = (((this.isModeActive("theater") && !this.isModeActive("miniPlayer")) || (this.isModeActive("fullScreen"))) && this.settings.previewImages) && !window.tmg.queryMediaMobile() ? 10 : 16.5
         if (percent < previewImgMin) {
             arrowPosition = `${Math.max(percent * rect.width, arrowPositionMin)}px`
         } else if (percent > (1 - previewImgMin)) {
@@ -3245,7 +3245,11 @@ class _T_M_G_Video_Player {
             this.DOM.touchVolumeNotifier?.classList.remove("T_M_G-video-control-active")
             this.DOM.touchBrightnessNotifier?.classList.remove("T_M_G-video-control-active")
         }
-        if (this.advancedTouchTimeoutId) clearTimeout(this.advancedTouchTimeoutId)
+        if (this.advancedTouchTimeoutId) {
+            clearTimeout(this.advancedTouchTimeoutId)
+            //tm:  removing listener since timeout reached and user is not scrolling
+            this.videoContainer.removeEventListener("touchmove", this._handleAdvancedTouchEnd, {passive: true})
+        }
         this.videoContainer.removeEventListener("touchmove", this._handleAdvancedTouchInit, {once: true, passive: false})
         this.videoContainer.removeEventListener("touchend", this._handleAdvancedTouchEnd)
     }
@@ -3318,7 +3322,11 @@ class _T_M_G_Video_Player {
         this.videoContainer.removeEventListener("touchmove", this._handleSpeedPointerMove, {passive: true})
         }
         this.speedPointerCheck = false
-        if (this.speedTimeoutId) clearTimeout(this.speedTimeoutId)
+        if (this.speedTimeoutId) {
+            clearTimeout(this.speedTimeoutId)
+            //tm: removing listener since timeout reached and user is not scrolling
+            this.videoContainer.removeEventListener("touchmove", this._handleSpeedPointerUp, {passive: true}) 
+        }
         if (this.speedCheck && this.playTriggerCounter < 1) this.slowDown()     
     } catch(e) {
         this._log(e, "error", "swallow")                   
