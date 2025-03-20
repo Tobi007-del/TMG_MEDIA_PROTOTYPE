@@ -4089,7 +4089,7 @@ class tmg {
     }
     static intersectionObserver = new IntersectionObserver(entries => {
         for (const {target, isIntersecting} of entries) {
-            target.classList.contains("T_M_G-media") ? target.tmgPlayer.Player._handleMediaIntersectionChange(isIntersecting) : target.querySelector(".T_M_G-media").tmgPlayer.Player._handleMediaParentIntersectionChange(isIntersecting)
+            target.classList.contains("T_M_G-media") ? target.tmgPlayer?.Player?._handleMediaIntersectionChange(isIntersecting) : target.querySelector(".T_M_G-media").tmgPlayer?.Player?._handleMediaParentIntersectionChange(isIntersecting)
         }
     }, {root: null, rootMargin: '0px', threshold: 0})
     static mutationObserver = new MutationObserver(mutations => {
