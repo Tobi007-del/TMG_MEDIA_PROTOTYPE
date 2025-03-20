@@ -46,6 +46,8 @@ class _T_M_G_Video_Player {
         this.buffering = false
         this.clickId = null 
         this.overlayRestraintId = null
+        this.floatingPlayerActive = false
+        this.floatingPlayerOptions = null
         this.lastAdvanedTouchX = null
         this.lastAdvanedTouchY = null
         this.advancedTouchZone = null
@@ -233,11 +235,11 @@ class _T_M_G_Video_Player {
         .flatMap(styleSheet => {
             try {
                 return [...styleSheet.cssRules]
-            } catch (error) {
+            } catch(e) {
                 return []
             }
         })
-        .filter(cssRule => cssRule instanceof CSSStyleRule && (cssRule.selectorText === ".T_M_G-video-container" || cssRule.selectorText ===  ":where(.T_M_G-video-container)"))
+        .filter(cssRule => cssRule instanceof CSSStyleRule && (cssRule.selectorText === ".T_M_G-video-container, .T_M_G-pseudo-video-container" || cssRule.selectorText ===  ":where(.T_M_G-video-container, .T_M_G-pseudo-video-container)"))
         .flatMap(cssRule => {
             return [...cssRule.style].map(property => {
                 const value = cssRule.style.getPropertyValue(property)
@@ -254,6 +256,7 @@ class _T_M_G_Video_Player {
                 },  
                 set(value) {  
                     this.videoContainer.style.setProperty(property, value)  
+                    this.pseudoVideoContainer.style.setProperty(property, value)
                 },  
                 enumerable: true,  
                 configurable: true  
@@ -408,14 +411,15 @@ class _T_M_G_Video_Player {
         controlsWrapperBuild = document.createElement("div"),
         leftSidedControlsWrapperBuild = this.settings.status.ui.leftSidedControls ? document.createElement("div") : null,
         rightSidedControlsWrapperBuild = this.settings.status.ui.rightSidedControls ? document.createElement("div") : null,
-        keyShortcuts = this.fetchKeyShortcuts(),
-        HTML = (() => { 
+        keyShortcuts = this.fetchKeyShortcuts()
+
+        this.HTML = (() => { 
         return {
             pictureinpicturewrapper :
             `
                 <div class="T_M_G-video-picture-in-picture-wrapper">
-                <span class="T_M_G-video-picture-in-picture-active-icon-wrapper">
-                    <svg class="T_M_G-video-picture-in-picture-active-icon" viewBox="0 0 73 73" data-no-resize="true">
+                    <span class="T_M_G-video-picture-in-picture-active-icon-wrapper">
+                        <svg class="T_M_G-video-picture-in-picture-active-icon" viewBox="0 0 73 73" data-no-resize="true">
                         <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
                             <g transform="translate(2.000000, 2.000000)" fill-rule="nonzero" stroke="#3E3D3D" stroke-width="2" fill="currentColor" class="T_M_G-video-pip-background">
                                 <rect x="-1" y="-1" width="71" height="71" rx="14"></rect>
@@ -859,21 +863,21 @@ class _T_M_G_Video_Player {
         controlsContainerBuild.innerHTML = ``
 
         //builiding overlay controls so order of insertioni matters because they are eall positioned absolutely
-        overlayControlsContainerBuild.innerHTML += HTML.pictureinpicturewrapper
+        overlayControlsContainerBuild.innerHTML += this.HTML.pictureinpicturewrapper
 
         //builidng and deploying Notifiers HTML
         if (this.settings.status.ui.notifiers) {
             notifiersContainerBuild.classList = "T_M_G-video-notifiers-container"
             notifiersContainerBuild.setAttribute("data-current-notifier", "")
-            notifiersContainerBuild.innerHTML += ``.concat(HTML.playpausenotifier ?? "", HTML.captionsnotifier ?? "", HTML.objectfitnotifier ?? "", HTML.playbackratenotifier ?? "", HTML.volumenotifier ?? "", HTML.brightnessnotifier ?? "", HTML.fwdnotifier ?? "", HTML.bwdnotifier ?? "", HTML.touchtimelinenotifier ?? "", HTML.touchvolumenotifier ?? "", HTML.touchbrightnessnotifier ?? "")
+            notifiersContainerBuild.innerHTML += ``.concat(this.HTML.playpausenotifier ?? "", this.HTML.captionsnotifier ?? "", this.HTML.objectfitnotifier ?? "", this.HTML.playbackratenotifier ?? "", this.HTML.volumenotifier ?? "", this.HTML.brightnessnotifier ?? "", this.HTML.fwdnotifier ?? "", this.HTML.bwdnotifier ?? "", this.HTML.touchtimelinenotifier ?? "", this.HTML.touchvolumenotifier ?? "", this.HTML.touchbrightnessnotifier ?? "")
             overlayControlsContainerBuild.append(notifiersContainerBuild)
         }
     
         //building and deploying overlay general controls
-        overlayControlsContainerBuild.innerHTML += ``.concat(HTML.thumbnail ?? '', HTML.videobuffer ?? '', HTML.playlisttitle ?? '', HTML.expandminiplayer ?? '', HTML.removeminiplayer ?? '', HTML.fullscreenorientation ?? '')
+        overlayControlsContainerBuild.innerHTML += ``.concat(this.HTML.thumbnail ?? '', this.HTML.videobuffer ?? '', this.HTML.playlisttitle ?? '', this.HTML.expandminiplayer ?? '', this.HTML.removeminiplayer ?? '', this.HTML.fullscreenorientation ?? '')
     
         //building and deploying overlay main controls wrapper 
-        overlayMainControlsWrapperBuild.innerHTML += ``.concat(HTML.mainprev ?? '', HTML.mainplaypause ?? '', HTML.mainnext ?? '')
+        overlayMainControlsWrapperBuild.innerHTML += ``.concat(this.HTML.mainprev ?? '', this.HTML.mainplaypause ?? '', this.HTML.mainnext ?? '')
         overlayMainControlsWrapperBuild.classList = "T_M_G-video-overlay-main-controls-wrapper"
         overlayControlsContainerBuild.append(overlayMainControlsWrapperBuild)
 
@@ -881,17 +885,17 @@ class _T_M_G_Video_Player {
         if (this.settings.status.ui.leftSidedControls) {
             leftSidedControlsWrapperBuild.classList = "T_M_G-video-left-side-controls-wrapper"
             leftSidedControlsWrapperBuild.setAttribute("data-dropzone", this.settings.status.ui.draggableControls ? true : false)
-            leftSidedControlsWrapperBuild.innerHTML += ``.concat(...Array.from(leftSidedControls, el => HTML[el] ? HTML[el] : ''))
+            leftSidedControlsWrapperBuild.innerHTML += ``.concat(...Array.from(leftSidedControls, el => this.HTML[el] ? this.HTML[el] : ''))
             controlsWrapperBuild.append(leftSidedControlsWrapperBuild)
         }
         if (this.settings.status.ui.rightSidedControls) {
             rightSidedControlsWrapperBuild.classList = "T_M_G-video-right-side-controls-wrapper"
             rightSidedControlsWrapperBuild.setAttribute("data-dropzone", this.settings.status.ui.draggableControls ? true : false)
-            rightSidedControlsWrapperBuild.innerHTML += ``.concat(...Array.from(rightSidedControls, el => HTML[el] ? HTML[el] : ''))
+            rightSidedControlsWrapperBuild.innerHTML += ``.concat(...Array.from(rightSidedControls, el => this.HTML[el] ? this.HTML[el] : ''))
             controlsWrapperBuild.append(rightSidedControlsWrapperBuild)
         }
 
-        controlsContainerBuild.innerHTML += HTML.timeline ?? ""        
+        controlsContainerBuild.innerHTML += this.HTML.timeline ?? ""        
         controlsWrapperBuild.classList = "T_M_G-video-controls-wrapper"
         controlsContainerBuild.append(controlsWrapperBuild)  
     } catch(e) {
@@ -939,6 +943,7 @@ class _T_M_G_Video_Player {
             videoControlsContainer : this.videoContainer.querySelector(".T_M_G-video-controls-container"),
             leftSidedControlsWrapper : this.settings.status.ui.leftSidedControls ? this.videoContainer.querySelector(".T_M_G-video-left-side-controls-wrapper") : null,
             rightSidedControlsWrapper : this.settings.status.ui.rightSidedControls ? this.videoContainer.querySelector(".T_M_G-video-right-side-controls-wrapper") : null,
+            pictureInPictureWrapper : this.videoContainer.querySelector(".T_M_G-video-picture-in-picture-wrapper"),
             fullScreenOrientationBtn : this.settings.status.ui.fullScreen ? this.videoContainer.querySelector(".T_M_G-video-full-screen-orientation-btn") : null,
             miniPlayerExpandBtn : this.settings.status.modes.miniPlayer ? this.videoContainer.querySelector(".T_M_G-video-mini-player-expand-btn") : null,
             miniPlayerCancelBtn : this.settings.status.modes.miniPlayer ? this.videoContainer.querySelector(".T_M_G-video-mini-player-cancel-btn") : null,
@@ -1336,6 +1341,7 @@ class _T_M_G_Video_Player {
         this.DOM.theaterBtn?.addEventListener("click", this.toggleTheaterMode)
         this.DOM.fullScreenBtn?.addEventListener("click", this.toggleFullScreenMode)
         this.DOM.pictureInPictureBtn?.addEventListener("click", this.togglePictureInPictureMode)
+        this.DOM.pictureInPictureWrapper?.addEventListener("click", this.togglePictureInPictureMode)
         this.DOM.settingsBtn?.addEventListener("click", this.toggleSettingsView)
 
         //timeline contanier event listeners
@@ -1542,22 +1548,6 @@ class _T_M_G_Video_Player {
     }                        
     }
 
-    toggleObjectFit() {
-    try {
-        const fitNames = ["Crop to Fit", "Fit To Screen", "Stretch"],
-        fits = ["contain", "cover", "fill"]
-        let fitIndex = fits.indexOf(this.videoObjectFit) + 1
-        if (fitIndex > 2) fitIndex = 0
-        if (fitIndex < 0) fitIndex = 2
-        this.videoObjectFit = fits[fitIndex]
-        this.videoContainer.setAttribute("data-object-fit", this.videoObjectFit)
-        if (this.DOM.objectFitNotifier) this.DOM.objectFitNotifier.textContent = fitNames[fitIndex]
-        this.fire("objectfitchange")
-    } catch(e) {
-        this._log(e, "error", "swallow")
-    }  
-    }
-
     controlsResize() {           
     try {
         let controlsSize = 25
@@ -1593,6 +1583,26 @@ class _T_M_G_Video_Player {
     } 
     }
 
+    activatePseudoMode() {
+    try {
+        this.pseudoVideoContainer.className += this.videoContainer.className.replace("T_M_G-video-container", "")
+        this.videoContainer.parentElement.insertBefore(this.pseudoVideoContainer, this.videoContainer)
+        document.body.append(this.videoContainer)
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    } 
+    }
+
+    deactivatePseudoMode() {
+    try {
+        this.pseudoVideoContainer.className = "T_M_G-pseudo-video-container"
+        this.pseudoVideoContainer.parentElement.insertBefore(this.videoContainer, this.pseudoVideoContainer)
+        this.pseudoVideoContainer.remove()
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    } 
+    }
+
     isModeActive(mode) {
     try {
         switch (mode) {
@@ -1602,6 +1612,8 @@ class _T_M_G_Video_Player {
                 return this.videoContainer.classList.contains("T_M_G-video-full-screen")
             case "pictureInPicture":
                 return this.videoContainer.classList.contains("T_M_G-video-picture-in-picture")
+            case "floatingPlayer": 
+                return this.videoContainer.classList.contains("T_M_G-video-floating-player")
             case "theater":
                 return this.videoContainer.classList.contains("T_M_G-video-theater")
             case "normal":
@@ -1870,6 +1882,7 @@ class _T_M_G_Video_Player {
 
     setMediaSession() {
     try {
+        if (window.tmg._PICTURE_IN_PICTURE_ACTIVE) return
         if ('mediaSession' in navigator) {
             if (this.media) navigator.mediaSession.metadata = new MediaMetadata(this.media)
             navigator.mediaSession.setActionHandler('play', () => this.togglePlay(true))
@@ -1888,6 +1901,22 @@ class _T_M_G_Video_Player {
     } catch(e) {
         this._log(e, "error", "swallow")
     }
+    }
+
+    toggleObjectFit() {
+    try {
+        const fitNames = ["Crop to Fit", "Fit To Screen", "Stretch"],
+        fits = ["contain", "cover", "fill"]
+        let fitIndex = fits.indexOf(this.videoObjectFit) + 1
+        if (fitIndex > 2) fitIndex = 0
+        if (fitIndex < 0) fitIndex = 2
+        this.videoObjectFit = fits[fitIndex]
+        this.videoContainer.setAttribute("data-object-fit", this.videoObjectFit)
+        if (this.DOM.objectFitNotifier) this.DOM.objectFitNotifier.textContent = fitNames[fitIndex]
+        this.fire("objectfitchange")
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }  
     }
 
     togglePlay(bool) {
@@ -2216,7 +2245,7 @@ class _T_M_G_Video_Player {
                 this.fire("playbackratechange")
                 break
             default: 
-                if (rate < this.settings.maxPlaybackRate) this.video.playbackRate += (rate%value) ? (rate%value) : value
+                if (rate < Math.min(16, this.settings.maxPlaybackRate)) this.video.playbackRate += (rate%value) ? (rate%value) : value
                 this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-rewind")
                 this.fire("playbackratechange")
                 break
@@ -2773,6 +2802,12 @@ class _T_M_G_Video_Player {
     togglePictureInPictureMode() {
     try {
         if (this.settings.status.modes.pictureInPicture) {
+        if (this.settings.status.beta.floatingPlayer) {
+            if ("documentPictureInPicture" in window) {
+                this.toggleFloatingPlayer()
+                return
+            }
+        }
         if (!this.isModeActive("pictureInPicture")) {
             if (this.isModeActive("fullScreen")) this.toggleFullScreenMode()
             this.video.requestPictureInPicture() 
@@ -2789,6 +2824,7 @@ class _T_M_G_Video_Player {
         this.showOverlay()
         this.toggleMiniPlayerMode(false)
         this.setMediaSession()
+        window.tmg._PICTURE_IN_PICTURE_ACTIVE = true
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
@@ -2796,14 +2832,88 @@ class _T_M_G_Video_Player {
 
     _handleLeavePictureInPicture() {
     try {
+        window.tmg._PICTURE_IN_PICTURE_ACTIVE = false
         //the video takes a while before it enters back into the player so a timeout is used to prevent the user from seeing the default ui
-        setTimeout(() => this.videoContainer.classList.remove("T_M_G-video-picture-in-picture"), 180)
+        setTimeout(() => {
+            this.videoContainer.classList.remove("T_M_G-video-picture-in-picture")
+            this.toggleMiniPlayerMode()
+        }, 180)
         this.overlayRestraint()
-        this.toggleMiniPlayerMode()
     } catch(e) {
         this._log(e, "error", "swallow")
     }        
-    }        
+    }    
+
+    toggleFloatingPlayer() {
+    try {
+    if ("documentPictureInPicture" in window) {
+        if (this.floatingPlayerActive) {
+            this.floatingPlayer?.close()
+        } else {
+            this.initFloatingPlayer()
+        }
+    }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }    
+    }
+
+    async initFloatingPlayer() {
+    try {
+        if (!this.floatingPlayerActive) {
+        if (window.documentPictureInPicture.window) window.documentPictureInPicture.window.close()
+        this.toggleMiniPlayerMode(false)
+
+        this.floatingPlayerActive = true
+        this.floatingPlayerOptions = {
+            width: 360,
+            height: 180,
+            preferInitialWindowPlacement: false
+        }
+        this.floatingPlayer = await window.documentPictureInPicture.requestWindow(this.floatingPlayerOptions)
+        const style = document.createElement("style")
+        style.textContent = Array.from(document.styleSheets)
+        .flatMap(styleSheet => {
+            try {
+                return [...styleSheet.cssRules]
+            } catch(e) {
+                return []
+            }
+        })
+        .filter(cssRule => cssRule.cssText.includes("T_M_G"))
+        .flatMap(cssRule => cssRule.cssText).join("")
+        this.floatingPlayer.document.head.appendChild(style)
+
+        this.pseudoVideoContainer.append(this.DOM.pictureInPictureWrapper.cloneNode(true))
+        this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-wrapper").addEventListener("click", this.toggleFloatingPlayer)
+        this.activatePseudoMode()
+
+        this.videoContainer.classList.add("T_M_G-video-progress-bar")
+        this.videoContainer.classList.add("T_M_G-video-floating-player")
+        this.floatingPlayer.addEventListener("pagehide", this._handleFloatingPlayerClose)
+        this.floatingPlayer.document.body.append(this.videoContainer)
+        }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }       
+    }
+
+    _handleFloatingPlayerClose() {
+    try {
+        if (this.floatingPlayerActive) {
+        this.floatingPlayerActive = false
+        this.videoContainer.classList.toggle("T_M_G-video-progress-bar", this.settings.progressBar)
+        this.videoContainer.classList.remove("T_M_G-video-floating-player")
+
+        this.deactivatePseudoMode()
+        this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-wrapper").remove()
+
+        this.toggleMiniPlayerMode()
+        }
+    } catch(e) {
+        this._log(e, "error", "swallow")
+    }  
+    }    
 
     expandMiniPlayer() {
         this.toggleMiniPlayerMode(false, "instant")
@@ -2817,26 +2927,21 @@ class _T_M_G_Video_Player {
     toggleMiniPlayerMode(bool, behaviour) {
     try {
     if (this.settings.status.modes.miniPlayer) {
-        const threshold = 240
-        if ((!this.isModeActive("miniPlayer") && !this.isModeActive("pictureInPicture") && !this.isModeActive("fullScreen") && !this.parentIntersecting && window.innerWidth >= threshold && !this.video.paused) || (bool === true && !this.isModeActive("miniPlayer"))) {
-            this.pseudoVideoContainer.className += this.videoContainer.className.replace("T_M_G-video-container", "")
-            this.videoContainer.parentElement.insertBefore(this.pseudoVideoContainer, this.videoContainer)
-            document.body.append(this.videoContainer)
+        if ((!this.isModeActive("miniPlayer") && !this.isModeActive("pictureInPicture") && !this.isModeActive("floatingPlayer") && !this.isModeActive("fullScreen") && !this.parentIntersecting && window.innerWidth >= this.settings.miniPlayerThreshold && !this.video.paused) || (bool === true && !this.isModeActive("miniPlayer"))) {
+            this.activatePseudoMode()
             this.videoContainer.classList.add("T_M_G-video-mini-player")
             this.videoContainer.addEventListener("mousedown", this.moveMiniPlayer)
             this.videoContainer.addEventListener("touchstart", this.moveMiniPlayer, {passive: false})
             return
         } 
-        if ((this.isModeActive("miniPlayer") && this.parentIntersecting) || (this.isModeActive("miniPlayer") && window.innerWidth < threshold) || (bool === false && this.isModeActive("miniPlayer"))) {
+        if ((this.isModeActive("miniPlayer") && this.parentIntersecting) || (this.isModeActive("miniPlayer") && window.innerWidth < this.settings.miniPlayerThreshold) || (bool === false && this.isModeActive("miniPlayer"))) {
             if (behaviour) 
             window.scrollTo({
                 top: this.pseudoVideoContainer.parentNode.offsetTop - ((window.innerHeight / 2) - (this.pseudoVideoContainer.offsetHeight / 2)),
                 left: 0,
                 behavior: behaviour,
             })  
-            this.pseudoVideoContainer.className = "T_M_G-pseudo-video-container"
-            this.pseudoVideoContainer.parentElement.insertBefore(this.videoContainer, this.pseudoVideoContainer)
-            this.pseudoVideoContainer.remove()
+            this.deactivatePseudoMode()
             this.videoContainer.classList.remove("T_M_G-video-mini-player")
             this.videoContainer.removeEventListener("mousedown", this.moveMiniPlayer)
             this.videoContainer.removeEventListener("touchstart", this.moveMiniPlayer, {passive: false})
@@ -3471,10 +3576,10 @@ class _T_M_G_Video_Player {
                 this.brightness === 0 ? this.fire("brightnessdark") : this.fire("brightnessup")
                 break           
             case this.settings.keyShortcuts["fullScreen"]?.toString()?.toLowerCase():
-                this.toggleFullScreenMode()
+                if (!this.isModeActive("floatingPlayer")) this.toggleFullScreenMode()
                 break
             case this.settings.keyShortcuts["theater"]?.toString()?.toLowerCase():
-                if (!window.tmg.queryMediaMobile() && !this.isModeActive("miniPlayer") && !this.isModeActive("fullScreen")) this.toggleTheaterMode()
+                if (!window.tmg.queryMediaMobile() && !this.isModeActive("fullScreen") && !this.isModeActive("miniPlayer") && !this.isModeActive("floatingPlayer")) this.toggleTheaterMode()
                 break
             case this.settings.keyShortcuts["expandMiniPlayer"]?.toString()?.toLowerCase():
                 if (this.isModeActive("miniPlayer")) 
@@ -3794,7 +3899,8 @@ class _T_M_G_Media_Player {
             settings.status.beta = {
                 rewind: false,
                 draggableControls: false,
-                advancedControls: false
+                advancedControls: false,
+                floatingPlayer: false
             }          
             if (settings.allowOverride) {
                 if (settings.allowOverride === true) {
@@ -3816,7 +3922,8 @@ class _T_M_G_Media_Player {
                     settings.status.beta = {
                         rewind: settings.beta.includes("rewind"),
                         draggableControls: settings.beta.includes("draggablecontrols"),
-                        advancedControls: settings.beta.includes("advancedcontrols")
+                        advancedControls: settings.beta.includes("advancedcontrols"),
+                        floatingPlayer: settings.beta.includes("floatingplayer")
                     }
                 }
             }
@@ -3874,7 +3981,7 @@ class tmg {
         debug: true,
         settings: {
             allowOverride: true,
-            beta: ["rewind", "draggablecontrols", "advancedcontrols"],
+            beta: ["rewind", "draggablecontrols", "advancedcontrols", "floatingplayer"],
             modes: ["normal", "fullscreen", "theater", "pictureinpicture", "miniplayer"],
             controllerStructure: ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"],
             timelinePosition: "bottom",
@@ -3900,6 +4007,7 @@ class tmg {
             playsInline: true,
             previewImages: false,
             overlayRestraint: 3000,
+            miniPlayerThreshold: 240,
             keyOverrides: [" ", "arrowdown", "arrowup", "arrowleft", "arrowright", "home", "end"],
             shiftKeys: ["prev", "next"],
             ctrlKeys: [],
@@ -3936,6 +4044,7 @@ class tmg {
     static _AUDIO_CONTEXT = null
     static _CURRENT_AUDIO_GAIN_NODE = null
     static _CURRENT_FULL_SCREEN_PLAYER = null
+    static _PICTURE_IN_PICTURE_ACTIVE = false
     static get userSettings() {
         if (localStorage._tmgUserVideoSettings) 
             return JSON.parse(localStorage._tmgUserVideoSettings)
