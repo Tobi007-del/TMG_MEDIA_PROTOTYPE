@@ -164,6 +164,7 @@ class _T_M_G_Video_Player {
     set src(value) {
         window.tmg.removeSources(this.video)
         this.video.src = value
+        this.video.load()
     }
 
     get sources() {
@@ -207,8 +208,9 @@ class _T_M_G_Video_Player {
         }
     }
 
-    _destroy() {      
-        this.togglePlay(false)
+    _destroy() {     
+        this.video.pause() 
+        this.src = ""
         this.removeAudio()
         this.leaveSettingsView()
         this.unobserveIntersection()
