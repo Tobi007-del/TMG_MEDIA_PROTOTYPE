@@ -1,7 +1,7 @@
 "use strict"
 /* 
 TODO: 
-    editable settings: shortcut, beta, keyshortcuts, notifiers, progressbar, controllerStructure
+    editable settings
 */
 
 //running a runtime environment check
@@ -207,7 +207,8 @@ class _T_M_G_Video_Player {
         }
     }
 
-    _destroy() {        
+    _destroy() {      
+        this.togglePlay(false)
         this.removeAudio()
         this.leaveSettingsView()
         this.unobserveIntersection()
@@ -239,7 +240,7 @@ class _T_M_G_Video_Player {
                 return []
             }
         })
-        .filter(cssRule => cssRule instanceof CSSStyleRule && (cssRule.selectorText === ".T_M_G-video-container, .T_M_G-pseudo-video-container" || cssRule.selectorText ===  ":where(.T_M_G-video-container, .T_M_G-pseudo-video-container)"))
+        .filter(cssRule => cssRule instanceof CSSStyleRule && cssRule.selectorText.includes(":root"))
         .flatMap(cssRule => {
             return [...cssRule.style].map(property => {
                 const value = cssRule.style.getPropertyValue(property)
@@ -944,6 +945,7 @@ class _T_M_G_Video_Player {
             leftSidedControlsWrapper : this.settings.status.ui.leftSidedControls ? this.videoContainer.querySelector(".T_M_G-video-left-side-controls-wrapper") : null,
             rightSidedControlsWrapper : this.settings.status.ui.rightSidedControls ? this.videoContainer.querySelector(".T_M_G-video-right-side-controls-wrapper") : null,
             pictureInPictureWrapper : this.videoContainer.querySelector(".T_M_G-video-picture-in-picture-wrapper"),
+            pictureInPictureActiveIconWrapper : this.videoContainer.querySelector(".T_M_G-video-picture-in-picture-active-icon-wrapper"),
             fullScreenOrientationBtn : this.settings.status.ui.fullScreen ? this.videoContainer.querySelector(".T_M_G-video-full-screen-orientation-btn") : null,
             miniPlayerExpandBtn : this.settings.status.modes.miniPlayer ? this.videoContainer.querySelector(".T_M_G-video-mini-player-expand-btn") : null,
             miniPlayerCancelBtn : this.settings.status.modes.miniPlayer ? this.videoContainer.querySelector(".T_M_G-video-mini-player-cancel-btn") : null,
@@ -1341,7 +1343,7 @@ class _T_M_G_Video_Player {
         this.DOM.theaterBtn?.addEventListener("click", this.toggleTheaterMode)
         this.DOM.fullScreenBtn?.addEventListener("click", this.toggleFullScreenMode)
         this.DOM.pictureInPictureBtn?.addEventListener("click", this.togglePictureInPictureMode)
-        this.DOM.pictureInPictureWrapper?.addEventListener("click", this.togglePictureInPictureMode)
+        this.DOM.pictureInPictureActiveIconWrapper?.addEventListener("click", this.togglePictureInPictureMode)
         this.DOM.settingsBtn?.addEventListener("click", this.toggleSettingsView)
 
         //timeline contanier event listeners
@@ -1882,7 +1884,7 @@ class _T_M_G_Video_Player {
 
     setMediaSession() {
     try {
-        if (window.tmg._PICTURE_IN_PICTURE_ACTIVE) return
+        if (window.tmg._PICTURE_IN_PICTURE_ACTIVE && !this.isModeActive("pictureInPicture")) return
         if ('mediaSession' in navigator) {
             if (this.media) navigator.mediaSession.metadata = new MediaMetadata(this.media)
             navigator.mediaSession.setActionHandler('play', () => this.togglePlay(true))
@@ -2885,7 +2887,7 @@ class _T_M_G_Video_Player {
         this.floatingPlayer.document.head.appendChild(style)
 
         this.pseudoVideoContainer.append(this.DOM.pictureInPictureWrapper.cloneNode(true))
-        this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-wrapper").addEventListener("click", this.toggleFloatingPlayer)
+        this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-active-icon-wrapper").addEventListener("click", this.toggleFloatingPlayer)
         this.activatePseudoMode()
 
         this.videoContainer.classList.add("T_M_G-video-progress-bar")
@@ -2929,6 +2931,7 @@ class _T_M_G_Video_Player {
     if (this.settings.status.modes.miniPlayer) {
         if ((!this.isModeActive("miniPlayer") && !this.isModeActive("pictureInPicture") && !this.isModeActive("floatingPlayer") && !this.isModeActive("fullScreen") && !this.parentIntersecting && window.innerWidth >= this.settings.miniPlayerThreshold && !this.video.paused) || (bool === true && !this.isModeActive("miniPlayer"))) {
             this.activatePseudoMode()
+            this.videoContainer.classList.add("T_M_G-video-progress-bar")
             this.videoContainer.classList.add("T_M_G-video-mini-player")
             this.videoContainer.addEventListener("mousedown", this.moveMiniPlayer)
             this.videoContainer.addEventListener("touchstart", this.moveMiniPlayer, {passive: false})
@@ -2942,6 +2945,7 @@ class _T_M_G_Video_Player {
                 behavior: behaviour,
             })  
             this.deactivatePseudoMode()
+            this.videoContainer.classList.toggle("T_M_G-video-progress-bar", this.settings.progressBar)
             this.videoContainer.classList.remove("T_M_G-video-mini-player")
             this.videoContainer.removeEventListener("mousedown", this.moveMiniPlayer)
             this.videoContainer.removeEventListener("touchstart", this.moveMiniPlayer, {passive: false})

@@ -2,9 +2,6 @@ html {
     scroll-behavior: smooth;
     background-color: rgb(10, 10, 10);
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-}
-
-.T_M_G-video-container {
     --T_M_G-video-font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
 }
 
