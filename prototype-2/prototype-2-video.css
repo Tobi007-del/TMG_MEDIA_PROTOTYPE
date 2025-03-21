@@ -2413,6 +2413,6 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 .T_M_G-video-container:not(.T_M_G-video-unavailable) .T_M_G-video-main-play-pause-btn.T_M_G-video-control-spin {
-    animation: spin 1s ease-out;
+    animation: T_M_G-spin 1s ease-out;
 }
 /* setting video initial state ends */
