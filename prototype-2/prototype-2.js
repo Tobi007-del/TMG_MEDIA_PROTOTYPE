@@ -2738,6 +2738,11 @@ class _T_M_G_Video_Player {
         if (this.settings.status.modes.fullScreen) {
         if (!this.isModeActive("fullScreen")) {
         if (!window.tmg._CURRENT_FULL_SCREEN_PLAYER) {
+            if (this.isModeActive("floatingPlayer")) {
+                this.floatingPlayer?.addEventListener("pagehide", this.toggleFullScreenMode)
+                this.floatingPlayer?.close()
+                return
+            }
             if (this.isModeActive("pictureInPicture")) document.exitPictureInPicture()
             if (this.isModeActive("miniPlayer")) this.toggleMiniPlayerMode(false, "instant")
             window.tmg._CURRENT_FULL_SCREEN_PLAYER = this
@@ -2803,8 +2808,9 @@ class _T_M_G_Video_Player {
     }                    
     }
 
-    togglePictureInPictureMode() {
+    async togglePictureInPictureMode() {
     try {
+        if (this.isModeActive("fullScreen")) await this.toggleFullScreenMode()
         if (this.settings.status.modes.pictureInPicture) {
         if (this.settings.status.beta.floatingPlayer) {
             if ("documentPictureInPicture" in window) {
@@ -2812,10 +2818,8 @@ class _T_M_G_Video_Player {
                 return
             }
         }
-        if (!this.isModeActive("pictureInPicture")) {
-            if (this.isModeActive("fullScreen")) this.toggleFullScreenMode()
-            this.video.requestPictureInPicture() 
-        } else document.exitPictureInPicture() 
+        if (!this.isModeActive("pictureInPicture")) this.video.requestPictureInPicture() 
+        else document.exitPictureInPicture() 
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -2870,9 +2874,8 @@ class _T_M_G_Video_Player {
 
         this.floatingPlayerActive = true
         this.floatingPlayerOptions = {
-            width: 360,
-            height: 180,
-            preferInitialWindowPlacement: false
+            width: 380,
+            height: 190,
         }
         this.floatingPlayer = await window.documentPictureInPicture.requestWindow(this.floatingPlayerOptions)
         const style = document.createElement("style")
@@ -2886,7 +2889,7 @@ class _T_M_G_Video_Player {
         })
         .filter(cssRule => cssRule.cssText.includes("T_M_G"))
         .flatMap(cssRule => cssRule.cssText).join("")
-        this.floatingPlayer.document.head.appendChild(style)
+        this.floatingPlayer?.document.head.appendChild(style)
 
         this.pseudoVideoContainer.append(this.DOM.pictureInPictureWrapper.cloneNode(true))
         this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-active-icon-wrapper").addEventListener("click", this.toggleFloatingPlayer)
@@ -2894,8 +2897,8 @@ class _T_M_G_Video_Player {
 
         this.videoContainer.classList.add("T_M_G-video-progress-bar")
         this.videoContainer.classList.add("T_M_G-video-floating-player")
-        this.floatingPlayer.addEventListener("pagehide", this._handleFloatingPlayerClose)
-        this.floatingPlayer.document.body.append(this.videoContainer)
+        this.floatingPlayer?.addEventListener("pagehide", this._handleFloatingPlayerClose)
+        this.floatingPlayer?.document.body.append(this.videoContainer)
         }
     } catch(e) {
         this._log(e, "error", "swallow")
@@ -3582,7 +3585,7 @@ class _T_M_G_Video_Player {
                 this.brightness === 0 ? this.fire("brightnessdark") : this.fire("brightnessup")
                 break           
             case this.settings.keyShortcuts["fullScreen"]?.toString()?.toLowerCase():
-                if (!this.isModeActive("floatingPlayer")) this.toggleFullScreenMode()
+                this.toggleFullScreenMode()
                 break
             case this.settings.keyShortcuts["theater"]?.toString()?.toLowerCase():
                 if (!window.tmg.queryMediaMobile() && !this.isModeActive("fullScreen") && !this.isModeActive("miniPlayer") && !this.isModeActive("floatingPlayer")) this.toggleTheaterMode()
