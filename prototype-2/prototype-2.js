@@ -767,7 +767,7 @@ class _T_M_G_Video_Player {
             ` : null,
             playbackrate : this.settings.status.ui.playbackRate ? 
             `
-                    <button type="button" class="T_M_G-video-playback-rate-btn T_M_G-video-wide-btn" title="Playback Rate${keyShortcuts["playbackRate"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="playbackrate">${this.video.playbackRate}x</button>
+                    <button type="button" class="T_M_G-video-playback-rate-btn" title="Playback Rate${keyShortcuts["playbackRate"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1" data-control-id="playbackrate">${this.video.playbackRate}x</button>
             ` : null,
             captions : this.settings.status.ui.captions ?
             `
@@ -2874,8 +2874,8 @@ class _T_M_G_Video_Player {
 
         this.floatingPlayerActive = true
         this.floatingPlayerOptions = {
-            width: 380,
-            height: 190,
+            width: 378,
+            height: 199,
         }
         this.floatingPlayer = await window.documentPictureInPicture.requestWindow(this.floatingPlayerOptions)
         const style = document.createElement("style")
