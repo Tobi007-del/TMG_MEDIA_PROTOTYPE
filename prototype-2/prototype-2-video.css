@@ -1267,11 +1267,6 @@ button:has(.T_M_G-video-next-icon) svg {
     display: block;
 }
 
-.T_M_G-video-container[data-volume-level="boost"] .T_M_G-video-volume-boost-sign::after,
-.T_M_G-video-container[data-brightness-level="boost"] .T_M_G-video-brightness-boost-sign::after {
-    display: block;
-}
-
 .T_M_G-video-vb-container {
     display: flex;
     align-items: center;
