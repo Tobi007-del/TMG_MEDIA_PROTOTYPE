@@ -1272,22 +1272,6 @@ button:has(.T_M_G-video-next-icon) svg {
     display: block;
 }
 
-.T_M_G-video-vb-boost-sign {
-    position: relative;
-}
-
-.T_M_G-video-vb-boost-sign::after {
-    display: none;
-    content: "x" attr(data-boost);
-    position: absolute;
-    bottom: var(--T_M_G-video-current-unit);
-    left: var(--T_M_G-video-current-unit);
-    translate: -70% 70%;
-    color: var(--T_M_G-video-slider-boost-color);
-    font-weight: bolder;
-    font-size: calc(var(--T_M_G-video-current-unit)/2.05);
-}
-
 .T_M_G-video-vb-container {
     display: flex;
     align-items: center;

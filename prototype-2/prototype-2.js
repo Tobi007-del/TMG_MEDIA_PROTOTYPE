@@ -242,7 +242,7 @@ class _T_M_G_Video_Player {
                 return []
             }
         })
-        .filter(cssRule => cssRule instanceof CSSStyleRule && cssRule.selectorText.includes(":root"))
+        .filter(cssRule => cssRule instanceof CSSStyleRule && cssRule.selectorText.includes(":root, .T_M_G-video-container, .T_M_G-pseudo-video-container"))
         .flatMap(cssRule => {
             return [...cssRule.style].map(property => {
                 const value = cssRule.style.getPropertyValue(property)
@@ -720,7 +720,6 @@ class _T_M_G_Video_Player {
             `
                 <div class="T_M_G-video-volume-container T_M_G-video-vb-container" data-control-id="volume">
                     <button type="button" class="T_M_G-video-mute-btn T_M_G-video-vb-btn" title="Toggle Volume${keyShortcuts["mute"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1">
-                    <g class="T_M_G-video-volume-boost-sign T_M_G-video-vb-boost-sign">
                         <svg class="T_M_G-video-volume-high-icon" data-tooltip-text="Mute${keyShortcuts["mute"]}" data-tooltip-position="top">
                             <path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
                         </svg>
@@ -730,7 +729,6 @@ class _T_M_G_Video_Player {
                         <svg class="T_M_G-video-volume-muted-icon" data-tooltip-text="Unmute${keyShortcuts["mute"]}" data-tooltip-position="top">
                             <path fill="currentColor" d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" />
                         </svg>
-                    </g>
                     </button>
                     <input class="T_M_G-video-volume-slider T_M_G-video-vb-slider" type="range" min="0" max="100" step="1" data-focusable-control="false" tabindex="-1">
                 </div>
@@ -739,7 +737,6 @@ class _T_M_G_Video_Player {
             `
                 <div class="T_M_G-video-brightness-container T_M_G-video-vb-container" data-control-id="brightness">
                     <button type="button" class="T_M_G-video-dark-btn T_M_G-video-vb-btn" title="Toggle Dark${keyShortcuts["dark"]}" data-draggable-control="${this.settings.status.ui.draggableControls ? true : false}" data-focusable-control="false" tabindex="-1">
-                    <g class="T_M_G-video-brightness-boost-sign T_M_G-video-vb-boost-sign">
                         <svg class="T_M_G-video-brightness-high-icon" data-tooltip-text="Dark${keyShortcuts["dark"]}" data-tooltip-position="top">
                             <path transform="scale(1.05) translate(1.5, 1.5)"  d="M10 14.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h3a1 1 0 0 1 0 2h-3a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm0-15a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm-9 9h3a1 1 0 1 1 0 2H1a1 1 0 0 1 0-2zm13.95 4.535l2.121 2.122a1 1 0 0 1-1.414 1.414l-2.121-2.121a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-2.12 2.12a1 1 0 1 1-1.415-1.413l2.121-2.122a1 1 0 0 1 1.414 0zM17.071 3.787a1 1 0 0 1 0 1.414L14.95 7.322a1 1 0 0 1-1.414-1.414l2.12-2.121a1 1 0 0 1 1.415 0zm-12.728 0l2.121 2.121A1 1 0 1 1 5.05 7.322L2.93 5.201a1 1 0 0 1 1.414-1.414z">
                             </path>
@@ -752,7 +749,6 @@ class _T_M_G_Video_Player {
                             <path transform="scale(1.2) translate(2, 2.5)" d="M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM8.5 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm0 11a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm5-5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm-11 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9.743-4.036a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm-7.779 7.779a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm7.072 0a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707zM3.757 4.464a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707z">
                             </path>
                         </svg>                        
-                    </g>
                     </button>
                     <input class="T_M_G-video-brightness-slider T_M_G-video-vb-slider" type="range" min="0" max="100" step="1" data-focusable-control="false" tabindex="-1">
                 </div>            
@@ -963,10 +959,8 @@ class _T_M_G_Video_Player {
             nextBtn : this.settings.status.ui.next ? this.videoContainer.querySelector(".T_M_G-video-next-btn") : null,
             objectFitBtn : this.settings.status.ui.objectFit ? this.videoContainer.querySelector(".T_M_G-video-object-fit-btn") : null,
             volumeContainer : this.settings.status.ui.volume ? this.videoContainer.querySelector(".T_M_G-video-volume-container") : null,
-            volumeBoostSign : this.settings.status.ui.volume ? this.videoContainer.querySelector(".T_M_G-video-volume-boost-sign") : null,
             volumeSlider : this.settings.status.ui.volume ? this.videoContainer.querySelector(".T_M_G-video-volume-slider") : null,
             brightnessContainer : this.settings.status.ui.brightness ? this.videoContainer.querySelector(".T_M_G-video-brightness-container") : null,
-            brightnessBoostSign : this.settings.status.ui.brightness ? this.videoContainer.querySelector(".T_M_G-video-brightness-boost-sign") : null,
             brightnessSlider : this.settings.status.ui.brightness ? this.videoContainer.querySelector(".T_M_G-video-brightness-slider") : null,
             durationContainer : this.settings.status.ui.duration ? this.videoContainer.querySelector(".T_M_G-video-duration-container") : null,
             currentTimeElement : this.settings.status.ui.duration ? this.videoContainer.querySelector(".T_M_G-video-current-time") : null,
@@ -2501,7 +2495,6 @@ class _T_M_G_Video_Player {
                 this.videoCurrentVolumeSliderBoostPosition = 0
                 this.videoCurrentVolumeSliderPosition = (volume - 0) / (100 - 0)
             } else if (volume > 100) {
-                this.DOM.volumeBoostSign?.setAttribute("data-boost", Math.round(volume / 10) / 10)
                 this.videoVolumeSliderBoostPercent = parseInt(this.videoVolumeSliderPercent) + 5
                 this.videoCurrentVolumeSliderBoostPosition = (volume - 100) / (this.settings.maxVolume - 100)
             }
@@ -2662,7 +2655,6 @@ class _T_M_G_Video_Player {
                 this.videoCurrentBrightnessSliderBoostPosition = 0
                 this.videoCurrentBrightnessSliderPosition = (brightness - 0) / (100 - 0)
             } else if (brightness > 100) {
-                this.DOM.brightnessBoostSign?.setAttribute("data-boost", Math.round(brightness / 10) / 10)
                 this.videoBrightnessSliderBoostPercent = parseInt(this.videoBrightnessSliderPercent) + 10
                 this.videoCurrentBrightnessSliderBoostPosition = (brightness - 100) / (this.settings.maxBrightness - 100)
             }
