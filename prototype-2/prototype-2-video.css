@@ -390,8 +390,12 @@
     visibility: hidden;
 }
 
-.T_M_G-video {
+.T_M_G-video,
+.T_M_G-video-thumbnail {
     filter: brightness(calc(((var(--T_M_G-video-brightness)/100) *  80%) + max(calc((var(--T_M_G-video-current-brightness-slider-boost-position) * var(--T_M_G-video-max-brightness-ratio)) * 20%), 20%)));
+}
+
+.T_M_G-video {
     transition: filter var(--T_M_G-video-settings-view-transition-time) ease;
 }
 
@@ -1689,7 +1693,6 @@ button:has(.T_M_G-video-next-icon) svg {
 
 .T_M_G-video-thumbnail {
     display: none;
-    filter: brightness(75%);
 }
 
 .T_M_G-video-container.T_M_G-video-scrubbing .T_M_G-video-thumbnail,

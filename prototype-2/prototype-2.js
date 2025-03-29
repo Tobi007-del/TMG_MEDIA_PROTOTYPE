@@ -25,20 +25,18 @@ class _T_M_G_Video_Player {
         this.inFullScreen = false
         this.wasPaused = !this.video.autoplay
         this.keyDownThrottleId = null
-        this.keyDownThrottleDelay = 20
+        this.keyDownThrottleDelay = 10
         this.miniPlayerThrottleId = null
         this.miniPlayerThrottleDelay = 10
         this.timelineThrottleId = null
         this.timelineThrottleDelay = 50
-        this.advancedTouchXMoveThrottleId = null
-        this.advancedTouchXMoveThrottleDelay = 20
-        this.advancedTouchYMoveThrottleId = null
-        this.advancedTouchYMoveThrottleDelay = 20
+        this.advancedTouchMoveThrottleId = null
+        this.advancedTouchMoveThrottleDelay = 50
         this.speedThrottleId = null
         this.speedThrottleDelay = 100
         this.dragOverThrottleId = null
         this.dragOverThrottleDelay = 20
-        this.lastRate = this.video.playbackRate
+        this.lastRate = this.video.playbackRate ?? 1
         this.isScrubbing = false
         this.parentIntersecting = true
         this.isIntersecting = true
@@ -1754,6 +1752,7 @@ class _T_M_G_Video_Player {
                 this._playlist[this.currentPlaylistIndex].settings.startTime = this.currentTime < (this.duration - this.settings.endTime ?? 0) ? this.playlistCurrentTime : null
             }
             this.stall()
+            this.lastRate = this.video.playbackRate
             this.loaded = false
             this.currentPlaylistIndex = index
             const video = this._playlist[index]
@@ -1770,6 +1769,7 @@ class _T_M_G_Video_Player {
             this.playlistCurrentTime = null
             this.setInitialStates()
             this.togglePlay(true)
+            this.video.playbackRate = this.lastRate
             this.canAutoMovePlaylist = true
         }        
     } catch(e) {
@@ -2267,6 +2267,7 @@ class _T_M_G_Video_Player {
         if (!this.speedCheck) {
             this.speedCheck = true
             this.wasPaused = this.video.paused
+            this.lastRate = this.video.playbackRate
             this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-rewind")
             this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-control-active")
             pos === "backwards" && this.settings.status.beta?.rewind ? setTimeout(this.rewind) : setTimeout(this.fastForward)
@@ -2279,7 +2280,6 @@ class _T_M_G_Video_Player {
     fastForward() {
         try {
             this.speedToken = 1
-            this.lastRate = this.video.playbackRate
             this.video.playbackRate = 2    
             if (this.wasPaused) this.togglePlay(true)
         } catch(e) {
@@ -2290,6 +2290,7 @@ class _T_M_G_Video_Player {
     rewind() {
         try {
             this.speedToken = 0
+            this.video.playbackRate = 1    
             if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.textContent = '2x'
             this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-rewind")
             this.video.addEventListener("play", this.rewindReset)
@@ -2329,9 +2330,8 @@ class _T_M_G_Video_Player {
     try {        
         if (this.speedCheck) {
             this.speedCheck = false
-            if (this.speedToken === 1) {
-                this.video.playbackRate = this.lastRate
-            } else if (this.speedToken === 0) {
+            this.video.playbackRate = this.lastRate
+            if (this.speedToken === 0) {
                 if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.textContent = `${this.lastRate}x`
                 this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-rewind")
                 this.video.removeEventListener("play", this.rewindReset)
@@ -3304,8 +3304,8 @@ class _T_M_G_Video_Player {
     try {
         e.preventDefault()
 
-        if (this.advancedTouchXMoveThrottleId !== null) return
-        this.advancedTouchXMoveThrottleId = setTimeout(() => this.advancedTouchXMoveThrottleId = null, this.timelineThrottleDelay)
+        if (this.advancedTouchMoveThrottleId !== null) return
+        this.advancedTouchMoveThrottleId = setTimeout(() => this.advancedTouchMoveThrottleId = null, this.advancedTouchMoveThrottleDelay)
 
         const width = this.videoContainer.offsetWidth
         const x = e.clientX ?? e.targetTouches[0].clientX
@@ -3322,8 +3322,8 @@ class _T_M_G_Video_Player {
     try {
         e.preventDefault()
 
-        if (this.advancedTouchYMoveThrottleId !== null) return
-        this.advancedTouchYMoveThrottleId = setTimeout(() => this.advancedTouchYMoveThrottleId = null, this.timelineThrottleDelay)
+        if (this.advancedTouchMoveThrottleId !== null) return
+        this.advancedTouchMoveThrottleId = setTimeout(() => this.advancedTouchMoveThrottleId = null, this.advancedTouchMoveThrottleDelay)
 
         const height = this.advancedTouchZone?.x === "right" ? (this.videoContainer.offsetHeight * 0.7) * this.maxVolumeRatio : this.videoContainer.offsetHeight * this.maxBrightnessRatio
         const y = e.clientY ?? e.targetTouches[0].clientY
