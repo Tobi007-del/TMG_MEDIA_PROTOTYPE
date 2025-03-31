@@ -1749,7 +1749,7 @@ class _T_M_G_Video_Player {
     try {
         if (this._playlist) {
             if (this.settings.status.allowOverride.startTime) {
-                this._playlist[this.currentPlaylistIndex].settings.startTime = this.currentTime < (this.duration - (this.settings.endTime ?? this.settings.automoveCountdown)) ? this.playlistCurrentTime : null
+                this._playlist[this.currentPlaylistIndex].settings.startTime = this.currentTime < (this.duration - (this.settings.endTime || this.settings.automoveCountdown)) ? this.playlistCurrentTime : null
             }
             this.stall()
             this.lastRate = this.video.playbackRate
