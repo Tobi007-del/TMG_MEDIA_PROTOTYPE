@@ -4021,7 +4021,7 @@ class tmg {
                 skipBwd: "j",
                 skipFwd: "l",
                 mute: "m",
-                dark: "b",
+                dark: "d",
                 volumeUp: "arrowup",
                 volumeDown: "arrowdown",
                 brightnessUp: "w",
