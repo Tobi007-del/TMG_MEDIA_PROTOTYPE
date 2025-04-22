@@ -225,8 +225,13 @@ class _T_M_G_Video_Player {
     }
 
     bindMethods() {
-        for (const method of Object.getOwnPropertyNames(Object.getPrototypeOf(this))) {
-            if (method !== "constructor" && typeof Object.getOwnPropertyDescriptor(Object.getPrototypeOf(this), method).value === "function") this[method] = this[method].bind(this)
+        let proto = Object.getPrototypeOf(this)
+        while (proto && proto !== Object.prototype) {
+            for (const method of Object.getOwnPropertyNames(proto)) {
+                const descriptor = Object.getOwnPropertyDescriptor(proto, method)
+                if (method !== "constructor" && descriptor && typeof descriptor.value === "function") this[method] = this[method].bind(this)
+            }
+            proto = Object.getPrototypeOf(proto)
         }
     }
 
@@ -4106,7 +4111,7 @@ class tmg {
             },
             enumerable: true,
             configurable: true
-        })
+        })        
     }
     static unmountMedia() {
         delete HTMLVideoElement.tmgcontrols
@@ -4126,12 +4131,12 @@ class tmg {
         document.addEventListener("visibilitychange", window.tmg._handleVisibilityChange)
         window.tmg.launch()
     }
-    static intersectionObserver = new IntersectionObserver(entries => {
+    static intersectionObserver = (typeof window !== "undefined") && new IntersectionObserver(entries => {
         for (const {target, isIntersecting} of entries) {
             target.classList.contains("T_M_G-media") ? target.tmgPlayer?.Player?._handleMediaIntersectionChange(isIntersecting) : target.querySelector(".T_M_G-media").tmgPlayer?.Player?._handleMediaParentIntersectionChange(isIntersecting)
         }
     }, {root: null, rootMargin: '10px', threshold: 0})
-    static mutationObserver = new MutationObserver(mutations => {
+    static mutationObserver = (typeof window !== "undefined") && new MutationObserver(mutations => {
         for (const mutation of mutations) {
             const video = mutation.target
             const player = video.tmgPlayer
@@ -4142,7 +4147,7 @@ class tmg {
             }
         }
     })
-    static DOMMutationObserver = new MutationObserver(mutations => {
+    static DOMMutationObserver = (typeof window !== "undefined") && new MutationObserver(mutations => {
         for (const mutation of mutations) {
             for (const node of mutation.addedNodes) {
                 if ((node.tagName === 'VIDEO') && !node.classList.contains("T_M_G-media")) {
@@ -4435,7 +4440,7 @@ class tmg {
     //a wild card for deploying TMG controls to available media, returns a promise that resolves with an array referencing the media
     static async launch(medium) {
         if (arguments.length === 0) {
-            const media = document.querySelectorAll("[tmgcontrols]")    
+            const media = document.querySelectorAll("[tmgcontrols]")
             let promises = []
             if (media) {
                 for (const medium of media) {
@@ -4457,10 +4462,10 @@ class tmg {
     static Player = _T_M_G_Media_Player
 }
 
-if (typeof window === "undefined") {
-    console.error("TMG Media Player cannot run in a terminal!")
-    console.warn("Consider moving to a browser environment to use the TMG Media Player")
-} else {
+if (typeof window !== "undefined") {
     window.tmg = tmg
     window.tmg.init()
+} else {
+    console.error("TMG Media Player cannot run in a terminal!")
+    console.warn("Consider moving to a browser environment to use the TMG Media Player")
 }
