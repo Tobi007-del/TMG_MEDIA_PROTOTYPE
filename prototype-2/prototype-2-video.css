@@ -2114,17 +2114,17 @@ button:has(.T_M_G-video-next-icon) svg {
         --T_M_G-video-dbc-backdrop-width: 80%;
         --T_M_G-video-current-touch-slider-width: calc(var(--T_M_G-video-current-unit)/2);
     }
-    .T_M_G-video-container:not(.T_M_G-video-floating-player) {
+    .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)) {
         --T_M_G-video-current-thumb-indicator-scale: 1.5;
         --T_M_G-video-current-touch-slider-height: calc(var(--T_M_G-video-current-unit)*8.5);
         --T_M_G-video-current-touch-slider-border-radius: calc(var(--T_M_G-video-current-touch-slider-width)/2);
     }
-        .T_M_G-video-container:not(.T_M_G-video-floating-player),
-        .T_M_G-video-container:not(.T_M_G-video-floating-player).T_M_G-video-scrubbing {
+        .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)),
+        .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)).T_M_G-video-scrubbing {
             --T_M_G-video-preview-border-color: var(--T_M_G-video-no-preview-pointer-color);
             --T_M_G-video-preview-pointer-color: var(--T_M_G-video-no-preview-pointer-color);
         }
-    .T_M_G-video-container:not(.T_M_G-video-floating-player):is(.T_M_G-video-scrubbing, .T_M_G-video-previewing) {
+    .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)):is(.T_M_G-video-scrubbing, .T_M_G-video-previewing) {
         --T_M_G-video-current-thumb-indicator-scale: 1.5;
     }
     .T_M_G-video-overlay-main-controls-wrapper > *,
@@ -2136,7 +2136,7 @@ button:has(.T_M_G-video-next-icon) svg {
         transition: background-color var(--T_M_G-video-fade-transition) ease-in-out;      
     }
     /* this style's specificity was raised to override the display property in case of unpredictability in the UI */
-    .T_M_G-video-container:not(.T_M_G-video-floating-player) :is(.T_M_G-video-theater-btn,
+    .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)) :is(.T_M_G-video-theater-btn,
     .T_M_G-video-play-pause-btn,
     .T_M_G-video-prev-btn,
     .T_M_G-video-next-btn,
@@ -2154,11 +2154,11 @@ button:has(.T_M_G-video-next-icon) svg {
     .T_M_G-video-overlay-main-controls-wrapper {
         gap:calc(var(--T_M_G-video-current-unit)*2.25);
     }
-    .T_M_G-video-container:not(.T_M_G-video-floating-player) .T_M_G-video-container-content .T_M_G-video-timeline-container,
-    .T_M_G-video-container:not(.T_M_G-video-floating-player) .T_M_G-video-container-content .T_M_G-video-timeline {
+    .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)) .T_M_G-video-container-content .T_M_G-video-timeline-container,
+    .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)) .T_M_G-video-container-content .T_M_G-video-timeline {
         height: calc(var(--T_M_G-video-current-unit)/6.5);
     }
-    .T_M_G-video-container:not(.T_M_G-video-floating-player) .T_M_G-video-controls-container .T_M_G-video-preview-container {
+    .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)) .T_M_G-video-controls-container .T_M_G-video-preview-container {
         height: calc(var(--T_M_G-video-current-unit)*1.05);
         min-width: calc(var(--T_M_G-video-current-unit)*2);
         aspect-ratio: unset;
@@ -2167,15 +2167,15 @@ button:has(.T_M_G-video-next-icon) svg {
         border-radius: var(--T_M_G-video-current-unit);
         background: var(--T_M_G-video-no-preview-background);
     }
-    .T_M_G-video-container:not(.T_M_G-video-floating-player) .T_M_G-video-controls-container .T_M_G-video-preview-container::after {
+    .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)) .T_M_G-video-controls-container .T_M_G-video-preview-container::after {
         position: relative;
         align-items: center;
         box-shadow: none;
     }
-    .T_M_G-video-container:not(.T_M_G-video-floating-player) .T_M_G-video-preview {
+    .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)) .T_M_G-video-preview {
         display: none;
     }
-    .T_M_G-video-container:not(.T_M_G-video-floating-player).T_M_G-video-scrubbing .T_M_G-video-preview-container {
+    .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)).T_M_G-video-scrubbing .T_M_G-video-preview-container {
         display: block;
     }
     .T_M_G-video-notifiers-container .T_M_G-video-notifiers.T_M_G-video-control-persist svg {
@@ -2215,18 +2215,15 @@ button:has(.T_M_G-video-next-icon) svg {
     .T_M_G-video {
         max-height: 90lvh;
     }
-    .T_M_G-video-container:not(.T_M_G-video-floating-player),
-    .T_M_G-video-container:not(.T_M_G-video-floating-player).T_M_G-video-theater,
-    .T_M_G-video-container:not(.T_M_G-video-floating-player).T_M_G-video-full-screen {
+    .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)),
+    .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)).T_M_G-video-theater,
+    .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)).T_M_G-video-full-screen {
         --T_M_G-video-current-unit: var(--T_M_G-video-mobile-landscape-unit);
-    }
-    .T_M_G-video-container:not(.T_M_G-video-floating-player).T_M_G-video-mini-player {
-        --T_M_G-video-current-unit: var(--T_M_G-video-mobile-mini-player-unit);
-    }
-    .T_M_G-video-container:not(.T_M_G-video-floating-player),
-    .T_M_G-video-container:not(.T_M_G-video-floating-player).T_M_G-video-theater,
-    .T_M_G-video-container:not(.T_M_G-video-floating-player).T_M_G-video-full-screen {
         --T_M_G-video-current-controls-gap: calc(var(--T_M_G-video-current-unit)/1.025);
+    }
+    .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)).T_M_G-video-mini-player {
+        --T_M_G-video-current-unit: var(--T_M_G-video-mobile-mini-player-unit);
+        --T_M_G-video-current-controls-gap: calc(var(--T_M_G-video-current-unit)/2);
     }
 }
 

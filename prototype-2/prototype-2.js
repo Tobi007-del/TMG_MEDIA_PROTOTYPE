@@ -4087,8 +4087,7 @@ class tmg {
         },
     }
     static ALT_IMG_SRC = "/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png"
-    static _STYLE_CACHE = {}
-    static _SCRIPT_CACHE = {}
+    static _RESOURCE_CACHE = {}
     static _AUDIO_CONTEXT = null
     static _CURRENT_AUDIO_GAIN_NODE = null
     static _CURRENT_FULL_SCREEN_PLAYER = null
@@ -4215,35 +4214,41 @@ class tmg {
     static suspendAudioManager() {
         if (window.tmg._AUDIO_CONTEXT === "running") window.tmg._AUDIO_CONTEXT.suspend()
     }
-    static loadResource(src, type) {
-    switch (type) {
-        case "script":
-            window.tmg._SCRIPT_CACHE[src] = window.tmg._SCRIPT_CACHE[src] || new Promise(function (resolve, reject) {
-                let script = document.createElement("script")
+    static loadResource(src, type = "style", options = {}) {
+        const { module = false, media = null, crossorigin = null, integrity = null, } = options
+        if (window.tmg._RESOURCE_CACHE[src]) return window.tmg._RESOURCE_CACHE[src]
+        const isLoaded = (() => {
+            if (type === "script") {
+            return Array.from(...document.scripts)?.some(s => s.src?.includes(src))
+            } else if (type === "style") {
+            return Array.from(document.styleSheets)?.some(s => s.href?.includes(src))
+            }
+            return false
+        })()
+        if (isLoaded) return Promise.resolve(null) 
+        window.tmg._RESOURCE_CACHE[src] = new Promise((resolve, reject) => {
+            if (type === "script") {
+                const script = document.createElement("script")
                 script.src = src
-
+                if (module) script.type = "module"
+                if (crossorigin) script.crossOrigin = crossorigin
+                if (integrity) script.integrity = integrity
                 script.onload = () => resolve(script)
-                script.onerror = () =>  reject(new Error(`Load error for TMG JavaScript file`))
-
+                script.onerror = () => reject(new Error(`Script load error: ${src}`))
                 document.body.append(script)
-            })
-
-            return window.tmg._SCRIPT_CACHE[src]
-        default:
-            window.tmg._STYLE_CACHE[src] = window.tmg._STYLE_CACHE[src] || new Promise(function (resolve, reject) {
-                let link = document.createElement("link")
-                link.href = src
+            } else if (type === "style") {
+                const link = document.createElement("link")
                 link.rel = "stylesheet"
-        
+                link.href = src
+                if (media) link.media = media
                 link.onload = () => resolve(link)
-
-                link.onerror = () =>  reject(new Error(`Load error for TMG CSSStylesheet`))
-        
+                link.onerror = () => reject(new Error(`Stylesheet load error: ${src}`))
                 document.head.append(link)
-            })
-        
-            return window.tmg._STYLE_CACHE[src]
-    }
+            } else {
+                reject(new Error(`Unsupported type: ${type}`))
+            }
+        })
+        return window.tmg._RESOURCE_CACHE[src]
     }
     static addSources(sources, medium) {
         const addSource = (source, medium) => {
