@@ -5,7 +5,7 @@ TODO:
 */
 
 //running a runtime environment check
-typeof window !== "undefined" ? console.log("%cTMG Media Player Available", "color: green") : console.log("TMG Media Player Unavailable")
+typeof window !== "undefined" ? console.log("%cTMG Media Player Available", "color: green") : console.log("\x1b[38;2;139;69;19mTMG Media Player Unavailable\x1b[0m")
 
 //The TMG Video Player Class
 class _T_M_G_Video_Player {
@@ -3661,7 +3661,7 @@ class _T_M_G_Video_Player {
             case "7":
             case "8":
             case "9":
-                this.moveVideoTime({to: e.key, max: 9})
+                this.moveVideoTime({to: e.key, max: 10})
                 break 
             case "end":
                 this.moveVideoTime({to: "end"})
