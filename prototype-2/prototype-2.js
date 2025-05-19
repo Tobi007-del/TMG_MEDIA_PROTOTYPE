@@ -2981,11 +2981,7 @@ class _T_M_G_Video_Player {
         } 
         if ((this.isModeActive("miniPlayer") && this.parentIntersecting) || (this.isModeActive("miniPlayer") && window.innerWidth < this.settings.miniPlayerThreshold) || (bool === false && this.isModeActive("miniPlayer"))) {
             if (behaviour) 
-            window.scrollTo({
-                top: this.pseudoVideoContainer.parentNode.offsetTop - ((window.innerHeight / 2) - (this.pseudoVideoContainer.offsetHeight / 2)),
-                left: 0,
-                behavior: behaviour,
-            })  
+            this.pseudoVideoContainer.scrollIntoView({behaviour, block: "center", inline: "center"})
             this.deactivatePseudoMode()
             this.videoContainer.classList.toggle("T_M_G-video-progress-bar", this.settings.progressBar)
             this.videoContainer.classList.remove("T_M_G-video-mini-player")
