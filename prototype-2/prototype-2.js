@@ -2897,15 +2897,20 @@ class _T_M_G_Video_Player {
       window.tmg._CURRENT_FULL_SCREEN_PLAYER = this
       if (this.videoContainer.requestFullscreen) await this.videoContainer.requestFullscreen()
 			else if (this.videoContainer.mozRequestFullScreen) await this.videoContainer.mozRequestFullScreen()
-			else if (this.videoContainer.webkitRequestFullScreen) await video.webkitRequestFullScreen() || await this.videoContainer.webkitRequestFullScreen()
-			else if (this.videoContainer.msRequestFullscreen) await this.videoContainer.msRequestFullscreen()
+      else if (this.videoContainer.msRequestFullscreen) await this.videoContainer.msRequestFullscreen()
+			else if (this.videoContainer.webkitRequestFullScreen) await this.videoContainer.webkitRequestFullScreen()
+      else if (this.video.webkitEnterFullScreen) {
+        // this is for native ios fullscreen support
+        await this.video.webkitEnterFullScreen()
+        this.video.addEventListener("webkitendfullscreen", () => this.inFullScreen = false, {once: true})
+      }
       this.inFullScreen = true
     }
     } else {
       if (document.exitFullscreen) await document.exitFullscreen()
 			else if (document.mozCancelFullScreen) await document.mozCancelFullScreen()
-			else if (document.webkitCancelFullScreen) await document.webkitCancelFullScreen()
 			else if (document.msExitFullscreen) await document.msExitFullscreen()
+			else if (document.webkitCancelFullScreen) await document.webkitCancelFullScreen()
       this.inFullScreen = false
     }
     }
@@ -4451,7 +4456,7 @@ class tmg {
     return document.pictureInPictureEnabled
   }
   static supportsFullScreen() {
-    return !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled)
+    return !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled || HTMLVideoElement.prototype.webkitEnterFullScreen)
   }
   static supportsPictureInPicture() {
     return document.pictureInPictureEnabled
