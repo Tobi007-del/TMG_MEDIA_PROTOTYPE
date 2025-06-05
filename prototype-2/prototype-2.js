@@ -164,7 +164,7 @@ class _T_M_G_Video_Player {
       if (this.currentPlaylistIndex == null) this.currentPlaylistIndex = 0
       else if (this.initialized) {
         const prevIndex = this.currentPlaylistIndex,
-        nextIndex = this._playlist.findIndex(vid => vid.src === this.src)
+        nextIndex = this._playlist?.findIndex(vid => vid.src === this.src)
         this.currentPlaylistIndex = nextIndex !== -1 ? nextIndex : 0
         if (nextIndex === -1) this.movePlaylistTo(this.currentPlaylistIndex, !this.video.paused)
       }
@@ -223,14 +223,20 @@ class _T_M_G_Video_Player {
     }
   }
 
+  replaceVideo() {
+    const clonedVideo = this.video.cloneNode(true)
+    this.video.parentElement.replaceChild(clonedVideo, this.video)
+    this.video = clonedVideo
+  }
+
   _destroy() {    
     this.video.pause() 
-    this.src = ""
     this.removeAudio()
     this.leaveSettingsView()
     this.unobserveIntersection()
     this.removeKeyEventListeners()
     this.removeVideoEventListeners()
+    this.video.removeAttribute("src")
     this.video.classList.remove("T_M_G-video")
     this.video.classList.remove("T_M_G-media")
     if (this.initialState) this.video.removeEventListener("play", this.removeInitialState, {once:true})
@@ -238,6 +244,8 @@ class _T_M_G_Video_Player {
       this.pseudoVideoContainer.parentElement.insertBefore(this.video, this.pseudoVideoContainer)
       this.pseudoVideoContainer.remove()
     } else this.videoContainer.parentElement.insertBefore(this.video, this.videoContainer)
+    //had to do this to get rid of stateful issues and freezing
+    this.replaceVideo()
     this.videoContainer.remove()
   }
 
@@ -2440,8 +2448,8 @@ class _T_M_G_Video_Player {
 
   _handleCueChange(cue) {
   try {
-    if (!cue) return
     this.DOM.cueContainer.innerHTML = ''
+    if (!cue) return
     const cueText = cue.text
     const cueWrapper = document.createElement("div")
     cueWrapper.className = "T_M_G-video-cue-wrapper";

@@ -64,7 +64,7 @@
 
 /* time variables */
 :where(:root, .T_M_G-video-container, .T_M_G-pseudo-video-container) {
-  --T_M_G-video-fade-transition: 200ms;
+  --T_M_G-video-fade-transition-time: 200ms;
   --T_M_G-video-transition-time: 500ms;
   --T_M_G-video-notifiers-animation-time: 1s;
   --T_M_G-video-loader-animation-time: 1250ms;
@@ -336,7 +336,7 @@
 
 .T_M_G-video-container svg path {
   fill: currentColor;
-  transition: fill var(--T_M_G-video-transition-time) ease;
+  transition: fill var(--T_M_G-video-fade-transition-time) ease;
 }
 
 .T_M_G_video-container *:is(:hover, :focus-visible) > svg {
@@ -362,7 +362,7 @@
   justify-content: center;
   font-size: calc(var(--T_M_G-video-current-unit)/1.4); 
   opacity: 0.9;
-  transition: opacity var(--T_M_G-video-fade-transition) ease-in-out;
+  transition: opacity var(--T_M_G-video-fade-transition-time) ease-in-out;
 }
 
 :where(.T_M_G-video-container button):is(:hover, :focus-visible) {
@@ -1023,7 +1023,7 @@ body:has(.T_M_G-video-floating-player) {
 
 .T_M_G-video-container:is(.T_M_G-video-mini-player, .T_M_G-video-floating-player) .T_M_G-video-overlay-controls-container {
   background-color: var(--T_M_G-video-current-curtain-color);
-  transition: background-color var(--T_M_G-video-fade-transition) ease-in-out;
+  transition: background-color var(--T_M_G-video-fade-transition-time) ease-in-out;
 }
 
 .T_M_G-video-overlay-main-controls-wrapper {
@@ -1138,7 +1138,7 @@ body:has(.T_M_G-video-floating-player) {
   width: 200%;
   height: 100%;
   border-style: solid;
-  border-color: var(--T_M_G-video-buffer-color);
+  border-color: var(--T_M_G-video-loader-color);
   border-bottom-color: transparent;
   border-radius: 50%;
   border-width: var(--T_M_G-video-current-loader-thickness);
@@ -1267,7 +1267,7 @@ body:has(.T_M_G-video-floating-player) {
   background: var(--T_M_G-video-controls-background);
   border-radius: var(--T_M_G-video-controls-background-radius);
   padding: var(--T_M_G-video-controls-padding);
-  transition: background-color var(--T_M_G-video-transition-time) ease;
+  transition: background-color var(--T_M_G-video-fade-transition-time) ease;
 }
 
 .T_M_G-video-controls-wrapper button:is(:hover, :focus-visible) {
@@ -1287,7 +1287,7 @@ button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon)::after {
   top: 50%;
   transform: translateY(-50%);
   background-color: var(--T_M_G-video-current-controls-color);
-  transition: background-color var(--T_M_G-video-transition-time) ease;
+  transition: background-color var(--T_M_G-video-fade-transition-time) ease;
 }
 
 button:has(.T_M_G-video-prev-icon)::after {
@@ -1589,6 +1589,12 @@ button:has(.T_M_G-video-next-icon) svg {
   text-align: center;
   touch-action: none;
   cursor: grab;
+  opacity: 0;
+  transition: opacity var(--T_M_G-video-fade-transition-time) ease;
+}
+
+.T_M_G-video-cue-container:not(:empty) {
+  opacity: 1;
 }
 
 .T_M_G-video-container.T_M_G-video-cue-dragging .T_M_G-video-cue-container {
@@ -1770,7 +1776,7 @@ button:has(.T_M_G-video-next-icon) svg {
 
 .T_M_G-video-preview-container::before, 
 .T_M_G-video-preview-container::after {
-  transition: border-color var(--T_M_G-video-fade-transition) ease;
+  transition: border-color var(--T_M_G-video-fade-transition-time) ease;
   display: block;
 }
 
@@ -2250,7 +2256,7 @@ button:has(.T_M_G-video-next-icon) svg {
   }
   .T_M_G-video-container .T_M_G-video-overlay-controls-container {
     background-color: var(--T_M_G-video-current-curtain-color);
-    transition: background-color var(--T_M_G-video-fade-transition) ease-in-out;    
+    transition: background-color var(--T_M_G-video-fade-transition-time) ease-in-out;    
   }
   /* this style's specificity was raised to override the display property in case of unpredictability in the UI */
   .T_M_G-video-container:where(:not(.T_M_G-video-floating-player)) :is(.T_M_G-video-theater-btn,
@@ -2409,11 +2415,11 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-overlay-main-controls-wrapper,
 .T_M_G-video-mini-player-expand-btn-wrapper,
 .T_M_G-video-mini-player-cancel-btn-wrapper {
-  transition: opacity var(--T_M_G-video-fade-transition) ease;
+  transition: opacity var(--T_M_G-video-fade-transition-time) ease;
 }
 
 .T_M_G-video-container:is(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-timeline-container {
-  transition: opacity var(--T_M_G-video-fade-transition) ease;
+  transition: opacity var(--T_M_G-video-fade-transition-time) ease;
 }
 
 .T_M_G-video-container:is(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-title-wrapper:has(.T_M_G-video-title:not([data-video-title=""])),
