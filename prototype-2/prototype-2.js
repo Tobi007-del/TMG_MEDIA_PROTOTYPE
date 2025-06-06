@@ -391,14 +391,14 @@ class _T_M_G_Video_Player {
 
   buildVideoPlayerInterface() {
   try {    
-    if (this.media.artwork && (this.media.artwork[0]?.src !== this.video.poster)) this.video.poster = this.media.artwork[0].src
+    if (this.media?.artwork && (this.media.artwork[0]?.src !== this.video.poster)) this.video.poster = this.media.artwork[0].src
     if (!this.videoContainer) {
       this.videoContainer = document.createElement('div')
       this.video.parentElement.insertBefore(this.videoContainer, this.video)
     }
     this.initCSSVariablesManager()
     this.videoContainer.classList.add("T_M_G-video-container")
-    if (!this.video.autoplay) this.videoContainer.classList.add("T_M_G-video-paused")
+    if (this.video.paused) this.videoContainer.classList.add("T_M_G-video-paused")
     if (this.initialMode && this.initialMode !== "normal") this.videoContainer.classList.add(`T_M_G-video-${window.tmg.uncamelizeString(this.initialMode, "-")}`)
     if (this.settings.progressBar) this.videoContainer.classList.add("T_M_G-video-progress-bar")
     this.videoContainer.setAttribute("data-timeline-position", `${this.settings.timelinePosition}`)
@@ -1053,7 +1053,7 @@ class _T_M_G_Video_Player {
       this.setVideoEventListeners()
     }
     if (this.activated) {
-      if (this.initialState) this.addInitialState()
+      if (this.initialState && this.video.paused) this.addInitialState()
       else this.initializeVideoControls()  
     } else {
       console.warn("You have to activate the TMG controller to access the custom controls")
@@ -1827,7 +1827,7 @@ class _T_M_G_Video_Player {
       const video = this._playlist[index]
       this.settings.startTime = video.settings.startTime
       this.settings.endTime = video.settings.endTime
-      if (video.media.artwork && (video.media.artwork[0]?.src !== this.video.poster)) this.video.poster = video.media.artwork[0].src
+      if (video.media?.artwork && (video.media.artwork[0]?.src !== this.video.poster)) this.video.poster = video.media.artwork[0].src
       if (video.src) this.src = video.src
       else if (video.sources?.length > 0) this.sources = video.sources
       if (video.tracks?.length > 0) this.tracks = video.tracks
