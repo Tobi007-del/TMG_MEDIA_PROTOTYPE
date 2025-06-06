@@ -1847,6 +1847,7 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 .T_M_G-video-container.T_M_G-video-no-previews .T_M_G-video-preview-container::after {
+  position: relative;
   align-items: center;
   box-shadow: none;
 }
