@@ -11,6 +11,7 @@ typeof window !== "undefined" ? console.log("%cTMG Media Player Available", "col
 class _T_M_G_Video_Player {
   constructor(videoOptions) {
   try {
+    videoOptions = { ...videoOptions }
     this.initialized = false
     this.bindMethods()
     //turning the video build into the Video Player Instance
@@ -226,17 +227,32 @@ class _T_M_G_Video_Player {
   replaceVideo() {
     const clonedVideo = this.video.cloneNode(true)
     this.video.parentElement.replaceChild(clonedVideo, this.video)
+    // Playback control
+    if (this.video.currentTime) clonedVideo.currentTime = this.video.currentTime;
+    if (this.video.playbackRate !== 1) clonedVideo.playbackRate = this.video.playbackRate;
+    if (this.video.defaultPlaybackRate !== 1) clonedVideo.defaultPlaybackRate = this.video.defaultPlaybackRate;
+    if (this.video.volume !== 1) clonedVideo.volume = this.video.volume;
+    if (this.video.muted) clonedVideo.muted = true;
+    if (this.video.defaultMuted) clonedVideo.defaultMuted = true;
+    if (this.video.srcObject) clonedVideo.srcObject = this.video.srcObject;
+    // Behavior flags
+    if (this.video.autoplay) clonedVideo.autoplay = true;
+    if (this.video.loop) clonedVideo.loop = true;
+    if (this.video.controls) clonedVideo.controls = true;
+    if (this.video.crossOrigin) clonedVideo.crossOrigin = this.video.crossOrigin;
+    if (this.video.playsInline) clonedVideo.playsInline = true;
+    if (this.video.controlsList && this.video.controlsList.length) clonedVideo.controlsList = this.video.controlsList;
+    if (this.video.disablePictureInPicture) clonedVideo.disablePictureInPicture = true; 
+    if (!this.video.paused) clonedVideo.play()
     this.video = clonedVideo
   }
 
   _destroy() {    
-    this.video.pause() 
     this.removeAudio()
     this.leaveSettingsView()
     this.unobserveIntersection()
     this.removeKeyEventListeners()
     this.removeVideoEventListeners()
-    this.video.removeAttribute("src")
     this.video.classList.remove("T_M_G-video")
     this.video.classList.remove("T_M_G-media")
     if (this.initialState) this.video.removeEventListener("play", this.removeInitialState, {once:true})
@@ -2247,7 +2263,7 @@ class _T_M_G_Video_Player {
   _handleTimeUpdate() {
   try {   
     this.video.removeAttribute("controls")
-    this.videoCurrentProgressPosition = window.tmg.formatNumber(this.video.currentTime / this.video.duration)
+    this.videoCurrentProgressPosition = window.tmg.isValidNumber(this.video.duration) ? window.tmg.formatNumber(this.video.currentTime / this.video.duration) : (this.video.currentTime / 60)// progress fallback, shouldn't take more than a min for duration to be available
     if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.timeFormat !== "timespent" ? window.tmg.formatTime(this.video.currentTime) : `-${window.tmg.formatTime(this.video.duration - this.video.currentTime)}`
     if (this.speedCheck && this.speedToken === 1) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", window.tmg.formatTime(this.video.currentTime))
     if (this._playlist && this.currentTime > 3) this.playlistCurrentTime = this.currentTime
@@ -3971,7 +3987,7 @@ class _T_M_G_Media_Player {
     let fetchedControls
     if (this.#medium.getAttribute("tmg")?.includes('.json')) {
       fetchedControls = fetch(v.window.tmg.toString()).then(res => {
-        if (!res.ok) throw new Error(`TMG could not find JSON file!. Status: ${res.status}`)
+        if (!res.ok) throw new Error(`TMG could not find provided JSON file!. Status: ${res.status}`)
         return res.json()
       }).catch(({message}) => {
         console.error(`${message}`)
@@ -4218,10 +4234,18 @@ class tmg {
   static mountMedia() {
     Object.defineProperty(HTMLVideoElement.prototype, 'tmgcontrols', {
       get: function() {
-        return (this.getAttribute("tmgcontrols") === null ? false : true)
+        return this._____tmgctrlsRef || false
       },
       set: function(value) {
-        value ? this.setAttribute("tmgcontrols", "") : this.removeAttribute("tmgcontrols")
+        const bool = Boolean(value)
+        this._____tmgctrlsRef = bool
+        if (bool) {
+          this.tmgPlayer?.attach(this)
+          this.setAttribute("tmgcontrols", "")
+        } else {
+          this.tmgPlayer?.detach()
+          this.removeAttribute("tmgcontrols")
+        }
       },
       enumerable: true,
       configurable: true
@@ -4253,11 +4277,12 @@ class tmg {
   static mutationObserver = (typeof window !== "undefined") && new MutationObserver(mutations => {
     for (const mutation of mutations) {
       const video = mutation.target
-      const player = video.tmgPlayer
-      if (mutation.type === "attributes" && mutation.attributeName === "tmgcontrols") {
-        video.hasAttribute("tmgcontrols") ? player.attach(video) : player.detach()
-      } else if (mutation.type === "attributes" && mutation.attributeName.startsWith("tmg")) {
-        if (video.hasAttribute(mutation.attributeName)) player.fetchCustomOptions()
+      if (mutation.type === "attributes") {
+        if (mutation.attributeName === "tmgcontrols") {
+          video._____tmgctrlsRef = video.hasAttribute("tmgcontrols")
+        } else if (mutation.attributeName.startsWith("tmg")) {
+          if (video.hasAttribute(mutation.attributeName)) player.fetchCustomOptions()
+        }
       }
     }
   })
@@ -4464,8 +4489,11 @@ class tmg {
   static clamp(min, amount, max) {
     return Math.min(Math.max(amount, min), max)
   }
+  static isValidNumber(number) {
+    return !isNaN(number ?? NaN) && number !== Infinity
+  }
   static formatTime(time) {
-    if (!isNaN(time ?? NaN) && time !== Infinity) {
+    if (this.isValidNumber(time)) {
       const seconds = Math.floor(time % 60)
       const minutes = Math.floor(time / 60) % 60
       const hours = Math.floor(time / 3600)
@@ -4474,7 +4502,7 @@ class tmg {
     } else return '-:--'
   }
   static formatNumber(number) {
-    if (!isNaN(number ?? NaN) && number !== Infinity) return number
+    if (window.tmg.isValidNumber(number)) return number
     else return 0
   }
   static formatCSSTime(time) {
