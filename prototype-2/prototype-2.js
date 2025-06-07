@@ -60,6 +60,7 @@ class _T_M_G_Video_Player {
     this.floatingPlayerOptions = null
     this.lastGestureTouchX = null
     this.lastGestureTouchY = null
+    this.gestureTouchCanCancel = true
     this.gestureTouchZone = null
     this.gestureNextTime = null
     this.gestureTouchTimeoutId = null
@@ -70,9 +71,11 @@ class _T_M_G_Video_Player {
     this.gestureWheelZone = null
     this.gestureWheelXCheck = false
     this.gestureWheelYCheck = false
-    this.gestureWheelTimeout = 1000
+    this.gestureWheelTimeout = 2000
     this.gestureWheelTimeoutId = null
     this.gestureWheelTimePercent = 0
+    this.gestureWheelTimeMultiplier = 1
+    this.gestureTimeMultiplierY = 0
     this.lastVolume = this.lastBrightness = 100
     this.volumeSliderVolume = this.brightnessSliderBrightness = 5
     this.shouldSetLastVolume = this.shouldSetLastBrightness = false
@@ -2209,11 +2212,13 @@ class _T_M_G_Video_Player {
   }      
   }
 
-  _handleGestureTimelineInput({percent, sign}) {
+  _handleGestureTimelineInput({percent, sign, multiplier}) {
     try {   
-      const time = sign === "+" ? this.currentTime + (percent * this.duration) : this.currentTime- (percent * this.duration)
+      multiplier = multiplier.toFixed(1)
+      percent = percent * multiplier
+      const time = sign === "+" ? this.currentTime + (percent * this.duration) : this.currentTime - (percent * this.duration)
       this.gestureNextTime = window.tmg.clamp(0, Math.floor(time), this.duration)
-      if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${window.tmg.formatTime(Math.abs(this.gestureNextTime - this.currentTime))} (${window.tmg.formatTime(this.gestureNextTime)})`
+      if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${window.tmg.formatTime(Math.abs(this.gestureNextTime - this.currentTime))} (${window.tmg.formatTime(this.gestureNextTime)}) ${multiplier < 1 ? `x ${multiplier}` : ''}`
     } catch(e) {
       this._log(e, "error", "swallow")
     }      
@@ -3365,38 +3370,52 @@ class _T_M_G_Video_Player {
 
   _handleGestureWheelInit({clientX: x, clientY: y}) {
   try {
+    const rect = this.videoContainer.getBoundingClientRect()
     this.gestureWheelZone = {
-      x : x > this.videoContainer.offsetWidth/2 ? "right" : "left",
-      y : y > this.videoContainer.offsetHeight/2 ? "bottom" : "top"
+      x : x - rect.left > rect.width/2 ? "right" : "left",
+      y : y - rect.left > rect.height/2 ? "bottom" : "top"
     }
     this.gestureWheelTimePercent = 0
+    this.gestureWheelTimeMultiplier = 1
+    this.gestureTimeMultiplierY = 0
   } catch(e) {
     this._log(e, "error", "swallow")
   }
   }
 
-  _handleGestureWheelMove({deltaX, deltaY}) {
+  _handleGestureWheelMove({clientX: x, clientY: y, deltaX, deltaY}) {
   try {
+    const width = window.innerWidth,
+    height = window.innerHeight
+    let xPercent = -deltaX / (width*10)
+    xPercent = this.gestureWheelTimePercent += xPercent
+    const xSign = Math.sign(xPercent) === 1 ? "+" : "-"
+    xPercent = Math.abs(xPercent)
+
     if (deltaX) {
+      if (this.gestureWheelYCheck) return this._handleGestureWheelStop()
+        
       this.gestureWheelXCheck = true
-      this.DOM.touchVolumeNotifier?.classList.remove("T_M_G-video-control-active") 
-      this.DOM.touchBrightnessNotifier?.classList.remove("T_M_G-video-control-active")
       this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
-      const width = this.videoContainer.offsetWidth 
-      let percent = -deltaX / (width*10)
-      percent = this.gestureWheelTimePercent += percent
-      const sign = Math.sign(percent) === 1 ? "+" : "-"
-      percent = Math.abs(percent)
-      this._handleGestureTimelineInput({percent, sign})
+      this._handleGestureTimelineInput({percent: xPercent, sign: xSign, multiplier: this.gestureWheelTimeMultiplier})
     } 
     if (deltaY) {
+      if (this.gestureWheelXCheck) {
+        const mY = window.tmg.clamp(0, Math.abs(this.gestureTimeMultiplierY += deltaY), height)
+        this.gestureWheelTimeMultiplier = 1 - (mY / height)
+        this._handleGestureTimelineInput({percent: xPercent, sign: xSign, multiplier: this.gestureWheelTimeMultiplier})
+        return
+      }
+
+      const currentXZone = x > width/2 ? "right" : "left"
+      if (currentXZone !== this.gestureWheelZone.x) return this._handleGestureWheelStop()
+        
       this.gestureWheelYCheck = true
-      this.DOM.touchTimelineNotifier?.classList.remove("T_M_G-video-control-active")
       this.gestureWheelZone?.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
-      const sign = deltaY >= 0 ? "+" : "-"
-      const height = this.gestureWheelZone?.x === "right" ? ((this.videoContainer.offsetHeight * 0.7) * this.maxVolumeRatio) : (this.videoContainer.offsetHeight * this.maxBrightnessRatio)
-      const percent = window.tmg.clamp(0, Math.abs(deltaY),  height) / height
-      this.gestureWheelZone?.x === "right" ? this._handleGestureVolumeSliderInput({percent, sign}) : this._handleGestureBrightnessSliderInput({percent, sign})
+      const ySign = deltaY >= 0 ? "+" : "-"
+      const rHeight = this.gestureWheelZone?.x === "right" ? ((height * 0.7) * this.maxVolumeRatio) : (height * this.maxBrightnessRatio)
+      const yPercent = window.tmg.clamp(0, Math.abs(deltaY), rHeight) / rHeight
+      this.gestureWheelZone?.x === "right" ? this._handleGestureVolumeSliderInput({percent: yPercent, sign: ySign}) : this._handleGestureBrightnessSliderInput({percent: yPercent, sign: ySign})
     } 
   } catch(e) {
     this._log(e, "error", "swallow")
@@ -3422,6 +3441,14 @@ class _T_M_G_Video_Player {
   }
   }   
 
+  setGestureTouchCancel() {
+  try {
+    this.gestureTouchCanCancel = true
+  } catch(e) {
+    this._log(e, "error", "swallow")
+  }
+  }
+
   _handleGestureTouchStart(e) {
   try {
     if (e.touches?.length > 1) return 
@@ -3430,17 +3457,14 @@ class _T_M_G_Video_Player {
       this._handleGestureTouchEnd()
       this.lastGestureTouchX = e.clientX ?? e.targetTouches[0].clientX
 	    this.lastGestureTouchY = e.clientY ?? e.targetTouches[0].clientY
-      if (this.isModeActive("fullScreen")) {
-        this.videoContainer.addEventListener("touchmove", this._handleGestureTouchInit, {once: true, passive: false})
-      } else {
-        //tm: if user moves finger before advanced touchmove listener is attached like during scrolling
-        this.videoContainer.addEventListener("touchmove", this._handleGestureTouchEnd, {passive: true})
-        this.gestureTouchTimeoutId = setTimeout(() => {
-          //tm: removing listener since timeout reached and user is not scrolling
-          this.videoContainer.removeEventListener("touchmove", this._handleGestureTouchEnd, {passive: true})
-          this.videoContainer.addEventListener("touchmove", this._handleGestureTouchInit, {once: true, passive: false})
-        }, this.gestureTouchThreshold)
-      }
+      this.videoContainer.addEventListener("touchmove", this._handleGestureTouchInit, {once: true, passive: false})
+      //if user moves finger like during scrolling
+      this.videoContainer.addEventListener("touchmove", this.setGestureTouchCancel, {passive: true})
+      //changing bool since timeout reached and user is not scrolling
+      this.gestureTouchTimeoutId = setTimeout(() => {
+        this.videoContainer.removeEventListener("touchmove", this.setGestureTouchCancel, {passive: true})
+        this.gestureTouchCanCancel = false
+      }, this.gestureTouchThreshold)
       this.videoContainer.addEventListener("touchend", this._handleGestureTouchEnd)
     }
     }
@@ -3451,7 +3475,7 @@ class _T_M_G_Video_Player {
 
   _handleGestureTouchInit(e) {
   try {
-    if (e.touches?.length > 1) return 
+    if (e.touches?.length > 1) return
     if (this.settings.status.beta.gestureControls && !this.isModeActive("miniPlayer") && !this.speedCheck) {  
       e.preventDefault()
       const rect = this.videoContainer.getBoundingClientRect(),
@@ -3466,11 +3490,9 @@ class _T_M_G_Video_Player {
       if (deltaX > deltaY * this.gestureTouchFingerXRatio) {
         this.gestureTouchXCheck = true
         this.videoContainer.addEventListener("touchmove", this._handleGestureTouchXMove, {passive: false})
-        this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
       } else if (deltaY > deltaX * this.gestureTouchFingerYRatio) {
         this.gestureTouchYCheck = true
         this.videoContainer.addEventListener("touchmove", this._handleGestureTouchYMove, {passive: false})
-        this.gestureTouchZone.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
       }
     }
   } catch(e) {
@@ -3481,16 +3503,23 @@ class _T_M_G_Video_Player {
   _handleGestureTouchXMove(e) {
   try {
     e.preventDefault()
+    if (this.gestureTouchCanCancel) return this._handleGestureTouchEnd()
+    else this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
 
     if (this.gestureTouchMoveThrottleId !== null) return
     this.gestureTouchMoveThrottleId = setTimeout(() => this.gestureTouchMoveThrottleId = null, this.gestureTouchMoveThrottleDelay)
 
-    const width = this.videoContainer.offsetWidth
-    const x = e.clientX ?? e.targetTouches[0].clientX
-    const deltaX = x - this.lastGestureTouchX
-    const sign = deltaX >= 0 ? "+" : "-"
-    const percent = window.tmg.clamp(0, Math.abs(deltaX), width) / width
-    this._handleGestureTimelineInput({percent, sign})
+    const width = this.videoContainer.offsetWidth,
+    height = this.videoContainer.offsetHeight,
+    x = e.clientX ?? e.targetTouches[0].clientX,
+    y = e.clientY ?? e.targetTouches[0].clientY,
+    deltaX = x - this.lastGestureTouchX,
+    deltaY = y - this.lastGestureTouchY,
+    sign = deltaX >= 0 ? "+" : "-",
+    percent = window.tmg.clamp(0, Math.abs(deltaX), width) / width,
+    mY = window.tmg.clamp(0, Math.abs(deltaY), (height/2)),
+    multiplier = 1 - (mY / (height/2))
+    this._handleGestureTimelineInput({percent, sign, multiplier})
   } catch(e) {
     this._log(e, "error", "swallow")
   }
@@ -3499,15 +3528,17 @@ class _T_M_G_Video_Player {
   _handleGestureTouchYMove(e) {
   try {
     e.preventDefault()
+    if (!this.isModeActive("fullScreen") && this.gestureTouchCanCancel) return this._handleGestureTouchEnd()      
+    else this.gestureTouchZone.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
 
     if (this.gestureTouchMoveThrottleId !== null) return
     this.gestureTouchMoveThrottleId = setTimeout(() => this.gestureTouchMoveThrottleId = null, this.gestureTouchMoveThrottleDelay)
 
-    const height = this.gestureTouchZone?.x === "right" ? (this.videoContainer.offsetHeight * 0.7) * this.maxVolumeRatio : this.videoContainer.offsetHeight * this.maxBrightnessRatio
-    const y = e.clientY ?? e.targetTouches[0].clientY
-    const deltaY = y - this.lastGestureTouchY
-    const sign = deltaY >= 0 ? "-" : "+"
-    const percent = window.tmg.clamp(0, Math.abs(deltaY), height) / height
+    const height = this.gestureTouchZone?.x === "right" ? (this.videoContainer.offsetHeight * 0.7) * this.maxVolumeRatio : this.videoContainer.offsetHeight * this.maxBrightnessRatio,
+    y = e.clientY ?? e.targetTouches[0].clientY,
+    deltaY = y - this.lastGestureTouchY,
+    sign = deltaY >= 0 ? "-" : "+",
+    percent = window.tmg.clamp(0, Math.abs(deltaY), height) / height
     this.lastGestureTouchY = y
     this.gestureTouchZone?.x === "right" ? this._handleGestureVolumeSliderInput({percent, sign}) : this._handleGestureBrightnessSliderInput({percent, sign})
   } catch(e) {
@@ -3520,19 +3551,19 @@ class _T_M_G_Video_Player {
       this.gestureTouchXCheck = false
       this.videoContainer.removeEventListener("touchmove", this._handleGestureTouchXMove, {passive: false})
       this.DOM.touchTimelineNotifier?.classList.remove("T_M_G-video-control-active")
-      this.video.currentTime = this.gestureNextTime
+      if (!this.gestureTouchCanCancel) this.video.currentTime = this.gestureNextTime
     } 
     if (this.gestureTouchYCheck) {
       this.gestureTouchYCheck = false
-      this.removeOverlay()
       this.videoContainer.removeEventListener("touchmove", this._handleGestureTouchYMove, {passive: false})
       this.DOM.touchVolumeNotifier?.classList.remove("T_M_G-video-control-active")
       this.DOM.touchBrightnessNotifier?.classList.remove("T_M_G-video-control-active")
+      if (!this.gestureTouchCanCancel) this.removeOverlay()
     }
     if (this.gestureTouchTimeoutId) {
       clearTimeout(this.gestureTouchTimeoutId)
-      //tm: removing listener user is not scrolling
-      this.videoContainer.removeEventListener("touchmove", this._handleGestureTouchEnd, {passive: true})
+      this.videoContainer.removeEventListener("touchmove", this.setGestureTouchCancel, {passive: true})
+      this.gestureTouchCanCancel = true
     }
     this.videoContainer.removeEventListener("touchmove", this._handleGestureTouchInit, {once: true, passive: false})
     this.videoContainer.removeEventListener("touchend", this._handleGestureTouchEnd)

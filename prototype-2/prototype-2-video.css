@@ -65,8 +65,8 @@
 /* time variables */
 :where(:root, .T_M_G-video-container, .T_M_G-pseudo-video-container) {
   --T_M_G-video-fade-transition-time: 200ms;
-  --T_M_G-video-transition-time: 500ms;
-  --T_M_G-video-notifiers-animation-time: 1s;
+  --T_M_G-video-motion-transition-time: 350ms;
+  --T_M_G-video-notifiers-animation-time: 1000ms;
   --T_M_G-video-loader-animation-time: 1250ms;
 }
 
@@ -146,7 +146,6 @@
 
 /* settings variables */
 :where(:root, .T_M_G-video-container, .T_M_G-pseudo-video-container) {
-  --T_M_G-video-settings-view-transition-time: var(--T_M_G-video-transition-time);
   --T_M_G-video-settings-view-transition-time: 500ms;
   --T_M_G-video-settings-content-padding: calc(var(--T_M_G-video-current-unit)/1.75);
   --T_M_G-video-settings-background-color: rgba(0,0,0,.75);
@@ -1563,7 +1562,7 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 .T_M_G-video-container .T_M_G-video-captions-btn::after {
-  transition: scale var(--T_M_G-video-transition-time) ease;
+  transition: scale var(--T_M_G-video-motion-transition-time) ease;
 }
 
 .T_M_G-video-container .T_M_G-video-captions-notifier::after {
@@ -1631,11 +1630,13 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-container:not(.T_M_G-video-cue-dragging).T_M_G-video-overlay .T_M_G-video-cue-container,
 .T_M_G-video-container:not(.T_M_G-video-cue-dragging):has(:focus-visible) .T_M_G-video-cue-container {
   bottom: clamp(calc(var(--T_M_G-video-current-unit)*2.5), var(--T_M_G-video-current-cue-y), calc(100% - (var(--T_M_G-video-current-unit)*3)));
+  transition: bottom var(--T_M_G-video-motion-transition-time) ease;
 }
 
 .T_M_G-video-container:not(.T_M_G-video-cue-dragging)[data-timeline-position="bottom"].T_M_G-video-overlay .T_M_G-video-cue-container,
 .T_M_G-video-container:not(.T_M_G-video-cue-dragging)[data-timeline-position="bottom"]:has(:focus-visible) .T_M_G-video-cue-container {
   bottom: clamp(calc(var(--T_M_G-video-current-unit)*2), var(--T_M_G-video-current-cue-y), calc(100% - (var(--T_M_G-video-current-unit)*3)));
+  transition: bottom var(--T_M_G-video-motion-transition-time) ease;
 }
 
 .T_M_G-video-timeline-container {
