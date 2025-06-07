@@ -2218,7 +2218,7 @@ class _T_M_G_Video_Player {
       percent = percent * multiplier
       const time = sign === "+" ? this.currentTime + (percent * this.duration) : this.currentTime - (percent * this.duration)
       this.gestureNextTime = window.tmg.clamp(0, Math.floor(time), this.duration)
-      if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${window.tmg.formatTime(Math.abs(this.gestureNextTime - this.currentTime))} (${window.tmg.formatTime(this.gestureNextTime)}) ${multiplier < 1 ? `x ${multiplier}` : ''}`
+      if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${window.tmg.formatTime(Math.abs(this.gestureNextTime - this.currentTime))} (${window.tmg.formatTime(this.gestureNextTime)}) ${multiplier < 1 ? `x${multiplier}` : ''}`
     } catch(e) {
       this._log(e, "error", "swallow")
     }      
@@ -3517,8 +3517,8 @@ class _T_M_G_Video_Player {
     deltaY = y - this.lastGestureTouchY,
     sign = deltaX >= 0 ? "+" : "-",
     percent = window.tmg.clamp(0, Math.abs(deltaX), width) / width,
-    mY = window.tmg.clamp(0, Math.abs(deltaY), (height/2)),
-    multiplier = 1 - (mY / (height/2))
+    mY = window.tmg.clamp(0, Math.abs(deltaY), (height*0.4)),
+    multiplier = 1 - (mY / (height*0.4))
     this._handleGestureTimelineInput({percent, sign, multiplier})
   } catch(e) {
     this._log(e, "error", "swallow")
