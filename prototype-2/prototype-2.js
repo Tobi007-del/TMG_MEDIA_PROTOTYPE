@@ -11,7 +11,6 @@ typeof window !== "undefined" ? console.log("%cTMG Media Player Available", "col
 class _T_M_G_Video_Player {
   constructor(videoOptions) {
   try {
-    videoOptions = { ...videoOptions }
     this.initialized = false
     this.bindMethods()
     //turning the video build into the Video Player Instance
