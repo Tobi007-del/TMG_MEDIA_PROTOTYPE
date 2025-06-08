@@ -40,6 +40,7 @@ class _T_M_G_Video_Player {
     this.miniPlayerThrottleDelay = 10
     this.timelineThrottleId = null
     this.timelineThrottleDelay = 50
+    this.cuePositionX = this.cuePositionY = null
     this.cueDraggingThrottleId = null
     this.cueDraggingThrottleDelay = 50
     this.gestureTouchMoveThrottleId = null
@@ -2487,6 +2488,9 @@ class _T_M_G_Video_Player {
       cueWrapper.appendChild(cueLine)
     })
     this.DOM.cueContainer.appendChild(cueWrapper)
+    this.videoCurrentCueContainerHeight = this.DOM.cueContainer.offsetHeight + 'px'
+    this.videoCurrentCueContainerWidth = this.DOM.cueContainer.offsetWidth + 'px'
+    this.changeCuePosition()
   } catch(e) {
     this._log(e, "error", "swallow")
   }
@@ -2502,25 +2506,36 @@ class _T_M_G_Video_Player {
   }
   }
 
-  _handleCueDragging({clientX: x, clientY: y}) {
+  _handleCueDragging({clientX, clientY}) {
   try {
     this.DOM.videoContainer.classList.add("T_M_G-video-cue-dragging")
 
     if (this.cueDraggingThrottleId !== null) return
     this.cueDraggingThrottleId = setTimeout(() => this.cueDraggingThrottleId = null, this.cueDraggingThrottleDelay)
 
+    this.cuePositionX = clientX
+    this.cuePositionY = clientY
+    this.changeCuePosition()
+  } catch(e) {
+    this._log(e, "error", "swallow")
+  }
+  } 
+
+  changeCuePosition() {
+  try {
+    if (!this.cuePositionX || !this.cuePositionY) return
     const rect = this.videoContainer.getBoundingClientRect(),
     { offsetWidth: w, offsetHeight: h } = this.DOM.cueContainer,
     xR = 0,
     yR = 0,
-    posX = window.tmg.clamp(xR + w/2, rect.width - (x - rect.left), rect.width - w/2 - xR),
-    posY = window.tmg.clamp(yR, rect.height - (y - rect.top + h/2), rect.height - h - yR)
+    posX = window.tmg.clamp(xR + w/2, rect.width - (this.cuePositionX - rect.left), rect.width - w/2 - xR),
+    posY = window.tmg.clamp(yR, rect.height - (this.cuePositionY - rect.top + h/2), rect.height - h - yR)
     this.videoCurrentCueX = `${Math.round(posX/rect.width * 100)}%`
     this.videoCurrentCueY = `${Math.round(posY/rect.height * 100)}%`
   } catch(e) {
     this._log(e, "error", "swallow")
   }
-  } 
+  }
 
   _handleCueDragEnd() {
   try {

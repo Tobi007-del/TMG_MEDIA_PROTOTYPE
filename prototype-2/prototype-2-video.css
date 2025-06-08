@@ -39,6 +39,8 @@
   --T_M_G-video-current-touch-slider-width: var(--T_M_G-video-current-unit);
   --T_M_G-video-current-touch-slider-height: calc(var(--T_M_G-video-current-unit)*12.5);
   --T_M_G-video-current-touch-slider-border-radius: 0;
+  --T_M_G-video-current-cue-container-height: 0;
+  --T_M_G-video-current-cue-container-width: 0;
 }
 
 /* position variables */
@@ -1629,13 +1631,13 @@ button:has(.T_M_G-video-next-icon) svg {
 
 .T_M_G-video-container:not(.T_M_G-video-cue-dragging).T_M_G-video-overlay .T_M_G-video-cue-container,
 .T_M_G-video-container:not(.T_M_G-video-cue-dragging):has(:focus-visible) .T_M_G-video-cue-container {
-  bottom: clamp(calc(var(--T_M_G-video-current-unit)*2.5), var(--T_M_G-video-current-cue-y), calc(100% - (var(--T_M_G-video-current-unit)*3)));
+  bottom: clamp(calc(var(--T_M_G-video-current-unit)*2.5), var(--T_M_G-video-current-cue-y), calc(100% - (var(--T_M_G-video-current-unit)*2) - var(--T_M_G-video-current-cue-container-height)));
   transition: bottom var(--T_M_G-video-motion-transition-time) ease;
 }
 
 .T_M_G-video-container:not(.T_M_G-video-cue-dragging)[data-timeline-position="bottom"].T_M_G-video-overlay .T_M_G-video-cue-container,
 .T_M_G-video-container:not(.T_M_G-video-cue-dragging)[data-timeline-position="bottom"]:has(:focus-visible) .T_M_G-video-cue-container {
-  bottom: clamp(calc(var(--T_M_G-video-current-unit)*2), var(--T_M_G-video-current-cue-y), calc(100% - (var(--T_M_G-video-current-unit)*3)));
+  bottom: clamp(calc(var(--T_M_G-video-current-unit)*2), var(--T_M_G-video-current-cue-y), calc(100% - (var(--T_M_G-video-current-unit)*2) - var(--T_M_G-video-current-cue-container-height)));
   transition: bottom var(--T_M_G-video-motion-transition-time) ease;
 }
 
