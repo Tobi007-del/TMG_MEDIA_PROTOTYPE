@@ -33,21 +33,15 @@ class _T_M_G_Video_Player {
     this.playlistCurrentTime = null
     this.inFullScreen = false
     this.wasPaused = !this.video.autoplay
-    this.keyDownThrottleId = null
+    this.throttleMap = {}
     this.keyDownThrottleDelay = 10
-    this.miniPlayerThrottleId = null
-    this.miniPlayerThrottleDelay = 10
-    this.timelineThrottleId = null
-    this.timelineThrottleDelay = 50
-    this.cuePositionX = this.cuePositionY = null
-    this.cueDraggingThrottleId = null
-    this.cueDraggingThrottleDelay = 50
-    this.gestureTouchMoveThrottleId = null
-    this.gestureTouchMoveThrottleDelay = 50
-    this.speedThrottleId = null
-    this.speedThrottleDelay = 100
-    this.dragOverThrottleId = null
+    this.miniPlayerDraggingThrottleDelay = 10
+    this.cueDraggingThrottleDelay = 10
+    this.gestureTouchMoveThrottleDelay = 10
     this.dragOverThrottleDelay = 20
+    this.timelineInputThrottleDelay = 50
+    this.speedPointerMoveThrottleDelay = 100
+    this.cuePositionX = this.cuePositionY = null
     this.lastRate = this.video.playbackRate ?? 1
     this.isScrubbing = false
     this.parentIntersecting = true
@@ -225,6 +219,14 @@ class _T_M_G_Video_Player {
       default:
         if (this.debug) console.log(message)
     }
+  }
+
+  _isThrottled(key) {
+    return this.throttleMap?.[key] != null
+  }
+
+  _setThrottle(key, delay) {
+    this.throttleMap[key] = setTimeout(() => delete this.throttleMap[key], delay)
   }
 
   replaceVideo() {
@@ -2175,8 +2177,8 @@ class _T_M_G_Video_Player {
 
   _handleTimelineInput({clientX: x}) { 
   try {      
-    if (this.timelineThrottleId !== null) return
-    this.timelineThrottleId = setTimeout(() => this.timelineThrottleId = null, this.timelineThrottleDelay)
+    if (this._isThrottled("timelineInput")) return
+    this._setThrottle("timelineInput", this.timelineInputThrottleDelay)
 
     const rect = this.DOM.timelineContainer?.getBoundingClientRect()
     const percent = window.tmg.clamp(0, x - rect.left, rect.width) / rect.width
@@ -2509,8 +2511,8 @@ class _T_M_G_Video_Player {
   try {
     this.DOM.videoContainer.classList.add("T_M_G-video-cue-dragging")
 
-    if (this.cueDraggingThrottleId !== null) return
-    this.cueDraggingThrottleId = setTimeout(() => this.cueDraggingThrottleId = null, this.cueDraggingThrottleDelay)
+    if (this._isThrottled("cueDragging")) return
+    this._setThrottle("cueDragging", this.cueDraggingThrottleDelay)
 
     this.cuePositionX = clientX
     this.cuePositionY = clientY
@@ -3170,8 +3172,8 @@ class _T_M_G_Video_Player {
     this.videoContainer.classList.remove("T_M_G-video-overlay")
 	  this.videoContainer.classList.add("T_M_G-video-movement")
 
-    if (this.miniPlayerThrottleId !== null) return
-    this.miniPlayerThrottleId = setTimeout(() => this.miniPlayerThrottleId = null, this.miniPlayerThrottleDelay)
+    if (this._isThrottled("miniPlayerDragging")) return
+    this._setThrottle("miniPlayerDragging", this.miniPlayerDraggingThrottleDelay)
 
     let {innerWidth: ww, innerHeight: wh} = window,
     {offsetWidth: w, offsetHeight: h} = this.videoContainer
@@ -3520,8 +3522,8 @@ class _T_M_G_Video_Player {
     if (this.gestureTouchCanCancel) return this._handleGestureTouchEnd()
     else this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
 
-    if (this.gestureTouchMoveThrottleId !== null) return
-    this.gestureTouchMoveThrottleId = setTimeout(() => this.gestureTouchMoveThrottleId = null, this.gestureTouchMoveThrottleDelay)
+    if (this._isThrottled("gestureTouchMove")) return
+    this._setThrottle("gestureTouchMove", this.gestureTouchMoveThrottleDelay)
 
     const width = this.videoContainer.offsetWidth,
     height = this.videoContainer.offsetHeight,
@@ -3545,8 +3547,8 @@ class _T_M_G_Video_Player {
     if (!this.isModeActive("fullScreen") && this.gestureTouchCanCancel) return this._handleGestureTouchEnd()      
     else this.gestureTouchZone.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
 
-    if (this.gestureTouchMoveThrottleId !== null) return
-    this.gestureTouchMoveThrottleId = setTimeout(() => this.gestureTouchMoveThrottleId = null, this.gestureTouchMoveThrottleDelay)
+    if (this._isThrottled("gestureTouchMove")) return
+    this._setThrottle("gestureTouchMove", this.gestureTouchMoveThrottleDelay)
 
     const height = this.gestureTouchZone?.x === "right" ? (this.videoContainer.offsetHeight * 0.7) * this.maxVolumeRatio : this.videoContainer.offsetHeight * this.maxBrightnessRatio,
     y = e.clientY ?? e.targetTouches[0].clientY,
@@ -3625,8 +3627,8 @@ class _T_M_G_Video_Player {
   _handleSpeedPointerMove(e) {
   try {
     if (e.touches?.length > 1) return 
-    if (this.speedThrottleId !== null) return
-    this.speedThrottleId = setTimeout(() => this.speedThrottleId = null, this.speedThrottleDelay)
+    if (this._isThrottled("speedPointerMove")) return
+    this._setThrottle("speedPointerMove", this.speedPointerMoveThrottleDelay)
     
     const rect = this.videoContainer.getBoundingClientRect()
     const x = e.clientX ?? e.targetTouches[0].clientX
@@ -3711,8 +3713,8 @@ class _T_M_G_Video_Player {
   try {
     if (!this.keyEventAllowed(e)) return
     
-    if (this.keyDownThrottleId !== null) return
-    this.keyDownThrottleId = setTimeout(() => this.keyDownThrottleId = null, this.keyDownThrottleDelay)
+    if (this._isThrottled("keyDown")) return
+    this._setThrottle("keyDown", this.keyDownThrottleDelay)
     
     switch (e.key.toString().toLowerCase()) {
       case " ":
@@ -3914,8 +3916,8 @@ class _T_M_G_Video_Player {
     if (e.target.dataset.dropzone && this.dragging) {
       e.preventDefault()
 
-      if (this.dragOverThrottleId !== null) return
-      this.dragOverThrottleId = setTimeout(() => this.dragOverThrottleId = null, this.dragOverThrottleDelay)
+      if (this._isThrottled("dragOver")) return
+      this._setThrottle("dragOver", this.dragOverThrottleDelay)
 
       e.dataTransfer.dropEffect = "move"
       const afterControl = this.getControlAfterDragging(e.target, e.clientX)
