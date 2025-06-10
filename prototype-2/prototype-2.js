@@ -33,10 +33,8 @@ class _T_M_G_Video_Player {
     this.playlistCurrentTime = null
     this.inFullScreen = false
     this.wasPaused = !this.video.autoplay
-    this.throttleMap = {}
+    this.timeoutThrottleMap = this.rafThrottleMap = new Map()
     this.keyDownThrottleDelay = 10
-    this.miniPlayerDraggingThrottleDelay = 10
-    this.cueDraggingThrottleDelay = 10
     this.gestureTouchMoveThrottleDelay = 10
     this.dragOverThrottleDelay = 20
     this.timelineInputThrottleDelay = 50
@@ -221,12 +219,48 @@ class _T_M_G_Video_Player {
     }
   }
 
-  _isThrottled(key) {
-    return this.throttleMap?.[key] != null
+  _timeoutThrottle(key, fn, delay = 50) {
+    if (this.timeoutThrottleMap.has(key)) return
+    const id = setTimeout(() => {
+      this.timeoutThrottleMap.delete(key)
+      fn()
+    }, delay)
+    this.timeoutThrottleMap.set(key, id)
   }
 
-  _setThrottle(key, delay) {
-    this.throttleMap[key] = setTimeout(() => delete this.throttleMap[key], delay)
+  _cancelTimeoutThrottle(key) {
+    const id = this.timeoutThrottleMap.get(key)
+    if (id) {
+      clearTimeout(id)
+      this.timeoutThrottleMap.delete(key)
+    }
+    this.timeoutThrottleMap[key] = false
+  }
+
+  _RAFThrottle(key, fn) {
+    if (this.rafThrottleMap.has(key)) return;
+    const id = requestAnimationFrame(() => {
+      this.rafThrottleMap.delete(key)
+      fn()
+    })
+    this.rafThrottleMap.set(key, id)
+  }
+
+  _cancelRAFThrottle(key) {
+    const id = this.rafThrottleMap.get(key)
+    if (id) {
+      cancelAnimationFrame(id)
+      this.rafThrottleMap.delete(key)
+    }
+  }
+
+  _cancelAllThrottles() {
+    for (const key of this.timeoutThrottleMap.keys()) {
+      this._cancelTimeoutThrottle(key)
+    }
+    for (const key of this.rafThrottleMap.keys()) {
+      this._cancelRAFThrottle(key)
+    }
   }
 
   replaceVideo() {
@@ -252,7 +286,8 @@ class _T_M_G_Video_Player {
     this.video = clonedVideo
   }
 
-  _destroy() {    
+  _destroy() {
+    this._cancelAllThrottles()
     this.removeAudio()
     this.leaveSettingsView()
     this.unobserveIntersection()
@@ -1927,31 +1962,26 @@ class _T_M_G_Video_Player {
         if (e.touches?.length > 1) return
         e.stopImmediatePropagation()
         pointerStartX = e.clientX ?? e.targetTouches[0]?.clientX
-        pointerTicker = false
         playlistToastContainer.addEventListener('touchmove', handleToastPointerMove, {passive: false})
         isPaused = true
       },
       handleToastPointerMove = e => {
         e.preventDefault()
         e.stopImmediatePropagation()
-        if (pointerTicker) return
-        pointerRAF = requestAnimationFrame(() => {
+        this._RAFThrottle("toastPointerMove", () => {
           let x = e.clientX ?? e.targetTouches[0]?.clientX
           pointerDeltaX = x - pointerStartX
           playlistToastContainer.style.setProperty("transition", "none", "important")
           playlistToastContainer.style.setProperty("transform", `translateX(${pointerDeltaX}px)`, "important")
           playlistToastContainer.style.setProperty("opacity", window.tmg.clamp(0, 1 - (Math.abs(pointerDeltaX) / playlistToastContainer.offsetWidth), 1), "important")
-          pointerTicker = false
         })
-        pointerTicker = true
       },
       handleToastPointerEnd = () => {
-        cancelAnimationFrame(pointerRAF)
+        this._cancelRAFThrottle("toastPointerMove")
         if (Math.abs(pointerDeltaX) > (playlistToastContainer.offsetWidth*0.4)) {
           cleanUpPlaylistToast(true)
           return
         } 
-        pointerTicker = false
         playlistToastContainer.removeEventListener('touchmove', handleToastPointerMove, {passive: false})
         playlistToastContainer.style.removeProperty("transition")
         playlistToastContainer.style.removeProperty("transform")
@@ -1969,8 +1999,6 @@ class _T_M_G_Video_Player {
       timeVisible = 0,
       pointerStartX,
       pointerDeltaX,
-      pointerTicker = false,
-      pointerRAF,
       nextVideoCountdown = count,
       nextVideoFrameId = requestAnimationFrame(updatePlaylistToast)
 
@@ -2177,9 +2205,7 @@ class _T_M_G_Video_Player {
 
   _handleTimelineInput({clientX: x}) { 
   try {      
-    if (this._isThrottled("timelineInput")) return
-    this._setThrottle("timelineInput", this.timelineInputThrottleDelay)
-
+  this._timeoutThrottle("timelineInput", () => {
     const rect = this.DOM.timelineContainer?.getBoundingClientRect()
     const percent = window.tmg.clamp(0, x - rect.left, rect.width) / rect.width
     const previewImgMin = (this.DOM.previewContainer.offsetWidth / 2) / rect.width
@@ -2209,6 +2235,7 @@ class _T_M_G_Video_Player {
       arrowPosition = `${Math.min(((this.DOM.previewContainer.offsetWidth/2 + (percent * rect.width) - this.DOM.previewContainer.offsetLeft)), this.DOM.previewContainer.offsetWidth - arrowPositionMin)}px`
     } else arrowPosition = "50%"
     this.videoCurrentPreviewImgArrowPosition = arrowPosition
+  }, this.timelineInputThrottleDelay)
   } catch(e) {
     this._log(e, "error", "swallow")
   }      
@@ -2511,9 +2538,6 @@ class _T_M_G_Video_Player {
   try {
     this.DOM.videoContainer.classList.add("T_M_G-video-cue-dragging")
 
-    if (this._isThrottled("cueDragging")) return
-    this._setThrottle("cueDragging", this.cueDraggingThrottleDelay)
-
     this.cuePositionX = clientX
     this.cuePositionY = clientY
     this.changeCuePosition()
@@ -2525,14 +2549,16 @@ class _T_M_G_Video_Player {
   changeCuePosition() {
   try {
     if (!this.cuePositionX || !this.cuePositionY) return
-    const rect = this.videoContainer.getBoundingClientRect(),
-    { offsetWidth: w, offsetHeight: h } = this.DOM.cueContainer,
-    xR = 0,
-    yR = 0,
-    posX = window.tmg.clamp(xR + w/2, rect.width - (this.cuePositionX - rect.left), rect.width - w/2 - xR),
-    posY = window.tmg.clamp(yR, rect.height - (this.cuePositionY - rect.top + h/2), rect.height - h - yR)
-    this.videoCurrentCueX = `${Math.round(posX/rect.width * 100)}%`
-    this.videoCurrentCueY = `${Math.round(posY/rect.height * 100)}%`
+    this._RAFThrottle("cueDragging", () => {
+      const rect = this.videoContainer.getBoundingClientRect(),
+      { offsetWidth: w, offsetHeight: h } = this.DOM.cueContainer,
+      xR = 0,
+      yR = 0,
+      posX = window.tmg.clamp(xR + w/2, rect.width - (this.cuePositionX - rect.left), rect.width - w/2 - xR),
+      posY = window.tmg.clamp(yR, rect.height - (this.cuePositionY - rect.top + h/2), rect.height - h - yR)
+      this.videoCurrentCueX = `${Math.round(posX/rect.width * 100)}%`
+      this.videoCurrentCueY = `${Math.round(posY/rect.height * 100)}%`
+    })
   } catch(e) {
     this._log(e, "error", "swallow")
   }
@@ -3172,19 +3198,18 @@ class _T_M_G_Video_Player {
     this.videoContainer.classList.remove("T_M_G-video-overlay")
 	  this.videoContainer.classList.add("T_M_G-video-movement")
 
-    if (this._isThrottled("miniPlayerDragging")) return
-    this._setThrottle("miniPlayerDragging", this.miniPlayerDraggingThrottleDelay)
-
-    let {innerWidth: ww, innerHeight: wh} = window,
-    {offsetWidth: w, offsetHeight: h} = this.videoContainer
-    const x = e.clientX ?? e.changedTouches[0].clientX,
-    y = e.clientY ?? e.changedTouches[0].clientY,
-    xR = 0,
-    yR = 0,
-    posX = window.tmg.clamp(xR, ww - x - w/2, ww - w - xR),
-    posY = window.tmg.clamp(yR, wh - y - h/2, wh - h - yR)
-    this.videoCurrentMiniPlayerX = `${Math.round(posX/ww * 100)}%`
-    this.videoCurrentMiniPlayerY = `${Math.round(posY/wh * 100)}%`
+    this._RAFThrottle("miniPlayerDragging", () => {
+      let {innerWidth: ww, innerHeight: wh} = window,
+      {offsetWidth: w, offsetHeight: h} = this.videoContainer
+      const x = e.clientX ?? e.changedTouches[0].clientX,
+      y = e.clientY ?? e.changedTouches[0].clientY,
+      xR = 0,
+      yR = 0,
+      posX = window.tmg.clamp(xR, ww - x - w/2, ww - w - xR),
+      posY = window.tmg.clamp(yR, wh - y - h/2, wh - h - yR)
+      this.videoCurrentMiniPlayerX = `${Math.round(posX/ww * 100)}%`
+      this.videoCurrentMiniPlayerY = `${Math.round(posY/wh * 100)}%`
+    })
   } catch(e) {
     this._log(e, "error", "swallow")
   }
@@ -3522,20 +3547,19 @@ class _T_M_G_Video_Player {
     if (this.gestureTouchCanCancel) return this._handleGestureTouchEnd()
     else this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
 
-    if (this._isThrottled("gestureTouchMove")) return
-    this._setThrottle("gestureTouchMove", this.gestureTouchMoveThrottleDelay)
-
-    const width = this.videoContainer.offsetWidth,
-    height = this.videoContainer.offsetHeight,
-    x = e.clientX ?? e.targetTouches[0].clientX,
-    y = e.clientY ?? e.targetTouches[0].clientY,
-    deltaX = x - this.lastGestureTouchX,
-    deltaY = y - this.lastGestureTouchY,
-    sign = deltaX >= 0 ? "+" : "-",
-    percent = window.tmg.clamp(0, Math.abs(deltaX), width) / width,
-    mY = window.tmg.clamp(0, Math.abs(deltaY), (height*0.4)),
-    multiplier = 1 - (mY / (height*0.4))
-    this._handleGestureTimelineInput({percent, sign, multiplier})
+    this._timeoutThrottle("gestureTouchMove", () => {
+      const width = this.videoContainer.offsetWidth,
+      height = this.videoContainer.offsetHeight,
+      x = e.clientX ?? e.targetTouches[0].clientX,
+      y = e.clientY ?? e.targetTouches[0].clientY,
+      deltaX = x - this.lastGestureTouchX,
+      deltaY = y - this.lastGestureTouchY,
+      sign = deltaX >= 0 ? "+" : "-",
+      percent = window.tmg.clamp(0, Math.abs(deltaX), width) / width,
+      mY = window.tmg.clamp(0, Math.abs(deltaY), (height*0.4)),
+      multiplier = 1 - (mY / (height*0.4))
+      this._handleGestureTimelineInput({percent, sign, multiplier})
+    }, this.gestureTouchMoveThrottleDelay)
   } catch(e) {
     this._log(e, "error", "swallow")
   }
@@ -3547,16 +3571,15 @@ class _T_M_G_Video_Player {
     if (!this.isModeActive("fullScreen") && this.gestureTouchCanCancel) return this._handleGestureTouchEnd()      
     else this.gestureTouchZone.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
 
-    if (this._isThrottled("gestureTouchMove")) return
-    this._setThrottle("gestureTouchMove", this.gestureTouchMoveThrottleDelay)
-
-    const height = this.gestureTouchZone?.x === "right" ? (this.videoContainer.offsetHeight * 0.7) * this.maxVolumeRatio : this.videoContainer.offsetHeight * this.maxBrightnessRatio,
-    y = e.clientY ?? e.targetTouches[0].clientY,
-    deltaY = y - this.lastGestureTouchY,
-    sign = deltaY >= 0 ? "-" : "+",
-    percent = window.tmg.clamp(0, Math.abs(deltaY), height) / height
-    this.lastGestureTouchY = y
-    this.gestureTouchZone?.x === "right" ? this._handleGestureVolumeSliderInput({percent, sign}) : this._handleGestureBrightnessSliderInput({percent, sign})
+    this._timeoutThrottle("gestureTouchMove", () => {
+      const height = this.gestureTouchZone?.x === "right" ? (this.videoContainer.offsetHeight * 0.7) * this.maxVolumeRatio : this.videoContainer.offsetHeight * this.maxBrightnessRatio,
+      y = e.clientY ?? e.targetTouches[0].clientY,
+      deltaY = y - this.lastGestureTouchY,
+      sign = deltaY >= 0 ? "-" : "+",
+      percent = window.tmg.clamp(0, Math.abs(deltaY), height) / height
+      this.lastGestureTouchY = y
+      this.gestureTouchZone?.x === "right" ? this._handleGestureVolumeSliderInput({percent, sign}) : this._handleGestureBrightnessSliderInput({percent, sign})
+    }, this.gestureTouchMoveThrottleDelay)
   } catch(e) {
     this._log(e, "error", "swallow")
   }
@@ -3627,17 +3650,17 @@ class _T_M_G_Video_Player {
   _handleSpeedPointerMove(e) {
   try {
     if (e.touches?.length > 1) return 
-    if (this._isThrottled("speedPointerMove")) return
-    this._setThrottle("speedPointerMove", this.speedPointerMoveThrottleDelay)
     
-    const rect = this.videoContainer.getBoundingClientRect()
-    const x = e.clientX ?? e.targetTouches[0].clientX
-    const currPos = x - rect.left >= rect.width * 0.5 ? "forwards" : "backwards"
-    if (currPos !== this.speedDirection) {
-      this.speedDirection = currPos
-      this.slowDown()
-      this.speedUp(this.speedDirection)
-    }
+    this._timeoutThrottle("speedPointerMove", () => {
+      const rect = this.videoContainer.getBoundingClientRect()
+      const x = e.clientX ?? e.targetTouches[0].clientX
+      const currPos = x - rect.left >= rect.width * 0.5 ? "forwards" : "backwards"
+      if (currPos !== this.speedDirection) {
+        this.speedDirection = currPos
+        this.slowDown()
+        this.speedUp(this.speedDirection)
+      }
+    }, this.speedPointerMoveThrottleDelay)
   } catch(e) {
     this._log(e, "error", "swallow")
   }
@@ -3711,11 +3734,9 @@ class _T_M_G_Video_Player {
 
   _handleKeyDown(e) {
   try {
-    if (!this.keyEventAllowed(e)) return
+  if (!this.keyEventAllowed(e)) return
     
-    if (this._isThrottled("keyDown")) return
-    this._setThrottle("keyDown", this.keyDownThrottleDelay)
-    
+  this._timeoutThrottle("keyDown", () => {
     switch (e.key.toString().toLowerCase()) {
       case " ":
         if (document.activeElement.tagName === 'BUTTON') return
@@ -3776,6 +3797,7 @@ class _T_M_G_Video_Player {
         this.fire("fwd")
         break                     
     }
+  }, this.keyDownThrottleDelay)
   } catch(e) {
     this._log(e, "error", "swallow")
   }      
@@ -3915,14 +3937,13 @@ class _T_M_G_Video_Player {
   try {
     if (e.target.dataset.dropzone && this.dragging) {
       e.preventDefault()
-
-      if (this._isThrottled("dragOver")) return
-      this._setThrottle("dragOver", this.dragOverThrottleDelay)
-
       e.dataTransfer.dropEffect = "move"
-      const afterControl = this.getControlAfterDragging(e.target, e.clientX)
-      if (afterControl) e.target.insertBefore(this.dragging, afterControl) 
-      else e.target.appendChild(this.dragging)       
+
+      this._timeoutThrottle("dragOver", () => {
+        const afterControl = this.getControlAfterDragging(e.target, e.clientX)
+        if (afterControl) e.target.insertBefore(this.dragging, afterControl) 
+        else e.target.appendChild(this.dragging)       
+      }, this.dragOverThrottleDelay)
     }
   } catch(e) {
     this._log(e, "error", "swallow")
