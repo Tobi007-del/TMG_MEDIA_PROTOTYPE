@@ -33,7 +33,9 @@ class _T_M_G_Video_Player {
     this.playlistCurrentTime = null
     this.inFullScreen = false
     this.wasPaused = !this.video.autoplay
-    this.timeoutThrottleMap = this.rafThrottleMap = new Map()
+    this.throttleMap = new Map()
+    this.rafLoopMap = new Map()
+    this.rafLoopFnMap = new Map()
     this.keyDownThrottleDelay = 10
     this.gestureTouchMoveThrottleDelay = 10
     this.dragOverThrottleDelay = 20
@@ -219,53 +221,82 @@ class _T_M_G_Video_Player {
     }
   }
 
-  _timeoutThrottle(key, fn, delay = 50) {
-    if (this.timeoutThrottleMap.has(key)) return
+  _throttle(key, fn, delay = 10) {
+    if (this.throttleMap.has(key)) return
     const id = setTimeout(() => {
-      this.timeoutThrottleMap.delete(key)
+      this.throttleMap.delete(key)
       fn()
     }, delay)
-    this.timeoutThrottleMap.set(key, id)
+    this.throttleMap.set(key, id)
   }
 
   _cancelTimeoutThrottle(key) {
-    const id = this.timeoutThrottleMap.get(key)
+    const id = this.throttleMap.get(key)
     if (id) {
       clearTimeout(id)
-      this.timeoutThrottleMap.delete(key)
+      this.throttleMap.delete(key)
     }
-    this.timeoutThrottleMap[key] = false
+    this.throttleMap[key] = false
   }
 
-  _RAFThrottle(key, fn) {
-    if (this.rafThrottleMap.has(key)) return;
-    const id = requestAnimationFrame(() => {
-      this.rafThrottleMap.delete(key)
-      fn()
-    })
-    this.rafThrottleMap.set(key, id)
+  _RAFLoop(key, fn) {
+    this.rafLoopFnMap.set(key, fn)
+    if (this.rafLoopMap.has(key)) return
+    let id
+    const loop = () => {
+      const fn = this.rafLoopFnMap.get(key)
+      typeof fn === "function" && fn()
+      id = requestAnimationFrame(loop)
+      this.rafLoopMap.set(key, id)
+    }
+    id = requestAnimationFrame(loop)
+    this.rafLoopMap.set(key, id)
   }
 
-  _cancelRAFThrottle(key) {
-    const id = this.rafThrottleMap.get(key)
+  _cancelRAFLoop(key) {
+    const id = this.rafLoopMap.get(key)
     if (id) {
       cancelAnimationFrame(id)
-      this.rafThrottleMap.delete(key)
+      this.rafLoopFnMap.delete(key)
+      this.rafLoopMap.delete(key)
     }
   }
 
   _cancelAllThrottles() {
-    for (const key of this.timeoutThrottleMap.keys()) {
+    for (const key of this.throttleMap.keys()) {
       this._cancelTimeoutThrottle(key)
     }
-    for (const key of this.rafThrottleMap.keys()) {
-      this._cancelRAFThrottle(key)
+    for (const key of this.rafLoopMap.keys()) {
+      this._cancelRAFLoop(key)
     }
   }
 
+  _cleanUpDOM()  {
+    if (this.isModeActive("floatingPlayer")) {
+      this.floatingPlayer?.addEventListener("pagehide", () => {
+        // at this point, the video is left to fend off alone and handle his own destruction cuz destroy can't be made asynchronous cuz of one event
+        this.videoContainer.classList = ''
+        this.pseudoVideoContainer.parentElement?.insertBefore(this.video, this.pseudoVideoContainer)
+        this.pseudoVideoContainer.remove()
+        this.replaceVideo()
+        this.video.tmgcontrols = false
+        window.tmg.initMedia(this.video, true)
+      })
+      this.floatingPlayer?.close()
+    } else if (this.isModeActive("miniPlayer")) {
+      if (document.documentElement.contains(this.video)) this.pseudoVideoContainer.parentElement?.insertBefore(this.video, this.pseudoVideoContainer)
+      this.pseudoVideoContainer.remove()
+    } else if (document.documentElement.contains(this.video)) this.videoContainer.parentElement?.insertBefore(this.video, this.videoContainer)
+    this.videoContainer.remove()
+  }
+
   replaceVideo() {
+    if (this.isModeActive("floatingPlayer")) return
+    this.video.classList.remove("T_M_G-video")
+    this.video.classList.remove("T_M_G-media")
     const clonedVideo = this.video.cloneNode(true)
-    this.video.parentElement.replaceChild(clonedVideo, this.video)
+    this.video.parentElement?.replaceChild(clonedVideo, this.video)
+    clonedVideo.tmgPlayer = this.video.tmgPlayer
     // Playback control
     if (this.video.currentTime) clonedVideo.currentTime = this.video.currentTime;
     if (this.video.playbackRate !== 1) clonedVideo.playbackRate = this.video.playbackRate;
@@ -282,7 +313,7 @@ class _T_M_G_Video_Player {
     if (this.video.playsInline) clonedVideo.playsInline = true;
     if (this.video.controlsList && this.video.controlsList.length) clonedVideo.controlsList = this.video.controlsList;
     if (this.video.disablePictureInPicture) clonedVideo.disablePictureInPicture = true; 
-    if (!this.video.paused) clonedVideo.play()
+    if (!this.video.paused && clonedVideo.parentElement) clonedVideo.play()
     this.video = clonedVideo
   }
 
@@ -290,19 +321,14 @@ class _T_M_G_Video_Player {
     this._cancelAllThrottles()
     this.removeAudio()
     this.leaveSettingsView()
+    this.unobserveResize()
     this.unobserveIntersection()
     this.removeKeyEventListeners()
     this.removeVideoEventListeners()
-    this.video.classList.remove("T_M_G-video")
-    this.video.classList.remove("T_M_G-media")
-    if (this.initialState) this.video.removeEventListener("play", this.removeInitialState, {once:true})
-    if (this.isModeActive("miniPlayer")) {
-      this.pseudoVideoContainer.parentElement.insertBefore(this.video, this.pseudoVideoContainer)
-      this.pseudoVideoContainer.remove()
-    } else this.videoContainer.parentElement.insertBefore(this.video, this.videoContainer)
+    this._cleanUpDOM()
     //had to do this to get rid of stateful issues and freezing
     this.replaceVideo()
-    this.videoContainer.remove()
+    return this.video
   }
 
   bindMethods() {
@@ -326,7 +352,7 @@ class _T_M_G_Video_Player {
         return []
       }
     })
-    .filter(cssRule => cssRule instanceof CSSStyleRule && cssRule.selectorText.includes(":root, .T_M_G-video-container, .T_M_G-pseudo-video-container"))
+    .filter(cssRule => cssRule instanceof CSSStyleRule && cssRule.selectorText.replaceAll(" ", "").includes(":root,:root,:root,:root,:root"))
     .flatMap(cssRule => {
       return [...cssRule.style].map(property => {
         const value = cssRule.style.getPropertyValue(property)
@@ -431,10 +457,11 @@ class _T_M_G_Video_Player {
 
   buildVideoPlayerInterface() {
   try {    
+    this.mutatingDOMNodes = true
     if (this.media?.artwork && (this.media.artwork[0]?.src !== this.video.poster)) this.video.poster = this.media.artwork[0].src
     if (!this.videoContainer) {
       this.videoContainer = document.createElement('div')
-      this.video.parentElement.insertBefore(this.videoContainer, this.video)
+      this.video.parentElement?.insertBefore(this.videoContainer, this.video)
     }
     this.initCSSVariablesManager()
     this.videoContainer.classList.add("T_M_G-video-container")
@@ -479,6 +506,7 @@ class _T_M_G_Video_Player {
     this.buildVideoControllerStructure()
     this.retrieveVideoPlayerDOM()
     this.initializeVideoPlayer()
+    setTimeout(() => this.mutatingDOMNodes = false)
   } catch(e) {
     this._log(e, "error", "swallow")
   }                  
@@ -1084,6 +1112,8 @@ class _T_M_G_Video_Player {
 
   initializeVideoPlayer() {
   try {
+    this._handleMediaResize()
+    this.observeResize()
     this.controlsResize()
     if (!(this.video.currentSrc || this.video.src)) {
       this._handleLoadedError() 
@@ -1206,6 +1236,7 @@ class _T_M_G_Video_Player {
 
   setPreviewImagesState() {
   try {
+    this.videoAltImgSrc = `url(${window.tmg.ALT_IMG_SRC})`
     this.videoContainer.classList.toggle("T_M_G-video-no-previews", !this.settings.previewImages)
     this.videoContainer.setAttribute("data-preview-type", this.settings.status.ui.previewImages ? "image" : "canvas")
     if (!this.settings.status.ui.previewImages && this.settings.previewImages) {
@@ -1404,6 +1435,7 @@ class _T_M_G_Video_Player {
 
   removeVideoEventListeners() {
   try {
+    if (this.initialState) this.video.removeEventListener("play", this.removeInitialState, {once:true})
     this.video.removeEventListener("error", this._handleLoadedError)
     this.video.removeEventListener("play", this._handlePlay)
     this.video.removeEventListener("pause", this._handlePause)      
@@ -1534,6 +1566,24 @@ class _T_M_G_Video_Player {
   }
   }
 
+  observeResize() {
+    try {
+      window.tmg.resizeObserver.observe(this.videoContainer)
+      window.tmg.resizeObserver.observe(this.pseudoVideoContainer)
+    } catch(e) {
+      this._log(e, "error", "swallow")
+    }         
+  }
+  
+  unobserveResize() {
+    try {
+      window.tmg.resizeObserver.unobserve(this.videoContainer)
+      window.tmg.resizeObserver.unobserve(this.pseudoVideoContainer)
+    } catch(e) {
+      this._log(e, "error", "swallow")
+    }      
+  }
+
   observeIntersection() {
   try {
     window.tmg.intersectionObserver.observe(this.videoContainer.parentElement)
@@ -1550,6 +1600,32 @@ class _T_M_G_Video_Player {
   } catch(e) {
     this._log(e, "error", "swallow")
   }      
+  }
+
+  _handleMediaResize(isPseudo = false) {
+  try {
+    const getTier = container => {
+      const { offsetWidth: w, offsetHeight: h } = container
+      return {
+        tier: h <= 120 ? "xxxxx" :
+          w <= 280 ? "xxxx" :
+          w <= 380 ? "xxx" :
+          w <= 480 ? "xx" :
+          w <= 630 ? "x" : "",
+        shouldRepeat: w < 1 && h < 1
+      }
+    }
+    if (!isPseudo) {
+      const { tier, shouldRepeat } = getTier(this.videoContainer)
+      this.videoContainer.dataset.sizeTier = tier
+      shouldRepeat && requestAnimationFrame(this._handleMediaResize)
+    } else {
+      const { tier } = getTier(this.pseudoVideoContainer)
+      this.pseudoVideoContainer.dataset.sizeTier = tier
+    }
+  } catch(e) {
+    this._log(e, "error", "swallow")
+  }    
   }
 
   _handleMediaIntersectionChange(isIntersecting) {
@@ -1690,9 +1766,12 @@ class _T_M_G_Video_Player {
 
   activatePseudoMode() {
   try {
-    this.pseudoVideoContainer.className += this.videoContainer.className.replace("T_M_G-video-container", "")
-    this.videoContainer.parentElement.insertBefore(this.pseudoVideoContainer, this.videoContainer)
+    this.mutatingDOMNodes = true
+    this.pseudoVideoContainer.className += " " + this.videoContainer.className.replace("T_M_G-video-container", "")
+    this.pseudoVideo.className += " " + this.video.className.replace("T_M_G-media T_M_G-video", "")
+    this.videoContainer.parentElement?.insertBefore(this.pseudoVideoContainer, this.videoContainer)
     document.body.append(this.videoContainer)
+    setTimeout(() => this.mutatingDOMNodes = false)
   } catch(e) {
     this._log(e, "error", "swallow")
   } 
@@ -1700,9 +1779,12 @@ class _T_M_G_Video_Player {
 
   deactivatePseudoMode() {
   try {
+    this.mutatingDOMNodes = true
     this.pseudoVideoContainer.className = "T_M_G-pseudo-video-container"
-    this.pseudoVideoContainer.parentElement.insertBefore(this.videoContainer, this.pseudoVideoContainer)
+    this.pseudoVideo.className = "T_M_G-pseudo-video  T_M_G-media"
+    this.pseudoVideoContainer.parentElement?.insertBefore(this.videoContainer, this.pseudoVideoContainer)
     this.pseudoVideoContainer.remove()
+    setTimeout(() => this.mutatingDOMNodes = false)
   } catch(e) {
     this._log(e, "error", "swallow")
   } 
@@ -1731,7 +1813,7 @@ class _T_M_G_Video_Player {
   }
 
   _handleWindowResize() {
-  try {      
+  try {
     this.toggleMiniPlayerMode()
   } catch(e) {
     this._log(e, "error", "swallow")
@@ -1795,6 +1877,7 @@ class _T_M_G_Video_Player {
 
   _handleLoadedMetadata() {
   try {
+    this._handleMediaResize()
     if (this.settings.startTime) this.currentTime = this.settings.startTime
     if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatTime(this.video.duration)
     this.aspectRatio = this.video.videoWidth / this.video.videoHeight
@@ -1968,7 +2051,7 @@ class _T_M_G_Video_Player {
       handleToastPointerMove = e => {
         e.preventDefault()
         e.stopImmediatePropagation()
-        this._RAFThrottle("toastPointerMove", () => {
+        this._RAFLoop("toastPointerMove", () => {
           let x = e.clientX ?? e.targetTouches[0]?.clientX
           pointerDeltaX = x - pointerStartX
           playlistToastContainer.style.setProperty("transition", "none", "important")
@@ -1977,7 +2060,7 @@ class _T_M_G_Video_Player {
         })
       },
       handleToastPointerEnd = () => {
-        this._cancelRAFThrottle("toastPointerMove")
+        this._cancelRAFLoop("toastPointerMove")
         if (Math.abs(pointerDeltaX) > (playlistToastContainer.offsetWidth*0.4)) {
           cleanUpPlaylistToast(true)
           return
@@ -2205,7 +2288,7 @@ class _T_M_G_Video_Player {
 
   _handleTimelineInput({clientX: x}) { 
   try {      
-  this._timeoutThrottle("timelineInput", () => {
+  this._throttle("timelineInput", () => {
     const rect = this.DOM.timelineContainer?.getBoundingClientRect()
     const percent = window.tmg.clamp(0, x - rect.left, rect.width) / rect.width
     const previewImgMin = (this.DOM.previewContainer.offsetWidth / 2) / rect.width
@@ -2549,7 +2632,7 @@ class _T_M_G_Video_Player {
   changeCuePosition() {
   try {
     if (!this.cuePositionX || !this.cuePositionY) return
-    this._RAFThrottle("cueDragging", () => {
+    this._RAFLoop("cueDragging", () => {
       const rect = this.videoContainer.getBoundingClientRect(),
       { offsetWidth: w, offsetHeight: h } = this.DOM.cueContainer,
       xR = 0,
@@ -2566,6 +2649,7 @@ class _T_M_G_Video_Player {
 
   _handleCueDragEnd() {
   try {
+    this._cancelRAFLoop("cueDragging")
     this.DOM.videoContainer.classList.remove("T_M_G-video-cue-dragging")
     this.DOM.cueContainer.removeEventListener("pointermove", this._handleCueDragging)
   } catch(e) {
@@ -2761,8 +2845,8 @@ class _T_M_G_Video_Player {
 
   _handleVolumeContainerMouseMove() {
   try {      
-    if (this.DOM.volumeSlider?.parentElement.matches(':hover')) {
-      this.DOM.volumeSlider?.parentElement.classList.add("T_M_G-video-control-active")
+    if (this.DOM.volumeSlider?.parentElement?.matches(':hover')) {
+      this.DOM.volumeSlider?.parentElement?.classList.add("T_M_G-video-control-active")
       this.volumeActiveRestraint()
     }
   } catch(e) {
@@ -2773,7 +2857,7 @@ class _T_M_G_Video_Player {
   volumeActiveRestraint() {
   try {
     if (this.volumeActiveRestraintId) clearTimeout(this.volumeActiveRestraintId)
-    this.volumeActiveRestraintId = setTimeout(() => this.DOM.volumeSlider?.parentElement.classList.remove("T_M_G-video-control-active"), this.settings.overlayRestraint)  
+    this.volumeActiveRestraintId = setTimeout(() => this.DOM.volumeSlider?.parentElement?.classList.remove("T_M_G-video-control-active"), this.settings.overlayRestraint)  
   } catch(e) {
     this._log(e, "error", "swallow")
   }
@@ -2919,8 +3003,8 @@ class _T_M_G_Video_Player {
 
   _handleBrightnessContainerMouseMove() {
   try {      
-    if (this.DOM.brightnessSlider?.parentElement.matches(':hover')) {
-      this.DOM.brightnessSlider?.parentElement.classList.add("T_M_G-video-control-active")
+    if (this.DOM.brightnessSlider?.parentElement?.matches(':hover')) {
+      this.DOM.brightnessSlider?.parentElement?.classList.add("T_M_G-video-control-active")
       this.brightnessActiveRestraint()
     }
   } catch(e) {
@@ -2931,7 +3015,7 @@ class _T_M_G_Video_Player {
   brightnessActiveRestraint() {
   try {
     if (this.brightnessActiveRestraintId) clearTimeout(this.brightnessActiveRestraintId)
-    this.brightnessActiveRestraintId = setTimeout(() => this.DOM.brightnessSlider?.parentElement.classList.remove("T_M_G-video-control-active"), this.settings.overlayRestraint)  
+    this.brightnessActiveRestraintId = setTimeout(() => this.DOM.brightnessSlider?.parentElement?.classList.remove("T_M_G-video-control-active"), this.settings.overlayRestraint)  
   } catch(e) {
     this._log(e, "error", "swallow")
   }
@@ -3115,6 +3199,7 @@ class _T_M_G_Video_Player {
     this.videoContainer.classList.add("T_M_G-video-progress-bar")
     this.videoContainer.classList.add("T_M_G-video-floating-player")
     this.floatingPlayer?.addEventListener("pagehide", this._handleFloatingPlayerClose)
+    this.floatingPlayer.addEventListener("resize", this._handleMediaResize)
     this.floatingPlayer?.document.body.append(this.videoContainer)
     }
   } catch(e) {
@@ -3198,7 +3283,7 @@ class _T_M_G_Video_Player {
     this.videoContainer.classList.remove("T_M_G-video-overlay")
 	  this.videoContainer.classList.add("T_M_G-video-movement")
 
-    this._RAFThrottle("miniPlayerDragging", () => {
+    this._RAFLoop("miniPlayerDragging", () => {
       let {innerWidth: ww, innerHeight: wh} = window,
       {offsetWidth: w, offsetHeight: h} = this.videoContainer
       const x = e.clientX ?? e.changedTouches[0].clientX,
@@ -3217,6 +3302,7 @@ class _T_M_G_Video_Player {
 
   emptyMiniPlayerListeners() {
   try {
+    this._cancelRAFLoop("miniPlayerDragging")
     this.videoContainer.classList.remove("T_M_G-video-movement")
     this.showOverlay()
     document.removeEventListener("mousemove", this._handleMiniPlayerPosition)
@@ -3547,7 +3633,7 @@ class _T_M_G_Video_Player {
     if (this.gestureTouchCanCancel) return this._handleGestureTouchEnd()
     else this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
 
-    this._timeoutThrottle("gestureTouchMove", () => {
+    this._throttle("gestureTouchMove", () => {
       const width = this.videoContainer.offsetWidth,
       height = this.videoContainer.offsetHeight,
       x = e.clientX ?? e.targetTouches[0].clientX,
@@ -3571,7 +3657,7 @@ class _T_M_G_Video_Player {
     if (!this.isModeActive("fullScreen") && this.gestureTouchCanCancel) return this._handleGestureTouchEnd()      
     else this.gestureTouchZone.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
 
-    this._timeoutThrottle("gestureTouchMove", () => {
+    this._throttle("gestureTouchMove", () => {
       const height = this.gestureTouchZone?.x === "right" ? (this.videoContainer.offsetHeight * 0.7) * this.maxVolumeRatio : this.videoContainer.offsetHeight * this.maxBrightnessRatio,
       y = e.clientY ?? e.targetTouches[0].clientY,
       deltaY = y - this.lastGestureTouchY,
@@ -3651,7 +3737,7 @@ class _T_M_G_Video_Player {
   try {
     if (e.touches?.length > 1) return 
     
-    this._timeoutThrottle("speedPointerMove", () => {
+    this._throttle("speedPointerMove", () => {
       const rect = this.videoContainer.getBoundingClientRect()
       const x = e.clientX ?? e.targetTouches[0].clientX
       const currPos = x - rect.left >= rect.width * 0.5 ? "forwards" : "backwards"
@@ -3736,7 +3822,7 @@ class _T_M_G_Video_Player {
   try {
   if (!this.keyEventAllowed(e)) return
     
-  this._timeoutThrottle("keyDown", () => {
+  this._throttle("keyDown", () => {
     switch (e.key.toString().toLowerCase()) {
       case " ":
         if (document.activeElement.tagName === 'BUTTON') return
@@ -3939,9 +4025,9 @@ class _T_M_G_Video_Player {
       e.preventDefault()
       e.dataTransfer.dropEffect = "move"
 
-      this._timeoutThrottle("dragOver", () => {
+      this._throttle("dragOver", () => {
         const afterControl = this.getControlAfterDragging(e.target, e.clientX)
-        if (afterControl) e.target.insertBefore(this.dragging, afterControl) 
+        if (afterControl) e.target?.insertBefore(this.dragging, afterControl) 
         else e.target.appendChild(this.dragging)       
       }, this.dragOverThrottleDelay)
     }
@@ -3988,7 +4074,7 @@ class _T_M_G_Media_Player {
 
   constructor(customOptions) {
     this.Player = null
-    this.#build = window.tmg._DEFAULT_VIDEO_BUILD
+    this.#build = { ...window.tmg._DEFAULT_VIDEO_BUILD }
     this.builder(customOptions)
   }
   
@@ -4044,10 +4130,12 @@ class _T_M_G_Media_Player {
 
   detach() {
     if (this.#active) {
-      this.Player?._destroy()
+      this.#medium = this.Player?._destroy()
       if (window.tmg.Players.indexOf(this.Player) !== -1) window.tmg.Players?.splice(window.tmg.Players.indexOf(this.Player), 1)
       this.Player = null
       this.#active = false
+      this.#medium.tmgcontrols = false
+      window.tmg.initMedia(this.#medium, true)
     }
   }
 
@@ -4059,7 +4147,7 @@ class _T_M_G_Media_Player {
         return res.json()
       }).catch(({message}) => {
         console.error(`${message}`)
-        console.warn("TMG requires a valid JSON file")
+        console.warn("TMG requires a valid JSON file for parsing your video options")
         fetchedControls = undefined
       })
     }
@@ -4089,7 +4177,7 @@ class _T_M_G_Media_Player {
     if (this.#medium.tagName === 'VIDEO') {
       this.#active = true
       this.#medium.controls = false
-      this.#medium.setAttribute('tmgcontrols', "")
+      this.#medium.tmgcontrols = true
       this.#medium.classList.add("T_M_G-media")
       this.#medium.classList.add("T_M_G-video")
       //doing some cleanup to make sure no necessary settings were removed
@@ -4206,7 +4294,7 @@ class _T_M_G_Media_Player {
       this.#build.settings = {...window.tmg._DEFAULT_VIDEO_BUILD.settings, ...settings}
       this.#build.video = this.#medium
       //window.tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/drag-drop-touch-polyfill.js", "script")
-      await window.tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css")
+      await window.tmg.loadResource(window.tmg.VIDEO_CSS_SRC)
       this.Player = new _T_M_G_Video_Player(this.#build)
       window.tmg.Players.push(this.Player)
       this.Player.fire("tmgready", this.#medium, {loaded: true})
@@ -4285,12 +4373,19 @@ class tmg {
       },
     },
   }
-  static ALT_IMG_SRC = "/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png"
   static _RESOURCE_CACHE = {}
   static _AUDIO_CONTEXT = null
+  static _INTERNAL_MUTATION_SET = new WeakSet()
+  static _INTERNAL_MUTATION_ID = null
   static _CURRENT_AUDIO_GAIN_NODE = null
   static _CURRENT_FULL_SCREEN_PLAYER = null
   static _PICTURE_IN_PICTURE_ACTIVE = false
+  static get VIDEO_CSS_SRC() {
+    return window.TMG_VIDEO_CSS_SRC || "/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css"
+  }
+  static get ALT_IMG_SRC() { 
+    return window.TMG_ALT_IMG_SRC || "/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png"
+  }
   static get userSettings() {
     if (localStorage._tmgUserVideoSettings) 
       return JSON.parse(localStorage._tmgUserVideoSettings)
@@ -4302,17 +4397,18 @@ class tmg {
   static mountMedia() {
     Object.defineProperty(HTMLVideoElement.prototype, 'tmgcontrols', {
       get: function() {
-        return this._____tmgctrlsRef || false
+        return this.hasAttribute("tmgcontrols")
       },
-      set: function(value) {
+      set: async function(value) {
         const bool = Boolean(value)
-        this._____tmgctrlsRef = bool
         if (bool) {
-          this.tmgPlayer?.attach(this)
+          if (!window.tmg._INTERNAL_MUTATION_SET.has(this)) window.tmg._INTERNAL_MUTATION_SET.add(this)
+          await this.tmgPlayer?.attach(this)
           this.setAttribute("tmgcontrols", "")
         } else {
-          this.tmgPlayer?.detach()
+          if (this.hasAttribute("tmgcontrols") && !window.tmg._INTERNAL_MUTATION_SET.has(this)) window.tmg._INTERNAL_MUTATION_SET.add(this)
           this.removeAttribute("tmgcontrols")
+          this.tmgPlayer?.detach()
         }
       },
       enumerable: true,
@@ -4328,7 +4424,7 @@ class tmg {
       window.tmg.initMedia(medium)
       window.tmg.mutationObserver.observe(medium, {attributes: true})
     }
-    window.tmg.DOMMutationObserver.observe(document.documentElement, {childList: true, subtree: true})      
+    window.tmg.DOMMutationObserver.observe(document.documentElement, {childList: true, subtree: true})
     window.addEventListener("resize", window.tmg._handleWindowResize)
     document.addEventListener("fullscreenchange", window.tmg._handleFullScreenChange)
     document.addEventListener("webkitfullscreenchange", window.tmg._handleFullScreenChange)
@@ -4339,17 +4435,31 @@ class tmg {
   }
   static intersectionObserver = (typeof window !== "undefined") && new IntersectionObserver(entries => {
     for (const {target, isIntersecting} of entries) {
-      target.classList.contains("T_M_G-media") ? target.tmgPlayer?.Player?._handleMediaIntersectionChange(isIntersecting) : target.querySelector(".T_M_G-media").tmgPlayer?.Player?._handleMediaParentIntersectionChange(isIntersecting)
+      target.classList.contains("T_M_G-media") ? target.tmgPlayer?.Player?._handleMediaIntersectionChange(isIntersecting) : target.querySelector(".T_M_G-media")?.tmgPlayer?.Player?._handleMediaParentIntersectionChange(isIntersecting)
     }
   }, {root: null, rootMargin: '-10px', threshold: 0})
+  static resizeObserver = (typeof window !== "undefined") && new ResizeObserver(entries => {
+    for (const { target } of entries) {
+      const isPseudo = target.className.includes("T_M_G-pseudo")
+      target?.classList.contains("T_M_G-media") ? target?.tmgPlayer?.Player?._handleMediaResize(isPseudo) : target?.querySelector(".T_M_G-media").tmgPlayer?.Player?._handleMediaResize(isPseudo)
+    }
+  })
   static mutationObserver = (typeof window !== "undefined") && new MutationObserver(mutations => {
     for (const mutation of mutations) {
       const video = mutation.target
       if (mutation.type === "attributes") {
         if (mutation.attributeName === "tmgcontrols") {
-          video._____tmgctrlsRef = video.hasAttribute("tmgcontrols")
+          if (!window.tmg._INTERNAL_MUTATION_SET.has(video)) {
+            window.tmg._INTERNAL_MUTATION_SET.add(video)
+            video.tmgcontrols = video.hasAttribute("tmgcontrols")
+          }
+          if (!window.tmg._INTERNAL_MUTATION_ID) 
+          window.tmg._INTERNAL_MUTATION_ID = setTimeout(() => {
+            window.tmg._INTERNAL_MUTATION_SET.delete(video)
+            window.tmg._INTERNAL_MUTATION_ID = null
+          })
         } else if (mutation.attributeName.startsWith("tmg")) {
-          if (video.hasAttribute(mutation.attributeName)) player.fetchCustomOptions()
+          if (video.hasAttribute(mutation.attributeName)) video.tmgPlayer?.fetchCustomOptions()
         }
       }
     }
@@ -4357,30 +4467,35 @@ class tmg {
   static DOMMutationObserver = (typeof window !== "undefined") && new MutationObserver(mutations => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
-        if ((node.tagName === 'VIDEO') && !node.classList.contains("T_M_G-media")) {
-          window.tmg.initMedia(node)
-          window.tmg.mutationObserver.observe(node, {attributes: true})
+        if (node.tagName && (node.matches("video:not(.T_M_G-media") || node.querySelector("video:not(.T_M_G-media)"))) {
+          const nodes = [...(node.querySelector("video:not(.T_M_G-media)") ? node.querySelectorAll("video:not(.T_M_G-media)") : [node])]
+          for (const node of nodes) {
+            window.tmg.initMedia(node)
+            window.tmg.mutationObserver.observe(node, {attributes: true})
+            node.tmgcontrols = node.hasAttribute("tmgcontrols")
+          }
         }
       }
       for (const node of mutation.removedNodes) {
-        if ((node.tagName === 'VIDEO') && node.classList.contains("T_M_G-media") && !document.documentElement.contains(node)) {
-          node.tmgPlayer?.detach()
-          node.tmgPlayer = null
+        if (node.tagName && (node.matches("video.T_M_G-media") || node.querySelector("video.T_M_G-media")) && !document.documentElement.contains(node)) {
+          const nodes = [...(node.querySelector("video.T_M_G-media") ? node.querySelectorAll("video.T_M_G-media") : [node])]
+          for (const node of nodes) {
+            if (node.tmgPlayer?.Player?.mutatingDOMNodes) return
+            node.tmgPlayer?.detach()
+            node.tmgPlayer = null
+          }
         }
       }
     }
   })
-  static initMedia(media) {
+  static initMedia(media, reset = false) {
     if (window.tmg.isIterable(media)) {
       for (const medium of media) {
         _initMedium(medium)
       }
     } else _initMedium(media)
     function _initMedium(medium) {
-      if (!medium.tmgPlayer) {
-        const player = new window.tmg.Player()
-        player._initMedium(medium)
-      }
+      if (!medium.tmgPlayer || reset) (new window.tmg.Player())._initMedium(medium)
     }
   }
   static _handleWindowResize() {
