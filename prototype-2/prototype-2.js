@@ -223,10 +223,8 @@ class _T_M_G_Video_Player {
 
   _throttle(key, fn, delay = 10) {
     if (this.throttleMap.has(key)) return
-    const id = setTimeout(() => {
-      this.throttleMap.delete(key)
-      fn()
-    }, delay)
+    const id = setTimeout(() => this.throttleMap.delete(key), delay)
+    fn()
     this.throttleMap.set(key, id)
   }
 
@@ -272,31 +270,38 @@ class _T_M_G_Video_Player {
   }
 
   _cleanUpDOM()  {
+    this.mutatingDOMNodes = true
+    this.video.classList.remove("T_M_G-video")
+    this.video.classList.remove("T_M_G-media")
     if (this.isModeActive("floatingPlayer")) {
       this.floatingPlayer?.addEventListener("pagehide", () => {
         // at this point, the video is left to fend off alone and handle his own destruction cuz destroy can't be made asynchronous cuz of one event
-        this.videoContainer.classList = ''
         this.pseudoVideoContainer.parentElement?.insertBefore(this.video, this.pseudoVideoContainer)
         this.pseudoVideoContainer.remove()
+        this.videoContainer.remove()
         this.replaceVideo()
         this.video.tmgcontrols = false
         window.tmg.initMedia(this.video, true)
       })
+      this.floatingPlayer?.removeEventListener("pagehide", this._handleFloatingPlayerClose)
       this.floatingPlayer?.close()
     } else if (this.isModeActive("miniPlayer")) {
       if (document.documentElement.contains(this.video)) this.pseudoVideoContainer.parentElement?.insertBefore(this.video, this.pseudoVideoContainer)
       this.pseudoVideoContainer.remove()
-    } else if (document.documentElement.contains(this.video)) this.videoContainer.parentElement?.insertBefore(this.video, this.videoContainer)
-    this.videoContainer.remove()
+      this.videoContainer.remove()
+    } else if (document.documentElement.contains(this.video)) {
+      this.videoContainer.parentElement?.insertBefore(this.video, this.videoContainer)
+      this.videoContainer.remove()
+    }
+    // setTimeout(() => this.mutatingDOMNodes = false)
   }
 
   replaceVideo() {
+    this.mutatingDOMNodes = true
     if (this.isModeActive("floatingPlayer")) return
-    this.video.classList.remove("T_M_G-video")
-    this.video.classList.remove("T_M_G-media")
     const clonedVideo = this.video.cloneNode(true)
-    this.video.parentElement?.replaceChild(clonedVideo, this.video)
     clonedVideo.tmgPlayer = this.video.tmgPlayer
+    this.video.parentElement?.replaceChild(clonedVideo, this.video)
     // Playback control
     if (this.video.currentTime) clonedVideo.currentTime = this.video.currentTime;
     if (this.video.playbackRate !== 1) clonedVideo.playbackRate = this.video.playbackRate;
@@ -315,6 +320,7 @@ class _T_M_G_Video_Player {
     if (this.video.disablePictureInPicture) clonedVideo.disablePictureInPicture = true; 
     if (!this.video.paused && clonedVideo.parentElement) clonedVideo.play()
     this.video = clonedVideo
+    // setTimeout(() => this.mutatingDOMNodes = false)
   }
 
   _destroy() {
@@ -1112,7 +1118,7 @@ class _T_M_G_Video_Player {
 
   initializeVideoPlayer() {
   try {
-    this._handleMediaResize()
+    this.syncAspectRatio()
     this.observeResize()
     this.controlsResize()
     if (!(this.video.currentSrc || this.video.src)) {
@@ -1137,6 +1143,7 @@ class _T_M_G_Video_Player {
   addInitialState() {
   try {
     if (this.initialState) {
+    if (this.settings.startTime && !this.video.poster) this.currentTime = this.settings.startTime
     this.videoContainer.classList.add("T_M_G-video-initial")
     this.video.addEventListener("play", this.removeInitialState, {once:true})
     this.DOM.mainPlayPauseBtn?.addEventListener("click", this.removeInitialState)
@@ -1568,6 +1575,7 @@ class _T_M_G_Video_Player {
 
   observeResize() {
     try {
+      this._handleMediaResize()
       window.tmg.resizeObserver.observe(this.videoContainer)
       window.tmg.resizeObserver.observe(this.pseudoVideoContainer)
     } catch(e) {
@@ -1875,13 +1883,21 @@ class _T_M_G_Video_Player {
   } 
   }
 
-  _handleLoadedMetadata() {
+  syncAspectRatio() {
   try {
-    this._handleMediaResize()
-    if (this.settings.startTime) this.currentTime = this.settings.startTime
-    if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatTime(this.video.duration)
+    if (!this.video.videoWidth || !this.video.videoHeight) return
     this.aspectRatio = this.video.videoWidth / this.video.videoHeight
     this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`
+  } catch(e) {
+    this._log(e, "error", "swallow")
+  } 
+  }
+
+  _handleLoadedMetadata() {
+  try {
+    if (this.settings.startTime) this.currentTime = this.settings.startTime
+    this.syncAspectRatio()
+    if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatTime(this.video.duration)
     this.videoCurrentProgressPosition = (this.currentTime < 1) ? this.videoCurrentLoadedPosition = 0 : window.tmg.formatNumber(this.video.currentTime / this.video.duration)
     this.loaded = true
     this.reactivate()
@@ -4394,6 +4410,16 @@ class tmg {
   static set userSettings(customSettings) {
     localStorage._tmgUserVideoSettings = JSON.stringify(customSettings)
   }
+  static activateInternalMutation(m, check = true) {
+    if (!window.tmg._INTERNAL_MUTATION_SET.has(m) && check) window.tmg._INTERNAL_MUTATION_SET.add(m)
+  }
+  static deactivateInternalMutation(m) {
+    if (window.tmg._INTERNAL_MUTATION_ID) clearTimeout(window.tmg._INTERNAL_MUTATION_ID)
+    window.tmg._INTERNAL_MUTATION_ID = setTimeout(() => {
+      window.tmg._INTERNAL_MUTATION_SET.delete(m)
+      window.tmg._INTERNAL_MUTATION_ID = null
+    })
+  }
   static mountMedia() {
     Object.defineProperty(HTMLVideoElement.prototype, 'tmgcontrols', {
       get: function() {
@@ -4402,13 +4428,15 @@ class tmg {
       set: async function(value) {
         const bool = Boolean(value)
         if (bool) {
-          if (!window.tmg._INTERNAL_MUTATION_SET.has(this)) window.tmg._INTERNAL_MUTATION_SET.add(this)
+          window.tmg.activateInternalMutation(this)
           await this.tmgPlayer?.attach(this)
           this.setAttribute("tmgcontrols", "")
+          window.tmg.deactivateInternalMutation(this)
         } else {
-          if (this.hasAttribute("tmgcontrols") && !window.tmg._INTERNAL_MUTATION_SET.has(this)) window.tmg._INTERNAL_MUTATION_SET.add(this)
+          window.tmg.activateInternalMutation(this, this.hasAttribute("tmgcontrols"))
           this.removeAttribute("tmgcontrols")
           this.tmgPlayer?.detach()
+          window.tmg.deactivateInternalMutation(this)
         }
       },
       enumerable: true,
@@ -4421,8 +4449,8 @@ class tmg {
   static init() {
     window.tmg.mountMedia()
     for (const medium of document.querySelectorAll("video")) {
+      window.tmg.mutationObserver.observe(medium, { attributes: true })
       window.tmg.initMedia(medium)
-      window.tmg.mutationObserver.observe(medium, {attributes: true})
     }
     window.tmg.DOMMutationObserver.observe(document.documentElement, {childList: true, subtree: true})
     window.addEventListener("resize", window.tmg._handleWindowResize)
@@ -4431,7 +4459,6 @@ class tmg {
     document.addEventListener("mozfullscreenchange", window.tmg._handleFullScreenChange)
     document.addEventListener("msfullscreenchange", window.tmg._handleFullScreenChange)
     document.addEventListener("visibilitychange", window.tmg._handleVisibilityChange)
-    window.tmg.launch()
   }
   static intersectionObserver = (typeof window !== "undefined") && new IntersectionObserver(entries => {
     for (const {target, isIntersecting} of entries) {
@@ -4449,15 +4476,7 @@ class tmg {
       const video = mutation.target
       if (mutation.type === "attributes") {
         if (mutation.attributeName === "tmgcontrols") {
-          if (!window.tmg._INTERNAL_MUTATION_SET.has(video)) {
-            window.tmg._INTERNAL_MUTATION_SET.add(video)
-            video.tmgcontrols = video.hasAttribute("tmgcontrols")
-          }
-          if (!window.tmg._INTERNAL_MUTATION_ID) 
-          window.tmg._INTERNAL_MUTATION_ID = setTimeout(() => {
-            window.tmg._INTERNAL_MUTATION_SET.delete(video)
-            window.tmg._INTERNAL_MUTATION_ID = null
-          })
+          if (!window.tmg._INTERNAL_MUTATION_SET.has(video)) video.tmgcontrols = video.hasAttribute("tmgcontrols")
         } else if (mutation.attributeName.startsWith("tmg")) {
           if (video.hasAttribute(mutation.attributeName)) video.tmgPlayer?.fetchCustomOptions()
         }
@@ -4470,9 +4489,8 @@ class tmg {
         if (node.tagName && (node.matches("video:not(.T_M_G-media") || node.querySelector("video:not(.T_M_G-media)"))) {
           const nodes = [...(node.querySelector("video:not(.T_M_G-media)") ? node.querySelectorAll("video:not(.T_M_G-media)") : [node])]
           for (const node of nodes) {
+            window.tmg.mutationObserver.observe(node, { attributes: true })
             window.tmg.initMedia(node)
-            window.tmg.mutationObserver.observe(node, {attributes: true})
-            node.tmgcontrols = node.hasAttribute("tmgcontrols")
           }
         }
       }
@@ -4481,8 +4499,7 @@ class tmg {
           const nodes = [...(node.querySelector("video.T_M_G-media") ? node.querySelectorAll("video.T_M_G-media") : [node])]
           for (const node of nodes) {
             if (node.tmgPlayer?.Player?.mutatingDOMNodes) return
-            node.tmgPlayer?.detach()
-            node.tmgPlayer = null
+            node.tmgcontrols = false
           }
         }
       }
@@ -4495,7 +4512,10 @@ class tmg {
       }
     } else _initMedium(media)
     function _initMedium(medium) {
-      if (!medium.tmgPlayer || reset) (new window.tmg.Player())._initMedium(medium)
+      if (!medium.tmgPlayer || reset) {
+        (new window.tmg.Player())._initMedium(medium)
+        medium.tmgcontrols = medium.hasAttribute("tmgcontrols")
+      }
     }
   }
   static _handleWindowResize() {
