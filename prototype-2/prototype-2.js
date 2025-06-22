@@ -1615,7 +1615,7 @@ class _T_M_G_Video_Player {
     const getTier = container => {
       const { offsetWidth: w, offsetHeight: h } = container
       return {
-        tier: h <= 120 ? "xxxxx" :
+        tier: h <= 130 ? "xxxxx" :
           w <= 280 ? "xxxx" :
           w <= 380 ? "xxx" :
           w <= 480 ? "xx" :
@@ -1775,8 +1775,10 @@ class _T_M_G_Video_Player {
   activatePseudoMode() {
   try {
     this.mutatingDOMNodes = true
-    this.pseudoVideoContainer.className += " " + this.videoContainer.className.replace("T_M_G-video-container", "")
+    this.pseudoVideo.id = this.video.id
+    this.video.id = ''
     this.pseudoVideo.className += " " + this.video.className.replace("T_M_G-media T_M_G-video", "")
+    this.pseudoVideoContainer.className += " " + this.videoContainer.className.replace("T_M_G-video-container", "")
     this.videoContainer.parentElement?.insertBefore(this.pseudoVideoContainer, this.videoContainer)
     document.body.append(this.videoContainer)
     setTimeout(() => this.mutatingDOMNodes = false)
@@ -1788,8 +1790,10 @@ class _T_M_G_Video_Player {
   deactivatePseudoMode() {
   try {
     this.mutatingDOMNodes = true
-    this.pseudoVideoContainer.className = "T_M_G-pseudo-video-container"
+    this.video.id = this.pseudoVideo.id
+    this.pseudoVideo.id = ''
     this.pseudoVideo.className = "T_M_G-pseudo-video  T_M_G-media"
+    this.pseudoVideoContainer.className = "T_M_G-pseudo-video-container"
     this.pseudoVideoContainer.parentElement?.insertBefore(this.videoContainer, this.pseudoVideoContainer)
     this.pseudoVideoContainer.remove()
     setTimeout(() => this.mutatingDOMNodes = false)
@@ -3215,7 +3219,7 @@ class _T_M_G_Video_Player {
     this.videoContainer.classList.add("T_M_G-video-progress-bar")
     this.videoContainer.classList.add("T_M_G-video-floating-player")
     this.floatingPlayer?.addEventListener("pagehide", this._handleFloatingPlayerClose)
-    this.floatingPlayer.addEventListener("resize", this._handleMediaResize)
+    this.floatingPlayer?.addEventListener("resize", this._handleMediaResize)
     this.floatingPlayer?.document.body.append(this.videoContainer)
     }
   } catch(e) {

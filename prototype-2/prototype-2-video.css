@@ -536,7 +536,6 @@ body:has(.T_M_G-video-container.T_M_G-video-mini-player) .T_M_G-pseudo-video-con
   z-index: 2147483647;
   width: fit-content;
   height: fit-content;
-  border-radius: var(--T_M_G-video-border-radius);
   animation: T_M_G-slide-in 0.25s ease forwards;
   will-change: right, bottom;
   isolation: unset;
@@ -2120,7 +2119,7 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 @media (max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape) {
-  :where(:root) {
+  :where(.T_M_G-video-container:not(.T_M_G-video-mini-player)) {
     --T_M_G-video-border-radius: 0;
   }
   :where(.T_M_G-video, 
@@ -2314,7 +2313,6 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 :is(.T_M_G-video-container, .T_M_G-pseudo-video-container)[data-size-tier^="xxx"] {
   --T_M_G-video-current-unit: var(--T_M_G-video-mini-player-unit);
-  --T_M_G-video-current-controls-gap: calc(var(--T_M_G-video-current-unit)/1.85);
 }
 :is(.T_M_G-video-container, .T_M_G-pseudo-video-container)[data-size-tier^="xxx"] .T_M_G-video-overlay-main-controls-wrapper {
   gap: calc(var(--T_M_G-video-current-unit)*1.25);
@@ -2327,6 +2325,9 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 :is(.T_M_G-video-container, .T_M_G-pseudo-video-container)[data-size-tier^="xxxx"] .T_M_G-video-overlay-main-controls-wrapper {
   gap: calc(var(--T_M_G-video-current-unit)*1);
+}
+:is(.T_M_G-video-container, .T_M_G-pseudo-video-container)[data-size-tier^="xxxx"] .T_M_G-video-controls-container .T_M_G-video-controls-wrapper {
+  padding-inline: 0;
 }
 :is(.T_M_G-video-container, .T_M_G-pseudo-video-container)[data-size-tier^="xxxx"],
 :is(.T_M_G-video-container, .T_M_G-pseudo-video-container)[data-size-tier^="xxxx"].T_M_G-video-scrubbing,
@@ -2366,7 +2367,7 @@ button:has(.T_M_G-video-next-icon) svg {
   pointer-events: none;
 }
 :is(.T_M_G-video-container, .T_M_G-pseudo-video-container)[data-size-tier^="xxxxx"] .T_M_G-video-controls-wrapper > * {
-  padding: 0;
+  padding-block: 0;
 }
 
 /* this style is here to override properties in case of unpredictability in the UI */
