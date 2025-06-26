@@ -350,38 +350,35 @@ class _T_M_G_Video_Player {
 
   //fetching all css varibles from the stylesheet for easy accessibility
   initCSSVariablesManager() {
-    Array.from(document.styleSheets)
-    .flatMap(styleSheet => {
-      try {
-        return [...styleSheet.cssRules]
-      } catch(e) {
-        return []
-      }
-    })
-    .filter(cssRule => cssRule instanceof CSSStyleRule && cssRule.selectorText.replaceAll(" ", "").includes(":root,:root,:root,:root,:root"))
-    .flatMap(cssRule => {
-      return [...cssRule.style].map(property => {
+  for (const sheet of document.styleSheets) {
+    try {
+    for (const cssRule of sheet.cssRules) {
+      if (!cssRule.selectorText?.replace(/\s/g, '')?.includes(":root,.T_M_G-video-container,.T_M_G-pseudo-video-container")) continue
+      for (const property of cssRule.style) {
+        if (!property.startsWith("--T_M_G-video-")) continue
         const value = cssRule.style.getPropertyValue(property)
-        return {property, value}
-      })
-    })
-    .filter(style => style.property.startsWith("--T_M_G-video-"))
-    .forEach(({property, value}) => {
-      const field = window.tmg.camelizeString(property.replace("--T_M_G-", "").replaceAll("-", " "))
-      this.CSSCustomPropertiesCache[field] = value
-      Object.defineProperty(this, field, {  
-        get() {  
-          return getComputedStyle(this.videoContainer).getPropertyValue(property)
-        },  
-        set(value) {  
-          this.videoContainer.style.setProperty(property, value)  
-          this.pseudoVideoContainer.style.setProperty(property, value)
-        },  
-        enumerable: true,  
-        configurable: true  
-      })  
-    })
-  }
+        const field = window.tmg.camelizeString(property.replace("--T_M_G-", "").replaceAll("-", " "))
+        this.CSSCustomPropertiesCache[field] = value
+
+        Object.defineProperty(this, field, {
+          get() {
+            return getComputedStyle(this.videoContainer).getPropertyValue(property)
+          },
+          set(value) {
+            // apply to both for full cascade control
+            this.videoContainer.style.setProperty(property, value)
+            this.pseudoVideoContainer.style.setProperty(property, value)
+          },
+          enumerable: true,
+          configurable: true
+        })
+      }
+    }
+    } catch (e) {
+      continue
+    }
+  } 
+}
 
   fire(eventName, el = this.DOM.notifiersContainer, detail=null, bubbles=true, cancellable=true) {
   try {
@@ -530,10 +527,10 @@ class _T_M_G_Video_Player {
     overlayMainControlsWrapperBuild = document.createElement("div"),
     controlsWrapperBuild = document.createElement("div"),
     leftSidedControlsWrapperBuild = this.settings.status.ui.leftSidedControls ? document.createElement("div") : null,
-    rightSidedControlsWrapperBuild = this.settings.status.ui.rightSidedControls ? document.createElement("div") : null,
-    keyShortcuts = this.fetchKeyShortcuts()
+    rightSidedControlsWrapperBuild = this.settings.status.ui.rightSidedControls ? document.createElement("div") : null
 
-    this.HTML = (() => { 
+    this.HTML = (() => {
+    const keyShortcuts = this.fetchKeyShortcuts()
     return {
       pictureinpicturewrapper :
       `
@@ -3200,16 +3197,19 @@ class _T_M_G_Video_Player {
     }
     this.floatingPlayer = await window.documentPictureInPicture.requestWindow(this.floatingPlayerOptions)
     const style = document.createElement("style")
-    style.textContent = Array.from(document.styleSheets)
-    .flatMap(styleSheet => {
+    let cssText = '';
+    for (const sheet of document.styleSheets) {
       try {
-        return [...styleSheet.cssRules]
-      } catch(e) {
-        return []
+        for (const cssRule of sheet.cssRules) {
+          if (cssRule.cssText.includes("T_M_G")) {
+            cssText += cssRule.cssText
+          }
+        }
+      } catch (e) {
+        continue
       }
-    })
-    .filter(cssRule => cssRule.cssText.includes("T_M_G"))
-    .flatMap(cssRule => cssRule.cssText).join("")
+    }
+    style.textContent = cssText
     this.floatingPlayer?.document.head.appendChild(style)
 
     this.pseudoVideoContainer.append(this.DOM.pictureInPictureWrapper.cloneNode(true))

@@ -1,10 +1,10 @@
 /* font variables */
-:where(:root,:root,:root,:root,:root) {
+:where(:root, .T_M_G-video-container, .T_M_G-pseudo-video-container) {
   --T_M_G-video-font-family: inherit;
 }
 
 /* sizes variables */
-:where(:root,:root,:root,:root,:root) {
+:where(:root, .T_M_G-video-container, .T_M_G-pseudo-video-container) {
   --T_M_G-video-relative-unit: 26px;
   --T_M_G-video-aspect-ratio: auto;
   --T_M_G-video-object-fit: contain;
@@ -27,7 +27,7 @@
   --T_M_G-video-max-touch-slider-height: 70%;
 }
 
-:root,:root,:root,:root,:root {
+:root, .T_M_G-video-container, .T_M_G-pseudo-video-container {
   --T_M_G-video-current-unit: var(--T_M_G-video-relative-unit);
   --T_M_G-video-current-controls-gap: calc(var(--T_M_G-video-current-unit)/1.6);
   --T_M_G-video-current-loader-thickness: calc(var(--T_M_G-video-current-unit)/7);
@@ -42,7 +42,7 @@
 }
 
 /* position variables */
-:root,:root,:root,:root,:root {
+:root, .T_M_G-video-container, .T_M_G-pseudo-video-container {
   --T_M_G-video-current-mini-player-x: 7.5px;
   --T_M_G-video-current-mini-player-y: 7.5px;
   --T_M_G-video-current-cue-x: 50%;
@@ -63,7 +63,7 @@
 }
 
 /* time variables */
-:where(:root,:root,:root,:root,:root) {
+:where(:root, .T_M_G-video-container, .T_M_G-pseudo-video-container) {
   --T_M_G-video-fade-transition-time: 200ms;
   --T_M_G-video-motion-transition-time: 350ms;
   --T_M_G-video-notifiers-animation-time: 1000ms;
@@ -71,7 +71,7 @@
 }
 
 /* color variables */
-:where(:root,:root,:root,:root,:root) {
+:where(:root, .T_M_G-video-container, .T_M_G-pseudo-video-container) {
   --T_M_G-video-alt-img-src: "";
   --T_M_G-video-brightness: 100;
   --T_M_G-video-text-color: var(--T_M_G-video-theme-accent-color);
@@ -84,10 +84,7 @@
   --T_M_G-video-theme-inverse-accent-color: hsl(from var(--T_M_G-video-theme-inverse-color) h s calc(l + 45));
   --T_M_G-video-focus-visible-color: var(--T_M_G-video-brand-accent-color);
   --T_M_G-video-background: black;
-  --T_M_G-video-curtain-color: rgb(from var(--T_M_G-video-background) r g b/.5);
-  --T_M_G-video-loader-color: var(--T_M_G-video-controls-color);
-  --T_M_G-video-loader-alt-color: var(--T_M_G-video-brand-accent-color);
-  --T_M_G-video-loader-base-color: var(--T_M_G-video-theme-inverse-accent-color);
+  --T_M_G-video-curtain-color: rgb(from var(--T_M_G-video-theme-inverse-color) r g b/.5);
   --T_M_G-video-main-timeline-background: linear-gradient(to right, var(--T_M_G-video-brand-color) 80%, var(--T_M_G-video-brand-accent-color));
   --T_M_G-video-timeline-base-background: hsl(from var(--T_M_G-video-theme-inverse-accent-color) h s l/.5);
   --T_M_G-video-preview-timeline-background: hsl(from var(--T_M_G-video-theme-inverse-accent-color) h s l/.75);
@@ -109,16 +106,19 @@
   --T_M_G-video-thumb-indicator-background: var(--T_M_G-video-brand-color);
 }
 
-:root,:root,:root,:root,:root {
+:root, .T_M_G-video-container, .T_M_G-pseudo-video-container {
   --T_M_G-video-current-curtain-color: transparent;
 }
 
 /* icons variables */
-:where(:root,:root,:root,:root,:root) {
+:where(:root, .T_M_G-video-container, .T_M_G-pseudo-video-container) {
   --T_M_G-video-icons-color: var(--T_M_G-video-theme-color);
   --T_M_G-video-icons-hover-color: var(--T_M_G-video-icons-color);
   --T_M_G-video-controls-color: var(--T_M_G-video-icons-color);
   --T_M_G-video-controls-hover-color: var(--T_M_G-video-icons-hover-color);
+  --T_M_G-video-loader-color: var(--T_M_G-video-controls-color);
+  --T_M_G-video-loader-alt-color: var(--T_M_G-video-brand-accent-color);
+  --T_M_G-video-loader-base-color: var(--T_M_G-video-theme-inverse-accent-color);
   --T_M_G-video-disabled-color: gray;
   --T_M_G-video-disabled-background: rgb(55, 55, 55);
   --T_M_G-video-controls-background: transparent;
@@ -127,12 +127,12 @@
   --T_M_G-video-controls-padding: 0;
 }
 
-:root,:root,:root,:root,:root {
+:root, .T_M_G-video-container, .T_M_G-pseudo-video-container {
   --T_M_G-video-current-controls-color: var(--T_M_G-video-controls-color);
 }
 
 /* captions varaibles */
-:where(:root,:root,:root,:root,:root) {
+:where(:root, .T_M_G-video-container, .T_M_G-pseudo-video-container) {
   --T_M_G-video-captions-font-family: var(--T_M_G-video-font-family);
   --T_M_G-video-captions-font-color: white;
   --T_M_G-video-captions-font-size: calc(var(--T_M_G-video-current-unit)/1.45);
@@ -146,7 +146,7 @@
 }
 
 /* settings variables */
-:where(:root,:root,:root,:root,:root) {
+:where(:root, .T_M_G-video-container, .T_M_G-pseudo-video-container) {
   --T_M_G-video-settings-view-transition-time: 500ms;
   --T_M_G-video-settings-content-padding: calc(var(--T_M_G-video-current-unit)/1.75);
   --T_M_G-video-settings-background-color: rgba(0,0,0,.75);
@@ -2362,6 +2362,7 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 :is(.T_M_G-video-container, .T_M_G-pseudo-video-container)[data-size-tier^="xxxxx"] .T_M_G-video-timeline-container {
   position: absolute;
+  bottom: -.25px;
   margin-inline: 0;
   width: 100%;
   pointer-events: none;
