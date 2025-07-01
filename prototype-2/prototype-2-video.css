@@ -2364,6 +2364,9 @@ button:has(.T_M_G-video-next-icon) svg {
   width: 100%;
   pointer-events: none;
 }
+.T_M_G-video-container[data-size-tier^="xxxxx"] .T_M_G-video-controls-container {
+  padding-bottom: calc(var(--T_M_G-video-current-unit)/5)
+}
 .T_M_G-media-container[data-size-tier^="xxxxx"] .T_M_G-video-controls-wrapper > * {
   padding-block: 0;
 }
