@@ -99,10 +99,9 @@ class _T_M_G_Video_Player {
     this.contentContext = this.contentCanvas.getContext("2d")
     this.pseudoVideo = document.createElement("video")
     this.pseudoVideo.tmgPlayer = this.video.tmgPlayer
-    this.pseudoVideo.classList.add("T_M_G-pseudo-video")
-    this.pseudoVideo.classList.add("T_M_G-media")
+    this.pseudoVideo.classList.add("T_M_G-pseudo-video", "T_M_G-media")
     this.pseudoVideoContainer = document.createElement("div")
-    this.pseudoVideoContainer.classList.add("T_M_G-pseudo-video-container")
+    this.pseudoVideoContainer.classList.add("T_M_G-pseudo-video-container", "T_M_G-media-container")
     this.pseudoVideoContainer.append(this.pseudoVideo)
     this.notify = this.settings.status.ui.notifiers ? {
       self: null,
@@ -271,8 +270,7 @@ class _T_M_G_Video_Player {
 
   _cleanUpDOM()  {
     this.mutatingDOMNodes = true
-    this.video.classList.remove("T_M_G-video")
-    this.video.classList.remove("T_M_G-media")
+    this.video.classList.remove("T_M_G-video", "T_M_G-media")
     if (this.isModeActive("floatingPlayer")) {
       this.floatingPlayer?.addEventListener("pagehide", () => {
         // at this point, the video is left to fend off alone and handle his own destruction cuz destroy can't be made asynchronous cuz of one event
@@ -353,7 +351,7 @@ class _T_M_G_Video_Player {
   for (const sheet of document.styleSheets) {
     try {
     for (const cssRule of sheet.cssRules) {
-      if (!cssRule.selectorText?.replace(/\s/g, '')?.includes(":root,.T_M_G-video-container,.T_M_G-pseudo-video-container")) continue
+      if (!cssRule.selectorText?.replace(/\s/g, '')?.includes(":root,.T_M_G-media-container")) continue
       for (const property of cssRule.style) {
         if (!property.startsWith("--T_M_G-video-")) continue
         const value = cssRule.style.getPropertyValue(property)
@@ -467,12 +465,12 @@ class _T_M_G_Video_Player {
       this.video.parentElement?.insertBefore(this.videoContainer, this.video)
     }
     this.initCSSVariablesManager()
-    this.videoContainer.classList.add("T_M_G-video-container")
+    this.videoContainer.classList.add("T_M_G-video-container", "T_M_G-media-container")
     if (this.video.paused) this.videoContainer.classList.add("T_M_G-video-paused")
     if (this.initialMode && this.initialMode !== "normal") this.videoContainer.classList.add(`T_M_G-video-${window.tmg.uncamelizeString(this.initialMode, "-")}`)
     if (this.settings.progressBar) this.videoContainer.classList.add("T_M_G-video-progress-bar")
     this.videoContainer.setAttribute("data-timeline-position", `${this.settings.timelinePosition}`)
-    this.videoContainer.setAttribute("data-object-fit", this.videoObjectFit)
+    this.videoContainer.setAttribute("data-object-fit", this.videoObjectFit ?? "contain")
 
     this.videoContainer.insertAdjacentHTML('beforeend', 
     `
@@ -1774,8 +1772,8 @@ class _T_M_G_Video_Player {
     this.mutatingDOMNodes = true
     this.pseudoVideo.id = this.video.id
     this.video.id = ''
-    this.pseudoVideo.className += " " + this.video.className.replace("T_M_G-media T_M_G-video", "")
-    this.pseudoVideoContainer.className += " " + this.videoContainer.className.replace("T_M_G-video-container", "")
+    this.pseudoVideo.className += " " + this.video.className.replace(/T_M_G-media|T_M_G-video/g, "")
+    this.pseudoVideoContainer.className += " " + this.videoContainer.className.replace(/T_M_G-media-container|T_M_G-pseudo-video-container/g, "")
     this.videoContainer.parentElement?.insertBefore(this.pseudoVideoContainer, this.videoContainer)
     document.body.append(this.videoContainer)
     setTimeout(() => this.mutatingDOMNodes = false)
@@ -1789,8 +1787,8 @@ class _T_M_G_Video_Player {
     this.mutatingDOMNodes = true
     this.video.id = this.pseudoVideo.id
     this.pseudoVideo.id = ''
-    this.pseudoVideo.className = "T_M_G-pseudo-video  T_M_G-media"
-    this.pseudoVideoContainer.className = "T_M_G-pseudo-video-container"
+    this.pseudoVideo.className = "T_M_G-pseudo-video T_M_G-media"
+    this.pseudoVideoContainer.className = "T_M_G-pseudo-video-container T_M_G-media-container"
     this.pseudoVideoContainer.parentElement?.insertBefore(this.videoContainer, this.pseudoVideoContainer)
     this.pseudoVideoContainer.remove()
     setTimeout(() => this.mutatingDOMNodes = false)
@@ -2899,7 +2897,7 @@ class _T_M_G_Video_Player {
   }
 
   get brightness() {
-    return parseInt(this.videoBrightness)
+    return parseInt(this.videoBrightness ?? 100)
   }
 
   toggleDark(auto) {
@@ -2976,7 +2974,7 @@ class _T_M_G_Video_Player {
         this.videoCurrentBrightnessSliderBoostPosition = 0
         this.videoCurrentBrightnessSliderPosition = (brightness - 0) / (100 - 0)
       } else if (brightness > 100) {
-        this.videoBrightnessSliderBoostPercent = parseInt(this.videoBrightnessSliderPercent) + 10
+        this.videoBrightnessSliderBoostPercent = parseInt(this.videoBrightnessSliderPercent) + 5
         this.videoCurrentBrightnessSliderBoostPosition = (brightness - 100) / (this.settings.maxBrightness - 100)
       }
     } else this.videoCurrentBrightnessSliderPosition = brightnessPercent
@@ -3201,7 +3199,7 @@ class _T_M_G_Video_Player {
     for (const sheet of document.styleSheets) {
       try {
         for (const cssRule of sheet.cssRules) {
-          if (cssRule.cssText.includes("T_M_G")) {
+          if (cssRule.selectorText?.includes(":root") || cssRule.cssText.includes("T_M_G")) {
             cssText += cssRule.cssText
           }
         }
@@ -3216,8 +3214,7 @@ class _T_M_G_Video_Player {
     this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-active-icon-wrapper").addEventListener("click", this.toggleFloatingPlayer)
     this.activatePseudoMode()
 
-    this.videoContainer.classList.add("T_M_G-video-progress-bar")
-    this.videoContainer.classList.add("T_M_G-video-floating-player")
+    this.videoContainer.classList.add("T_M_G-video-progress-bar", "T_M_G-video-floating-player")
     this.floatingPlayer?.addEventListener("pagehide", this._handleFloatingPlayerClose)
     this.floatingPlayer?.addEventListener("resize", this._handleMediaResize)
     this.floatingPlayer?.document.body.append(this.videoContainer)
@@ -3259,8 +3256,7 @@ class _T_M_G_Video_Player {
   if (this.settings.status.modes.miniPlayer) {
     if ((!this.isModeActive("miniPlayer") && !this.isModeActive("pictureInPicture") && !this.isModeActive("floatingPlayer") && !this.isModeActive("fullScreen") && !this.parentIntersecting && window.innerWidth >= this.settings.miniPlayerThreshold && !this.video.paused) || (bool === true && !this.isModeActive("miniPlayer"))) {
       this.activatePseudoMode()
-      this.videoContainer.classList.add("T_M_G-video-progress-bar")
-      this.videoContainer.classList.add("T_M_G-video-mini-player")
+      this.videoContainer.classList.add("T_M_G-video-progress-bar", "T_M_G-video-mini-player")
       this.videoContainer.addEventListener("mousedown", this.moveMiniPlayer)
       this.videoContainer.addEventListener("touchstart", this.moveMiniPlayer, {passive: false})
       return
@@ -4198,8 +4194,7 @@ class _T_M_G_Media_Player {
       this.#active = true
       this.#medium.controls = false
       this.#medium.tmgcontrols = true
-      this.#medium.classList.add("T_M_G-media")
-      this.#medium.classList.add("T_M_G-video")
+      this.#medium.classList.add("T_M_G-video", "T_M_G-media")
       //doing some cleanup to make sure no necessary settings were removed
       const settings = this.#build.settings.allowOverride ? {...this.#build.settings, ...window.tmg.userSettings} : this.#build.settings
       this.#build.video = this.#medium
