@@ -1519,7 +1519,7 @@ button:has(.T_M_G-video-next-icon) svg {
   gap: calc(var(--T_M_G-video-current-unit)/10);
   color: var(--T_M_G-video-text-color);
   font-size: calc(var(--T_M_G-video-current-unit)/1.7);
-  font-weight: 500;
+  font-weight: 450;
   white-space: nowrap;
 }
 
