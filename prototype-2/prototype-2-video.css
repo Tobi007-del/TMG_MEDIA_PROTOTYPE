@@ -2312,7 +2312,7 @@ button:has(.T_M_G-video-next-icon) svg {
   --T_M_G-video-current-unit: var(--T_M_G-video-mini-player-unit);
 }
 .T_M_G-media-container[data-size-tier^="xxx"] .T_M_G-video-overlay-main-controls-wrapper {
-  gap: calc(var(--T_M_G-video-current-unit)*1.25);
+  gap: calc(var(--T_M_G-video-current-unit)*2);
 }
 .T_M_G-media-container[data-size-tier^="xxx"] .T_M_G-video-playlist-toast-container {
   max-width: calc(100% - var(--T_M_G-video-current-unit)/1.25);

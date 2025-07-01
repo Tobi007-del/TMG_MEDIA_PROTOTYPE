@@ -2199,7 +2199,7 @@ class _T_M_G_Video_Player {
   try {
     window.tmg.connectAudio(this.audioGainNode)
     for (const media of document.querySelectorAll("video, audio")) {
-      if (media !== this.video) media.pause()
+      if (media !== this.video && !media.paused) media.pause()
     }
     this.videoContainer.classList.remove("T_M_G-video-paused")
     this.overlayRestraint()
