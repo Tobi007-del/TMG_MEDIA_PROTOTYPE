@@ -2117,12 +2117,15 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 @media (max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape) {
-  :where(.T_M_G-video-container:not(.T_M_G-video-mini-player)) {
+  :where(.T_M_G-media-container:not(.T_M_G-video-mini-player)) {
     --T_M_G-video-border-radius: 0;
   }
   :where(.T_M_G-media) {
     width: 100%;
     max-width: unset;
+  }
+  .T_M_G-media-container {
+    width: 100%;  
   }
   .T_M_G-video-container {
     --T_M_G-video-current-loader-thickness: calc(var(--T_M_G-video-current-unit)/12.75);
