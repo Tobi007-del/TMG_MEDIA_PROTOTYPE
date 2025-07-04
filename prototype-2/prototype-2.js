@@ -1860,19 +1860,19 @@ class _T_M_G_Video_Player {
     let message 
     switch (error.code) {
       case error.MEDIA_ERR_ABORTED:
-        message = "The video playback was aborted."
+        message = "The video playback was aborted"
         break;
       case error.MEDIA_ERR_NETWORK:
-        message = "The video failed due to a network error."
+        message = "The video failed due to a network error"
         break;
       case error.MEDIA_ERR_DECODE:
-        message = "The video could not be decoded."
+        message = "The video could not be decoded"
         break;
       case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
-        message = "The video source is not supported."
+        message = "The video source is not supported"
         break;
       default:
-        message = "An unknown error occurred during video playback."
+        message = "An unknown error occurred during video playback"
     }
     this.showMessage(message)
     this.loaded = false
