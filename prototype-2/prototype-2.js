@@ -1498,8 +1498,8 @@ class _T_M_G_Video_Player {
     this.DOM.settingsBtn?.addEventListener("click", this.toggleSettingsView)
 
     //controls wrapper event listeners
-    this.DOM.leftSideControlsWrapper.addEventListener("scroll", this.updateControlsWrapperScrollVisibility)
-    this.DOM.rightSideControlsWrapper.addEventListener("scroll", this.updateControlsWrapperScrollVisibility)
+    this.DOM.leftSideControlsWrapper.addEventListener("scroll", this.updateSideControlsWrapperScroll)
+    this.DOM.rightSideControlsWrapper.addEventListener("scroll", this.updateSideControlsWrapperScroll)
     this.DOM.videoControlsScrollAssists.forEach(assist => {
       assist.addEventListener("pointerenter", this._handleControlsAssistEnter)
       assist.addEventListener("pointerleave", this._handleControlsAssistLeave)
@@ -1596,6 +1596,8 @@ class _T_M_G_Video_Player {
   observeResize() {
     try {
       this._handleMediaParentResize()
+      this._handleSideControlsWrapperResize(this.DOM.leftSideControlsWrapper)
+      this._handleSideControlsWrapperResize(this.DOM.rightSideControlsWrapper)
       window.tmg.resizeObserver.observe(this.videoContainer)
       window.tmg.resizeObserver.observe(this.pseudoVideoContainer)
       window.tmg.resizeObserver.observe(this.DOM.leftSideControlsWrapper)
@@ -1638,7 +1640,7 @@ class _T_M_G_Video_Player {
   try {
     const isPseudo = target.className.includes("T_M_G-pseudo")
     if (target.classList.contains("T_M_G-media-container")) this._handleMediaParentResize(isPseudo)
-    else if (target.classList.contains("T_M_G-video-side-controls-wrapper")) this._handleControlsWrapperResize(target)
+    else if (target.classList.contains("T_M_G-video-side-controls-wrapper")) this._handleSideControlsWrapperResize(target)
   } catch(e) {
     this.log(e, "error", "swallow")
   }
@@ -1670,9 +1672,9 @@ class _T_M_G_Video_Player {
   }    
   }
 
-  _handleControlsWrapperResize(wrapper) {
+  _handleSideControlsWrapperResize(wrapper) {
   try {
-    this.updateControlsWrapperScrollVisibility({ currentTarget: wrapper })
+    this.updateSideControlsWrapperScroll({ target: wrapper })
   } catch(e) {
     this.log(e, "error", "swallow")
   }
@@ -1696,17 +1698,25 @@ class _T_M_G_Video_Player {
   } 
   }
 
-  updateControlsWrapperScrollVisibility({ currentTarget: wrapper }) {
+  updateSideControlsWrapperScroll({ target: wrapper }) {
   try {
     const { scrollLeft, scrollWidth, offsetWidth } = wrapper;
     wrapper.parentElement.dataset.canScrollLeft = scrollLeft > 0
     wrapper.parentElement.dataset.canScrollRight = scrollLeft + offsetWidth < scrollWidth - 1
+    if (!wrapper.classList.contains("T_M_G-video-right-side-controls-wrapper")) return
+    let c = wrapper.children[0],
+    spacerChild
+    for (;c;c=c.nextElementSibling) {
+      c.dataset.spacer = false
+      if ((getComputedStyle(c)).display !== "none" && !spacerChild) spacerChild = c
+    }
+    spacerChild?.setAttribute("data-spacer", true)
   } catch(e) {
     this.log(e, "error", "swallow")
   }
   }
 
-  _handleControlsAssistEnter({ currentTarget: target }) {
+  _handleControlsAssistEnter({ target: target }) {
   try {
     const direction = target.dataset.scrollDirection
     const wrapper = target.parentElement.querySelector(".T_M_G-video-side-controls-wrapper")
@@ -4128,7 +4138,8 @@ class _T_M_G_Video_Player {
       this.throttle("dragOver", () => {
         const afterControl = this.getControlAfterDragging(e.target, e.clientX)
         if (afterControl) e.target?.insertBefore(this.dragging, afterControl) 
-        else e.target.appendChild(this.dragging)       
+        else e.target.appendChild(this.dragging)
+        this.updateSideControlsWrapperScroll(e)  
       }, this.dragOverThrottleDelay)
     }
   } catch(e) {
