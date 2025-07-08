@@ -1701,16 +1701,15 @@ class _T_M_G_Video_Player {
   updateSideControlsWrapperScroll({ target: wrapper }) {
   try {
     const { scrollLeft, scrollWidth, offsetWidth } = wrapper;
-    wrapper.parentElement.dataset.canScrollLeft = scrollLeft > 0
-    wrapper.parentElement.dataset.canScrollRight = scrollLeft + offsetWidth < scrollWidth - 1
-    if (!wrapper.classList.contains("T_M_G-video-right-side-controls-wrapper")) return
-    let c = wrapper.children[0],
-    spacerChild
+    let c = wrapper.children[0], spacer
     for (;c;c=c.nextElementSibling) {
       c.dataset.spacer = false
-      if ((getComputedStyle(c)).display !== "none" && !spacerChild) spacerChild = c
+      c.dataset.displayed = (getComputedStyle(c)).display !== "none"
+      if (c.dataset.displayed=="true" && !spacer) spacer = c
     }
-    spacerChild?.setAttribute("data-spacer", true)
+    if (wrapper.classList.contains("T_M_G-video-right-side-controls-wrapper")) spacer?.setAttribute("data-spacer", true)
+    wrapper.parentElement.dataset.canScrollLeft = [...wrapper.children]?.filter(c => c.dataset.displayed=="true").length === 0 ? false : scrollLeft > 0
+    wrapper.parentElement.dataset.canScrollRight = [...wrapper.children]?.filter(c => c.dataset.displayed=="true").length === 0 ? false : scrollLeft + offsetWidth < scrollWidth - 1
   } catch(e) {
     this.log(e, "error", "swallow")
   }
