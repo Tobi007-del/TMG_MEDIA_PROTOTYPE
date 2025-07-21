@@ -466,6 +466,7 @@ class _T_M_G_Video_Player {
     }
     this.initCSSVariablesManager()
     this.videoContainer.classList.add("T_M_G-video-container", "T_M_G-media-container")
+    if (window.tmg.queryMediaMobile()) this.videoContainer.classList.add("T_M_G-video-mobile")
     if (this.video.paused) this.videoContainer.classList.add("T_M_G-video-paused")
     if (this.initialMode && this.initialMode !== "normal") this.videoContainer.classList.add(`T_M_G-video-${window.tmg.uncamelizeString(this.initialMode, "-")}`)
     if (this.settings.progressBar) this.videoContainer.classList.add("T_M_G-video-progress-bar")
@@ -528,7 +529,7 @@ class _T_M_G_Video_Player {
     rightSideControlsWrapperBuild = this.settings.status.ui.rightSideControls ? document.createElement("div") : null
 
     this.HTML = (() => {
-    const keyShortcuts = this.fetchKeyShortcuts()
+    const keyShortcuts = this.fetchKeyShortcutsForDisplay()
     return {
       pictureinpicturewrapper :
       `
@@ -565,7 +566,11 @@ class _T_M_G_Video_Player {
       playlisttitle : 
       `
         <div class="T_M_G-video-title-wrapper">
-          <p class="T_M_G-video-title"></p>
+          <div class="T_M_G-video-title-content">
+            <div class="T_M_G-video-title-casing">
+              <p class="T_M_G-video-title"></p>
+            </div>
+          </div>
         </div>      
       `,
       videobuffer : 
@@ -808,7 +813,7 @@ class _T_M_G_Video_Player {
               <img class="T_M_G-video-preview T_M_G-video-preview-image" alt="Preview image" src="${window.tmg.ALT_IMG_SRC}">
               <canvas class="T_M_G-video-preview T_M_G-video-preview-canvas"></canvas>
             </div>
-            <div class="T_M_G-video-thumb-indicator"></div>
+            <div class="T_M_G-video-thumb-indicator T_M_G-video-rippler"></div>
           </div>
         </div>
       ` : null,
@@ -1007,16 +1012,8 @@ class _T_M_G_Video_Player {
     overlayControlsContainerBuild.append(overlayMainControlsWrapperBuild)
 
     //building and deploying controls wrapper
-    const scrollAssistsHTML = 
-    `
-      <div class="T_M_G-video-controls-scroll-assist" data-scroll-direction="left">
-      </div>
-      <div class="T_M_G-video-controls-scroll-assist" data-scroll-direction="right">
-      </div>
-    `
     if (this.settings.status.ui.leftSideControls) {
       leftSideControlsWrapperBuild.classList = "T_M_G-video-left-side-controls-wrapper-cover T_M_G-video-side-controls-wrapper-cover"
-      leftSideControlsWrapperBuild.innerHTML += scrollAssistsHTML
       const leftSideControlsWrapper = document.createElement("div");
       leftSideControlsWrapper.classList = "T_M_G-video-left-side-controls-wrapper T_M_G-video-side-controls-wrapper"
       leftSideControlsWrapper.setAttribute("data-dropzone", this.settings.status.ui.draggableControls ? true : false)
@@ -1026,7 +1023,6 @@ class _T_M_G_Video_Player {
     }
     if (this.settings.status.ui.rightSideControls) {
       rightSideControlsWrapperBuild.classList = "T_M_G-video-right-side-controls-wrapper-cover T_M_G-video-side-controls-wrapper-cover"
-      rightSideControlsWrapperBuild.innerHTML += scrollAssistsHTML
       const rightSideControlsWrapper = document.createElement("div");
       rightSideControlsWrapper.classList = "T_M_G-video-right-side-controls-wrapper T_M_G-video-side-controls-wrapper"
       rightSideControlsWrapper.setAttribute("data-dropzone", this.settings.status.ui.draggableControls ? true : false)
@@ -1051,6 +1047,7 @@ class _T_M_G_Video_Player {
       videoContainerContentWrapper: this.videoContainer.querySelector(".T_M_G-video-container-content-wrapper"),
       videoContainerContent: this.videoContainer.querySelector(".T_M_G-video-container-content"),
       videoTitleWrapper: this.videoContainer.querySelector(".T_M_G-video-title-wrapper"),
+      videoTitleCasing: this.videoContainer.querySelector(".T_M_G-video-title-casing"),
       videoTitle: this.videoContainer.querySelector(".T_M_G-video-title"),
       thumbnailImg : this.videoContainer.querySelector(".T_M_G-video-thumbnail-image"),
       thumbnailCanvas : this.videoContainer.querySelector(".T_M_G-video-thumbnail-canvas"),
@@ -1084,7 +1081,6 @@ class _T_M_G_Video_Player {
       videoControlsWrapper : this.settings.status.ui.leftSideControls || this.settings.status.ui.rightSideControls ? this.videoContainer.querySelector(".T_M_G-video-controls-wrapper") : null,
       leftSideControlsWrapper : this.settings.status.ui.leftSideControls ? this.videoContainer.querySelector(".T_M_G-video-left-side-controls-wrapper") : null,
       rightSideControlsWrapper : this.settings.status.ui.rightSideControls ? this.videoContainer.querySelector(".T_M_G-video-right-side-controls-wrapper") : null,
-      videoControlsScrollAssists : this.settings.status.ui.leftSideControls || this.settings.status.ui.rightSideControls ? this.videoContainer.querySelectorAll(".T_M_G-video-controls-scroll-assist") : null,
       pictureInPictureWrapper : this.videoContainer.querySelector(".T_M_G-video-picture-in-picture-wrapper"),
       pictureInPictureActiveIconWrapper : this.videoContainer.querySelector(".T_M_G-video-picture-in-picture-active-icon-wrapper"),
       cueContainer: this.videoContainer.querySelector(".T_M_G-video-cue-container"),
@@ -1264,8 +1260,8 @@ class _T_M_G_Video_Player {
       let dummyImg = document.createElement("img")
       dummyImg.src = window.tmg.ALT_IMG_SRC
       dummyImg.onload = () => {
-        this.previewContext.drawImage(dummyImg, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height)
-        this.thumbnailContext.drawImage(dummyImg, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height)
+        this.previewContext?.drawImage(dummyImg, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height)
+        this.thumbnailContext?.drawImage(dummyImg, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height)
         dummyImg = null
       }
     }
@@ -1497,14 +1493,6 @@ class _T_M_G_Video_Player {
     this.DOM.pictureInPictureActiveIconWrapper?.addEventListener("click", this.togglePictureInPictureMode)
     this.DOM.settingsBtn?.addEventListener("click", this.toggleSettingsView)
 
-    //controls wrapper event listeners
-    this.DOM.leftSideControlsWrapper.addEventListener("scroll", this.updateSideControlsWrapperScroll)
-    this.DOM.rightSideControlsWrapper.addEventListener("scroll", this.updateSideControlsWrapperScroll)
-    this.DOM.videoControlsScrollAssists.forEach(assist => {
-      assist.addEventListener("pointerenter", this._handleControlsAssistEnter)
-      assist.addEventListener("pointerleave", this._handleControlsAssistLeave)
-    })
-
     //timeline contanier event listeners
     this.DOM.timelineContainer?.addEventListener("pointerdown", this._handleTimelineScrubbing)
     this.DOM.timelineContainer?.addEventListener("mouseover", this.showPreviewImages)
@@ -1595,27 +1583,34 @@ class _T_M_G_Video_Player {
 
   observeResize() {
     try {
-      this._handleMediaParentResize()
-      this._handleSideControlsWrapperResize(this.DOM.leftSideControlsWrapper)
-      this._handleSideControlsWrapperResize(this.DOM.rightSideControlsWrapper)
-      window.tmg.resizeObserver.observe(this.videoContainer)
-      window.tmg.resizeObserver.observe(this.pseudoVideoContainer)
-      window.tmg.resizeObserver.observe(this.DOM.leftSideControlsWrapper)
-      window.tmg.resizeObserver.observe(this.DOM.rightSideControlsWrapper)
-    } catch(e) {
-      this.log(e, "error", "swallow")
-    }         
+      this._handleMediaParentResize();
+      window.tmg.initScrollAssist(this.DOM.videoTitleCasing, { pxPerSecond: 60 });
+      [this.DOM.leftSideControlsWrapper, this.DOM.rightSideControlsWrapper].forEach(el => {
+        this._handleSideControlsWrapperResize(el);
+        window.tmg.initScrollAssist(el, { pxPerSecond: 60 });
+        window.tmg.resizeObserver.observe(el);
+      });
+      [this.videoContainer, this.pseudoVideoContainer].forEach(el =>
+        window.tmg.resizeObserver.observe(el)
+      );
+    } catch (e) {
+      this.log(e, "error", "swallow");
+    }
   }
-  
+
   unobserveResize() {
     try {
-      window.tmg.resizeObserver.unobserve(this.videoContainer)
-      window.tmg.resizeObserver.unobserve(this.pseudoVideoContainer)
-      window.tmg.resizeObserver.unobserve(this.DOM.leftSideControlsWrapper)
-      window.tmg.resizeObserver.unobserve(this.DOM.rightSideControlsWrapper)
-    } catch(e) {
-      this.log(e, "error", "swallow")
-    }      
+      window.tmg.removeScrollAssist(this.DOM.videoTitleCasing);
+      [this.DOM.leftSideControlsWrapper, this.DOM.rightSideControlsWrapper].forEach(el => {
+        window.tmg.removeScrollAssist(el);
+        window.tmg.resizeObserver.unobserve(el);
+      });
+      [this.videoContainer, this.pseudoVideoContainer].forEach(el =>
+        window.tmg.resizeObserver.unobserve(el)
+      );
+    } catch (e) {
+      this.log(e, "error", "swallow");
+    }
   }
 
   observeIntersection() {
@@ -1674,7 +1669,7 @@ class _T_M_G_Video_Player {
 
   _handleSideControlsWrapperResize(wrapper) {
   try {
-    this.updateSideControlsWrapperScroll({ target: wrapper })
+    this.updateSideControls({ target: wrapper })
   } catch(e) {
     this.log(e, "error", "swallow")
   }
@@ -1698,24 +1693,21 @@ class _T_M_G_Video_Player {
   } 
   }
 
-  updateSideControlsWrapperScroll({ target: wrapper }) {
+  updateSideControls({ target: wrapper }) {
   try {
-    const { scrollLeft, scrollWidth, offsetWidth } = wrapper;
     let c = wrapper.children[0], spacer
-    for (;c;c=c.nextElementSibling) {
-      c.dataset.spacer = false
-      c.dataset.displayed = (getComputedStyle(c)).display !== "none"
-      if (c.dataset.displayed=="true" && !spacer) spacer = c
-    }
-    if (wrapper.classList.contains("T_M_G-video-right-side-controls-wrapper")) spacer?.setAttribute("data-spacer", true)
-    wrapper.parentElement.dataset.canScrollLeft = [...wrapper.children]?.filter(c => c.dataset.displayed=="true").length === 0 ? false : scrollLeft > 0
-    wrapper.parentElement.dataset.canScrollRight = [...wrapper.children]?.filter(c => c.dataset.displayed=="true").length === 0 ? false : scrollLeft + offsetWidth < scrollWidth - 1
+    do {
+      c.dataset.spacer = "false";
+      c.dataset.displayed = getComputedStyle(c).display !== "none" ? "true" : "false";
+      if (c.dataset.displayed === "true" && !spacer) spacer = c;
+    } while (c = c.nextElementSibling);
+    if (wrapper === this.DOM.rightSideControlsWrapper) spacer?.setAttribute("data-spacer", true)
   } catch(e) {
     this.log(e, "error", "swallow")
   }
   }
 
-  _handleControlsAssistEnter({ target: target }) {
+  _handleControlsScrollAssistEnter({ target }) {
   try {
     const direction = target.dataset.scrollDirection
     const wrapper = target.parentElement.querySelector(".T_M_G-video-side-controls-wrapper")
@@ -1734,7 +1726,7 @@ class _T_M_G_Video_Player {
   }
   }
 
-  _handleControlsAssistLeave() {
+  _handleControlsScrollAssistLeave() {
     try {
       this.cancelRAFLoop("controlsScrollAssisting")
     } catch(e) {
@@ -1795,7 +1787,7 @@ class _T_M_G_Video_Player {
     this.pseudoVideo.currentTime = this.currentTime
     this.contentCanvas.width = this.video.videoWidth
     this.contentCanvas.height = this.video.videoHeight
-    this.contentContext.drawImage(this.pseudoVideo, 0, 0, this.contentCanvas.width, this.contentCanvas.height)
+    this.contentContext?.drawImage(this.pseudoVideo, 0, 0, this.contentCanvas.width, this.contentCanvas.height)
     if (type === "monochrome") this.convertToMonoChrome(this.contentCanvas)
     return this.contentCanvas.toDataURL("image/png")
   } catch(e) {
@@ -2416,8 +2408,8 @@ class _T_M_G_Video_Player {
       if (this.isScrubbing) this.DOM.thumbnailImg.src = previewImgSrc
     } else if (this.settings.previewImages) {
       this.pseudoVideo.currentTime = percent * this.duration
-      if (this.settings.previewImages && !window.tmg.queryMediaMobile()) this.previewContext.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height)
-      if (this.isScrubbing) this.thumbnailContext.drawImage(this.pseudoVideo, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height)
+      if (this.settings.previewImages && !window.tmg.queryMediaMobile()) this.previewContext?.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height)
+      if (this.isScrubbing) this.thumbnailContext?.drawImage(this.pseudoVideo, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height)
     }   
     let arrowPosition, arrowPositionMin = (((this.isModeActive("theater") && !this.isModeActive("miniPlayer")) || (this.isModeActive("fullScreen"))) && this.settings.previewImages) && !window.tmg.queryMediaMobile() ? 10 : 16.5
     if (percent < previewImgMin) {
@@ -2521,7 +2513,6 @@ class _T_M_G_Video_Player {
       if (this.currentNotifier && notifier !== this.currentNotifier) {
         this.skipDuration = 0
         this.currentNotifier.classList.remove("T_M_G-video-control-persist")
-        this.currentNotifier = null
       }
       this.currentNotifier = notifier
       notifier.classList.add("T_M_G-video-control-persist")
@@ -3454,8 +3445,9 @@ class _T_M_G_Video_Player {
   }            
   }
 
-  _handleDoubleClick({clientX: x, target, detail}) {
+  _handleDoubleClick(e) {
   try {
+    const {clientX: x, target, detail} = e
     //this function triggers the forward and backward skip, they then assign the function to the click event, when the trigger is pulled, skipPersist is set to true and the skip is handled by only the click event, if the position of the click changes within the skip interval and when the 'skipPosition' prop is still available, the click event assignment is revoked
     if (target === this.DOM.videoOverlayControlsContainer) {
     if (this.clickId) clearTimeout(this.clickId)
@@ -3472,6 +3464,8 @@ class _T_M_G_Video_Player {
       if (this.skipPersist  && detail == 2) return
       this.activateSkipPersist(pos)
       pos === "right" ? this.skip(this.settings.timeSkip) : this.skip(-this.settings.timeSkip)
+      console.log(e)
+      window.tmg.rippleHandler(e, this.currentNotifier);
     }
     }
   } catch(e) {
@@ -3882,7 +3876,7 @@ class _T_M_G_Video_Player {
   }
   }
 
-  fetchKeyShortcuts() {
+  fetchKeyShortcutsForDisplay() {
   try {
     const shortcuts = {}
     for (const key of Object.keys(window.tmg._DEFAULT_VIDEO_BUILD.settings.keyShortcuts)) {
@@ -3904,7 +3898,7 @@ class _T_M_G_Video_Player {
   keyEventAllowed(e) {
   try {
     const key = e.key.toString().toLowerCase() 
-    if (document.activeElement.tagName=== 'INPUT') return false
+    if (document.activeElement?.matches("input, textarea")) return false
     if (this.isTimelineFocused)
       if (key.startsWith("arrow")) return false
     if (this.settings.keyShortcuts)
@@ -4138,7 +4132,7 @@ class _T_M_G_Video_Player {
         const afterControl = this.getControlAfterDragging(e.target, e.clientX)
         if (afterControl) e.target?.insertBefore(this.dragging, afterControl) 
         else e.target.appendChild(this.dragging)
-        this.updateSideControlsWrapperScroll(e)  
+        this.updateSideControls(e)  
       }, this.dragOverThrottleDelay)
     }
   } catch(e) {
@@ -4493,7 +4487,7 @@ class tmg {
     return window.TMG_VIDEO_CSS_SRC || "/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css"
   }
   static get ALT_IMG_SRC() { 
-    return window.TMG_ALT_IMG_SRC || "/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png"
+    return window.TMG_VIDEO_ALT_IMG_SRC || "/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png"
   }
   static get userSettings() {
     if (localStorage._tmgUserVideoSettings) 
@@ -4767,8 +4761,10 @@ class tmg {
       currObj = currObj[part]
     })
   }
-  static queryMediaMobile() {
-    return window.matchMedia('(max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape)').matches
+  static queryMediaMobile(strict = true) {
+    const isMobileDimensions = window.matchMedia('(max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape)').matches,
+    isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/.test(navigator?.userAgent)
+    return strict ? isMobileDevice : isMobileDimensions
   }
   static queryFullScreen() {
     return !!(document.fullscreenElement || document.fullScreen || document.webkitIsFullScreen || document.mozFullScreen || document.msFullscreenElement)
@@ -4880,6 +4876,116 @@ class tmg {
       const { left, top } = parseObjectPosition(objectPosition, bbox, {width, height})
       return { left, top, width, height }
     }
+  }
+  static _SCROLL_ASSIST_OBSERVER = new ResizeObserver(entries =>
+    entries.forEach(({ target }) => window.tmg._SCROLL_ASSIST_DATA.get(target)?.update())
+  );
+  static _SCROLL_ASSIST_DATA = new WeakMap();
+  static initScrollAssist(container, {
+    pxPerSecond = 80,
+    assistClassName = "T_M_G-video-controls-scroll-assist",
+    vertical = true,
+    horizontal = true
+  } = {}) {
+    const parent = container.parentElement;
+    if (!parent || window.tmg._SCROLL_ASSIST_DATA.has(container)) return;
+    const assist = {};
+    let scrollId = null;
+    let last = performance.now();
+    const update = () => {
+      if (horizontal) {
+        const w = assist.left?.offsetWidth || 20;
+        assist.left.style.display = container.clientWidth < w * 2 ? "none" : container.scrollLeft > 0 ? "block" : "none";
+        assist.right.style.display = container.clientWidth < w * 2 ? "none" : container.scrollLeft + container.clientWidth < container.scrollWidth - 1 ? "block" : "none";
+      }
+      if (vertical) {
+        const h = assist.up?.offsetHeight || 20;
+        assist.up.style.display = container.clientHeight < h * 2 ? "none" : container.scrollTop > 0 ? "block" : "none";
+        assist.down.style.display = container.clientHeight < h * 2 ? "none" : container.scrollTop + container.clientHeight < container.scrollHeight - 1 ? "block" : "none";
+      }
+    };
+    const scroll = dir => {
+      const frame = () => {
+        const now = performance.now(), dt = now - last;
+        last = now;
+        const d = (pxPerSecond * dt) / 1000;
+        if (dir === "left") container.scrollLeft = Math.max(0, container.scrollLeft - d);
+        if (dir === "right") container.scrollLeft = Math.min(container.scrollWidth - container.clientWidth, container.scrollLeft + d);
+        if (dir === "up") container.scrollTop = Math.max(0, container.scrollTop - d);
+        if (dir === "down") container.scrollTop = Math.min(container.scrollHeight - container.clientHeight, container.scrollTop + d);
+        scrollId = requestAnimationFrame(frame);
+      };
+      last = performance.now();
+      frame();
+    };
+    const stop = () => {
+      if (scrollId) cancelAnimationFrame(scrollId);
+      scrollId = null;
+    };
+    const addAssist = dir => {
+      const el = Object.assign(document.createElement("div"), {
+        className: assistClassName,
+        style: "display:none"
+      });
+      el.dataset.scrollDirection = dir;
+      ["pointerenter", "dragenter"].forEach(e => el.addEventListener(e, () => scroll(dir)));
+      ["pointerleave", "pointerup", "pointercancel", "dragleave", "dragend"].forEach(e => el.addEventListener(e, stop));
+      (dir === "left" || dir === "up" ? parent.insertBefore : parent.appendChild).call(parent, el, container);
+      assist[dir] = el;
+    };
+    if (horizontal) ["left", "right"].forEach(addAssist);
+    if (vertical) ["up", "down"].forEach(addAssist);
+    container.addEventListener("scroll", update);
+    window.tmg._SCROLL_ASSIST_OBSERVER.observe(container);
+    window.tmg._SCROLL_ASSIST_DATA.set(container, {
+      update,
+      destroy() {
+        stop();
+        container.removeEventListener("scroll", update);
+        window.tmg._SCROLL_ASSIST_OBSERVER.unobserve(container);
+        window.tmg._SCROLL_ASSIST_DATA.delete(container);
+        Object.values(assist).forEach(el => el.remove());
+      }
+    });
+    update();
+    return window.tmg._SCROLL_ASSIST_DATA.get(container);
+  }
+  static removeScrollAssist(container) {
+    window.tmg._SCROLL_ASSIST_DATA.get(container)?.destroy();
+  }
+  static rippleHandler(e, target) {
+    const currentTarget  = target || e.currentTarget;
+    if ((e.target !== e.currentTarget && e.target?.matches("button,[href],input,label,select,textarea,[tabindex]:not([tabindex='-1'])")) || currentTarget?.hasAttribute("disabled")) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.stopPropagation?.();
+    const el = currentTarget;
+    const rect = el.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const x = e.clientX - rect.left - size / 2;
+    const y = e.clientY - rect.top - size / 2;
+    const wrapper = document.createElement("span");
+    const ripple = document.createElement("span");
+    wrapper.className = "T_M_G-video-ripple-container";
+    ripple.className = "T_M_G-video-ripple T_M_G-video-ripple-hold";
+    ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
+    let canRelease = false;
+    ripple.addEventListener("animationend", () => canRelease = true, { once: true });
+    wrapper.appendChild(ripple);
+    el.appendChild(wrapper);
+    console.log(rect)
+    console.log(e.clientX, rect.left, size, x)
+    console.log(e.clientY, rect.top, size, y)
+    const release = () => {
+      if (!canRelease) return ripple.addEventListener("animationend", release, { once: true });
+      ripple.classList.replace("T_M_G-video-ripple-hold", "T_M_G-video-ripple-fade");
+      ripple.addEventListener("animationend", () => {
+        (window.requestIdleCallback || setTimeout)(() => wrapper.remove());
+      });
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+    };
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
   }
   //a wild card for deploying TMG controls to available media, returns a promise that resolves with an array referencing the media
   static async launch(medium) {
