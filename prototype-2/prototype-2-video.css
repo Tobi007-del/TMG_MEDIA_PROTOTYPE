@@ -68,7 +68,7 @@
 :where(:root, .T_M_G-media-container) {
   --T_M_G-video-switch-transition-time: 150ms;
   --T_M_G-video-fade-transition-time: 200ms;
-  --T_M_G-video-motion-transition-time: 350ms;
+  --T_M_G-video-motion-transition-time: 300ms;
   --T_M_G-video-slow-transition-time: 500ms;
   --T_M_G-video-notifiers-animation-time: 1000ms;
   --T_M_G-video-loader-animation-time: 1250ms;
@@ -855,16 +855,13 @@ body:has(.T_M_G-video-floating-player) {
   position: absolute;
   top: 0;
   left: 0;
-  padding-block: calc(var(--T_M_G-video-current-unit)/1.5);
-  font-size: calc(var(--T_M_G-video-current-unit)/1.35);
   width: 100%;
-  background: linear-gradient(to bottom, var(--T_M_G-video-curtain-color), transparent);
+  padding-block: calc(var(--T_M_G-video-current-unit)/1.5);
   color: var(--T_M_G-video-text-color);
+  font-size: calc(var(--T_M_G-video-current-unit)/1.25);
+  font-weight: 500;
+  background: linear-gradient(to bottom, var(--T_M_G-video-curtain-color), transparent);
   white-space: nowrap;
-}
-
-.T_M_G-video-title-casing {
-  overflow-x: auto;
 }
 
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-title-wrapper {
@@ -875,9 +872,12 @@ body:has(.T_M_G-video-floating-player) {
   justify-content: center;
 }
 
+.T_M_G-video-title-casing {
+  overflow-x: auto;
+}
+
 .T_M_G-video-title {
   position: relative;
-  color: var(--T_M_G-video-text-color);
 }
 
 .T_M_G-video-title::before {
@@ -1293,17 +1293,18 @@ body:has(.T_M_G-video-floating-player) {
 .T_M_G-video-side-controls-wrapper {
   display: flex;
   gap: var(--T_M_G-video-current-controls-gap);
-  padding-block: calc(var(--T_M_G-video-current-unit)/2.5); 
+  padding-block: calc(var(--T_M_G-video-current-unit)/2.5);
+  padding-inline: calc(var(--T_M_G-video-current-controls-gap)/2);
   overflow-x: auto;
   overflow-y: hidden;
 }
 
 .T_M_G-video-left-side-controls-wrapper {
-  padding-left: calc(var(--T_M_G-video-current-controls-gap)/1);
+  padding-left: var(--T_M_G-video-current-controls-gap);
 }
 
 .T_M_G-video-right-side-controls-wrapper {
-  padding-right: calc(var(--T_M_G-video-current-controls-gap)/1)
+  padding-right: var(--T_M_G-video-current-controls-gap)
 }
 
 .T_M_G-video-right-side-controls-wrapper > [data-spacer="true"] {
@@ -2348,8 +2349,11 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-media-container[data-size-tier^="xxxx"] .T_M_G-video-overlay-main-controls-wrapper {
   gap: calc(var(--T_M_G-video-current-unit)*1);
 }
-.T_M_G-media-container[data-size-tier^="xxxx"] .T_M_G-video-side-controls-wrapper {
-  padding-inline: 0;
+.T_M_G-media-container[data-size-tier^="xxxx"]  .T_M_G-video-left-side-controls-wrapper {
+  padding-left: 0;
+}
+.T_M_G-media-container[data-size-tier^="xxxx"]  .T_M_G-video-right-side-controls-wrapper {
+  padding-right: 0;
 }
 .T_M_G-media-container:is([data-size-tier^="xxxx"], .T_M_G-video-mobile, .T_M_G-video-no-previews),
 .T_M_G-media-container:is([data-size-tier^="xxxx"], .T_M_G-video-mobile).T_M_G-video-scrubbing {
@@ -2393,10 +2397,10 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 @media (max-width: 940px) and (max-height: 480px) and (orientation: landscape) {
-  .T_M_G-video {
+  :where(.T_M_G-video-container.T_M_G-video-mobile .T_M_G-media) {
     max-height: 90lvh;
   }
-  .T_M_G-video-container:where(:not(.T_M_G-video-floating-player, .T_M_G-video-mini-player)) {
+  .T_M_G-video-container:where(.T_M_G-video-mobile:not(.T_M_G-video-floating-player, .T_M_G-video-mini-player)) {
     --T_M_G-video-current-controls-gap: calc(var(--T_M_G-video-current-unit)/1.025);
   }
 }
