@@ -1146,7 +1146,6 @@ class _T_M_G_Video_Player {
     if (this.initialState && this.video.paused) this.addInitialState()
     else this.initializeVideoControls()
     if (this.disabled) this.disable()
-    else this.log("You have to enable the TMG controller to access the custom controls", "warn")
     this.initialized = true
   } catch(e) {
     this.log(e, "error", "swallow")
@@ -1826,6 +1825,7 @@ class _T_M_G_Video_Player {
     this.disableFocusableControls("all")
     this.removeKeyEventListeners()
     this.disabled = true
+    this.log("You have to enable the TMG controller to access the custom controls", "warn")
   } catch(e) {
     this.log(e, "error", "swallow")
   }
