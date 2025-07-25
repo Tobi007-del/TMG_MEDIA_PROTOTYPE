@@ -26,6 +26,7 @@ class _T_M_G_Video_Player {
     if (tracks.length) videoOptions.tracks = tracks
     this.log(videoOptions)
     //some general variables
+    this.isMediaMobile = window.tmg.queryMediaMobile()
     this.audioSetup = false
     this.loaded = false
     this.CSSCustomPropertiesCache = {}
@@ -160,8 +161,7 @@ class _T_M_G_Video_Player {
       this._playlist = value
       if (this.currentPlaylistIndex == null) this.currentPlaylistIndex = 0
       else if (this.initialized) {
-        const prevIndex = this.currentPlaylistIndex,
-        nextIndex = this._playlist?.findIndex(vid => vid.src === this.src)
+        const nextIndex = this._playlist?.findIndex(vid => vid.src === this.src)
         this.currentPlaylistIndex = nextIndex !== -1 ? nextIndex : 0
         if (nextIndex === -1) this.movePlaylistTo(this.currentPlaylistIndex, !this.video.paused)
       }
@@ -273,7 +273,7 @@ class _T_M_G_Video_Player {
     this.video.classList.remove("T_M_G-video", "T_M_G-media")
     if (this.isModeActive("floatingPlayer")) {
       this.floatingPlayer?.addEventListener("pagehide", () => {
-        // at this point, the video is left to fend off alone and handle his own destruction cuz destroy can't be made asynchronous cuz of one event
+        // at this point, the video is left to fend off alone and handle it's own destruction cuz destroy can't be made asynchronous cuz of one event
         this.pseudoVideoContainer.parentElement?.insertBefore(this.video, this.pseudoVideoContainer)
         this.pseudoVideoContainer.remove()
         this.videoContainer.remove()
@@ -466,12 +466,14 @@ class _T_M_G_Video_Player {
     }
     this.initCSSVariablesManager()
     this.videoContainer.classList.add("T_M_G-video-container", "T_M_G-media-container")
-    if (window.tmg.queryMediaMobile()) this.videoContainer.classList.add("T_M_G-video-mobile")
+    if (this.isMediaMobile) this.videoContainer.classList.add("T_M_G-video-mobile")
     if (this.video.paused) this.videoContainer.classList.add("T_M_G-video-paused")
     if (this.initialMode && this.initialMode !== "normal") this.videoContainer.classList.add(`T_M_G-video-${window.tmg.uncamelizeString(this.initialMode, "-")}`)
     if (this.settings.progressBar) this.videoContainer.classList.add("T_M_G-video-progress-bar")
-    this.videoContainer.setAttribute("data-timeline-position", `${this.settings.timelinePosition}`)
+    this.videoContainer.setAttribute("data-timeline-position", this.settings.timelinePosition)
     this.videoContainer.setAttribute("data-object-fit", this.videoObjectFit ?? "contain")
+    this.videoContainer.setAttribute("data-volume-level", "muted")
+    this.videoContainer.setAttribute("data-brightness-level", "dark")
 
     this.videoContainer.insertAdjacentHTML('beforeend', 
     `
@@ -1150,13 +1152,12 @@ class _T_M_G_Video_Player {
 
   addInitialState() {
   try {
-    if (this.initialState) {
+    if (!this.initialState) return
     if (this.settings.startTime && !this.video.poster) this.currentTime = this.settings.startTime
     this.videoContainer.classList.add("T_M_G-video-initial")
     this.video.addEventListener("play", this.removeInitialState, {once:true})
     this.DOM.mainPlayPauseBtn?.addEventListener("click", this.removeInitialState)
     this.videoContainer.addEventListener("click", this.removeInitialState)
-    }
   } catch(e) {
     this.log(e, "error", "swallow")
   }      
@@ -1168,7 +1169,7 @@ class _T_M_G_Video_Player {
     this.stall()
     this.videoContainer.classList.remove("T_M_G-video-initial")
     this.initialState = false
-    this.togglePlay(true) 
+    this.togglePlay(true)
     this.initializeVideoControls()
     this.DOM.mainPlayPauseBtn?.removeEventListener("click", this.removeInitialState)
     this.videoContainer.removeEventListener("click", this.removeInitialState)
@@ -1914,7 +1915,7 @@ class _T_M_G_Video_Player {
 
   _handleVisibilityChange() {
   try {
-    //tending to some observed glitches when visibility changes
+    // tending to some observed glitches when visibility changes
     if (document.visibilityState === "visible") {
       this.stopTimelineScrubbing()
     }
@@ -2113,10 +2114,7 @@ class _T_M_G_Video_Player {
             playlistNextVideoCountdown.textContent = nextVideoCountdown
             constraint = 0
           }
-          if (timeVisible >= count * 1000) {
-            autoNextVideo()
-            return
-          }
+          if (timeVisible >= count * 1000) return autoNextVideo()
         }
         lastTime = timestamp
         nextVideoFrameId = requestAnimationFrame(updatePlaylistToast)
@@ -2161,10 +2159,7 @@ class _T_M_G_Video_Player {
       },
       handleToastPointerEnd = () => {
         this.cancelRAFLoop("toastPointerMove")
-        if (Math.abs(pointerDeltaX) > (playlistToastContainer.offsetWidth*0.4)) {
-          cleanUpPlaylistToast(true)
-          return
-        } 
+        if (Math.abs(pointerDeltaX) > (playlistToastContainer.offsetWidth*0.4)) return cleanUpPlaylistToast(true)
         playlistToastContainer.removeEventListener('pointermove', handleToastPointerMove, {passive: false})
         playlistToastContainer.style.removeProperty("transition")
         playlistToastContainer.style.removeProperty("transform")
@@ -2175,13 +2170,9 @@ class _T_M_G_Video_Player {
       playlistNextVideoCountdown = this.videoContainer.querySelector(".T_M_G-video-playlist-next-video-countdown"),
       playlistNextVideoCancelBtn = this.videoContainer.querySelector(".T_M_G-video-playlist-next-video-cancel-btn")
 
-      let isPaused = false, 
-      shouldUnPause,
-      lastTime,
+      let isPaused = false, shouldUnPause, lastTime, pointerStartX, pointerDeltaX,
       constraint = 0,
       timeVisible = 0,
-      pointerStartX,
-      pointerDeltaX,
       nextVideoCountdown = count,
       nextVideoFrameId = requestAnimationFrame(updatePlaylistToast)
 
@@ -2189,7 +2180,8 @@ class _T_M_G_Video_Player {
       playlistToastContainer.addEventListener("mouseover", () => isPaused = true)
       playlistToastContainer.addEventListener("mouseleave", () => {if (!playlistToastContainer.matches(":hover")) setTimeout(() => isPaused = false)})
       playlistToastContainer.addEventListener('pointerdown', handleToastPointerStart.bind(this), {passive: false})
-      playlistToastContainer.addEventListener('pointerup', handleToastPointerEnd.bind(this))            
+      playlistToastContainer.addEventListener('pointerup', handleToastPointerEnd.bind(this))
+      playlistToastContainer.addEventListener('pointercancel', handleToastPointerEnd.bind(this))        
       this.video.addEventListener("pause", cleanUpPlaylistToastWhenNeeded)
       this.video.addEventListener("waiting", cleanUpPlaylistToastWhenNeeded)
       this.video.addEventListener("timeupdate", autoCleanUpPlaylistToast)
@@ -2240,9 +2232,9 @@ class _T_M_G_Video_Player {
   }  
   }
 
-  togglePlay(bool) {
+  async togglePlay(bool) {
   try {      
-    this.video.ended ? this.replay() : typeof bool == "boolean" ? bool ? this.video.play() : this.video.pause() : this.video.paused ? this.video.play() : this.video.pause()
+    this.video.ended ? this.replay() : typeof bool == "boolean" ? await this.video[bool ? 'play' : 'pause']() : await this.video[this.video.paused ? 'play' : 'pause']()
   } catch(e) {
     this._handleLoadedError(e)
   }      
@@ -2336,7 +2328,8 @@ class _T_M_G_Video_Player {
     this.isScrubbing = true
     this.toggleScrubbing(e)
     this.DOM.timelineContainer?.addEventListener("pointermove", this._handleTimelineInput)
-    this.DOM.timelineContainer?.addEventListener("pointerup", this.stopTimelineScrubbing, {once:true})
+    this.DOM.timelineContainer?.addEventListener("pointerup", this.stopTimelineScrubbing)
+    this.DOM.timelineContainer?.addEventListener("pointercancel", this.stopTimelineScrubbing)
     }
   } catch(e) {
     this.log(e, "error", "swallow")
@@ -2350,6 +2343,8 @@ class _T_M_G_Video_Player {
     if (e) this.toggleScrubbing(e)
     else this.videoContainer.classList.remove("T_M_G-video-scrubbing")
     this.DOM.timelineContainer?.removeEventListener("pointermove", this._handleTimelineInput)
+    this.DOM.timelineContainer?.removeEventListener("pointerup", this.stopTimelineScrubbing)
+    this.DOM.timelineContainer?.removeEventListener("pointercancel", this.stopTimelineScrubbing)
     }
   } catch(e) {
     this.log(e, "error", "swallow")
@@ -2362,8 +2357,9 @@ class _T_M_G_Video_Player {
     const percent = Math.min(Math.max(0, e.clientX - rect.x), rect.width) / rect.width
     this.videoContainer.classList.toggle("T_M_G-video-scrubbing", this.isScrubbing)
     if (this.isScrubbing) {
-      const width = window.tmg.getRenderedBox(this.video)?.width ?? this.videoContainer.offsetWidth
-      const height = window.tmg.getRenderedBox(this.video)?.height ?? this.videoContainer.offsetHeight
+      let { width, height } = window.tmg.getRenderedBox(this.video)
+      width = width ?? this.videoContainer.offsetWidth
+      height = height ?? this.videoContainer.offsetHeight
       this.DOM.thumbnailCanvas.height = this.DOM.thumbnailImg.height = height + 1
       this.DOM.thumbnailCanvas.width = this.DOM.thumbnailImg.width = width + 1
       this.wasPaused = this.video.paused
@@ -2379,7 +2375,7 @@ class _T_M_G_Video_Player {
   }
 
   showPreviewImages() {
-    if (!window.tmg.queryMediaMobile()) this.videoContainer.classList.add("T_M_G-video-previewing")
+    if (!this.isMediaMobile) this.videoContainer.classList.add("T_M_G-video-previewing")
   }
 
   hidePreviewImages() {
@@ -2404,14 +2400,14 @@ class _T_M_G_Video_Player {
     if (this.settings.status.ui.previewImages) {
       const previewImgNumber = Math.max(1, Math.floor((percent * this.duration) / this.settings.previewImages.fps))
       previewImgSrc = this.settings.previewImages.address.replace('$', previewImgNumber)
-      if (this.settings.previewImages && !window.tmg.queryMediaMobile()) this.DOM.previewImg.src = previewImgSrc
+      if (this.settings.previewImages && !this.isMediaMobile) this.DOM.previewImg.src = previewImgSrc
       if (this.isScrubbing) this.DOM.thumbnailImg.src = previewImgSrc
     } else if (this.settings.previewImages) {
       this.pseudoVideo.currentTime = percent * this.duration
-      if (this.settings.previewImages && !window.tmg.queryMediaMobile()) this.previewContext?.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height)
+      if (this.settings.previewImages && !this.isMediaMobile) this.previewContext?.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height)
       if (this.isScrubbing) this.thumbnailContext?.drawImage(this.pseudoVideo, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height)
     }   
-    let arrowPosition, arrowPositionMin = (((this.isModeActive("theater") && !this.isModeActive("miniPlayer")) || (this.isModeActive("fullScreen"))) && this.settings.previewImages) && !window.tmg.queryMediaMobile() ? 10 : 16.5
+    let arrowPosition, arrowPositionMin = (((this.isModeActive("theater") && !this.isModeActive("miniPlayer")) || (this.isModeActive("fullScreen"))) && this.settings.previewImages) && !this.isMediaMobile ? 10 : 16.5
     if (percent < previewImgMin) {
       arrowPosition = `${Math.max(percent * rect.width, arrowPositionMin)}px`
     } else if (percent > (1 - previewImgMin)) {
@@ -2710,7 +2706,8 @@ class _T_M_G_Video_Player {
   try {
     this.DOM.cueContainer?.setPointerCapture(e.pointerId)
     this.DOM.cueContainer?.addEventListener("pointermove", this._handleCueDragging)
-    this.DOM.cueContainer?.addEventListener("pointerup", this._handleCueDragEnd, {once:true})
+    this.DOM.cueContainer?.addEventListener("pointerup", this._handleCueDragEnd)
+    this.DOM.cueContainer?.addEventListener("pointercancel", this._handleCueDragEnd)
   } catch(e) {
     this.log(e, "error", "swallow")
   }
@@ -2751,6 +2748,8 @@ class _T_M_G_Video_Player {
     this.cancelRAFLoop("cueDragging")
     this.DOM.videoContainer.classList.remove("T_M_G-video-cue-dragging")
     this.DOM.cueContainer.removeEventListener("pointermove", this._handleCueDragging)
+    this.DOM.cueContainer?.removeEventListener("pointerup", this._handleCueDragEnd)
+    this.DOM.cueContainer?.removeEventListener("pointercancel", this._handleCueDragEnd)
   } catch(e) {
       this.log(e, "error", "swallow")
   }
@@ -3130,7 +3129,7 @@ class _T_M_G_Video_Player {
 
   async toggleFullScreenMode() {
   try {
-    if (this.settings.status.modes.fullScreen) {
+    if (!this.settings.status.modes.fullScreen) return
     if (!this.isModeActive("fullScreen")) {
     if (!window.tmg._CURRENT_FULL_SCREEN_PLAYER) {
       if (this.isModeActive("floatingPlayer")) {
@@ -3148,7 +3147,10 @@ class _T_M_G_Video_Player {
       else if (this.video.webkitEnterFullScreen) {
         // this is for native ios fullscreen support
         await this.video.webkitEnterFullScreen()
-        this.video.addEventListener("webkitendfullscreen", () => this.inFullScreen = false, {once: true})
+        this.video.addEventListener("webkitendfullscreen", () => {
+          this.inFullScreen = false
+          this._handleFullScreenChange()
+        }, {once: true})
       }
       this.inFullScreen = true
     }
@@ -3158,7 +3160,6 @@ class _T_M_G_Video_Player {
 			else if (document.msExitFullscreen) await document.msExitFullscreen()
 			else if (document.webkitCancelFullScreen) await document.webkitCancelFullScreen()
       this.inFullScreen = false
-    }
     }
   } catch(e) {
     this.log(e, "error", "swallow")
@@ -3187,10 +3188,10 @@ class _T_M_G_Video_Player {
   try {
     if (this.isModeActive("fullScreen")) {
       const lockOrientation = this.video.videoHeight > this.video.videoWidth ? "portrait" : "landscape"
-      if (screen.orientation && screen.orientation.lock) await screen.orientation.lock(lockOrientation)
+      if (screen.orientation) await screen.orientation?.lock?.(lockOrientation)
       this.DOM.fullScreenOrientationBtn.classList.remove("T_M_G-video-control-hidden")
     } else {
-      if (screen.orientation && screen.orientation.lock) screen.orientation.unlock()
+      screen.orientation?.unlock?.()
       this.DOM.fullScreenOrientationBtn.classList.add("T_M_G-video-control-hidden")
     }
   } catch(e) {
@@ -3198,11 +3199,9 @@ class _T_M_G_Video_Player {
   }
   }
 
-  changeFullScreenOrientation() {
+  async changeFullScreenOrientation() {
   try {
-    if (screen.orientation && screen.orientation.lock) {
-      screen.orientation.lock(screen.orientation.angle === 0 ? "landscape" : "portrait").catch(e => this.log(e, "error", "swallow"))
-    }
+    await screen.orientation?.lock?.(screen.orientation.angle === 0 ? "landscape" : "portrait").catch(e => this.log(e, "error", "swallow"))
   } catch(e) {
     this.log(e, "error", "swallow")
   }               
@@ -3210,17 +3209,11 @@ class _T_M_G_Video_Player {
 
   async togglePictureInPictureMode() {
   try {
+    if (!this.settings.status.modes.pictureInPicture) return
     if (this.isModeActive("fullScreen")) await this.toggleFullScreenMode()
-    if (this.settings.status.modes.pictureInPicture) {
-    if (this.settings.status.beta.floatingPlayer) {
-      if ("documentPictureInPicture" in window) {
-        this.toggleFloatingPlayer()
-        return
-      }
-    }
+    if (this.settings.status.beta.floatingPlayer && "documentPictureInPicture" in window) return this.toggleFloatingPlayer()
     if (!this.isModeActive("pictureInPicture")) this.video.requestPictureInPicture() 
-    else document.exitPictureInPicture() 
-    }
+    else document.exitPictureInPicture()
   } catch(e) {
     this.log(e, "error", "swallow")
   }      
@@ -3254,13 +3247,9 @@ class _T_M_G_Video_Player {
 
   toggleFloatingPlayer() {
   try {
-  if ("documentPictureInPicture" in window) {
-    if (this.floatingPlayerActive) {
-      this.floatingPlayer?.close()
-    } else {
-      this.initFloatingPlayer()
-    }
-  }
+    if (!this.settings.status.modes.pictureInPicture || !("documentPictureInPicture" in window)) return
+    if (!this.floatingPlayerActive) this.initFloatingPlayer()
+    else this.floatingPlayer?.close()
   } catch(e) {
     this.log(e, "error", "swallow")
   }   
@@ -3269,7 +3258,7 @@ class _T_M_G_Video_Player {
   async initFloatingPlayer() {
   try {
     if (!this.floatingPlayerActive) {
-    if (window.documentPictureInPicture.window) window.documentPictureInPicture.window.close()
+    window.documentPictureInPicture.window?.close?.()
     this.toggleMiniPlayerMode(false)
 
     this.floatingPlayerActive = true
@@ -3336,8 +3325,8 @@ class _T_M_G_Video_Player {
 
   toggleMiniPlayerMode(bool, behaviour) {
   try {
-  // mini player has an actual behaviour
-  if (this.settings.status.modes.miniPlayer) {
+    if (!this.settings.status.modes.miniPlayer) return
+    // mini player has an actual behaviour
     if ((!this.isModeActive("miniPlayer") && !this.isModeActive("pictureInPicture") && !this.isModeActive("floatingPlayer") && !this.isModeActive("fullScreen") && !this.parentIntersecting && window.innerWidth >= this.settings.miniPlayerThreshold && !this.video.paused) || (bool === true && !this.isModeActive("miniPlayer"))) {
       this.activatePseudoMode()
       this.videoContainer.classList.add("T_M_G-video-progress-bar", "T_M_G-video-mini-player")
@@ -3354,7 +3343,6 @@ class _T_M_G_Video_Player {
       this.videoContainer.removeEventListener("mousedown", this.moveMiniPlayer)
       this.videoContainer.removeEventListener("touchstart", this.moveMiniPlayer, {passive: false})
     } 
-  }
   } catch(e) {
     this.log(e, "error", "swallow")
   }
@@ -3421,10 +3409,10 @@ class _T_M_G_Video_Player {
 	if (target === this.DOM.videoOverlayControlsContainer) {
     if (this.clickId) clearTimeout(this.clickId)
     this.clickId = setTimeout(() => {
-	  if (window.tmg.queryMediaMobile() && !this.isModeActive("miniPlayer")) {
+	  if (this.isMediaMobile && !this.isModeActive("miniPlayer")) {
         if (!this.buffering && !this.isModeActive("pictureInPicture")) this.videoContainer.classList.toggle("T_M_G-video-overlay")
       } 
-      if (window.tmg.queryMediaMobile() || this.isModeActive("miniPlayer")) return
+      if (this.isMediaMobile || this.isModeActive("miniPlayer")) return
       if (!(this.speedCheck && this.playTriggerCounter < 1))  {
         this.togglePlay()
         this.video.paused ? this.fire("videopause") : this.fire("videoplay")
@@ -3458,13 +3446,12 @@ class _T_M_G_Video_Player {
       if (detail == 1) return
     }
     if (pos === "center") {
-      window.tmg.queryMediaMobile() || this.isModeActive("miniPlayer") ? this.togglePlay() : this.toggleFullScreenMode()
+      this.isMediaMobile || this.isModeActive("miniPlayer") ? this.togglePlay() : this.toggleFullScreenMode()
       return
     } else {
       if (this.skipPersist  && detail == 2) return
       this.activateSkipPersist(pos)
       pos === "right" ? this.skip(this.settings.timeSkip) : this.skip(-this.settings.timeSkip)
-      console.log(e)
       window.tmg.rippleHandler(e, this.currentNotifier);
     }
     }
@@ -3475,11 +3462,10 @@ class _T_M_G_Video_Player {
 
   activateSkipPersist(pos) {
   try {
-    if (!this.skipPersist) {
+    if (this.skipPersist) return
     this.videoContainer.addEventListener("click", this._handleDoubleClick)
     this.skipPersist = true
     this.skipPersistPosition = pos
-    }
   } catch(e) {
     this.log(e, "error", "swallow")
   }   
@@ -3487,11 +3473,10 @@ class _T_M_G_Video_Player {
 
   deactivateSkipPersist() {
   try {
-    if (this.skipPersist) {
+    if (!this.skipPersist) return
     this.videoContainer.removeEventListener("click", this._handleDoubleClick)
     this.skipPersist = false
     this.skipPersistPosition = null
-    }
   } catch(e) {
     this.log(e, "error", "swallow")
   }   
@@ -3499,7 +3484,7 @@ class _T_M_G_Video_Player {
 
   _handleHoverPointerActive({target}) {
   try {
-    if (!(window.tmg.queryMediaMobile() && !this.isModeActive("miniPlayer"))) this.showOverlay()
+    if (!(this.isMediaMobile && !this.isModeActive("miniPlayer"))) this.showOverlay()
     if (this.DOM.videoControlsContainer.contains(target)) clearTimeout(this.overlayRestraintId)
   } catch(e) {
     this.log(e, "error", "swallow")
@@ -3516,7 +3501,7 @@ class _T_M_G_Video_Player {
 
   _handleHoverPointerOut() {
   try {
-    if (!window.tmg.queryMediaMobile() && !this.videoContainer.matches(":hover")) this.removeOverlay()
+    if (!this.isMediaMobile && !this.videoContainer.matches(":hover")) this.removeOverlay()
   } catch(e) {
     this.log(e, "error", "swallow")
   }               
@@ -3613,7 +3598,7 @@ class _T_M_G_Video_Player {
   }
   }
 
-  _handleGestureWheelMove({clientX: x, clientY: y, deltaX, deltaY}) {
+  _handleGestureWheelMove({clientX: x, deltaX, deltaY}) {
   try {
     const width = window.innerWidth,
     height = window.innerHeight
@@ -4016,7 +4001,7 @@ class _T_M_G_Video_Player {
         this.toggleFullScreenMode()
         break
       case this.settings.keyShortcuts["theater"]?.toString()?.toLowerCase():
-        if (!window.tmg.queryMediaMobile() && !this.isModeActive("fullScreen") && !this.isModeActive("miniPlayer") && !this.isModeActive("floatingPlayer")) this.toggleTheaterMode()
+        if (!this.isMediaMobile && !this.isModeActive("fullScreen") && !this.isModeActive("miniPlayer") && !this.isModeActive("floatingPlayer")) this.toggleTheaterMode()
         break
       case this.settings.keyShortcuts["expandMiniPlayer"]?.toString()?.toLowerCase():
         if (this.isModeActive("miniPlayer")) 
@@ -4106,7 +4091,8 @@ class _T_M_G_Video_Player {
     this.dragging = null
     const leftSideStructure = this.settings.status.ui.leftSideControls && this.DOM.leftSideControlsWrapper.children ? Array.from(this.DOM.leftSideControlsWrapper.children, el => el.dataset.controlId) : []
     const rightSideStructure = this.settings.status.ui.rightSideControls && this.DOM.rightSideControlsWrapper.children ? Array.from(this.DOM.rightSideControlsWrapper.children, el => el.dataset.controlId) : []
-    this.settings.controllerStructure = [].concat(leftSideStructure, ["spacer"], rightSideStructure)
+    this.settings.controllerStructure = [...leftSideStructure, "spacer", ...rightSideStructure]
+    window.tmg.userSettings = { controllerStructure: this.settings.controllerStructure }
   } catch(e) {
     this.log(e, "error", "swallow")
   }      
@@ -4132,7 +4118,7 @@ class _T_M_G_Video_Player {
         const afterControl = this.getControlAfterDragging(e.target, e.clientX)
         if (afterControl) e.target?.insertBefore(this.dragging, afterControl) 
         else e.target.appendChild(this.dragging)
-        this.updateSideControls(e)  
+        this.updateSideControls(e)
       }, this.dragOverThrottleDelay)
     }
   } catch(e) {
@@ -4278,7 +4264,7 @@ class _T_M_G_Media_Player {
 
   async #deploy() {
     if (!this.#active) {
-    if (this.#medium.tagName === 'VIDEO') {
+    if (this.#medium instanceof HTMLVideoElement) {
       this.#active = true
       this.#medium.controls = false
       this.#medium.tmgcontrols = true
@@ -4430,6 +4416,7 @@ class tmg {
       volumeSkip: 5,
       brightnessSkip: 5,
       playbackRateSkip: 0.25,
+      automoveCountdown: 10,
       maxBrightness: 150,
       maxVolume: 300,
       maxPlaybackRate: 16,
@@ -4437,7 +4424,6 @@ class tmg {
       progressBar: false,
       persist: true,
       automove: true,
-      automoveCountdown: 10,
       autocaptions: false,
       autoplay: false,
       loop: false,
@@ -4763,7 +4749,7 @@ class tmg {
   }
   static queryMediaMobile(strict = true) {
     const isMobileDimensions = window.matchMedia('(max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape)').matches,
-    isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/.test(navigator?.userAgent)
+    isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent)
     return strict ? isMobileDevice : isMobileDimensions
   }
   static queryFullScreen() {
@@ -4836,7 +4822,7 @@ class tmg {
     const bbox   = elem.getBoundingClientRect()
     const object = getResourceDimensions(elem)
   
-    if (!object) return null
+    if (!object) return { width: null, height: null, left: null, right: null }
 
     if (objectFit === "scale-down") {
       objectFit = (bbox.width < object.width || bbox.height < object.height) ? "contain" : "none"
@@ -4877,7 +4863,7 @@ class tmg {
       return { left, top, width, height }
     }
   }
-  static _SCROLL_ASSIST_OBSERVER = new ResizeObserver(entries =>
+  static _SCROLL_ASSIST_OBSERVER = (typeof window !== "undefined") && new ResizeObserver(entries =>
     entries.forEach(({ target }) => window.tmg._SCROLL_ASSIST_DATA.get(target)?.update())
   );
   static _SCROLL_ASSIST_DATA = new WeakMap();
@@ -4972,20 +4958,17 @@ class tmg {
     ripple.addEventListener("animationend", () => canRelease = true, { once: true });
     wrapper.appendChild(ripple);
     el.appendChild(wrapper);
-    console.log(rect)
-    console.log(e.clientX, rect.left, size, x)
-    console.log(e.clientY, rect.top, size, y)
     const release = () => {
       if (!canRelease) return ripple.addEventListener("animationend", release, { once: true });
       ripple.classList.replace("T_M_G-video-ripple-hold", "T_M_G-video-ripple-fade");
       ripple.addEventListener("animationend", () => {
         (window.requestIdleCallback || setTimeout)(() => wrapper.remove());
       });
-      window.removeEventListener("pointerup", release);
-      window.removeEventListener("pointercancel", release);
+      el.ownerDocument.defaultView.removeEventListener("pointerup", release);
+      el.ownerDocument.defaultView.removeEventListener("pointercancel", release);
     };
-    window.addEventListener("pointerup", release);
-    window.addEventListener("pointercancel", release);
+    el.ownerDocument.defaultView.addEventListener("pointerup", release);
+    el.ownerDocument.defaultView.addEventListener("pointercancel", release);
   }
   //a wild card for deploying TMG controls to available media, returns a promise that resolves with an array referencing the media
   static async launch(medium) {
