@@ -1165,7 +1165,7 @@ class _T_M_G_Video_Player {
 
   removeInitialState() {
   try {
-    if (this.initialState) {
+    if (!this.initialState) return
     this.stall()
     this.videoContainer.classList.remove("T_M_G-video-initial")
     this.initialState = false
@@ -1173,7 +1173,6 @@ class _T_M_G_Video_Player {
     this.initializeVideoControls()
     this.DOM.mainPlayPauseBtn?.removeEventListener("click", this.removeInitialState)
     this.videoContainer.removeEventListener("click", this.removeInitialState)
-    }
   } catch(e) {
     this.log(e, "error", "swallow")
   }
@@ -4232,7 +4231,7 @@ class _T_M_G_Media_Player {
   async fetchCustomOptions() {
     let fetchedControls
     if (this.#medium.getAttribute("tmg")?.includes('.json')) {
-      fetchedControls = fetch(v.window.tmg.toString()).then(res => {
+      fetchedControls = fetch(this.#medium.getAttribute("tmg")).then(res => {
         if (!res.ok) throw new Error(`TMG could not find provided JSON file!. Status: ${res.status}`)
         return res.json()
       }).catch(({message}) => {
@@ -4241,17 +4240,13 @@ class _T_M_G_Media_Player {
         fetchedControls = undefined
       })
     }
-    const customOptions = await fetchedControls ??  {} 
+    const customOptions = await fetchedControls ?? {} 
     if (customOptions && Object.keys(customOptions).length === 0) {
       const attributes = this.#medium.getAttributeNames().filter(attr => attr.startsWith("tmg--"))
       const specialProps = ["tmg--media--artwork", "tmg--playlist"]
-      attributes?.forEach(attr => {
-        if (!specialProps.some(sp => attr.includes(sp))) window.tmg.putHTMLOptions(attr, customOptions, this.#medium)
-      })
+      attributes?.forEach(attr => !specialProps.some(sp => attr.includes(sp)) && window.tmg.putHTMLOptions(attr, customOptions, this.#medium))
       if (this.#medium.poster || attributes.includes("tmg--media-artwork")) {
-        customOptions.media ? customOptions.media.artwork = [{src: this.#medium.getAttribute("tmg--media-artwork") ?? this.#medium.poster}] : customOptions.media = {
-          artwork: [{src: this.#medium.getAttribute("tmg--media-artwork") ?? this.#medium.poster}]
-        }
+        customOptions.media ? customOptions.media.artwork = [{src: this.#medium.getAttribute("tmg--media-artwork") ?? this.#medium.poster}] : customOptions.media = { artwork: [{src: this.#medium.getAttribute("tmg--media-artwork") ?? this.#medium.poster}] }
       }            
     }
     if (this.#active) {
@@ -4354,7 +4349,7 @@ class _T_M_G_Media_Player {
       settings.status.ui = {
         //notifiers would be in the UI if specified in the settings or if not specified but override is allowed
         notifiers: settings.notifiers || settings.status.allowOverride.notifiers,
-        timeline: (/top|bottom/).test(settings.timelinePosition),
+        timeline: /top|bottom/.test(settings.timelinePosition),
         prev: settings.controllerStructure.includes("prev"),
         playPause: settings.controllerStructure.includes("playpause"),
         next: settings.controllerStructure.includes("next"),

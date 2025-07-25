@@ -1,19 +1,20 @@
 {
-"media": {
-  "title": "Justice League Teaser", 
-  "author": "TMG MEDIA PROTOTYPE 2",
-  "artwork": [
-    {
-      "src": "../assets/justice-league-b.jpeg"
+  "media": {
+    "title": "Justice League Teaser", 
+    "author": "TMG MEDIA PROTOTYPE 2",
+    "artwork": [
+      {
+        "src": "../assets/justice-league-b.jpeg"
+      }
+    ]
+  },
+  "settings": {
+    "muted": true,
+    "progressBar": true,
+    "beta": true,
+    "previewImages": {
+      "address": "../assets/previewImgs/preview$.jpg", 
+      "fps": 10
     }
-  ]
-},
-"settings": {
-  "progressBar": true,
-  "beta": true,
-  "previewImages": {
-    "address": "../assets/previewImgs/preview$.jpg", 
-    "fps": 10
   }
-}
 }
