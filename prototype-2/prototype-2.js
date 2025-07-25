@@ -2,6 +2,7 @@
 /* 
 TODO: 
   editable settings
+  video resolution
 */
 
 //running a runtime environment check
@@ -211,12 +212,16 @@ class _T_M_G_Video_Player {
   }
 
   log(message, type, action) {
+    if (!this.debug) return
     switch (type) {
       case "error":
-        if (this.debug) action === "swallow" ? console.warn(`TMG silenced a rendering error:`, message) : console.error(`TMG rendering error:`, message)
-      break
+        action === "swallow" ? console.warn(`TMG silenced a rendering error:`, message) : console.error(`TMG rendering error:`, message)
+        break
+      case "warn":
+        console.warn(message)
+        break
       default:
-        if (this.debug) console.log(message)
+        console.log(message)
     }
   }
 
@@ -346,8 +351,8 @@ class _T_M_G_Video_Player {
     }
   }
 
-  //fetching all css varibles from the stylesheet for easy accessibility
   initCSSVariablesManager() {
+  //fetching all css varibles from the stylesheet for easy accessibility
   for (const sheet of document.styleSheets) {
     try {
     for (const cssRule of sheet.cssRules) {
@@ -569,7 +574,7 @@ class _T_M_G_Video_Player {
       `
         <div class="T_M_G-video-title-wrapper">
           <div class="T_M_G-video-title-content">
-            <div class="T_M_G-video-title-casing">
+            <div class="T_M_G-video-title-casing" tabindex="-1">
               <p class="T_M_G-video-title"></p>
             </div>
           </div>
@@ -808,7 +813,7 @@ class _T_M_G_Video_Player {
       ` : null,
       timeline : this.settings.status.ui.timeline ?
       `
-        <div class="T_M_G-video-timeline-container" data-focusable-control="false">
+        <div class="T_M_G-video-timeline-container" data-focusable-control="false" tabindex="-1">
           <div class="T_M_G-video-timeline">
             <div class="T_M_G-video-loaded-timeline"></div>
             <div class="T_M_G-video-preview-container">
@@ -888,7 +893,7 @@ class _T_M_G_Video_Player {
       ` : null,
       duration : this.settings.status.ui.duration ?
       `
-        <button class="T_M_G-video-duration-container" title="Change Time Format${keyShortcuts["timeFormat"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="duration">
+        <button class="T_M_G-video-duration-container" title="Change Time Format${keyShortcuts["timeFormat"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="duration">
           <div class="T_M_G-video-current-time">0:00</div>
           /
           <div class="T_M_G-video-total-time">-:--</div>
@@ -1138,12 +1143,10 @@ class _T_M_G_Video_Player {
       this.setVideoTitleState()
       this.setVideoEventListeners()
     }
-    if (this.activated) {
-      if (this.initialState && this.video.paused) this.addInitialState()
-      else this.initializeVideoControls()  
-    } else {
-      console.warn("You have to activate the TMG controller to access the custom controls")
-    }
+    if (this.initialState && this.video.paused) this.addInitialState()
+    else this.initializeVideoControls()
+    if (this.disabled) this.disable()
+    else this.log("You have to enable the TMG controller to access the custom controls", "warn")
     this.initialized = true
   } catch(e) {
     this.log(e, "error", "swallow")
@@ -1157,7 +1160,7 @@ class _T_M_G_Video_Player {
     this.videoContainer.classList.add("T_M_G-video-initial")
     this.video.addEventListener("play", this.removeInitialState, {once:true})
     this.DOM.mainPlayPauseBtn?.addEventListener("click", this.removeInitialState)
-    this.videoContainer.addEventListener("click", this.removeInitialState)
+    this.DOM.videoContainerContent.addEventListener("click", this.removeInitialState)
   } catch(e) {
     this.log(e, "error", "swallow")
   }      
@@ -1172,7 +1175,7 @@ class _T_M_G_Video_Player {
     this.togglePlay(true)
     this.initializeVideoControls()
     this.DOM.mainPlayPauseBtn?.removeEventListener("click", this.removeInitialState)
-    this.videoContainer.removeEventListener("click", this.removeInitialState)
+    this.DOM.videoContainerContent.removeEventListener("click", this.removeInitialState)
   } catch(e) {
     this.log(e, "error", "swallow")
   }
@@ -1707,33 +1710,6 @@ class _T_M_G_Video_Player {
   }
   }
 
-  _handleControlsScrollAssistEnter({ target }) {
-  try {
-    const direction = target.dataset.scrollDirection
-    const wrapper = target.parentElement.querySelector(".T_M_G-video-side-controls-wrapper")
-    const scrollAmount = direction === "left" ? -2 : 2
-    this.RAFLoop("controlsScrollAssisting", () => {
-      const { scrollLeft, scrollWidth, offsetWidth } = wrapper
-      const shouldSnub =
-        direction === "left"
-          ? scrollLeft === 0
-          : scrollLeft + offsetWidth === scrollWidth;
-      if (shouldSnub) return this.cancelRAFLoop("controlsScrollAssisting")
-      wrapper.scrollLeft += scrollAmount;
-    })
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
-  }
-
-  _handleControlsScrollAssistLeave() {
-    try {
-      this.cancelRAFLoop("controlsScrollAssisting")
-    } catch(e) {
-      this.log(e, "error", "swallow")
-    }
-  }
-
   cache() {
   try {
     this.settingsCache = JSON.parse(JSON.stringify(this.settings))
@@ -1744,19 +1720,16 @@ class _T_M_G_Video_Player {
 
   enableFocusableControls(all) {
   try {
-    if (all === "all") {
-      this.DOM.focusableControls?.forEach(control => {
+    if (all === "all") this.DOM.focusableControls?.forEach(control => {
+      control.tabIndex = "0"
+      control.setAttribute("data-focusable-control", true)
+    })
+    else this.DOM.focusableControls?.forEach(control => {
+      if (this.DOM.videoContainerContent.contains(control)) {
         control.tabIndex = "0"
         control.setAttribute("data-focusable-control", true)
-      })
-    } else {
-      this.DOM.focusableControls?.forEach(control => {
-        if (this.DOM.videoContainerContent.contains(control)) {
-          control.tabIndex = "0"
-          control.setAttribute("data-focusable-control", true)
-        }
-      })
-    }
+      }
+    })
   } catch(e) {
     this.log(e, "error", "swallow")
   }  
@@ -1764,19 +1737,16 @@ class _T_M_G_Video_Player {
 
   disableFocusableControls(all) {
   try {
-    if (all === "all") {
-      this.DOM.focusableControls?.forEach(control => {
+    if (all === "all") this.DOM.focusableControls?.forEach(control => {
+      control.tabIndex = "-1"
+      control.setAttribute("data-focusable-control", false)
+    })
+    else this.DOM.focusableControls?.forEach(control => {
+      if (this.DOM.videoContainerContent.contains(control)) {
         control.tabIndex = "-1"
         control.setAttribute("data-focusable-control", false)
-      })
-    } else {
-      this.DOM.focusableControls?.forEach(control => {
-        if (this.DOM.videoContainerContent.contains(control)) {
-          control.tabIndex = "-1"
-          control.setAttribute("data-focusable-control", false)
-        }
-      })
-    }
+      }
+    })
   } catch(e) {
     this.log(e, "error", "swallow")
   }  
@@ -1799,7 +1769,6 @@ class _T_M_G_Video_Player {
   try {
     const frame = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height)
     const l = frame.data.length / 4
-
     for (let i = 0; i < l; i ++) {
       const grey = (
         frame.data[i * 4 + 0] +
@@ -1810,7 +1779,6 @@ class _T_M_G_Video_Player {
       frame.data[i * 4 + 1] = grey
       frame.data[i * 4 + 2] = grey
     }
-
     canvas.getContext("2d").putImageData(frame, 0, 0)
   } catch(e) {
     this.log(e, "error", "swallow")
@@ -1829,12 +1797,11 @@ class _T_M_G_Video_Player {
   }      
   }      
 
-  deactivate() {
+  deactivate(message) {
   try {
     this.showOverlay()
+    this.showMessage(message)
     this.videoContainer.classList.add("T_M_G-video-unavailable")
-    // this.disableFocusableControls("all")
-    // this.removeKeyEventListeners()
   } catch(e) {
     this.log(e, "error", "swallow")
   } 
@@ -1844,12 +1811,35 @@ class _T_M_G_Video_Player {
   try {
     if (this.videoContainer.classList.contains("T_M_G-video-unavailable") && this.loaded) {
       this.videoContainer.classList.remove("T_M_G-video-unavailable")
-      // this.enableFocusableControls("all")
-      // this.setKeyEventListeners()
     }
   } catch(e) {
     this.log(e, "error", "swallow")
   } 
+  }
+
+  disable() {
+  try {
+    this.videoContainer.classList.add("T_M_G-video-disabled")
+    this.video.pause()
+    this.cancelAllThrottles()
+    this.leaveSettingsView()
+    this.disableFocusableControls("all")
+    this.removeKeyEventListeners()
+    this.disabled = true
+  } catch(e) {
+    this.log(e, "error", "swallow")
+  }
+  }
+
+  enable() {
+  try {
+    this.videoContainer.classList.remove("T_M_G-video-disabled")
+    this.enableFocusableControls("all")
+    this.setKeyEventListeners()
+    this.disabled = false
+  } catch(e) {
+    this.log(e, "error", "swallow")
+  }
   }
 
   activatePseudoMode() {
@@ -1959,9 +1949,8 @@ class _T_M_G_Video_Player {
       default:
         message = "An unknown error occurred during video playback"
     }
-    this.showMessage(message)
     this.loaded = false
-    this.deactivate()
+    this.deactivate(message)
   } catch(e) {
     this.log(e, "error", "swallow")
   } 
@@ -2474,8 +2463,8 @@ class _T_M_G_Video_Player {
 
   _handleTimeUpdate() {
   try {   
-    this.video.removeAttribute("controls")
-    this.videoCurrentProgressPosition = window.tmg.isValidNumber(this.video.duration) ? window.tmg.formatNumber(this.video.currentTime / this.video.duration) : (this.video.currentTime / 60)// progress fallback, shouldn't take more than a min for duration to be available
+    this.video.removeAttribute("controls") // youtube did this too :)
+    this.videoCurrentProgressPosition = window.tmg.isValidNumber(this.video.duration) ? window.tmg.formatNumber(this.video.currentTime / this.video.duration) : (this.video.currentTime / 60) // progress fallback, shouldn't take more than a min for duration to be available
     if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.timeFormat !== "timespent" ? window.tmg.formatTime(this.video.currentTime) : `-${window.tmg.formatTime(this.video.duration - this.video.currentTime)}`
     if (this.speedCheck && this.speedToken === 1) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", window.tmg.formatTime(this.video.currentTime))
     if (this._playlist && this.currentTime > 3) this.playlistCurrentTime = this.currentTime
@@ -2665,9 +2654,7 @@ class _T_M_G_Video_Player {
 
   toggleCaptions() {
   try {      
-    if (this.video.textTracks[this.textTrackIndex]) {
-    this.videoContainer.classList.toggle("T_M_G-video-captions")
-    }
+    if (this.video.textTracks[this.textTrackIndex]) this.videoContainer.classList.toggle("T_M_G-video-captions")
   } catch(e) {
     this.log(e, "error", "swallow")
   }      
@@ -2715,7 +2702,6 @@ class _T_M_G_Video_Player {
   _handleCueDragging({clientX, clientY}) {
   try {
     this.DOM.videoContainer.classList.add("T_M_G-video-cue-dragging")
-
     this.cuePositionX = clientX
     this.cuePositionY = clientY
     this.changeCuePosition()
@@ -2755,6 +2741,7 @@ class _T_M_G_Video_Player {
   }
 
   set videoCaptionsCharacterEdgeStyle(value) {
+    this.DOM.cueContainer.classList = 'T_M_G-video-cue-container'
     this.DOM.cueContainer.classList.add(`T_M_G-video-cue-${value.replaceAll(" ", "-")}`)
   }
 
@@ -2878,12 +2865,9 @@ class _T_M_G_Video_Player {
     if (this.video.muted || volume == 0) {
       volume = 0
       volumeLevel = "muted"
-    } else if (volume < 50)
-      volumeLevel = "low" 
-    else if (volume <= 100) 
-      volumeLevel = "high"
-    else if (volume > 100) 
-      volumeLevel = "boost"
+    } else if (volume < 50) volumeLevel = "low" 
+    else if (volume <= 100)  volumeLevel = "high"
+    else if (volume > 100)  volumeLevel = "boost"
     const volumePercent = (volume - 0) / (this.settings.maxVolume - 0)
     this.videoContainer.setAttribute("data-volume-level", volumeLevel)
     if (this.DOM.volumeSlider) this.DOM.volumeSlider.value = volume
@@ -3036,14 +3020,10 @@ class _T_M_G_Video_Player {
     let brightness = this.brightness
     if (this.DOM.brightnessNotifierContent) this.DOM.brightnessNotifierContent.textContent = brightness + "%"
     let brightnessLevel = ""
-    if (brightness == 0)
-      brightnessLevel = "dark"
-    else if (brightness < 50)
-      brightnessLevel = "low" 
-    else if (brightness <= 100) 
-      brightnessLevel = "high"
-    else if (brightness > 100)
-      brightnessLevel = "boost"
+    if (brightness == 0) brightnessLevel = "dark"
+    else if (brightness < 50) brightnessLevel = "low" 
+    else if (brightness <= 100) brightnessLevel = "high"
+    else if (brightness > 100) brightnessLevel = "boost"
     const brightnessPercent = (brightness - 0) / (this.settings.maxBrightness - 0)
     this.videoContainer.setAttribute("data-brightness-level", brightnessLevel)  
     if (this.DOM.brightnessSlider) this.DOM.brightnessSlider.value = brightness
@@ -3865,12 +3845,9 @@ class _T_M_G_Video_Player {
     const shortcuts = {}
     for (const key of Object.keys(window.tmg._DEFAULT_VIDEO_BUILD.settings.keyShortcuts)) {
       let mods = ""
-      if (this.settings.ctrlKeys?.includes(String(key)))
-        mods += "ctrl + "
-      if (this.settings.altKeys?.includes(String(key)))
-        mods += "alt + "
-      if (this.settings.shiftKeys?.includes(String(key)))
-        mods += "shift + "
+      if (this.settings.ctrlKeys?.includes(String(key))) mods += "ctrl + "
+      if (this.settings.altKeys?.includes(String(key))) mods += "alt + "
+      if (this.settings.shiftKeys?.includes(String(key))) mods += "shift + "
       shortcuts[key] = this.settings.keyShortcuts[key]?.toString()?.toLowerCase()?.replace(/^(.+)$/, `(${mods}$1)`) ?? ""
     }
     return shortcuts
@@ -3908,7 +3885,6 @@ class _T_M_G_Video_Player {
   _handleKeyDown(e) {
   try {
   if (!this.keyEventAllowed(e)) return
-    
   this.throttle("keyDown", () => {
     switch (e.key.toString().toLowerCase()) {
       case " ":
@@ -4099,9 +4075,7 @@ class _T_M_G_Video_Player {
 
   _handleDragEnter({target}) {
   try {
-    if (target.dataset.dropzone && this.dragging) {
-      target.classList.add("T_M_G-video-dragover")
-    }
+    if (target.dataset.dropzone && this.dragging) target.classList.add("T_M_G-video-dragover")
   } catch(e) {
     this.log(e, "error", "swallow")
   }            
@@ -4146,7 +4120,6 @@ class _T_M_G_Video_Player {
 
   getControlAfterDragging(container, x) {
     const draggableControls = [...container.querySelectorAll("[draggable=true]:not(.T_M_G-video-control-dragging, .T_M_G-video-vb-btn), .T_M_G-video-vb-container:has([draggable=true])")]
-
     return draggableControls.reduce((closest, child) => {
       const box = child.getBoundingClientRect()
       const offset = x - box.left - (box.width / 2)
@@ -4394,12 +4367,13 @@ class tmg {
   static _DEFAULT_VIDEO_BUILD = {
     mediaPlayer: 'TMG',
     mediaType: 'video',
-    activated: true,
+    disabled: false,
     initialMode: "normal",
     initialState: true,
     debug: true,
     settings: {
       allowOverride: true,
+      previewImages: false,
       beta: ["rewind", "draggablecontrols", "gesturecontrols", "floatingplayer"],
       modes: ["normal", "fullscreen", "theater", "pictureinpicture", "miniplayer"],
       controllerStructure: ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"],
@@ -4424,7 +4398,6 @@ class tmg {
       loop: false,
       muted: false,
       playsInline: true,
-      previewImages: false,
       overlayRestraint: 3000,
       miniPlayerThreshold: 240,
       keyOverrides: [" ", "arrowdown", "arrowup", "arrowleft", "arrowright", "home", "end"],
@@ -4744,7 +4717,7 @@ class tmg {
   }
   static queryMediaMobile(strict = true) {
     const isMobileDimensions = window.matchMedia('(max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape)').matches,
-    isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent)
+    isMobileDevice = /Mobi|Android|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent)
     return strict ? isMobileDevice : isMobileDimensions
   }
   static queryFullScreen() {
@@ -4858,9 +4831,7 @@ class tmg {
       return { left, top, width, height }
     }
   }
-  static _SCROLL_ASSIST_OBSERVER = (typeof window !== "undefined") && new ResizeObserver(entries =>
-    entries.forEach(({ target }) => window.tmg._SCROLL_ASSIST_DATA.get(target)?.update())
-  );
+  static _SCROLL_ASSIST_OBSERVER = (typeof window !== "undefined") && new ResizeObserver(entries => entries.forEach(({ target }) => window.tmg._SCROLL_ASSIST_DATA.get(target)?.update()));
   static _SCROLL_ASSIST_DATA = new WeakMap();
   static initScrollAssist(container, {
     pxPerSecond = 80,

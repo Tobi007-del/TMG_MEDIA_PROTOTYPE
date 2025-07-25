@@ -1,3 +1,4 @@
+/* #o#o#o#o#o#o#o#o#o#o - 10-0-0 is used to raise specificity where required with the power of 10 id's to avoid the use of '!important' style declarations  */
 /* font variables */
 :where(:root, .T_M_G-media-container) {
   --T_M_G-video-font-family: inherit;
@@ -231,44 +232,44 @@
 }
 @keyframes T_M_G-spinner-easespin {
   12.5% {
-  transform: rotate(135deg);
+    transform: rotate(135deg);
   }
   25% {
-  transform: rotate(270deg);
+    transform: rotate(270deg);
   }
   37.5% {
-  transform: rotate(405deg);
+    transform: rotate(405deg);
   }
   50% {
-  transform: rotate(540deg);
+    transform: rotate(540deg);
   }
   62.5% {
-  transform: rotate(675deg);
+    transform: rotate(675deg);
   }
   75% {
-  transform: rotate(810deg);
+    transform: rotate(810deg);
   }
   87.5% {
-  transform: rotate(945deg);
+    transform: rotate(945deg);
   }
   100% {
-  transform: rotate(3turn);
+    transform: rotate(3turn);
   }
 }
 @keyframes T_M_G-left-spin {
   from, to {
-  transform: rotate(130deg);
+    transform: rotate(130deg);
   }
   50% {
-  transform: rotate(-5deg);
+    transform: rotate(-5deg);
   }
 }
 @keyframes T_M_G-right-spin {
   from, to {
-  transform: rotate(-130deg);
+    transform: rotate(-130deg);
   }
   50% {
-  transform: rotate(5deg);
+    transform: rotate(5deg);
   }
 }
 @keyframes T_M_G-ripple-expand {
@@ -311,16 +312,15 @@
   background-color: var(--T_M_G-video-brand-color);
 }
 
+:where(.T_M_G-video-container:not(.T_M_G-video-disabled)) :is(
 .T_M_G-video-title,
 .T_M_G-video-playlist-next-video-title,
-.T_M_G-video::cue,
 .T_M_G-video-current-time,
-.T_M_G-video-total-time {
+.T_M_G-video-total-time) {
   -webkit-user-select: text;
   user-select: text;
 }
 
-/* this style's specifiicty was raised to override the property if present so the desired dragging will be achievable*/
 .T_M_G-video-container :is([draggable="true"], #o#o#o#o#o#o#o#o#o#o) {
   -webkit-user-drag: element;
 }
@@ -415,7 +415,6 @@
   background: linear-gradient(to top, var(--T_M_G-video-brand-translucent-color), transparent);
 }
 
-/* utility styles specificity was raised for overrides */
 .T_M_G-video-container :is(.T_M_G-video-control-hidden, #o#o#o#o#o#o#o#o#o#o) {
   display: none;
   pointer-events: none;
@@ -509,7 +508,6 @@
   max-width: unset;
 }
 
-/* this style's specificity was raised to ensure that the theater mode always takes the entire width of the window and overrides any flex, grid or width property that may interfere. */
 :is(*:has(.T_M_G-media-container:is(.T_M_G-video-full-screen, .T_M_G-video-theater)), #o#o#o#o#o#o#o#o#o#o) {
   flex: 0 0 100%;
   grid-column: 1 / -1;
@@ -639,11 +637,10 @@ body:has(.T_M_G-video-floating-player) {
 }
 
 /* setting deactivated state */
-.T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) {
+.T_M_G-video-container:is(.T_M_G-video-unavailable, .T_M_G-video-disabled, #o#o#o#o#o#o#o#o#o#o) {
   --T_M_G-video-icons-color: var(--T_M_G-video-disabled-color);
   --T_M_G-video-controls-color: var(--T_M_G-video-disabled-color);
   --T_M_G-video-text-color: var(--T_M_G-video-disabled-color);
-  cursor: not-allowed;
 }
 
 .T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content::after {
@@ -670,6 +667,19 @@ body:has(.T_M_G-video-floating-player) {
 
 .T_M_G-video-container:is(.T_M_G-video-unavailable, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video {
   opacity: 0;
+}
+
+.T_M_G-video-container:is(.T_M_G-video-disabled, #o#o#o#o#o#o#o#o#o#o) {
+  cursor: not-allowed;
+}
+
+.T_M_G-video-container:is(.T_M_G-video-disabled, #o#o#o#o#o#o#o#o#o#o) * {
+  pointer-events: none;
+  animation: none;
+}
+
+.T_M_G-video-container:is(.T_M_G-video-disabled, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video {
+  filter: grayscale(100%);
 }
 /* setting deactivated state ends */
 
@@ -2409,7 +2419,7 @@ button:has(.T_M_G-video-next-icon) svg {
   }
 }
 
-/* this style is here to override properties in case of unpredictability in the UI */
+/* this style is here to override properties due unpredictability of specificity in the UI */
 .T_M_G-video-title-wrapper,
 .T_M_G-video-controls-container > *,
 .T_M_G-video-overlay-main-controls-wrapper,
@@ -2457,7 +2467,7 @@ button:has(.T_M_G-video-next-icon) svg {
   pointer-events: none;
 }
 
-/* setting video initial state begins*/
+/* setting video initial state */
 .T_M_G-video-container:not(.T_M_G-video-unavailable).T_M_G-video-initial .T_M_G-video-container-content {
   cursor: pointer;
 }
