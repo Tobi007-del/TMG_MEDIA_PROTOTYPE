@@ -73,7 +73,9 @@
   --T_M_G-video-slow-transition-time: 500ms;
   --T_M_G-video-notifiers-animation-time: 1000ms;
   --T_M_G-video-loader-animation-time: 1250ms;
-  --T_M_G-video-motion-transition: inset var(--T_M_G-video-motion-transition-time) cubic-bezier(.05, 0, 0, 1);
+  --T_M_G-video-bounce-timing: cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  --T_M_G-video-motion-timing: cubic-bezier(.05, 0, 0, 1);
+  --T_M_G-video-motion-transition: inset var(--T_M_G-video-motion-transition-time) var(--T_M_G-video-motion-timing);
 }
 
 /* color variables */
@@ -155,7 +157,7 @@
 
 /* settings variables */
 :where(:root, .T_M_G-media-container) {
-  --T_M_G-video-settings-view-transition-time: 550ms;
+  --T_M_G-video-settings-view-transition-time: 600ms;
   --T_M_G-video-settings-content-padding: calc(var(--T_M_G-video-current-unit)/1.75);
   --T_M_G-video-settings-background-color: rgba(0,0,0,.75);
   --T_M_G-video-settings-text-color: var(--T_M_G-video-text-color);
@@ -303,6 +305,7 @@
 :where(.T_M_G-media-container) *,
 :where(.T_M_G-media-container) *::after,
 :where(.T_M_G-media-container) *::before {
+  content: '';
   padding: 0;
   margin: 0;
 }
@@ -436,7 +439,8 @@
 .T_M_G-video-overlay-main-controls-wrapper,
 .T_M_G-video-thumbnail,
 .T_M_G-video-captions-btn::after,
-.T_M_G-video-captions-notifier::after {
+.T_M_G-video-captions-notifier::after,
+.T_M_G-video-thumb-indicator::before {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -690,7 +694,6 @@ body:has(.T_M_G-video-floating-player) {
 .T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-settings {
   pointer-events: all;
   opacity: 1;
-  transition: opacity var(--T_M_G-video-settings-view-transition-time) ease;
 }
 
 .T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-container-content video {
@@ -704,7 +707,7 @@ body:has(.T_M_G-video-floating-player) {
 .T_M_G-video-container-content-wrapper {
   position: relative;
   transform-style: preserve-3d;
-  transition: transform var(--T_M_G-video-settings-view-transition-time) ease;
+  transition: transform var(--T_M_G-video-settings-view-transition-time) var(--T_M_G-video-bounce-timing);
   height: inherit;
   width: inherit;
   max-width: inherit;
@@ -724,7 +727,7 @@ body:has(.T_M_G-video-floating-player) {
   min-width: inherit;
   min-height: inherit;
   border-radius: inherit;
-  transition: transform var(--T_M_G-video-settings-view-transition-time) ease;
+  transition: transform var(--T_M_G-video-settings-view-transition-time) var(--T_M_G-video-bounce-timing);
   transform-style: preserve-3d;
 }
 
@@ -746,6 +749,7 @@ body:has(.T_M_G-video-floating-player) {
   background-color: var(--T_M_G-video-settings-background-color);
   -webkit-backdrop-filter: blur(1px);
   backdrop-filter: blur(1px);
+  transition: opacity var(--T_M_G-video-settings-view-transition-time) var(--T_M_G-video-bounce-timing);
 }
 
 .T_M_G-video-settings-content {
@@ -941,11 +945,10 @@ body:has(.T_M_G-video-floating-player) {
   transition-property: transform, opacity;
   transition-duration: var(--T_M_G-video-motion-transition-time);
   transition-timing-function: ease;
-  animation: T_M_G-slide-in var(--T_M_G-video-slow-transition-time) forwards;
+  animation: T_M_G-slide-in var(--T_M_G-video-slow-transition-time) forwards var(--T_M_G-video-bounce-timing);
 }
 
 .T_M_G-video-playlist-toast-container::before {
-  content: '';
   position: absolute;
   bottom: 0;
   left: 0;
@@ -1280,7 +1283,6 @@ body:has(.T_M_G-video-floating-player) {
 }
 
 .T_M_G-video-controls-container::before {
-  content: "";
   position: absolute;
   bottom: 0;
   background: linear-gradient(to top, var(--T_M_G-video-current-curtain-color), transparent);
@@ -1402,7 +1404,6 @@ body:has(.T_M_G-video-floating-player) {
 }
 
 button:has(.T_M_G-video-next-icon, .T_M_G-video-prev-icon)::after {
-  content: '';
   position: absolute;
   width: calc(var(--T_M_G-video-current-unit)/10);
   height: calc(var(--T_M_G-video-current-unit)/1.75);
@@ -1533,6 +1534,9 @@ button:has(.T_M_G-video-next-icon) svg {
   transform-origin: left;
   transition: width var(--T_M_G-video-switch-transition-time) ease-in-out;
   box-shadow: 1px 1px 10px black;
+  transition-property: opacity, width;
+  transition-duration: var(--T_M_G-video-switch-transition-time);
+  transition-timing-function: ease;
 }
 
 .T_M_G-video-vb-container.T_M_G-video-control-active:hover .T_M_G-video-vb-slider,
@@ -1540,9 +1544,6 @@ button:has(.T_M_G-video-next-icon) svg {
   width: calc(var(--T_M_G-video-current-unit)*2);
   opacity: 1;
   overflow: visible;
-  transition-property: opacity, width;
-  transition-duration: var(--T_M_G-video-switch-transition-time);
-  transition-timing-function: ease;
 }
 
 .T_M_G-video-left-side-controls-wrapper .T_M_G-video-vb-container:has(.T_M_G-video-vb-slider:focus-visible) .T_M_G-video-vb-slider,
@@ -1634,7 +1635,6 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 .T_M_G-video-vb-slider::before {
-  content: '';
   position: absolute;
   display: none;
   top: calc(var(--T_M_G-video-current-unit)/4);
@@ -1670,10 +1670,6 @@ button:has(.T_M_G-video-next-icon) svg {
   white-space: nowrap;
 }
 
-.T_M_G-video-duration-container:hover {
-  cursor: pointer;
-}
-
 .T_M_G-video-container.T_M_G-video-scrubbing .T_M_G-video-current-time {
   font-weight: bolder;
 }
@@ -1685,7 +1681,6 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-container .T_M_G-video-captions-btn::after {
   top: 49%;
   left: 49%;
-  content: '';
   z-index: -1;
   height: calc(var(--T_M_G-video-current-unit)/1.75);
   width: calc(var(--T_M_G-video-current-unit)/1.175);
@@ -1825,7 +1820,6 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 .T_M_G-video-timeline::before {
-  content: '';
   position: absolute;
   left: 0;
   top: 0;
@@ -1836,7 +1830,6 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 .T_M_G-video-timeline::after {
-  content: '';
   position: absolute;
   left: 0;
   top: 0;
@@ -1856,27 +1849,23 @@ button:has(.T_M_G-video-next-icon) svg {
   background: var(--T_M_G-video-thumb-indicator-background);
   border-radius: 50%;
   transform: translateX(-50%) scale(var(--T_M_G-video-current-thumb-indicator-scale));
-  transition: transform var(--T_M_G-video-switch-transition-time) ease-in-out;
+  transition: transform var(--T_M_G-video-switch-transition-time) var(--T_M_G-video-bounce-timing);
 }
 
 .T_M_G-video-thumb-indicator::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
+  width: var(--T_M_G-video-ripple-size);
+  height: var(--T_M_G-video-ripple-size);
   background: var(--T_M_G-video-ripple-color);
   border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: all var(--T_M_G-video-fade-transition-time) ease;
+  scale: 0;
   opacity: 0;
   pointer-events: none;
+  z-index: -1;
+  transition: all var(--T_M_G-video-fade-transition-time) var(--T_M_G-video-bounce-timing);
 }
 
 .T_M_G-video-container.T_M_G-video-scrubbing .T_M_G-video-thumb-indicator::before {
-  width: var(--T_M_G-video-ripple-size);
-  height: var(--T_M_G-video-ripple-size);
+  scale: 1;
   opacity: 1;
 }
 
@@ -1927,7 +1916,6 @@ button:has(.T_M_G-video-next-icon) svg {
 }
 
 .T_M_G-video-preview-container::before {
-  content: '';
   position: absolute;
   top: 100%;
   left: var(--T_M_G-video-current-preview-img-arrow-position);
@@ -2099,7 +2087,6 @@ button:has(.T_M_G-video-next-icon) svg {
 
 .T_M_G-video-playback-rate-notifier:not(.T_M_G-video-rewind)::after, 
 .T_M_G-video-playback-rate-notifier.T_M_G-video-rewind::before {
-  content: '';
   -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='70' fill='white'><polygon points='0,0 50,35 0,70'/></svg>");
   mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='70' fill='white'><polygon points='0,0 50,35 0,70'/></svg>");
   -webkit-mask-repeat: repeat-x;
@@ -2142,6 +2129,10 @@ button:has(.T_M_G-video-next-icon) svg {
 .T_M_G-video-playback-rate-notifier.T_M_G-video-rewind::before {
   margin-right: calc(var(--T_M_G-video-current-unit)/5);
   transform: scaleX(-1);
+}
+
+.T_M_G-video-touch-vb-notifier {
+  transition: opacity var(--T_M_G-video-fade-transition-time) ease;
 }
 
 .T_M_G-video-notifiers-container :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-timeline-notifier, .T_M_G-video-touch-vb-notifier).T_M_G-video-control-active {
