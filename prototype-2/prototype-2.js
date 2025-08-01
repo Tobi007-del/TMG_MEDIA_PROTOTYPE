@@ -1509,14 +1509,10 @@ class _T_M_G_Video_Player {
 
     //volume event listeners
     this.DOM.volumeSlider?.addEventListener("input", this._handleVolumeSliderInput)
-    this.DOM.volumeSlider?.addEventListener("mousedown", this. _handleVolumeSliderMouseDown)
-    this.DOM.volumeSlider?.addEventListener("mouseup", this._handleVolumeSliderMouseUp)
     this.DOM.volumeContainer?.addEventListener("mousemove", this._handleVolumeContainerMouseMove)
 
     //brightness event listeners
     this.DOM.brightnessSlider?.addEventListener("input", this._handleBrightnessSliderInput)
-    this.DOM.brightnessSlider?.addEventListener("mousedown", this. _handleBrightnessSliderMouseDown)
-    this.DOM.brightnessSlider?.addEventListener("mouseup", this._handleBrightnessSliderMouseUp)
     this.DOM.brightnessContainer?.addEventListener("mousemove", this._handleBrightnessContainerMouseMove)
 
     //drag event listeners
@@ -1929,38 +1925,18 @@ class _T_M_G_Video_Player {
   }          
   }
 
+
   _handleLoadedError(error) {
   try {
-    if (error) this.log(error, "error", "swallow")
-    let message 
-    switch (error.code) {
-      case error.MEDIA_ERR_ABORTED:
-        message = "The video playback was aborted"
-        break;
-      case error.MEDIA_ERR_NETWORK:
-        message = "The video failed due to a network error"
-        break;
-      case error.MEDIA_ERR_DECODE:
-        message = "The video could not be decoded"
-        break;
-      case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
-        message = "The video source is not supported"
-        break;
-      default:
-        message = "An unknown error occurred during video playback"
-    }
-    this.loaded = false
-    this.deactivate(message)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  } 
-  }
-
-  syncAspectRatio() {
-  try {
-    if (!this.video.videoWidth || !this.video.videoHeight) return
-    this.aspectRatio = this.video.videoWidth / this.video.videoHeight
-    this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`
+    const mediaError = this.video.error;
+    const message =
+      this.settings.errorMessages?.[mediaError?.code] ||
+      error?.message || // Prefer native thrown error message
+      mediaError?.message || // Browser-generated message (if available)
+      (typeof error === "string" ? error : null) || 
+      this.settings.errorMessages?.[5] || ''; // Unknown error message
+    this.loaded = false;
+    this.deactivate(message);
   } catch(e) {
     this.log(e, "error", "swallow")
   } 
@@ -2006,7 +1982,17 @@ class _T_M_G_Video_Player {
   } catch(e) {
     this.log(e, "error", "swallow")
   }               
-  }   
+  }
+
+  syncAspectRatio() {
+  try {
+    if (!this.video.videoWidth || !this.video.videoHeight) return
+    this.aspectRatio = this.video.videoWidth / this.video.videoHeight
+    this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`
+  } catch(e) {
+    this.log(e, "error", "swallow")
+  } 
+  }
 
   previousVideo() {
   try {
@@ -2269,6 +2255,9 @@ class _T_M_G_Video_Player {
     this.videoContainer.classList.remove("T_M_G-video-paused")
     this.overlayRestraint()
     this.setMediaSession()
+    if (this.loaded) return
+    this.loaded = true
+    this.reactivate()
   } catch(e) {
     this.log(e, "error", "swallow")
   }
@@ -2848,14 +2837,6 @@ class _T_M_G_Video_Player {
     this.log(e, "error", "swallow")
   }
   }
-
-  _handleVolumeSliderMouseDown() {
-    this.DOM.volumeSlider?.classList.add("T_M_G-video-control-active")
-  }
-
-  _handleVolumeSliderMouseUp() {
-    this.DOM.volumeSlider?.classList.remove("T_M_G-video-control-active")
-  }
         
   _handleVolumeChange() {
   try {
@@ -3006,14 +2987,6 @@ class _T_M_G_Video_Player {
     this.log(e, "error", "swallow")
   }
   }
-
-  _handleBrightnessSliderMouseDown() {
-    this.DOM.brightnessSlider?.classList.add("T_M_G-video-control-active")
-  }
-
-  _handleBrightnessSliderMouseUp() {
-    this.DOM.brightnessSlider?.classList.remove("T_M_G-video-control-active")
-  }   
 
   _handleBrightnessChange() {
   try {
@@ -4170,17 +4143,18 @@ class _T_M_G_Media_Player {
     if (this.queryBuild()) {
     if (typeof customOptions === "object") {
       this.#build = {...this.#build, ...customOptions}
+      const df = window.tmg._DEFAULT_VIDEO_BUILD
       //The general settings and nested key shortcuts can either take the value of false to signify that they are not wanted or they can be given the value of true to use all the defaults or they can use the values passed down in the parameter, any other value like null or undefined will also pass down the default values
-      this.#build.settings = this.#build.settings !== false ? (this.#build.settings ?? false) || !(this.#build.settings === true) ? {...window.tmg._DEFAULT_VIDEO_BUILD.settings, ...this.#build.settings} : window.tmg._DEFAULT_VIDEO_BUILD.settings : false
-      this.#build.settings.keyShortcuts = this.#build.settings.keyShortcuts !== false ? (this.#build.settings.keyShortcuts ?? false) || !(this.#build.settings.keyShortcuts !== true) ? {...window.tmg._DEFAULT_VIDEO_BUILD.settings.keyShortcuts, ...this.#build.settings.keyShortcuts} : window.tmg._DEFAULT_VIDEO_BUILD.settings.keyShortcuts : false
+      this.#build.settings = this.#build.settings !== false ? (this.#build.settings ?? false) || !(this.#build.settings === true) ? {...df.settings, ...this.#build.settings} : df.settings : false
+      this.#build.settings.keyShortcuts = this.#build.settings.keyShortcuts !== false ? (this.#build.settings.keyShortcuts ?? false) || !(this.#build.settings.keyShortcuts !== true) ? {...df.settings.keyShortcuts, ...this.#build.settings.keyShortcuts} : df.settings.keyShortcuts : false
     }
     }
   }
 
   async attach(medium) {
     if (window.tmg.isIterable(medium)) {
-      console.error("Please provide a single media element to the TMG media player")
-      console.warn("Consider looping the iterable argument to get a single argument and instantiate a new 'window.tmg.Player' for each of them")
+      console.error("An iterable argument cannot be attached to the TMG media player")
+      console.warn("Consider looping the iterable argument to get a single argument and instantiate a new 'window.tmg.Player' for each")
     } else if (!this.#active) { 
       if (medium.tmgPlayer) medium.tmgPlayer.detach()
       medium.tmgPlayer = this
@@ -4374,6 +4348,13 @@ class tmg {
     settings: {
       allowOverride: true,
       previewImages: false,
+      errorMessages: {
+        1: "The video playback was aborted",
+        2: "The video failed due to a network error", 
+        3: "The video could not be decoded",
+        4: "The video source is not supported",
+        5: "An unknown error occurred during video playback"
+      },
       beta: ["rewind", "draggablecontrols", "gesturecontrols", "floatingplayer"],
       modes: ["normal", "fullscreen", "theater", "pictureinpicture", "miniplayer"],
       controllerStructure: ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"],
