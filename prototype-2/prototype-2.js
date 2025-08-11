@@ -30,6 +30,7 @@ class _T_M_G_Video_Player {
     this.isMediaMobile = window.tmg.queryMediaMobile()
     this.audioSetup = false
     this.loaded = false
+    this.fps = 30 // just for frame stepping, not accurate :(
     this.CSSCustomPropertiesCache = {}
     this.currentPlaylistIndex = this._playlist ? 0 : null
     this.playlistCurrentTime = null
@@ -360,7 +361,7 @@ class _T_M_G_Video_Player {
       for (const property of cssRule.style) {
         if (!property.startsWith("--T_M_G-video-")) continue
         const value = cssRule.style.getPropertyValue(property)
-        const field = window.tmg.camelizeString(property.replace("--T_M_G-", "").replaceAll("-", " "))
+        const field = window.tmg.camelizeString(property.replace("--T_M_G-", ""), "-")
         this.CSSCustomPropertiesCache[field] = value
 
         Object.defineProperty(this, field, {
@@ -1925,21 +1926,22 @@ class _T_M_G_Video_Player {
   }          
   }
 
-
   _handleLoadedError(error) {
-  try {
-    const mediaError = this.video.error;
-    const message =
-      this.settings.errorMessages?.[mediaError?.code] ||
-      error?.message || // Prefer native thrown error message
-      mediaError?.message || // Browser-generated message (if available)
-      (typeof error === "string" ? error : null) || 
-      this.settings.errorMessages?.[5] || ''; // Unknown error message
-    this.loaded = false;
-    this.deactivate(message);
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  } 
+    try {
+      const mediaError = this.video.error;
+      // Get the error message from prioritized sources
+      const fallbackMessage = 
+        (typeof error === "string" && error) ||
+        error?.message ||
+        mediaError?.message ||
+        "An unknown error occurred during video playback";
+      const errorCode = mediaError?.code ?? 5;
+      const message = this.settings.errorMessages?.[errorCode] || fallbackMessage;
+      this.loaded = false;
+      this.deactivate(message);
+    } catch (e) {
+      this.log(e, "error", "swallow");
+    }
   }
 
   _handleLoadedMetadata() {
@@ -2210,7 +2212,8 @@ class _T_M_G_Video_Player {
   try {      
     this.video.ended ? this.replay() : typeof bool == "boolean" ? await this.video[bool ? 'play' : 'pause']() : await this.video[this.video.paused ? 'play' : 'pause']()
   } catch(e) {
-    this._handleLoadedError(e)
+    this.log(e, "error", "swallow")
+    // this._handleLoadedError(e)
   }      
   }
 
@@ -2276,23 +2279,6 @@ class _T_M_G_Video_Player {
   _handleEnded() {
   try {      
     this.videoContainer.classList.add("T_M_G-video-replay")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
-  }
-
-  moveVideoTime(details) {
-  try {      
-    switch(details.to) {
-      case "start":
-        this.currentTime = 0
-        break
-      case "end":
-        this.currentTime = this.duration
-        break
-      default:                  
-        this.currentTime = (Number(details.to)/Number(details.max)) * this.duration
-    }
   } catch(e) {
     this.log(e, "error", "swallow")
   }      
@@ -2506,23 +2492,47 @@ class _T_M_G_Video_Player {
     this.log(e, "error", "swallow")
   }      
   }
-      
-  togglePlaybackRate(dir = "forwards") {
-  try {    
-    let newPlaybackRate
-    if (dir === "backwards") {
-      newPlaybackRate = this.video.playbackRate - .25
-      this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-rewind")
-    } else {
-      newPlaybackRate = this.video.playbackRate + .25
-      this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-rewind")
+
+  moveVideoTime(details) {
+  try {      
+    switch(details.to) {
+      case "start":
+        this.currentTime = 0
+        break
+      case "end":
+        this.currentTime = this.duration
+        break
+      default:                  
+        this.currentTime = (Number(details.to)/Number(details.max)) * this.duration
     }
-    if (newPlaybackRate < 0.25) newPlaybackRate = 2
-    else if (newPlaybackRate > 2) newPlaybackRate = 0.25
-    this.video.playbackRate = newPlaybackRate
   } catch(e) {
     this.log(e, "error", "swallow")
   }      
+  }
+
+  moveVideoFrame(dir = "forwards") {
+    try {
+      if (!this.video.paused) return;
+      const frame = Math.round(this.currentTime * this.fps);
+      const delta = dir === "backwards" ? -1 : 1;
+      const maxFrame = Math.floor(this.video.duration * this.fps);
+      this.currentTime = Math.min(maxFrame, Math.max(0, frame + delta)) / this.fps;
+    } catch (e) {
+      this.log(e, "error", "swallow");
+    }
+  }
+      
+  togglePlaybackRate(dir = "forwards") {
+    try {
+      const delta = dir === "backwards" ? -0.25 : 0.25;
+      this.DOM.playbackRateNotifier?.classList.toggle("T_M_G-video-rewind", dir === "backwards");
+      let rate = this.video.playbackRate + delta;
+      if (rate < 0.25) rate = 2;
+      else if (rate > 2) rate = 0.25;
+      this.video.playbackRate = rate;
+    } catch (e) {
+      this.log(e, "error", "swallow");
+    }
   }
 
   changePlaybackRate(value) {
@@ -3716,7 +3726,7 @@ class _T_M_G_Video_Player {
       this.gestureTouchXCheck = false
       this.videoContainer.removeEventListener("touchmove", this._handleGestureTouchXMove, {passive: false})
       this.DOM.touchTimelineNotifier?.classList.remove("T_M_G-video-control-active")
-      if (!this.gestureTouchCanCancel) this.video.currentTime = this.gestureNextTime
+      if (!this.gestureTouchCanCancel) this.currentTime = this.gestureNextTime
     } 
     if (this.gestureTouchYCheck) {
       this.gestureTouchYCheck = false
@@ -3832,7 +3842,7 @@ class _T_M_G_Video_Player {
   keyEventAllowed(e) {
   try {
     const key = e.key.toString().toLowerCase() 
-    if (document.activeElement?.matches("input, textarea")) return false
+    if (document.activeElement?.matches("input, textarea, [contenteditable='true']")) return false
     if (this.isTimelineFocused)
       if (key.startsWith("arrow")) return false
     if (this.settings.keyShortcuts)
@@ -3883,6 +3893,12 @@ class _T_M_G_Video_Player {
         this.deactivateSkipPersist()
         this.skip(this.settings.timeSkip)
         this.fire("fwd")
+        break
+      case this.settings.keyShortcuts["stepBwd"]?.toString()?.toLowerCase():
+        this.moveVideoFrame("backwards")
+        break
+      case this.settings.keyShortcuts["stepFwd"]?.toString()?.toLowerCase():
+        this.moveVideoFrame("forwards")
         break
       case this.settings.keyShortcuts["volumeUp"]?.toString()?.toLowerCase():
         this.changeVolume(this.settings.volumeSkip)
@@ -4353,7 +4369,6 @@ class tmg {
         2: "The video failed due to a network error", 
         3: "The video could not be decoded",
         4: "The video source is not supported",
-        5: "An unknown error occurred during video playback"
       },
       beta: ["rewind", "draggablecontrols", "gesturecontrols", "floatingplayer"],
       modes: ["normal", "fullscreen", "theater", "pictureinpicture", "miniplayer"],
@@ -4392,6 +4407,8 @@ class tmg {
         timeFormat: "q",
         skipBwd: "j",
         skipFwd: "l",
+        stepFwd: ".",
+        stepBwd: ",",
         mute: "m",
         dark: "d",
         volumeUp: "arrowup",
@@ -4739,10 +4756,10 @@ class tmg {
   static isIterable(obj) { 
     return obj !== null && obj !== undefined && typeof obj[Symbol.iterator] === 'function'
   }
-  static camelizeString(str) {  
-    return str.toLowerCase().replace(/^\w|\b\w/g, (match, index) => index === 0 ? match.toLowerCase() : match.toUpperCase()).replace(/\s+/g, "")  
+  static camelizeString(str, seperator = " ") {  
+    return str.toLowerCase().replace(/^\w|\b\w/g, (match, index) => index === 0 ? match.toLowerCase() : match.toUpperCase()).replaceAll(seperator, "")  
   }
-  static uncamelizeString(str, separator) {
+  static uncamelizeString(str, separator = " ") {
     return str.replace(/(?:[a-z])(?:[A-Z])/g, match => `${match[0]}${separator ?? " "}${match[1].toLowerCase()}`)
   }
   static getRenderedBox(elem) {
@@ -4823,18 +4840,25 @@ class tmg {
     const parent = container.parentElement;
     if (!parent || window.tmg._SCROLL_ASSIST_DATA.has(container)) return;
     const assist = {};
-    let scrollId = null;
-    let last = performance.now();
+    let scrollId = null,
+    last = performance.now(),
+    assistWidth = 20,
+    assistHeight = 20;
     const update = () => {
+      const hasInteractive = !!parent.querySelector('button, a[href], input, select, textarea, [contenteditable="true"], [tabindex]:not([tabindex="-1"])');
       if (horizontal) {
-        const w = assist.left?.offsetWidth || 20;
-        assist.left.style.display = container.clientWidth < w * 2 ? "none" : container.scrollLeft > 0 ? "block" : "none";
-        assist.right.style.display = container.clientWidth < w * 2 ? "none" : container.scrollLeft + container.clientWidth < container.scrollWidth - 1 ? "block" : "none";
+        const w = assist.left?.offsetWidth || assistWidth;
+        const check = hasInteractive ? container.clientWidth < w * 2 : false;
+        assist.left.style.display = check ? "none" : container.scrollLeft > 0 ? "block" : "none";
+        assist.right.style.display = check ? "none" : container.scrollLeft + container.clientWidth < container.scrollWidth - 1 ? "block" : "none";
+        assistWidth = w;
       }
       if (vertical) {
-        const h = assist.up?.offsetHeight || 20;
-        assist.up.style.display = container.clientHeight < h * 2 ? "none" : container.scrollTop > 0 ? "block" : "none";
-        assist.down.style.display = container.clientHeight < h * 2 ? "none" : container.scrollTop + container.clientHeight < container.scrollHeight - 1 ? "block" : "none";
+        const h = assist.up?.offsetHeight || assistHeight;
+        const check = hasInteractive ? container.clientHeight < h * 2 : false;
+        assist.up.style.display = check ? "none" : container.scrollTop > 0 ? "block" : "none";
+        assist.down.style.display = check ? "none" : container.scrollTop + container.clientHeight < container.scrollHeight - 1 ? "block" : "none";
+        assistHeight = h;
       }
     };
     const scroll = dir => {

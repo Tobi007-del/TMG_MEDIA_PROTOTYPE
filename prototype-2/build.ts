@@ -1,7 +1,7 @@
 const modes = ["normal", "fullscreen", "theater", "pictureinpicture", "miniplayer"] as const;
 const beta = ["rewind", "draggablecontrols", "gesturecontrols", "floatingplayer"] as const;
 const controllerStructure = ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
-const keyShortcutActions = ["prev", "next", "playPause", "timeFormat", "skipBwd", "skipFwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "objectFit", "fullScreen", "theater", "expandMiniPlayer", "removeMiniPlayer", "pictureInPicture", "captions", "settings"] as const;
+const keyShortcutActions = ["prev", "next", "playPause", "timeFormat", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "objectFit", "fullScreen", "theater", "expandMiniPlayer", "removeMiniPlayer", "pictureInPicture", "captions", "settings"] as const;
 const errorCodes = [
   1, // MEDIA_ERR_ABORTED
   2, // MEDIA_ERR_NETWORK
