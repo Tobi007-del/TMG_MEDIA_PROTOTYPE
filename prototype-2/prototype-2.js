@@ -44,6 +44,7 @@ class _T_M_G_Video_Player {
     this.dragOverThrottleDelay = 20
     this.timelineInputThrottleDelay = 50
     this.speedPointerMoveThrottleDelay = 100
+    this.frameStepThrottleDelay = 1000 / this.fps
     this.cuePositionX = this.cuePositionY = null
     this.lastRate = this.video.playbackRate ?? 1
     this.isScrubbing = false
@@ -2512,11 +2513,14 @@ class _T_M_G_Video_Player {
 
   moveVideoFrame(dir = "forwards") {
     try {
+    if (!this.video.paused) return;
+    this.throttle("frameStepping", () => {
       if (!this.video.paused) return;
       const frame = Math.round(this.currentTime * this.fps);
       const delta = dir === "backwards" ? -1 : 1;
       const maxFrame = Math.floor(this.video.duration * this.fps);
       this.currentTime = Math.min(maxFrame, Math.max(0, frame + delta)) / this.fps;
+    }, this.frameStepThrottleDelay)
     } catch (e) {
       this.log(e, "error", "swallow");
     }
