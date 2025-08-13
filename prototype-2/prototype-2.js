@@ -202,7 +202,7 @@ class _T_M_G_Video_Player {
   }
 
   get duration() {
-    return window.tmg.formatNumber(this.video.duration)
+    return window.tmg.parseNumber(this.video.duration)
   }
 
   set currentTime(value) {
@@ -210,7 +210,7 @@ class _T_M_G_Video_Player {
   }
 
   get currentTime() {
-    return window.tmg.formatNumber(this.video.currentTime)
+    return window.tmg.parseNumber(this.video.currentTime)
   }
 
   log(message, type, action) {
@@ -370,7 +370,6 @@ class _T_M_G_Video_Player {
             return getComputedStyle(this.videoContainer).getPropertyValue(property)
           },
           set(value) {
-            // apply to both for full cascade control
             this.videoContainer.style.setProperty(property, value)
             this.pseudoVideoContainer.style.setProperty(property, value)
           },
@@ -1950,7 +1949,7 @@ class _T_M_G_Video_Player {
     if (this.settings.startTime) this.currentTime = this.settings.startTime
     this.syncAspectRatio()
     if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatTime(this.video.duration)
-    this.videoCurrentProgressPosition = (this.currentTime < 1) ? this.videoCurrentLoadedPosition = 0 : window.tmg.formatNumber(this.video.currentTime / this.video.duration)
+    this.videoCurrentProgressPosition = (this.currentTime < 1) ? this.videoCurrentLoadedPosition = 0 : window.tmg.parseNumber(this.video.currentTime / this.video.duration)
     this.loaded = true
     this.reactivate()
   } catch(e) {
@@ -2440,7 +2439,7 @@ class _T_M_G_Video_Player {
   _handleTimeUpdate() {
   try {   
     this.video.removeAttribute("controls") // youtube did this too :)
-    this.videoCurrentProgressPosition = window.tmg.isValidNumber(this.video.duration) ? window.tmg.formatNumber(this.video.currentTime / this.video.duration) : (this.video.currentTime / 60) // progress fallback, shouldn't take more than a min for duration to be available
+    this.videoCurrentProgressPosition = window.tmg.isValidNumber(this.video.duration) ? window.tmg.parseNumber(this.video.currentTime / this.video.duration) : (this.video.currentTime / 60) // progress fallback, shouldn't take more than a min for duration to be available
     if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.timeFormat !== "timespent" ? window.tmg.formatTime(this.video.currentTime) : `-${window.tmg.formatTime(this.video.duration - this.video.currentTime)}`
     if (this.speedCheck && this.speedToken === 1) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", window.tmg.formatTime(this.video.currentTime))
     if (this._playlist && this.currentTime > 3) this.playlistCurrentTime = this.currentTime
@@ -3248,7 +3247,12 @@ class _T_M_G_Video_Player {
     }
     style.textContent = cssText
     this.floatingPlayer?.document.head.appendChild(style)
-
+    if (this.floatingPlayer) {
+    this.floatingPlayer.document.documentElement.id = document.documentElement.id
+    this.floatingPlayer.document.documentElement.className = document.documentElement.className
+    document.documentElement.getAttributeNames().forEach(attr => this.floatingPlayer.document.documentElement.setAttribute(attr, document.documentElement.getAttribute(attr)))
+    }
+    
     this.pseudoVideoContainer.append(this.DOM.pictureInPictureWrapper.cloneNode(true))
     this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-active-icon-wrapper").addEventListener("click", this.toggleFloatingPlayer)
     this.activatePseudoMode()
@@ -4749,7 +4753,7 @@ class tmg {
       else return `${hours}:${window.tmg.leadingZeroFormatter.format(minutes)}:${window.tmg.leadingZeroFormatter.format(seconds)}`
     } else return '-:--'
   }
-  static formatNumber(number) {
+  static parseNumber(number) {
     if (window.tmg.isValidNumber(number)) return number
     else return 0
   }

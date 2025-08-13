@@ -1,4 +1,4 @@
-/* #o#o#o#o#o#o#o#o#o#o - 10-0-0 is used to raise specificity where required with the power of 10 id's to avoid the use of '!important' style declarations  */
+/* #o#o#o#o#o#o#o#o#o#o - 10-0-0 is used to raise specificity where required with the power of 10 id's to avoid the use of '!important' style declarations for now  */
 /* font variables */
 :where(:root, .T_M_G-media-container) {
   --T_M_G-video-font-family: inherit;
@@ -78,7 +78,7 @@
   --T_M_G-video-motion-transition: inset var(--T_M_G-video-motion-transition-time) var(--T_M_G-video-motion-timing);
 }
 
-/* color variables */
+/* theme variables */
 :where(:root, .T_M_G-media-container) {
   --T_M_G-video-alt-img-src: "";
   --T_M_G-video-brightness: 100;
@@ -91,6 +91,8 @@
   --T_M_G-video-theme-inverse-color: rgb(from var(--T_M_G-video-theme-color) calc(255 - r) calc(255 - g) calc(255 - b));
   --T_M_G-video-theme-inverse-accent-color: hsl(from var(--T_M_G-video-theme-inverse-color) h s calc(l + 45));
   --T_M_G-video-focus-visible-color: var(--T_M_G-video-brand-accent-color);
+  --T_M_G-video-focus-visible-outline: 2px solid var(--T_M_G-video-focus-visible-color);
+  --T_M_G-video-error-color: rgba(255,0,0,0.8);
   --T_M_G-video-background: black;
   --T_M_G-video-curtain-color: rgb(from var(--T_M_G-video-theme-inverse-color) r g b/.5);
   --T_M_G-video-main-timeline-background: linear-gradient(to right, var(--T_M_G-video-brand-color) 80%, var(--T_M_G-video-brand-accent-color));
@@ -120,7 +122,7 @@
   --T_M_G-video-current-curtain-color: transparent;
 }
 
-/* icons variables */
+/* controls variables */
 :where(:root, .T_M_G-media-container) {
   --T_M_G-video-icons-color: var(--T_M_G-video-theme-color);
   --T_M_G-video-icons-hover-color: var(--T_M_G-video-icons-color);
@@ -133,7 +135,7 @@
   --T_M_G-video-disabled-background: rgb(55, 55, 55);
   --T_M_G-video-controls-background: transparent;
   --T_M_G-video-controls-hover-background: var(--T_M_G-video-controls-background);
-  --T_M_G-video-controls-background-radius: 0;
+  --T_M_G-video-controls-border-radius: 0;
   --T_M_G-video-controls-padding: 0;
 }
 
@@ -337,21 +339,21 @@
   overflow: hidden;
 }
 
-.T_M_G-video-container *:focus-visible {
-  outline: 2px solid var(--T_M_G-video-focus-visible-color);
+.T_M_G-video-container :is(*:focus-visible, #o#o#o#o#o#o#o#o#o#o) {
+  outline: var(--T_M_G-video-focus-visible-outline);
   outline-offset: 3.5px;
   transition: none;
 }
 
-.T_M_G-video-container .T_M_G-video-timeline-container:focus-visible {
+:is(.T_M_G-video-timeline-container:focus-visible, #o#o#o#o#o#o#o#o#o#o) {
   outline-offset: .5px;
 }
 
-.T_M_G-video-vb-slider:focus-visible {
+:is(.T_M_G-video-vb-slider:focus-visible, #o#o#o#o#o#o#o#o#o#o) {
   outline-offset: calc(var(--T_M_G-video-current-unit)/3.57);
 }
 
-:is(.T_M_G-video-main-prev-btn, .T_M_G-video-main-play-pause-btn, .T_M_G-video-main-next-btn):focus-visible {
+:is(.T_M_G-video-main-prev-btn, .T_M_G-video-main-play-pause-btn, .T_M_G-video-main-next-btn, #o#o#o#o#o#o#o#o#o#o):focus-visible {
   outline-offset: 1px;
 }
 
@@ -452,24 +454,28 @@
 }
 
 :where(.T_M_G-media) {
-  aspect-ratio: var(--T_M_G-video-aspect-ratio);
-  object-fit: var(--T_M_G-video-object-fit);
   border-radius: inherit;
   width: 90dvw;
   max-width: 700px;
   max-height: 80lvh;
 }
 
+.T_M_G-media {
+  aspect-ratio: var(--T_M_G-video-aspect-ratio);
+  object-fit: var(--T_M_G-video-object-fit);
+}
+
 .T_M_G-pseudo-video {
   visibility: hidden;
 }
 
-.T_M_G-video,
+.T_M_G-media,
 .T_M_G-video-thumbnail {
-  filter: brightness(calc(((var(--T_M_G-video-brightness)/100) *  80%) + max(calc((var(--T_M_G-video-current-brightness-slider-boost-position) * var(--T_M_G-video-max-brightness-ratio)) * 20%), 20%)));
+  --T_M_G-video-computed-brightness: brightness(calc(((var(--T_M_G-video-brightness)/100) *  80%) + max(calc((var(--T_M_G-video-current-brightness-slider-boost-position) * var(--T_M_G-video-max-brightness-ratio)) * 20%), 20%)));
+  filter: var(--T_M_G-video-computed-brightness);
 }
 
-.T_M_G-video-container:not(:has(.T_M_G-video-vb-slider:active)) .T_M_G-video {
+.T_M_G-video-container:not(:has(.T_M_G-video-vb-slider:active, .T_M_G-video-touch-vb-notifier.T_M_G-video-control-active)) .T_M_G-video {
   transition: filter var(--T_M_G-video-settings-view-transition-time) ease; /* does not interfere with brightness slider */
 }
 
@@ -651,7 +657,7 @@ body:has(.T_M_G-video-floating-player) {
   inset: 0;
   width: 100%;
   height: 100%;
-  color: rgba(255,0,0,0.8);
+  color: var(--T_M_G-video-error-color);
   display: flex; 
   justify-content: center;
   align-items: center;
@@ -681,7 +687,7 @@ body:has(.T_M_G-video-floating-player) {
 }
 
 .T_M_G-video-container:is(.T_M_G-video-disabled, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video {
-  filter: grayscale(100%);
+  filter: var(--T_M_G-video-computed-brightness) grayscale(100%);
 }
 /* setting deactivated state ends */
 
@@ -695,7 +701,7 @@ body:has(.T_M_G-video-floating-player) {
 }
 
 .T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-container-content video {
-  filter: brightness(calc(max(var(--T_M_G-video-brightness), 10) / 100 * 100%)) blur(10px);
+  filter: var(--T_M_G-video-computed-brightness) blur(10px);
 }
 
 .T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-settings-btn svg {
@@ -745,8 +751,8 @@ body:has(.T_M_G-video-floating-player) {
   z-index: 1;
   opacity: 0;
   background-color: var(--T_M_G-video-settings-background-color);
-  -webkit-backdrop-filter: blur(1px);
-  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
   transition: opacity var(--T_M_G-video-settings-view-transition-time) var(--T_M_G-video-bounce-timing);
 }
 
@@ -1396,7 +1402,7 @@ body:has(.T_M_G-video-floating-player) {
 
 .T_M_G-video-controls-wrapper button {
   background: var(--T_M_G-video-controls-background);
-  border-radius: var(--T_M_G-video-controls-background-radius);
+  border-radius: var(--T_M_G-video-controls-border-radius);
   padding: var(--T_M_G-video-controls-padding);
   transition: background-color var(--T_M_G-video-fade-transition-time) ease;
 }
