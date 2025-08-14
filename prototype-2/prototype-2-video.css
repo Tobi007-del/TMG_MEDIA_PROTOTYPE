@@ -345,15 +345,15 @@
   transition: none;
 }
 
-:is(.T_M_G-video-timeline-container:focus-visible, #o#o#o#o#o#o#o#o#o#o) {
+.T_M_G-video-container :is(.T_M_G-video-timeline-container:focus-visible, #o#o#o#o#o#o#o#o#o#o) {
   outline-offset: .5px;
 }
 
-:is(.T_M_G-video-vb-slider:focus-visible, #o#o#o#o#o#o#o#o#o#o) {
+.T_M_G-video-container :is(.T_M_G-video-vb-slider:focus-visible, #o#o#o#o#o#o#o#o#o#o) {
   outline-offset: calc(var(--T_M_G-video-current-unit)/3.57);
 }
 
-:is(.T_M_G-video-main-prev-btn, .T_M_G-video-main-play-pause-btn, .T_M_G-video-main-next-btn, #o#o#o#o#o#o#o#o#o#o):focus-visible {
+.T_M_G-video-container :is(.T_M_G-video-main-prev-btn, .T_M_G-video-main-play-pause-btn, .T_M_G-video-main-next-btn, #o#o#o#o#o#o#o#o#o#o):focus-visible {
   outline-offset: 1px;
 }
 
