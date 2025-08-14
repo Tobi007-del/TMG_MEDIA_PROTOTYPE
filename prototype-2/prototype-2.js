@@ -504,8 +504,8 @@ class _T_M_G_Video_Player {
       pictureinpicturewrapper :
       `
         <div class="T_M_G-video-picture-in-picture-wrapper">
-          <span class="T_M_G-video-picture-in-picture-active-icon-wrapper">
-            <svg class="T_M_G-video-picture-in-picture-active-icon" viewBox="0 0 73 73" data-no-resize="true">
+          <span class="T_M_G-video-picture-in-picture-icon-wrapper">
+            <svg class="T_M_G-video-picture-in-picture-icon" viewBox="0 0 73 73" data-no-resize="true">
             <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
               <g transform="translate(2.000000, 2.000000)" fill-rule="nonzero" stroke="#3E3D3D" stroke-width="2" fill="currentColor" class="T_M_G-video-pip-background">
                 <rect x="-1" y="-1" width="71" height="71" rx="14"></rect>
@@ -1048,7 +1048,7 @@ class _T_M_G_Video_Player {
       leftSideControlsWrapper : this.settings.status.ui.leftSideControls ? this.videoContainer.querySelector(".T_M_G-video-left-side-controls-wrapper") : null,
       rightSideControlsWrapper : this.settings.status.ui.rightSideControls ? this.videoContainer.querySelector(".T_M_G-video-right-side-controls-wrapper") : null,
       pictureInPictureWrapper : this.videoContainer.querySelector(".T_M_G-video-picture-in-picture-wrapper"),
-      pictureInPictureActiveIconWrapper : this.videoContainer.querySelector(".T_M_G-video-picture-in-picture-active-icon-wrapper"),
+      pictureInPictureActiveIconWrapper : this.videoContainer.querySelector(".T_M_G-video-picture-in-picture-icon-wrapper"),
       cueContainer: this.videoContainer.querySelector(".T_M_G-video-cue-container"),
       fullScreenOrientationBtn : this.settings.status.ui.fullScreen ? this.videoContainer.querySelector(".T_M_G-video-full-screen-orientation-btn") : null,
       miniPlayerExpandBtn : this.settings.status.modes.miniPlayer ? this.videoContainer.querySelector(".T_M_G-video-mini-player-expand-btn") : null,
@@ -2689,11 +2689,15 @@ class _T_M_G_Video_Player {
     this.toggleMiniPlayerMode(false)
 
     this.floatingPlayerActive = true
-    this.floatingPlayerOptions = {
-      width: 378,
-      height: 199,
-    }
+    this.floatingPlayerOptions = { width: 378, height: 199 }
     this.floatingPlayer = await window.documentPictureInPicture.requestWindow(this.floatingPlayerOptions)
+    
+    this.pseudoVideoContainer.append(this.DOM.pictureInPictureWrapper.cloneNode(true))
+    this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-icon-wrapper").addEventListener("click", this.toggleFloatingPlayer)
+    this.activatePseudoMode()
+
+    this.videoContainer.classList.add("T_M_G-video-progress-bar", "T_M_G-video-floating-player")
+
     const style = document.createElement("style")
     let cssText = '';
     for (const sheet of document.styleSheets) {
@@ -2709,33 +2713,29 @@ class _T_M_G_Video_Player {
     }
     style.textContent = cssText
     this.floatingPlayer?.document.head.appendChild(style)
+    this.floatingPlayer?.document.body.append(this.videoContainer)
     if (this.floatingPlayer) {
     this.floatingPlayer.document.documentElement.id = document.documentElement.id
     this.floatingPlayer.document.documentElement.className = document.documentElement.className
     document.documentElement.getAttributeNames().forEach(attr => this.floatingPlayer.document.documentElement.setAttribute(attr, document.documentElement.getAttribute(attr)))
     }
-    
-    this.pseudoVideoContainer.append(this.DOM.pictureInPictureWrapper.cloneNode(true))
-    this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-active-icon-wrapper").addEventListener("click", this.toggleFloatingPlayer)
-    this.activatePseudoMode()
-
-    this.videoContainer.classList.add("T_M_G-video-progress-bar", "T_M_G-video-floating-player")
     this.floatingPlayer?.addEventListener("pagehide", this._handleFloatingPlayerClose)
     this.floatingPlayer?.addEventListener("resize", this._handleMediaParentResize)
-    this.floatingPlayer?.document.body.append(this.videoContainer)
+    this.floatingPlayer?.addEventListener("wheel", this._handleGestureWheel, {passive: false})
     this.setKeyEventListeners("floating")
-  }      
+    }
   }
 
   _handleFloatingPlayerClose() {
     if (this.floatingPlayerActive) {
     this.floatingPlayerActive = false
+
     this.videoContainer.classList.toggle("T_M_G-video-progress-bar", this.settings.progressBar)
     this.videoContainer.classList.remove("T_M_G-video-floating-player")
 
     this.deactivatePseudoMode()
     this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-wrapper").remove()
-
+    
     this.toggleMiniPlayerMode()
     }  
   }   
@@ -2933,8 +2933,9 @@ class _T_M_G_Video_Player {
   }
 
   _handleGestureWheelMove({clientX: x, deltaX, deltaY}) {
-    const width = window.innerWidth,
-    height = window.innerHeight
+    const rect = this.videoContainer.getBoundingClientRect()
+    const width = rect.width,
+    height = rect.height
     let xPercent = -deltaX / (width*10)
     xPercent = this.gestureWheelTimePercent += xPercent
     const xSign = Math.sign(xPercent) === 1 ? "+" : "-"
@@ -2955,9 +2956,8 @@ class _T_M_G_Video_Player {
         return
       }
 
-      const currentXZone = x > width/2 ? "right" : "left"
+      const currentXZone = x - rect.left > width/2 ? "right" : "left"
       if (currentXZone !== this.gestureWheelZone.x) return this._handleGestureWheelStop()
-        
       this.gestureWheelYCheck = true
       this.gestureWheelZone?.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
       const ySign = deltaY >= 0 ? "+" : "-"
