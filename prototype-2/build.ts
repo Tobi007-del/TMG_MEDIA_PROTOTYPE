@@ -73,10 +73,9 @@ type VideoBuild = Partial<{
     muted: boolean;
     playsInline: boolean;
     overlayRestraint: number;
+    strictKeyMatches: boolean;
     keyOverrides: string[];
-    shiftKeys: KeyShortcut[];
-    altKeys: KeyShortcut[];
-    ctrlKeys: KeyShortcut[];
+    keyBlocks: string[];
     keyShortcuts: boolean | Partial<Record<KeyShortcut, string>>;
   };
 }>

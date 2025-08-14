@@ -11,14 +11,13 @@ typeof window !== "undefined" ? console.log("%cTMG Media Player Available", "col
 //The TMG Video Player Class
 class _T_M_G_Video_Player {
   constructor(videoOptions) {
-  try {
     this.initialized = false
     this.bindMethods()
-    //turning the video build into the Video Player Instance
+    //merging the video build into the Video Player Instance
     for (const [key, value] of Object.entries(videoOptions)) {
       this[key] = value
     }            
-    //adding some info before logging incase user had them burnt into the video's html
+    //adding some info before logging incase user had them burnt into the html
     const src = this.src,
     sources = this.sources,
     tracks = this.tracks
@@ -27,7 +26,7 @@ class _T_M_G_Video_Player {
     if (tracks.length) videoOptions.tracks = tracks
     this.log(videoOptions)
     //some general variables
-    this.isMediaMobile = window.tmg.queryMediaMobile()
+    this.isMediaMobile = tmg.queryMediaMobile()
     this.audioSetup = false
     this.loaded = false
     this.fps = 30 // just for frame stepping, not accurate :(
@@ -50,7 +49,7 @@ class _T_M_G_Video_Player {
     this.isScrubbing = false
     this.parentIntersecting = true
     this.isIntersecting = true
-    this.isTimelineFocused = false
+    this.timelineFocused = false
     this.buffering = false
     this.clickId = null 
     this.overlayRestraintId = null
@@ -143,10 +142,7 @@ class _T_M_G_Video_Player {
       return
     }
     // build code block ends
-    this.buildVideoPlayerInterface()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }                  
+    this.buildVideoPlayerInterface()                  
   }
 
   get playlist() {
@@ -177,32 +173,32 @@ class _T_M_G_Video_Player {
   }
 
   set src(value) {
-    window.tmg.removeSources(this.video)
+    tmg.removeSources(this.video)
     this.video.src = value
     this.video.load()
   }
 
   get sources() {
-    return window.tmg.getSources(this.video)
+    return tmg.getSources(this.video)
   }
 
   set sources(value) {
     this.video.src = ""
-    window.tmg.removeSources(this.video)
-    window.tmg.addSources(value, this.video) 
+    tmg.removeSources(this.video)
+    tmg.addSources(value, this.video) 
   }
 
   get tracks() {
-    return window.tmg.getTracks(this.video)
+    return tmg.getTracks(this.video)
   }
 
   set tracks(value) {
-    window.tmg.removeTracks(this.video)
-    window.tmg.addTracks(value, this.video)
+    tmg.removeTracks(this.video)
+    tmg.addTracks(value, this.video)
   }
 
   get duration() {
-    return window.tmg.parseNumber(this.video.duration)
+    return tmg.parseNumber(this.video.duration)
   }
 
   set currentTime(value) {
@@ -210,7 +206,7 @@ class _T_M_G_Video_Player {
   }
 
   get currentTime() {
-    return window.tmg.parseNumber(this.video.currentTime)
+    return tmg.parseNumber(this.video.currentTime)
   }
 
   log(message, type, action) {
@@ -286,7 +282,7 @@ class _T_M_G_Video_Player {
         this.videoContainer.remove()
         this.replaceVideo()
         this.video.tmgcontrols = false
-        window.tmg.initMedia(this.video, true)
+        tmg.initMedia(this.video, true)
       })
       this.floatingPlayer?.removeEventListener("pagehide", this._handleFloatingPlayerClose)
       this.floatingPlayer?.close()
@@ -334,7 +330,7 @@ class _T_M_G_Video_Player {
     this.leaveSettingsView()
     this.unobserveResize()
     this.unobserveIntersection()
-    this.removeKeyEventListeners()
+    this.removeKeyEventListeners("all")
     this.removeVideoEventListeners()
     this.cleanUpDOM()
     //had to do this to get rid of stateful issues and freezing
@@ -347,7 +343,18 @@ class _T_M_G_Video_Player {
     while (proto && proto !== Object.prototype) {
       for (const method of Object.getOwnPropertyNames(proto)) {
         const descriptor = Object.getOwnPropertyDescriptor(proto, method)
-        if (method !== "constructor" && descriptor && typeof descriptor.value === "function") this[method] = this[method].bind(this)
+        if (method !== "constructor" && descriptor && typeof descriptor.value === "function") {
+          const fn = this[method].bind(this)
+          this[method] = (...args) => {
+          try {
+            const result = fn(...args);
+            if (result instanceof Promise) return result.catch(e => this.log(e, "error", "swallow"));
+            return result;
+          } catch (e) {
+            this.log(e, "error", "swallow");
+          }
+          }
+        }
       }
       proto = Object.getPrototypeOf(proto)
     }
@@ -362,7 +369,7 @@ class _T_M_G_Video_Player {
       for (const property of cssRule.style) {
         if (!property.startsWith("--T_M_G-video-")) continue
         const value = cssRule.style.getPropertyValue(property)
-        const field = window.tmg.camelizeString(property.replace("--T_M_G-", ""), "-")
+        const field = tmg.camelizeString(property.replace("--T_M_G-", ""), "-")
         this.CSSCustomPropertiesCache[field] = value
 
         Object.defineProperty(this, field, {
@@ -382,23 +389,15 @@ class _T_M_G_Video_Player {
       continue
     }
   } 
-}
+  }
 
   fire(eventName, el = this.DOM.notifiersContainer, detail=null, bubbles=true, cancellable=true) {
-  try {
     let evt = new CustomEvent(eventName, {detail, bubbles, cancellable})
-    el.dispatchEvent(evt)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }                  
+    el.dispatchEvent(evt)                  
   }
 
   initSettingsManager() {
-  try {
-    this.log("TMG Video Settings Manager started")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }                  
+    this.log("TMG Video Settings Manager started")                  
   }
 
   get settingsView() {
@@ -410,60 +409,45 @@ class _T_M_G_Video_Player {
   }
 
   toggleSettingsView() {
-  try {
-    !this.settingsView ? this.enterSettingsView() : this.leaveSettingsView()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }                  
+    !this.settingsView ? this.enterSettingsView() : this.leaveSettingsView()                  
   }
 
   enterSettingsView() {
-  try {
     if (!this.settingsView) {
     this.DOM.settingsCloseBtn.focus()
     this.wasPaused = this.video.paused
     if (!this.wasPaused) this.togglePlay(false)
     this.settingsView = true
-    document.addEventListener("keyup", this._handleSettingsKeyUp) 
-    this.removeKeyEventListeners()
+    document.addEventListener("keyup", this._handleSettingsKeyUp)
+    this.floatingPlayer?.document.addEventListener("keyup", this._handleSettingsKeyUp)
+    this.removeKeyEventListeners("all")
     this.disableFocusableControls()
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    }               
   }
 
   leaveSettingsView() {
-  try {
     if (this.settingsView) {
     this.DOM.settingsCloseBtn.blur()
     this.settingsView = false
     document.removeEventListener("keyup", this._handleSettingsKeyUp)
-    this.setKeyEventListeners()
+    this.floatingPlayer?.document.removeEventListener("keyup", this._handleSettingsKeyUp)
+    this.setKeyEventListeners("all")
     this.enableFocusableControls()
     if (!this.wasPaused) this.togglePlay(true)
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }                  
+    }                  
   }
   
   _handleSettingsKeyUp(e) {
-  try {
-    if (!this.keyEventAllowed(e)) return
-
-    switch (e.key.toString().toLowerCase()) {
-      case this.settings.keyShortcuts["settings"]?.toString()?.toLowerCase():    
+    const action = this.keyEventAllowed(e)
+    if (action === false) return
+    switch (action) {
+      case "settings":
         this.leaveSettingsView()
         break
     }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
-  buildVideoPlayerInterface() {
-  try {    
+  buildVideoPlayerInterface() {    
     this.mutatingDOMNodes = true
     if (this.media?.artwork && (this.media.artwork[0]?.src !== this.video.poster)) this.video.poster = this.media.artwork[0].src
     if (!this.videoContainer) {
@@ -474,7 +458,7 @@ class _T_M_G_Video_Player {
     this.videoContainer.classList.add("T_M_G-video-container", "T_M_G-media-container")
     if (this.isMediaMobile) this.videoContainer.classList.add("T_M_G-video-mobile")
     if (this.video.paused) this.videoContainer.classList.add("T_M_G-video-paused")
-    if (this.initialMode && this.initialMode !== "normal") this.videoContainer.classList.add(`T_M_G-video-${window.tmg.uncamelizeString(this.initialMode, "-")}`)
+    if (this.initialMode && this.initialMode !== "normal") this.videoContainer.classList.add(`T_M_G-video-${tmg.uncamelizeString(this.initialMode, "-")}`)
     if (this.settings.progressBar) this.videoContainer.classList.add("T_M_G-video-progress-bar")
     this.videoContainer.setAttribute("data-timeline-position", this.settings.timelinePosition)
     this.videoContainer.setAttribute("data-object-fit", this.videoObjectFit ?? "contain")
@@ -516,14 +500,10 @@ class _T_M_G_Video_Player {
     this.buildVideoControllerStructure()
     this.retrieveVideoPlayerDOM()
     this.initializeVideoPlayer()
-    setTimeout(() => this.mutatingDOMNodes = false)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }                  
+    setTimeout(() => this.mutatingDOMNodes = false)                  
   }
 
-  buildVideoControllerStructure() {  
-  try {   
+  buildVideoControllerStructure() {     
     const spacerIndex = this.settings.controllerStructure.indexOf("spacer"),
     leftSideControls = spacerIndex > -1 ? this.settings.controllerStructure.slice(0, spacerIndex) : null,
     rightSideControls = spacerIndex > -1 ? this.settings.controllerStructure.slice(spacerIndex + 1) : null,
@@ -598,7 +578,7 @@ class _T_M_G_Video_Player {
       `,
       thumbnail :
       `
-        <img class="T_M_G-video-thumbnail T_M_G-video-thumbnail-image" alt="movie-image" src="${window.tmg.ALT_IMG_SRC}">
+        <img class="T_M_G-video-thumbnail T_M_G-video-thumbnail-image" alt="movie-image" src="${tmg.ALT_IMG_SRC}">
         <canvas class="T_M_G-video-thumbnail T_M_G-video-thumbnail-canvas"></canvas>
       `,
       cueContainer: 
@@ -818,7 +798,7 @@ class _T_M_G_Video_Player {
           <div class="T_M_G-video-timeline">
             <div class="T_M_G-video-loaded-timeline"></div>
             <div class="T_M_G-video-preview-container">
-              <img class="T_M_G-video-preview T_M_G-video-preview-image" alt="Preview image" src="${window.tmg.ALT_IMG_SRC}">
+              <img class="T_M_G-video-preview T_M_G-video-preview-image" alt="Preview image" src="${tmg.ALT_IMG_SRC}">
               <canvas class="T_M_G-video-preview T_M_G-video-preview-canvas"></canvas>
             </div>
             <div class="T_M_G-video-thumb-indicator T_M_G-video-rippler"></div>
@@ -1041,14 +1021,10 @@ class _T_M_G_Video_Player {
 
     controlsContainerBuild.innerHTML += this.HTML.timeline ?? ""      
     controlsWrapperBuild.classList = "T_M_G-video-controls-wrapper"
-    controlsContainerBuild.append(controlsWrapperBuild)  
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }                  
+    controlsContainerBuild.append(controlsWrapperBuild)                    
   }
 
   retrieveVideoPlayerDOM() {
-  try {
     this.DOM = {
       video: this.video,
       videoContainer : this.videoContainer,
@@ -1126,14 +1102,10 @@ class _T_M_G_Video_Player {
       draggableControls: this.settings.status.ui.draggableControls ? this.videoContainer.querySelectorAll("[data-draggable-control]") : null,
       draggableControlContainers: this.settings.status.ui.draggableControls ? this.videoContainer.querySelectorAll(".T_M_G-video-side-controls-wrapper") : null,
       settingsCloseBtn: this.settings ? this.videoContainer.querySelector(".T_M_G-video-settings-close-btn") : null,
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }                  
+    }                  
   }
 
   initializeVideoPlayer() {
-  try {
     this.syncAspectRatio()
     this.observeResize()
     this.controlsResize()
@@ -1148,26 +1120,18 @@ class _T_M_G_Video_Player {
     else this.initializeVideoControls()
     if (this.disabled) this.disable()
     this.initialized = true
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   addInitialState() {
-  try {
     if (!this.initialState) return
     if (this.settings.startTime && !this.video.poster) this.currentTime = this.settings.startTime
     this.videoContainer.classList.add("T_M_G-video-initial")
     this.video.addEventListener("play", this.removeInitialState, {once:true})
     this.DOM.mainPlayPauseBtn?.addEventListener("click", this.removeInitialState)
-    this.DOM.videoContainerContent.addEventListener("click", this.removeInitialState)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    this.DOM.videoContainerContent.addEventListener("click", this.removeInitialState)      
   }
 
   removeInitialState() {
-  try {
     if (!this.initialState) return
     this.stall()
     this.videoContainer.classList.remove("T_M_G-video-initial")
@@ -1176,23 +1140,15 @@ class _T_M_G_Video_Player {
     this.initializeVideoControls()
     this.DOM.mainPlayPauseBtn?.removeEventListener("click", this.removeInitialState)
     this.DOM.videoContainerContent.removeEventListener("click", this.removeInitialState)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   stall() {
-  try {
     this.showOverlay()
     this.DOM.mainPlayPauseBtn?.classList.add("T_M_G-video-control-spin")
-    this.DOM.mainPlayPauseBtn?.addEventListener("animationend", () => this.DOM.mainPlayPauseBtn?.classList.remove("T_M_G-video-control-spin"), {once: true}) 
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }         
+    this.DOM.mainPlayPauseBtn?.addEventListener("animationend", () => this.DOM.mainPlayPauseBtn?.classList.remove("T_M_G-video-control-spin"), {once: true})          
   }
 
-  initializeVideoControls() {
-  try {    
+  initializeVideoControls() {    
     this._handleLoadedMetadata()
     this.initAudioManager()
     this.updateBrightnessSettings()
@@ -1200,36 +1156,24 @@ class _T_M_G_Video_Player {
     this.setInitialStates()
     this.setGeneralEventListeners()
     this.observeIntersection()
-    this.cache()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    this.cache()      
   }
 
-  setInitialStates() {
-  try {    
+  setInitialStates() {    
     this.showOverlay()
     this.setVideoTitleState()
     this.setCaptionsState()   
     this.setPreviewImagesState()
     this.setBtnsState()
-    this.pseudoVideo.src = this.video.src || this.video.currentSrc
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }   
+    this.pseudoVideo.src = this.video.src || this.video.currentSrc   
   }
 
   setVideoTitleState() {
-  try {
     if (this.DOM.videoTitle) this.DOM.videoTitle.textContent = this.media?.title || ""
-    this.DOM.videoTitle?.setAttribute("data-video-title", this.media?.title || "")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  } 
+    this.DOM.videoTitle?.setAttribute("data-video-title", this.media?.title || "") 
   }
 
   setCaptionsState() {
-  try {
     if (this.video.textTracks.length > 0) { 
       Array.from(this.video.textTracks).forEach((track, index) => {
         track.oncuechange = () => {
@@ -1246,95 +1190,67 @@ class _T_M_G_Video_Player {
       this.video.textTracks[this.textTrackIndex].mode = this.settings.autocaptions ? "showing" : "hidden"
       this.videoContainer.classList.toggle("T_M_G-video-captions", this.settings.autocaptions)
       this.videoContainer.setAttribute("data-track-kind", this.video.textTracks[this.textTrackIndex].kind)
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  } 
+    } 
   }
 
   setPreviewImagesState() {
-  try {
-    this.videoAltImgSrc = `url(${window.tmg.ALT_IMG_SRC})`
+    this.videoAltImgSrc = `url(${tmg.ALT_IMG_SRC})`
     this.videoContainer.classList.toggle("T_M_G-video-no-previews", !this.settings.previewImages)
     this.videoContainer.setAttribute("data-preview-type", this.settings.status.ui.previewImages ? "image" : "canvas")
     if (!this.settings.status.ui.previewImages && this.settings.previewImages) {
       this.previewContext = this.DOM.previewCanvas.getContext("2d")
       this.thumbnailContext = this.DOM.thumbnailCanvas.getContext("2d")
       let dummyImg = document.createElement("img")
-      dummyImg.src = window.tmg.ALT_IMG_SRC
+      dummyImg.src = tmg.ALT_IMG_SRC
       dummyImg.onload = () => {
         this.previewContext?.drawImage(dummyImg, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height)
         this.thumbnailContext?.drawImage(dummyImg, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height)
         dummyImg = null
       }
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  } 
+    } 
   }
 
   setBtnsState() {
-  try {
     this.setCaptionBtnState()
     this.setFullScreenBtnState()
     this.setTheaterBtnState()
     this.setPictureInPictureBtnState()
-    this.setPlaylistBtnsState()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }         
+    this.setPlaylistBtnsState()         
   }
 
   setCaptionBtnState() {
-  try {
     if (!this.video.textTracks[this.textTrackIndex]) {
       this.DOM.captionsBtn?.classList.add("T_M_G-video-control-disabled")
     } else {
       this.DOM.captionsBtn?.classList.remove("T_M_G-video-control-disabled")
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    }               
   }
 
   setFullScreenBtnState() {
-  try {
     if (!this.settings.status.modes.fullScreen) {
       this.DOM.fullScreenBtn?.classList.add("T_M_G-video-control-hidden")
     } else {
       this.DOM.fullScreenBtn?.classList.remove("T_M_G-video-control-hidden")
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    }               
   }
 
   setTheaterBtnState() {
-  try {
     if (!this.settings.status.modes.theater) {
       this.DOM.theaterBtn?.classList.add("T_M_G-video-control-hidden")
     } else {
       this.DOM.theaterBtn?.classList.remove("T_M_G-video-control-hidden")
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    }               
   }
 
   setPictureInPictureBtnState() {
-  try {
     if (!this.settings.status.modes.pictureInPicture) {
       this.DOM.pictureInPictureBtn?.classList.add("T_M_G-video-control-hidden")
     } else {
       this.DOM.pictureInPictureBtn?.classList.remove("T_M_G-video-control-hidden")
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    }               
   }
 
   setPlaylistBtnsState() {
-  try {
     if (!this.DOM) return
     if (this._playlist) {
       this.DOM.mainPrevBtn?.classList.remove
@@ -1371,44 +1287,40 @@ class _T_M_G_Video_Player {
       this.DOM.nextBtn?.classList.add("T_M_G-video-control-hidden")
     } else {
       this.DOM.nextBtn?.classList.remove("T_M_G-video-control-hidden")
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    }               
   }
 
-  setGeneralEventListeners() {
-  try { 
+  setGeneralEventListeners() { 
     this.setVideoContainerEventListeners()
     this.setControlsEventListeners()
-    this.setSettingsEventListeners()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    this.setSettingsEventListeners()               
   }
 
-  setKeyEventListeners() {
-  try {      
+  setKeyEventListeners(all) {      
     if (this.settings.keyShortcuts) {
-    document.addEventListener("keydown", this._handleKeyDown)
-    document.addEventListener("keyup", this._handleKeyUp)
+    if (all !== "floating") {
+      document.addEventListener("keydown", this._handleKeyDown)
+      document.addEventListener("keyup", this._handleKeyUp)
+    } 
+    if (all === "all" || all === "floating") {
+      this.floatingPlayer?.document.addEventListener("keydown", this._handleKeyDown)
+      this.floatingPlayer?.document.addEventListener("keyup", this._handleKeyUp)
     }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    }      
   }
 
-  removeKeyEventListeners() {
-  try {      
-    document.removeEventListener("keydown", this._handleKeyDown)
-    document.removeEventListener("keyup", this._handleKeyUp)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+  removeKeyEventListeners(all) {      
+    if (all !== "floating") {
+      document.removeEventListener("keydown", this._handleKeyDown)
+      document.removeEventListener("keyup", this._handleKeyUp)
+    } 
+    if (all === "all" || all === "floating") {
+      this.floatingPlayer?.document.removeEventListener("keydown", this._handleKeyDown)
+      this.floatingPlayer?.document.removeEventListener("keyup", this._handleKeyUp)
+    }      
   }
 
   setVideoContainerEventListeners() {
-  try {
     this.DOM.videoControlsContainer.addEventListener("contextmenu", this._handleRightClick)
     this.DOM.videoOverlayControlsContainer.addEventListener("contextmenu", this._handleRightClick)
     this.DOM.videoOverlayControlsContainer.addEventListener("click", this._handleHoverPointerDown, true)
@@ -1424,14 +1336,10 @@ class _T_M_G_Video_Player {
     this.DOM.videoOverlayControlsContainer.addEventListener("mousedown", this._handleSpeedPointerDown, true)
     this.DOM.videoOverlayControlsContainer.addEventListener("touchstart", this._handleSpeedPointerDown, {passive:true, useCapture:true})
     this.DOM.videoOverlayControlsContainer.addEventListener("touchstart", this._handleGestureTouchStart, {passive:false, useCapture:true})
-
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }         
+         
   }   
 
   setVideoEventListeners() {
-  try {
     this.video.addEventListener("error", this._handleLoadedError)
     this.video.addEventListener("play", this._handlePlay)
     this.video.addEventListener("pause", this._handlePause)      
@@ -1445,14 +1353,10 @@ class _T_M_G_Video_Player {
     this.video.addEventListener("loadeddata", this._handleLoadedData)
     this.video.addEventListener("ended", this._handleEnded)
     this.video.addEventListener("enterpictureinpicture", this._handleEnterPictureInPicture)
-    this.video.addEventListener("leavepictureinpicture", this._handleLeavePictureInPicture)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }         
+    this.video.addEventListener("leavepictureinpicture", this._handleLeavePictureInPicture)         
   }
 
   removeVideoEventListeners() {
-  try {
     if (this.initialState) this.video.removeEventListener("play", this.removeInitialState, {once:true})
     this.video.removeEventListener("error", this._handleLoadedError)
     this.video.removeEventListener("play", this._handlePlay)
@@ -1467,14 +1371,10 @@ class _T_M_G_Video_Player {
     this.video.removeEventListener("loadeddata", this._handleLoadedData)
     this.video.removeEventListener("ended", this._handleEnded)
     this.video.removeEventListener("enterpictureinpicture", this._handleEnterPictureInPicture)
-    this.video.removeEventListener("leavepictureinpicture", this._handleLeavePictureInPicture)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }         
+    this.video.removeEventListener("leavepictureinpicture", this._handleLeavePictureInPicture)         
   }
 
   setControlsEventListeners() {
-  try {
     this.DOM.fullScreenOrientationBtn?.addEventListener("click", this.changeFullScreenOrientation)
     this.DOM.miniPlayerExpandBtn?.addEventListener("click", this.expandMiniPlayer)
     this.DOM.miniPlayerCancelBtn?.addEventListener("click", this.cancelMiniPlayer)      
@@ -1526,14 +1426,10 @@ class _T_M_G_Video_Player {
     }
 
     //notifiers event listeners
-    this.notify.init(this)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }         
+    this.notify.init(this)         
   }
 
   setDragEventListeners() {
-  try {
   if (this.settings.status.ui.draggableControls) {
     this.DOM.draggableControls?.forEach(control => control.draggable = true)
     this.DOM.draggableControls?.forEach(control => {
@@ -1547,14 +1443,10 @@ class _T_M_G_Video_Player {
       container.addEventListener("drop", this._handleDrop)
       container.addEventListener("dragleave", this._handleDragLeave)
     })
-  }
-  } catch(e) {
-    this.log(e, "error", "swallow")
   }         
   }
 
-  removeDragEventListeners() {
-  try {      
+  removeDragEventListeners() {      
     this.DOM.draggableControls?.forEach(control => control.draggable = false)
     this.DOM.draggableControls?.forEach(control => {
       control.removeEventListener("dragstart", this._handleDragStart)
@@ -1566,82 +1458,54 @@ class _T_M_G_Video_Player {
       container.removeEventListener("dragover", this._handleDragOver)
       container.removeEventListener("drop", this._handleDrop)
       container.removeEventListener("dragleave", this._handleDragLeave)
-    })
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }         
+    })         
   }
 
   setSettingsEventListeners() {
-  try {
     this.DOM.settingsCloseBtn?.addEventListener("click", this.leaveSettingsView)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   observeResize() {
-    try {
-      this._handleMediaParentResize();
-      window.tmg.initScrollAssist(this.DOM.videoTitleCasing, { pxPerSecond: 60 });
-      [this.DOM.leftSideControlsWrapper, this.DOM.rightSideControlsWrapper].forEach(el => {
-        this._handleSideControlsWrapperResize(el);
-        window.tmg.initScrollAssist(el, { pxPerSecond: 60 });
-        window.tmg.resizeObserver.observe(el);
-      });
-      [this.videoContainer, this.pseudoVideoContainer].forEach(el =>
-        window.tmg.resizeObserver.observe(el)
-      );
-    } catch (e) {
-      this.log(e, "error", "swallow");
-    }
+    this._handleMediaParentResize();
+    tmg.initScrollAssist(this.DOM.videoTitleCasing, { pxPerSecond: 60 });
+    [this.DOM.leftSideControlsWrapper, this.DOM.rightSideControlsWrapper].forEach(el => {
+      this._handleSideControlsWrapperResize(el);
+      tmg.initScrollAssist(el, { pxPerSecond: 60 });
+      tmg.resizeObserver.observe(el);
+    });
+    [this.videoContainer, this.pseudoVideoContainer].forEach(el =>
+      tmg.resizeObserver.observe(el)
+    );
   }
 
   unobserveResize() {
-    try {
-      window.tmg.removeScrollAssist(this.DOM.videoTitleCasing);
-      [this.DOM.leftSideControlsWrapper, this.DOM.rightSideControlsWrapper].forEach(el => {
-        window.tmg.removeScrollAssist(el);
-        window.tmg.resizeObserver.unobserve(el);
-      });
-      [this.videoContainer, this.pseudoVideoContainer].forEach(el =>
-        window.tmg.resizeObserver.unobserve(el)
-      );
-    } catch (e) {
-      this.log(e, "error", "swallow");
-    }
+    tmg.removeScrollAssist(this.DOM.videoTitleCasing);
+    [this.DOM.leftSideControlsWrapper, this.DOM.rightSideControlsWrapper].forEach(el => {
+      tmg.removeScrollAssist(el);
+      tmg.resizeObserver.unobserve(el);
+    });
+    [this.videoContainer, this.pseudoVideoContainer].forEach(el =>
+      tmg.resizeObserver.unobserve(el)
+    );
   }
 
   observeIntersection() {
-  try {
-    window.tmg.intersectionObserver.observe(this.videoContainer.parentElement)
-    window.tmg.intersectionObserver.observe(this.video)     
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }         
+    tmg.intersectionObserver.observe(this.videoContainer.parentElement)
+    tmg.intersectionObserver.observe(this.video)              
   }
 
   unobserveIntersection() {
-  try {
-    window.tmg.intersectionObserver.unobserve(this.videoContainer.parentElement)
-    window.tmg.intersectionObserver.unobserve(this.video)     
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  } 
+    tmg.intersectionObserver.unobserve(this.videoContainer.parentElement)
+    tmg.intersectionObserver.unobserve(this.video)      
   }
 
   _handleResize(target) {
-  try {
     const isPseudo = target.className.includes("T_M_G-pseudo")
     if (target.classList.contains("T_M_G-media-container")) this._handleMediaParentResize(isPseudo)
     else if (target.classList.contains("T_M_G-video-side-controls-wrapper")) this._handleSideControlsWrapperResize(target)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleMediaParentResize(isPseudo = false) {
-  try {
     const getTier = container => {
       const { offsetWidth: w, offsetHeight: h } = container
       return {
@@ -1660,40 +1524,24 @@ class _T_M_G_Video_Player {
     } else {
       const { tier } = getTier(this.pseudoVideoContainer)
       this.pseudoVideoContainer.dataset.sizeTier = tier
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }    
+    }    
   }
 
   _handleSideControlsWrapperResize(wrapper) {
-  try {
     this.updateSideControls({ target: wrapper })
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleMediaIntersectionChange(isIntersecting) {
-  try {
     this.isIntersecting = isIntersecting
-    this.isIntersecting && !this.settingsView ? this.setKeyEventListeners() : this.removeKeyEventListeners()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  } 
+    this.isIntersecting && !this.settingsView ? this.setKeyEventListeners() : this.removeKeyEventListeners() 
   }
 
   _handleMediaParentIntersectionChange(isIntersecting) {
-  try {
     this.parentIntersecting = isIntersecting
-    this.toggleMiniPlayerMode()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  } 
+    this.toggleMiniPlayerMode() 
   }
 
   updateSideControls({ target: wrapper }) {
-  try {
     let c = wrapper.children[0], spacer
     do {
       c.dataset.spacer = "false";
@@ -1701,21 +1549,13 @@ class _T_M_G_Video_Player {
       if (c.dataset.displayed === "true" && !spacer) spacer = c;
     } while (c = c.nextElementSibling);
     if (wrapper === this.DOM.rightSideControlsWrapper) spacer?.setAttribute("data-spacer", true)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   cache() {
-  try {
-    this.settingsCache = JSON.parse(JSON.stringify(this.settings))
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }                  
+    this.settingsCache = JSON.parse(JSON.stringify(this.settings))                  
   }
 
   enableFocusableControls(all) {
-  try {
     if (all === "all") this.DOM.focusableControls?.forEach(control => {
       control.tabIndex = "0"
       control.setAttribute("data-focusable-control", true)
@@ -1725,14 +1565,10 @@ class _T_M_G_Video_Player {
         control.tabIndex = "0"
         control.setAttribute("data-focusable-control", true)
       }
-    })
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }  
+    })  
   }
 
   disableFocusableControls(all) {
-  try {
     if (all === "all") this.DOM.focusableControls?.forEach(control => {
       control.tabIndex = "-1"
       control.setAttribute("data-focusable-control", false)
@@ -1742,27 +1578,19 @@ class _T_M_G_Video_Player {
         control.tabIndex = "-1"
         control.setAttribute("data-focusable-control", false)
       }
-    })
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }  
+    })  
   }
 
   getCurrentVideoFrame(type) {
-  try {
     this.pseudoVideo.currentTime = this.currentTime
     this.contentCanvas.width = this.video.videoWidth
     this.contentCanvas.height = this.video.videoHeight
     this.contentContext?.drawImage(this.pseudoVideo, 0, 0, this.contentCanvas.width, this.contentCanvas.height)
     if (type === "monochrome") this.convertToMonoChrome(this.contentCanvas)
-    return this.contentCanvas.toDataURL("image/png")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    return this.contentCanvas.toDataURL("image/png")               
   }
 
   convertToMonoChrome(canvas) {
-  try {
     const frame = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height)
     const l = frame.data.length / 4
     for (let i = 0; i < l; i ++) {
@@ -1775,72 +1603,48 @@ class _T_M_G_Video_Player {
       frame.data[i * 4 + 1] = grey
       frame.data[i * 4 + 2] = grey
     }
-    canvas.getContext("2d").putImageData(frame, 0, 0)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }                  
+    canvas.getContext("2d").putImageData(frame, 0, 0)                  
   }
 
   controlsResize() {         
-  try {
     let controlsSize = 25
     this.DOM.svgs?.forEach(svg => {
       svg.setAttribute("preserveAspectRatio", "xMidYMid meet")
       if (!(svg.dataset.noResize === "true")) svg.setAttribute("viewBox", `0 0 ${controlsSize} ${controlsSize}`)
-    })
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    })      
   }      
 
   deactivate(message) {
-  try {
     this.showOverlay()
     this.showMessage(message)
-    this.videoContainer.classList.add("T_M_G-video-unavailable")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  } 
+    this.videoContainer.classList.add("T_M_G-video-unavailable") 
   }
 
   reactivate() {
-  try {
     if (this.videoContainer.classList.contains("T_M_G-video-unavailable") && this.loaded) {
       this.videoContainer.classList.remove("T_M_G-video-unavailable")
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  } 
+    } 
   }
 
   disable() {
-  try {
     this.videoContainer.classList.add("T_M_G-video-disabled")
     this.video.pause()
     this.cancelAllThrottles()
     this.leaveSettingsView()
     this.disableFocusableControls("all")
-    this.removeKeyEventListeners()
+    this.removeKeyEventListeners("all")
     this.disabled = true
     this.log("You have to enable the TMG controller to access the custom controls", "warn")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   enable() {
-  try {
     this.videoContainer.classList.remove("T_M_G-video-disabled")
     this.enableFocusableControls("all")
-    this.setKeyEventListeners()
+    this.setKeyEventListeners("all")
     this.disabled = false
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   activatePseudoMode() {
-  try {
     this.mutatingDOMNodes = true
     this.pseudoVideo.id = this.video.id
     this.video.id = ''
@@ -1848,14 +1652,10 @@ class _T_M_G_Video_Player {
     this.pseudoVideoContainer.className += " " + this.videoContainer.className.replace(/T_M_G-media-container|T_M_G-pseudo-video-container/g, "")
     this.videoContainer.parentElement?.insertBefore(this.pseudoVideoContainer, this.videoContainer)
     document.body.append(this.videoContainer)
-    setTimeout(() => this.mutatingDOMNodes = false)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  } 
+    setTimeout(() => this.mutatingDOMNodes = false) 
   }
 
   deactivatePseudoMode() {
-  try {
     this.mutatingDOMNodes = true
     this.video.id = this.pseudoVideo.id
     this.pseudoVideo.id = ''
@@ -1863,14 +1663,10 @@ class _T_M_G_Video_Player {
     this.pseudoVideoContainer.className = "T_M_G-pseudo-video-container T_M_G-media-container"
     this.pseudoVideoContainer.parentElement?.insertBefore(this.videoContainer, this.pseudoVideoContainer)
     this.pseudoVideoContainer.remove()
-    setTimeout(() => this.mutatingDOMNodes = false)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  } 
+    setTimeout(() => this.mutatingDOMNodes = false) 
   }
 
   isModeActive(mode) {
-  try {
     switch (mode) {
       case "miniPlayer":
         return this.videoContainer.classList.contains("T_M_G-video-mini-player")
@@ -1885,137 +1681,85 @@ class _T_M_G_Video_Player {
       case "normal":
       default:
         return false
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }       
+    }       
   }
 
   _handleWindowResize() {
-  try {
-    this.toggleMiniPlayerMode()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    this.toggleMiniPlayerMode()      
   }
 
   _handleVisibilityChange() {
-  try {
     // tending to some observed glitches when visibility changes
     if (document.visibilityState === "visible") {
       this.stopTimelineScrubbing()
     }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleImgBreak(e) {
-  try {
-    e.target.src = window.tmg.ALT_IMG_SRC
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }                  
+    e.target.src = tmg.ALT_IMG_SRC                  
   }      
 
   showMessage(message) {
-  try {
-    if (message) this.DOM.videoContainerContent?.setAttribute("data-message", message)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }          
+    if (message) this.DOM.videoContainerContent?.setAttribute("data-message", message)          
   }
 
   _handleLoadedError(error) {
-    try {
-      const mediaError = this.video.error;
-      // Get the error message from prioritized sources
-      const fallbackMessage = 
-        (typeof error === "string" && error) ||
-        error?.message ||
-        mediaError?.message ||
-        "An unknown error occurred during video playback";
-      const errorCode = mediaError?.code ?? 5;
-      const message = this.settings.errorMessages?.[errorCode] || fallbackMessage;
-      this.loaded = false;
-      this.deactivate(message);
-    } catch (e) {
-      this.log(e, "error", "swallow");
-    }
+    const mediaError = this.video.error;
+    // Get the error message from prioritized sources
+    const fallbackMessage = 
+      (typeof error === "string" && error) ||
+      error?.message ||
+      mediaError?.message ||
+      "An unknown error occurred during video playback";
+    const errorCode = mediaError?.code ?? 5;
+    const message = this.settings.errorMessages?.[errorCode] || fallbackMessage;
+    this.loaded = false;
+    this.deactivate(message);
   }
 
   _handleLoadedMetadata() {
-  try {
     if (this.settings.startTime) this.currentTime = this.settings.startTime
     this.syncAspectRatio()
-    if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatTime(this.video.duration)
-    this.videoCurrentProgressPosition = (this.currentTime < 1) ? this.videoCurrentLoadedPosition = 0 : window.tmg.parseNumber(this.video.currentTime / this.video.duration)
+    if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = tmg.formatTime(this.video.duration)
+    this.videoCurrentProgressPosition = (this.currentTime < 1) ? this.videoCurrentLoadedPosition = 0 : tmg.parseNumber(this.video.currentTime / this.video.duration)
     this.loaded = true
-    this.reactivate()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    this.reactivate()               
   }
 
   _handleLoadedData() {
-  try {
-    if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatTime(this.video.duration)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }            
+    if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = tmg.formatTime(this.video.duration)            
   }
 
   _handleDurationChange() {
-  try {
-    if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = window.tmg.formatTime(this.video.duration)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
+    if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = tmg.formatTime(this.video.duration)
   } 
 
   _handleLoadedProgress() {
-  try {
     for (let i = 0; i < this.video.buffered.length; i++) {
       if (this.video.buffered.start(this.video.buffered.length - 1 - i) < this.currentTime) {
         this.videoCurrentLoadedPosition = this.video.buffered.end(this.video.buffered.length - 1 - i) / this.duration
         break
       }
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    }               
   }
 
   syncAspectRatio() {
-  try {
     if (!this.video.videoWidth || !this.video.videoHeight) return
     this.aspectRatio = this.video.videoWidth / this.video.videoHeight
-    this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  } 
+    this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}` 
   }
 
   previousVideo() {
-  try {
     if (this._playlist && this.currentPlaylistIndex > 0) {
       this.currentTime < 3 ? this.movePlaylistTo(this.currentPlaylistIndex - 1) : this.moveVideoTime({to: "start"})
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }            
+    }            
   }
 
   nextVideo() {
-  try {
-    if (this._playlist && this.currentPlaylistIndex < this._playlist.length - 1) this.movePlaylistTo(this.currentPlaylistIndex + 1)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }            
+    if (this._playlist && this.currentPlaylistIndex < this._playlist.length - 1) this.movePlaylistTo(this.currentPlaylistIndex + 1)            
   }
 
   movePlaylistTo(index, shouldPlay = true) {
-  try {
     if (this._playlist) {
       if (this.settings.status.allowOverride.startTime) {
         this._playlist[this.currentPlaylistIndex].settings.startTime = this.currentTime < (this.duration - (this.settings.endTime || this.settings.automoveCountdown)) ? this.playlistCurrentTime : null
@@ -2039,14 +1783,10 @@ class _T_M_G_Video_Player {
       this.togglePlay(shouldPlay)
       this.video.playbackRate = this.lastRate
       this.canAutoMovePlaylist = true
-    }      
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }         
+    }               
   }
 
-  automovePlaylist() {
-  try {      
+  automovePlaylist() {      
     if (this.loaded && this._playlist && this.settings.automove && this.canAutoMovePlaylist && (this.currentPlaylistIndex < this._playlist.length - 1) && !this.video.paused) {
       this.canAutoMovePlaylist = false
       const count = Math.floor((this.settings.endTime || this.duration) - this.currentTime)
@@ -2130,7 +1870,7 @@ class _T_M_G_Video_Player {
           pointerDeltaX = x - pointerStartX
           playlistToastContainer.style.setProperty("transition", "none", "important")
           playlistToastContainer.style.setProperty("transform", `translateX(${pointerDeltaX}px)`, "important")
-          playlistToastContainer.style.setProperty("opacity", window.tmg.clamp(0, 1 - (Math.abs(pointerDeltaX) / playlistToastContainer.offsetWidth), 1), "important")
+          playlistToastContainer.style.setProperty("opacity", tmg.clamp(0, 1 - (Math.abs(pointerDeltaX) / playlistToastContainer.offsetWidth), 1), "important")
         })
       },
       handleToastPointerEnd = () => {
@@ -2164,14 +1904,10 @@ class _T_M_G_Video_Player {
       playlistNextVideoPreviewWrapper.addEventListener('click', autoNextVideo)
       playlistNextVideoCancelBtn.addEventListener('click', () => cleanUpPlaylistToast(true))
     }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   setMediaSession() {
-  try {
-    if (window.tmg._PICTURE_IN_PICTURE_ACTIVE && !this.isModeActive("pictureInPicture")) return
+    if (tmg._PICTURE_IN_PICTURE_ACTIVE && !this.isModeActive("pictureInPicture")) return
     if ('mediaSession' in navigator) {
       if (this.media) navigator.mediaSession.metadata = new MediaMetadata(this.media)
       navigator.mediaSession.setActionHandler('play', () => this.togglePlay(true))
@@ -2187,13 +1923,9 @@ class _T_M_G_Video_Player {
         navigator.mediaSession.setActionHandler("nexttrack", () => this.nextVideo())
       }         
     }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   toggleObjectFit() {
-  try {
     const fitNames = ["Crop to Fit", "Fit To Screen", "Stretch"],
     fits = ["contain", "cover", "fill"]
     let fitIndex = fits.indexOf(this.videoObjectFit) + 1
@@ -2202,56 +1934,35 @@ class _T_M_G_Video_Player {
     this.videoObjectFit = fits[fitIndex]
     this.videoContainer.setAttribute("data-object-fit", this.videoObjectFit)
     if (this.DOM.objectFitNotifier) this.DOM.objectFitNotifier.textContent = fitNames[fitIndex]
-    this.fire("objectfitchange")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }  
+    this.fire("objectfitchange")  
   }
 
-  async togglePlay(bool) {
-  try {      
-    this.video.ended ? this.replay() : typeof bool == "boolean" ? await this.video[bool ? 'play' : 'pause']() : await this.video[this.video.paused ? 'play' : 'pause']()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-    // this._handleLoadedError(e)
-  }      
+  async togglePlay(bool) {      
+    this.video.ended ? this.replay() : typeof bool == "boolean" ? await this.video[bool ? 'play' : 'pause']() : await this.video[this.video.paused ? 'play' : 'pause']()   
   }
 
-  replay() {
-  try {      
+  replay() {      
     this.stall()
     this.moveVideoTime({to: "start"})
-    this.video.play()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    this.video.play()      
   }   
   
   _handleBufferStart() {
-  try {
     this.buffering = true
     this.showOverlay()
-    this.videoContainer.classList.add("T_M_G-video-buffering")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }            
+    this.videoContainer.classList.add("T_M_G-video-buffering")            
   }
 
-  _handleBufferStop() {
-  try {      
+  _handleBufferStop() {      
     if (this.buffering) {
     this.buffering = false
     this.overlayRestraint()
     this.videoContainer.classList.remove("T_M_G-video-buffering")
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }                  
+    }                  
   }
   
   _handlePlay() {
-  try {
-    window.tmg.connectAudio(this.audioGainNode)
+    tmg.connectAudio(this.audioGainNode)
     for (const media of document.querySelectorAll("video, audio")) {
       if (media !== this.video && !media.paused) media.pause()
     }
@@ -2261,31 +1972,19 @@ class _T_M_G_Video_Player {
     if (this.loaded) return
     this.loaded = true
     this.reactivate()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
       
-  _handlePause() {
-  try {      
+  _handlePause() {      
     this.videoContainer.classList.add("T_M_G-video-paused")
     this.showOverlay()
-    if (this.buffering) this._handleBufferStop()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    if (this.buffering) this._handleBufferStop()      
   }
 
-  _handleEnded() {
-  try {      
-    this.videoContainer.classList.add("T_M_G-video-replay")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+  _handleEnded() {      
+    this.videoContainer.classList.add("T_M_G-video-replay")      
   }
 
   _handleTimelineScrubbing(e) {
-  try {
     if (!this.isScrubbing) {
     this.DOM.timelineContainer?.setPointerCapture(e.pointerId)
     this.isScrubbing = true
@@ -2293,14 +1992,10 @@ class _T_M_G_Video_Player {
     this.DOM.timelineContainer?.addEventListener("pointermove", this._handleTimelineInput)
     this.DOM.timelineContainer?.addEventListener("pointerup", this.stopTimelineScrubbing)
     this.DOM.timelineContainer?.addEventListener("pointercancel", this.stopTimelineScrubbing)
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    }      
   }
 
   stopTimelineScrubbing(e) {
-  try {
     if (this.isScrubbing) {
     this.isScrubbing = false
     if (e) this.toggleScrubbing(e)
@@ -2309,18 +2004,14 @@ class _T_M_G_Video_Player {
     this.DOM.timelineContainer?.removeEventListener("pointerup", this.stopTimelineScrubbing)
     this.DOM.timelineContainer?.removeEventListener("pointercancel", this.stopTimelineScrubbing)
     }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
   
-  toggleScrubbing(e) {
-  try {      
+  toggleScrubbing(e) {      
     const rect = this.DOM.timelineContainer?.getBoundingClientRect()
     const percent = Math.min(Math.max(0, e.clientX - rect.x), rect.width) / rect.width
     this.videoContainer.classList.toggle("T_M_G-video-scrubbing", this.isScrubbing)
     if (this.isScrubbing) {
-      let { width, height } = window.tmg.getRenderedBox(this.video)
+      let { width, height } = tmg.getRenderedBox(this.video)
       width = width ?? this.videoContainer.offsetWidth
       height = height ?? this.videoContainer.offsetHeight
       this.DOM.thumbnailCanvas.height = this.DOM.thumbnailImg.height = height + 1
@@ -2332,9 +2023,6 @@ class _T_M_G_Video_Player {
       if (!this.wasPaused) this.togglePlay(true)
     }
     this._handleTimelineInput(e)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   showPreviewImages() {
@@ -2345,16 +2033,15 @@ class _T_M_G_Video_Player {
     setTimeout(() => this.videoContainer.classList.remove("T_M_G-video-previewing"))
   }
 
-  _handleTimelineInput({clientX: x}) { 
-  try {      
+  _handleTimelineInput({clientX: x}) {       
   this.throttle("timelineInput", () => {
     const rect = this.DOM.timelineContainer?.getBoundingClientRect()
-    const percent = window.tmg.clamp(0, x - rect.left, rect.width) / rect.width
+    const percent = tmg.clamp(0, x - rect.left, rect.width) / rect.width
     const previewImgMin = (this.DOM.previewContainer.offsetWidth / 2) / rect.width
-    const previewImgPercent = window.tmg.clamp(previewImgMin, percent, (1 - previewImgMin))
+    const previewImgPercent = tmg.clamp(previewImgMin, percent, (1 - previewImgMin))
     this.videoCurrentPreviewPosition = percent
     this.videoCurrentPreviewImgPosition = previewImgPercent
-    this.DOM.previewContainer?.setAttribute("data-preview-time", window.tmg.formatTime(percent * this.video.duration))  
+    this.DOM.previewContainer?.setAttribute("data-preview-time", tmg.formatTime(percent * this.video.duration))  
     if (this.isScrubbing) {
       this.videoCurrentProgressPosition =  percent
       this.overlayRestraint()
@@ -2377,38 +2064,33 @@ class _T_M_G_Video_Player {
       arrowPosition = `${Math.min(((this.DOM.previewContainer.offsetWidth/2 + (percent * rect.width) - this.DOM.previewContainer.offsetLeft)), this.DOM.previewContainer.offsetWidth - arrowPositionMin)}px`
     } else arrowPosition = "50%"
     this.videoCurrentPreviewImgArrowPosition = arrowPosition
-  }, this.timelineInputThrottleDelay)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+  }, this.timelineInputThrottleDelay)      
   }
 
-  _handleGestureTimelineInput({percent, sign, multiplier}) {
-    try {   
-      multiplier = multiplier.toFixed(1)
-      percent = percent * multiplier
-      const time = sign === "+" ? this.currentTime + (percent * this.duration) : this.currentTime - (percent * this.duration)
-      this.gestureNextTime = window.tmg.clamp(0, Math.floor(time), this.duration)
-      if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${window.tmg.formatTime(Math.abs(this.gestureNextTime - this.currentTime))} (${window.tmg.formatTime(this.gestureNextTime)}) ${multiplier < 1 ? `x${multiplier}` : ''}`
-    } catch(e) {
-      this.log(e, "error", "swallow")
+  _handleGestureTimelineInput({percent, sign, multiplier}) {   
+    multiplier = multiplier.toFixed(1)
+    percent = percent * multiplier
+    const time = sign === "+" ? this.currentTime + (percent * this.duration) : this.currentTime - (percent * this.duration)
+    this.gestureNextTime = tmg.clamp(0, Math.floor(time), this.duration)
+    if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${tmg.formatTime(Math.abs(this.gestureNextTime - this.currentTime))} (${tmg.formatTime(this.gestureNextTime)}) ${multiplier < 1 ? `x${multiplier}` : ''}`     
+  }
+
+  _handleTimelineFocus() {      
+    if (this.DOM.timelineContainer?.matches(":focus-visible")) {
+      this.timelineFocused = true
+      document.addEventListener("keydown", this._handleTimelineKeyDown)
+      this.floatingPlayer?.document.addEventListener("keydown", this._handleTimelineKeyDown)
     }      
   }
 
-  _handleTimelineFocus() {
-  try {      
-    if (this.DOM.timelineContainer?.matches(":focus-visible")) {
-      this.isTimelineFocused = true
-      document.addEventListener("keydown", this._handleTimelineKeyDown)
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+  _handleTimelineBlur() { 
+    this.timelineFocused = false
+    document.removeEventListener('keydown', this._handleTimelineKeyDown)
+    this.floatingPlayer?.document.removeEventListener('keydown', this._handleTimelineKeyDown)         
   }
 
   _handleTimelineKeyDown(e) {
-  try {
-    switch (e.key.toString().toLowerCase()) {
+    switch (e.key?.toLowerCase()) {
       case "arrowleft":
       case "arrowdown":
         e.preventDefault()
@@ -2421,49 +2103,28 @@ class _T_M_G_Video_Player {
         e.stopImmediatePropagation()
         this.currentTime += e.shiftKey ? 5 : 1
       break
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    }      
   }
 
-  _handleTimelineBlur() { 
-  try {
-    this.isTimelineFocused = false
-    document.removeEventListener('keydown', this._handleTimelineKeyDown)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }         
-  }
-
-  _handleTimeUpdate() {
-  try {   
+  _handleTimeUpdate() {   
     this.video.removeAttribute("controls") // youtube did this too :)
-    this.videoCurrentProgressPosition = window.tmg.isValidNumber(this.video.duration) ? window.tmg.parseNumber(this.video.currentTime / this.video.duration) : (this.video.currentTime / 60) // progress fallback, shouldn't take more than a min for duration to be available
-    if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.timeFormat !== "timespent" ? window.tmg.formatTime(this.video.currentTime) : `-${window.tmg.formatTime(this.video.duration - this.video.currentTime)}`
-    if (this.speedCheck && this.speedToken === 1) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", window.tmg.formatTime(this.video.currentTime))
+    this.videoCurrentProgressPosition = tmg.isValidNumber(this.video.duration) ? tmg.parseNumber(this.video.currentTime / this.video.duration) : (this.video.currentTime / 60) // progress fallback, shouldn't take more than a min for duration to be available
+    if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.timeFormat !== "timespent" ? tmg.formatTime(this.video.currentTime) : `-${tmg.formatTime(this.video.duration - this.video.currentTime)}`
+    if (this.speedCheck && this.speedToken === 1) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", tmg.formatTime(this.video.currentTime))
     if (this._playlist && this.currentTime > 3) this.playlistCurrentTime = this.currentTime
     if (Math.floor((this.settings.endTime || this.duration) - this.currentTime) <= this.settings.automoveCountdown) this.automovePlaylist()
-    if (this.videoContainer.classList.contains("T_M_G-video-replay")) this.videoContainer.classList.remove("T_M_G-video-replay")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }   
+    if (this.videoContainer.classList.contains("T_M_G-video-replay")) this.videoContainer.classList.remove("T_M_G-video-replay")   
   }
   
   changeTimeFormat() {
-  try {
     if (this.settings.status.allowOverride.timeFormat) {
       this.showOverlay()
       this.settings.timeFormat = this.settings.timeFormat !== "timespent" ? "timespent" : "timeleft"
-      if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.timeFormat !== "timespent" ? window.tmg.formatTime(this.video.currentTime) : `-${window.tmg.formatTime(this.video.duration - this.video.currentTime)}`
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }     
+      if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.timeFormat !== "timespent" ? tmg.formatTime(this.video.currentTime) : `-${tmg.formatTime(this.video.duration - this.video.currentTime)}`
+    }     
   }
   
   skip(duration) {
-  try {
     const notifier = duration > 0 ? this.DOM.fwdNotifier : this.DOM.bwdNotifier
     duration = Math.sign(duration) === 1 ? this.duration - this.currentTime > duration ? duration : this.duration - this.currentTime : Math.sign(duration) === -1 ? this.currentTime > Math.abs(duration) ? duration : -this.currentTime : 0
     duration = Math.trunc(duration)
@@ -2483,18 +2144,14 @@ class _T_M_G_Video_Player {
         notifier.classList.remove("T_M_G-video-control-persist")
         this.currentNotifier = null
         this.removeOverlay() 
-      }, window.tmg.formatCSSTime(this.videoNotifiersAnimationTime))
+      }, tmg.formatCSSTime(this.videoNotifiersAnimationTime))
       notifier.setAttribute("data-skip", this.skipDuration)
       return
     } else this.currentNotifier?.classList.remove("T_M_G-video-control-persist")
-    notifier.setAttribute("data-skip", Math.abs(duration))
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    notifier.setAttribute("data-skip", Math.abs(duration))      
   }
 
-  moveVideoTime(details) {
-  try {      
+  moveVideoTime(details) {      
     switch(details.to) {
       case "start":
         this.currentTime = 0
@@ -2504,14 +2161,11 @@ class _T_M_G_Video_Player {
         break
       default:                  
         this.currentTime = (Number(details.to)/Number(details.max)) * this.duration
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    }      
   }
 
   moveVideoFrame(dir = "forwards") {
-    try {
+
     if (!this.video.paused) return;
     this.throttle("frameStepping", () => {
       if (!this.video.paused) return;
@@ -2520,26 +2174,19 @@ class _T_M_G_Video_Player {
       const maxFrame = Math.floor(this.video.duration * this.fps);
       this.currentTime = Math.min(maxFrame, Math.max(0, frame + delta)) / this.fps;
     }, this.frameStepThrottleDelay)
-    } catch (e) {
-      this.log(e, "error", "swallow");
-    }
   }
       
   togglePlaybackRate(dir = "forwards") {
-    try {
+
       const delta = dir === "backwards" ? -0.25 : 0.25;
       this.DOM.playbackRateNotifier?.classList.toggle("T_M_G-video-rewind", dir === "backwards");
       let rate = this.video.playbackRate + delta;
       if (rate < 0.25) rate = 2;
       else if (rate > 2) rate = 0.25;
       this.video.playbackRate = rate;
-    } catch (e) {
-      this.log(e, "error", "swallow");
-    }
   }
 
-  changePlaybackRate(value) {
-  try {    
+  changePlaybackRate(value) {    
     const sign = Math.sign(value) === 1 ? "+" : "-"
     value = Math.abs(value)
     const rate = this.video.playbackRate
@@ -2556,23 +2203,15 @@ class _T_M_G_Video_Player {
         this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-rewind")
         this.fire("playbackratechange")
         break
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    }      
   }
   
-  _handlePlaybackRateChange() {
-  try {    
+  _handlePlaybackRateChange() {    
     if (this.DOM.playbackRateBtn) this.DOM.playbackRateBtn.textContent = `${this.video.playbackRate}x`
-    if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.textContent = `${this.video.playbackRate}x`  
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.textContent = `${this.video.playbackRate}x`        
   }
   
-  speedUp(pos) {
-  try {      
+  speedUp(pos) {      
     if (!this.speedCheck) {
       this.speedCheck = true
       this.wasPaused = this.video.paused
@@ -2580,63 +2219,43 @@ class _T_M_G_Video_Player {
       this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-rewind")
       this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-control-active")
       pos === "backwards" && this.settings.status.beta?.rewind ? setTimeout(this.rewind) : setTimeout(this.fastForward)
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }   
+    }   
   }
 
   fastForward() {
-    try {
-      this.speedToken = 1
-      this.video.playbackRate = 2   
-      if (this.wasPaused) this.togglePlay(true)
-    } catch(e) {
-      this.log(e, "error", "swallow")
-    }
+    this.speedToken = 1
+    this.video.playbackRate = 2   
+    if (this.wasPaused) this.togglePlay(true)
   }
 
   rewind() {
-    try {
-      this.speedToken = 0
-      this.video.playbackRate = 1   
-      if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.textContent = '2x'
-      this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-rewind")
-      this.video.addEventListener("play", this.rewindReset)
-      this.video.addEventListener("pause", this.rewindReset)
-      this.speedVideoTime = this.currentTime
-      this.speedIntervalId = setInterval(this.rewindVideo.bind(this), this.speedIntervalDelay)
-      setTimeout(() => {
-        if (this.wasPaused) this.togglePlay(true)
-      }, 1000)
-    } catch(e) {
-      this.log(e, "error", "swallow")
-    }
+    this.speedToken = 0
+    this.video.playbackRate = 1   
+    if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.textContent = '2x'
+    this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-rewind")
+    this.video.addEventListener("play", this.rewindReset)
+    this.video.addEventListener("pause", this.rewindReset)
+    this.speedVideoTime = this.currentTime
+    this.speedIntervalId = setInterval(this.rewindVideo.bind(this), this.speedIntervalDelay)
+    setTimeout(() => {
+      if (this.wasPaused) this.togglePlay(true)
+    }, 1000)
   }      
 
 
-  rewindVideo() {
-  try {      
+  rewindVideo() {      
     this.speedVideoTime -= this.speedIntervalTime
     this.videoCurrentProgressPosition = this.speedVideoTime / this.duration
-    if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.setAttribute("data-current-time", window.tmg.formatTime(Math.max(this.speedVideoTime, 0)))
-    this.currentTime -= this.speedIntervalTime
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.setAttribute("data-current-time", tmg.formatTime(Math.max(this.speedVideoTime, 0)))
+    this.currentTime -= this.speedIntervalTime      
   }
 
   rewindReset() {
-  try {
     clearInterval(this.speedIntervalId)
-    if (!this.video.paused) this.speedIntervalId = setInterval(this.rewindVideo.bind(this), this.speedIntervalDelay)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }         
+    if (!this.video.paused) this.speedIntervalId = setInterval(this.rewindVideo.bind(this), this.speedIntervalDelay)         
   }
   
-  slowDown() {
-  try {      
+  slowDown() {      
     if (this.speedCheck) {
       this.speedCheck = false
       this.video.playbackRate = this.lastRate
@@ -2648,22 +2267,14 @@ class _T_M_G_Video_Player {
         if (this.speedIntervalId) clearInterval(this.speedIntervalId)
       }
       this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-control-active")
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }   
+    }   
   }
 
-  toggleCaptions() {
-  try {      
-    if (this.video.textTracks[this.textTrackIndex]) this.videoContainer.classList.toggle("T_M_G-video-captions")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+  toggleCaptions() {      
+    if (this.video.textTracks[this.textTrackIndex]) this.videoContainer.classList.toggle("T_M_G-video-captions")      
   }
 
   _handleCueChange(cue) {
-  try {
     this.DOM.cueContainer.innerHTML = ''
     if (!cue) return
     const cueText = cue.text
@@ -2685,61 +2296,42 @@ class _T_M_G_Video_Player {
     this.videoCurrentCueContainerHeight = this.DOM.cueContainer.offsetHeight + 'px'
     this.videoCurrentCueContainerWidth = this.DOM.cueContainer.offsetWidth + 'px'
     this.changeCuePosition()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleCueDragStart(e) {
-  try {
     this.DOM.cueContainer?.setPointerCapture(e.pointerId)
     this.DOM.cueContainer?.addEventListener("pointermove", this._handleCueDragging)
     this.DOM.cueContainer?.addEventListener("pointerup", this._handleCueDragEnd)
     this.DOM.cueContainer?.addEventListener("pointercancel", this._handleCueDragEnd)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleCueDragging({clientX, clientY}) {
-  try {
     this.DOM.videoContainer.classList.add("T_M_G-video-cue-dragging")
     this.cuePositionX = clientX
     this.cuePositionY = clientY
     this.changeCuePosition()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   } 
 
   changeCuePosition() {
-  try {
     if (!this.cuePositionX || !this.cuePositionY) return
     this.RAFLoop("cueDragging", () => {
       const rect = this.videoContainer.getBoundingClientRect(),
       { offsetWidth: w, offsetHeight: h } = this.DOM.cueContainer,
       xR = 0,
       yR = 0,
-      posX = window.tmg.clamp(xR + w/2, rect.width - (this.cuePositionX - rect.left), rect.width - w/2 - xR),
-      posY = window.tmg.clamp(yR, rect.height - (this.cuePositionY - rect.top + h/2), rect.height - h - yR)
+      posX = tmg.clamp(xR + w/2, rect.width - (this.cuePositionX - rect.left), rect.width - w/2 - xR),
+      posY = tmg.clamp(yR, rect.height - (this.cuePositionY - rect.top + h/2), rect.height - h - yR)
       this.videoCurrentCueX = `${Math.round(posX/rect.width * 100)}%`
       this.videoCurrentCueY = `${Math.round(posY/rect.height * 100)}%`
     })
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleCueDragEnd() {
-  try {
     this.cancelRAFLoop("cueDragging")
     this.DOM.videoContainer.classList.remove("T_M_G-video-cue-dragging")
     this.DOM.cueContainer.removeEventListener("pointermove", this._handleCueDragging)
     this.DOM.cueContainer?.removeEventListener("pointerup", this._handleCueDragEnd)
     this.DOM.cueContainer?.removeEventListener("pointercancel", this._handleCueDragEnd)
-  } catch(e) {
-      this.log(e, "error", "swallow")
-  }
   }
 
   set videoCaptionsCharacterEdgeStyle(value) {
@@ -2748,13 +2340,9 @@ class _T_M_G_Video_Player {
   }
 
   initAudioManager() {
-  try {
     this.updateAudioSettings() 
-    if (!window.tmg._AUDIO_CONTEXT) window.tmg.initializeAudioManager(!this.video.autoplay)
-    if (window.tmg._AUDIO_CONTEXT) this.manageAudio()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }        
+    if (!tmg._AUDIO_CONTEXT) tmg.initializeAudioManager(!this.video.autoplay)
+    if (tmg._AUDIO_CONTEXT) this.manageAudio()        
   }
 
   set volume(value) {
@@ -2767,48 +2355,35 @@ class _T_M_G_Video_Player {
   }
 
   manageAudio() {
-  try {
     if (!this.audioSetup) {
-    window.tmg.connectMediaToAudioManager(this.video)
+    tmg.connectMediaToAudioManager(this.video)
     this.audioSourceNode = this.video.tmgSourceNode
     this.audioGainNode = this.video.tmgGainNode
     this.video.volume = 1
     this.volume = this.video.muted ? 0 : this.volume
     this.volumeTypeCounter = this.volume === 0 ? 1 : 0
     this.audioSetup = true
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }  
+    }  
   }
 
   removeAudio() {
-  try {
     this.audioSourceNode?.disconnect()
     this.audioGainNode?.disconnect()
     this.audioSourceNode = this.audioGainNode = null
-    this.audioSetup = false
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    this.audioSetup = false      
   }
 
   updateAudioSettings() {
-  try {
     this.volumeBoost = this.settings.maxVolume > 100
     this.videoContainer.classList.toggle("T_M_G-video-volume-boost", this.volumeBoost)
     if (this.DOM.volumeSlider) this.DOM.volumeSlider.max = this.settings.maxVolume
     this.videoVolumeSliderPercent = Math.round((100 / this.settings.maxVolume) * 100)
     this.videoMaxVolumeRatio = this.maxVolumeRatio = this.settings.maxVolume / 100
     this.shouldSetLastVolume = this.video.muted
-    this._handleVolumeChange()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }   
+    this._handleVolumeChange()   
   }
 
   toggleMute(auto) {
-  try {
     let volume
     if (this.volume) {
       this.lastVolume = this.volume
@@ -2820,39 +2395,27 @@ class _T_M_G_Video_Player {
       this.shouldSetLastVolume = false
     }
     this.video.muted = volume === 0
-    this.volume = volume
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    this.volume = volume      
   }
 
-  _handleVolumeSliderInput({target: {value: volume}}) {
-  try {            
+  _handleVolumeSliderInput({target: {value: volume}}) {            
     this.video.muted = volume === 0
     this.volume = volume
     if (volume > 5) this.volumeSliderVolume = volume
     this.shouldSetLastVolume = false
     this.volumeActiveRestraint()         
     this.overlayRestraint()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleGestureVolumeSliderInput({percent, sign}) {
-  try {
     let volume = sign === "+" ? this.volume + (percent * this.settings.maxVolume) : this.volume - (percent * this.settings.maxVolume)
-    volume = window.tmg.clamp(0, Math.floor(volume), this.settings.maxVolume)
+    volume = tmg.clamp(0, Math.floor(volume), this.settings.maxVolume)
     this.video.muted = volume === 0
     this.volume = volume
     this.shouldSetLastVolume = false
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
         
   _handleVolumeChange() {
-  try {
     let volume = this.volume
     if (this.DOM.volumeNotifierContent) this.DOM.volumeNotifierContent.textContent = volume + "%"
     let volumeLevel = ""
@@ -2877,14 +2440,10 @@ class _T_M_G_Video_Player {
         this.videoVolumeSliderBoostPercent = parseInt(this.videoVolumeSliderPercent) + 5
         this.videoCurrentVolumeSliderBoostPosition = (volume - 100) / (this.settings.maxVolume - 100)
       }
-    } else this.videoCurrentVolumeSliderPosition = volumePercent
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    } else this.videoCurrentVolumeSliderPosition = volumePercent      
   }
 
   changeVolume(value) {
-  try {
     const sign = Math.sign(value) === 1 ? "+" : "-"
     value = Math.abs(value)
     let volume = this.shouldSetLastVolume ? this.lastVolume : this.volume
@@ -2913,42 +2472,27 @@ class _T_M_G_Video_Player {
       this.video.muted = volume === 0
       this.volume = volume
     }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
-  _handleVolumeContainerMouseMove() {
-  try {      
+  _handleVolumeContainerMouseMove() {      
     if (this.DOM.volumeSlider?.parentElement?.matches(':hover')) {
       this.DOM.volumeSlider?.parentElement?.classList.add("T_M_G-video-control-active")
       this.volumeActiveRestraint()
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    }      
   }
 
   volumeActiveRestraint() {
-  try {
     if (this.volumeActiveRestraintId) clearTimeout(this.volumeActiveRestraintId)
     this.volumeActiveRestraintId = setTimeout(() => this.DOM.volumeSlider?.parentElement?.classList.remove("T_M_G-video-control-active"), this.settings.overlayRestraint)  
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   updateBrightnessSettings() {
-  try {
     this.brightnessBoost = this.settings.maxBrightness > 100
     if (this.DOM.brightnessSlider) this.DOM.brightnessSlider.max = this.settings.maxBrightness
     this.videoBrightnessSliderPercent = Math.round((100 / this.settings.maxBrightness) * 100)
     this.videoMaxBrightnessRatio = this.maxBrightnessRatio = this.settings.maxBrightness / 100
     this.videoContainer.classList.toggle("T_M_G-video-brightness-boost", this.brightnessBoost)
     this._handleBrightnessChange()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   set brightness(value) {
@@ -2961,7 +2505,6 @@ class _T_M_G_Video_Player {
   }
 
   toggleDark(auto) {
-  try {
     let brightness
     if (this.brightness) {
       this.lastBrightness = this.brightness
@@ -2972,37 +2515,25 @@ class _T_M_G_Video_Player {
       if (brightness === 0) brightness = auto === "auto" ? this.settings.brightnessSkip : this.brightnessSliderBrightness
       this.shouldSetLastBrightness = false
     }
-    this.brightness = brightness
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    this.brightness = brightness      
   }
 
-  _handleBrightnessSliderInput({target: {value: brightness}}) {
-  try {            
+  _handleBrightnessSliderInput({target: {value: brightness}}) {            
     this.brightness = brightness
     if (brightness > 5) this.brightnessSliderBrightness = brightness
     this.shouldSetLastBrightness = false
     this.brightnessActiveRestraint()         
     this.overlayRestraint() 
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleGestureBrightnessSliderInput({percent, sign}) {
-  try {
     let brightness = sign === "+" ? this.brightness + (percent * this.settings.maxBrightness) : this.brightness - (percent * this.settings.maxBrightness)
-    brightness = window.tmg.clamp(0, Math.floor(brightness), this.settings.maxBrightness)
+    brightness = tmg.clamp(0, Math.floor(brightness), this.settings.maxBrightness)
     this.brightness = brightness
     this.shouldSetLastBrightness = false
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleBrightnessChange() {
-  try {
     let brightness = this.brightness
     if (this.DOM.brightnessNotifierContent) this.DOM.brightnessNotifierContent.textContent = brightness + "%"
     let brightnessLevel = ""
@@ -3025,14 +2556,10 @@ class _T_M_G_Video_Player {
         this.videoBrightnessSliderBoostPercent = parseInt(this.videoBrightnessSliderPercent) + 5
         this.videoCurrentBrightnessSliderBoostPosition = (brightness - 100) / (this.settings.maxBrightness - 100)
       }
-    } else this.videoCurrentBrightnessSliderPosition = brightnessPercent
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    } else this.videoCurrentBrightnessSliderPosition = brightnessPercent      
   }
 
   changeBrightness(value) {
-  try {
     const sign = Math.sign(value) === 1 ? "+" : "-"
     value = Math.abs(value)
     let brightness = this.shouldSetLastBrightness ? this.lastBrightness : this.brightness
@@ -3059,44 +2586,28 @@ class _T_M_G_Video_Player {
       if (this.DOM.brightnessNotifierContent) this.DOM.brightnessNotifierContent.textContent = brightness + "%"
       this.lastBrightness = brightness
     } else this.brightness = brightness
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
-  _handleBrightnessContainerMouseMove() {
-  try {      
+  _handleBrightnessContainerMouseMove() {      
     if (this.DOM.brightnessSlider?.parentElement?.matches(':hover')) {
       this.DOM.brightnessSlider?.parentElement?.classList.add("T_M_G-video-control-active")
       this.brightnessActiveRestraint()
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    }      
   }
 
   brightnessActiveRestraint() {
-  try {
     if (this.brightnessActiveRestraintId) clearTimeout(this.brightnessActiveRestraintId)
     this.brightnessActiveRestraintId = setTimeout(() => this.DOM.brightnessSlider?.parentElement?.classList.remove("T_M_G-video-control-active"), this.settings.overlayRestraint)  
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   toggleTheaterMode() {
-  try {
-    if (this.settings.status.modes.theater) this.videoContainer.classList.toggle("T_M_G-video-theater")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    if (this.settings.status.modes.theater) this.videoContainer.classList.toggle("T_M_G-video-theater")      
   }
 
   async toggleFullScreenMode() {
-  try {
     if (!this.settings.status.modes.fullScreen) return
     if (!this.isModeActive("fullScreen")) {
-    if (!window.tmg._CURRENT_FULL_SCREEN_PLAYER) {
+    if (!tmg._CURRENT_FULL_SCREEN_PLAYER) {
       if (this.isModeActive("floatingPlayer")) {
         this.floatingPlayer?.addEventListener("pagehide", this.toggleFullScreenMode)
         this.floatingPlayer?.close()
@@ -3104,7 +2615,7 @@ class _T_M_G_Video_Player {
       }
       if (this.isModeActive("pictureInPicture")) document.exitPictureInPicture()
       if (this.isModeActive("miniPlayer")) this.toggleMiniPlayerMode(false, "instant")
-      window.tmg._CURRENT_FULL_SCREEN_PLAYER = this
+      tmg._CURRENT_FULL_SCREEN_PLAYER = this
       if (this.videoContainer.requestFullscreen) await this.videoContainer.requestFullscreen()
 			else if (this.videoContainer.mozRequestFullScreen) await this.videoContainer.mozRequestFullScreen()
       else if (this.videoContainer.msRequestFullscreen) await this.videoContainer.msRequestFullscreen()
@@ -3125,32 +2636,24 @@ class _T_M_G_Video_Player {
 			else if (document.msExitFullscreen) await document.msExitFullscreen()
 			else if (document.webkitCancelFullScreen) await document.webkitCancelFullScreen()
       this.inFullScreen = false
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    }      
   }
 
   async _handleFullScreenChange() {
-  try {
     if (this.inFullScreen) {
       this.videoContainer.classList.add("T_M_G-video-full-screen")
       this.setGestureWheelListeners()
     }
-    if (!this.inFullScreen || !window.tmg.queryFullScreen()) {
+    if (!this.inFullScreen || !tmg.queryFullScreen()) {
       this.videoContainer.classList.remove("T_M_G-video-full-screen")
-      window.tmg._CURRENT_FULL_SCREEN_PLAYER = null
+      tmg._CURRENT_FULL_SCREEN_PLAYER = null
       this.inFullScreen = false
       this.removeGestureWheelListeners()
     }
-    await this.autoLockFullScreenOrientation()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }         
+    await this.autoLockFullScreenOrientation()         
   }   
   
   async autoLockFullScreenOrientation() {
-  try {
     if (this.isModeActive("fullScreen")) {
       const lockOrientation = this.video.videoHeight > this.video.videoWidth ? "portrait" : "landscape"
       if (screen.orientation) await screen.orientation?.lock?.(lockOrientation)
@@ -3159,69 +2662,45 @@ class _T_M_G_Video_Player {
       screen.orientation?.unlock?.()
       this.DOM.fullScreenOrientationBtn.classList.add("T_M_G-video-control-hidden")
     }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   async changeFullScreenOrientation() {
-  try {
-    await screen.orientation?.lock?.(screen.orientation.angle === 0 ? "landscape" : "portrait").catch(e => this.log(e, "error", "swallow"))
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    await screen.orientation?.lock?.(screen.orientation.angle === 0 ? "landscape" : "portrait")               
   }
 
   async togglePictureInPictureMode() {
-  try {
     if (!this.settings.status.modes.pictureInPicture) return
     if (this.isModeActive("fullScreen")) await this.toggleFullScreenMode()
     if (this.settings.status.beta.floatingPlayer && "documentPictureInPicture" in window) return this.toggleFloatingPlayer()
     if (!this.isModeActive("pictureInPicture")) this.video.requestPictureInPicture() 
-    else document.exitPictureInPicture()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    else document.exitPictureInPicture()      
   } 
 
   _handleEnterPictureInPicture() {
-  try {
     this.videoContainer.classList.add("T_M_G-video-picture-in-picture")
     this.showOverlay()
     this.toggleMiniPlayerMode(false)
     this.setMediaSession()
-    window.tmg._PICTURE_IN_PICTURE_ACTIVE = true
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    tmg._PICTURE_IN_PICTURE_ACTIVE = true      
   }
 
   _handleLeavePictureInPicture() {
-  try {
-    window.tmg._PICTURE_IN_PICTURE_ACTIVE = false
+    tmg._PICTURE_IN_PICTURE_ACTIVE = false
     //the video takes a while before it enters back into the player so a timeout is used to prevent the user from seeing the default ui
     setTimeout(() => {
       this.videoContainer.classList.remove("T_M_G-video-picture-in-picture")
       this.toggleMiniPlayerMode()
     }, 180)
-    this.overlayRestraint()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    this.overlayRestraint()      
   }   
 
   toggleFloatingPlayer() {
-  try {
     if (!this.settings.status.modes.pictureInPicture || !("documentPictureInPicture" in window)) return
     if (!this.floatingPlayerActive) this.initFloatingPlayer()
-    else this.floatingPlayer?.close()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }   
+    else this.floatingPlayer?.close()   
   }
 
   async initFloatingPlayer() {
-  try {
     if (!this.floatingPlayerActive) {
     window.documentPictureInPicture.window?.close?.()
     this.toggleMiniPlayerMode(false)
@@ -3261,14 +2740,11 @@ class _T_M_G_Video_Player {
     this.floatingPlayer?.addEventListener("pagehide", this._handleFloatingPlayerClose)
     this.floatingPlayer?.addEventListener("resize", this._handleMediaParentResize)
     this.floatingPlayer?.document.body.append(this.videoContainer)
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
+    this.setKeyEventListeners("floating")
   }      
   }
 
   _handleFloatingPlayerClose() {
-  try {
     if (this.floatingPlayerActive) {
     this.floatingPlayerActive = false
     this.videoContainer.classList.toggle("T_M_G-video-progress-bar", this.settings.progressBar)
@@ -3278,10 +2754,7 @@ class _T_M_G_Video_Player {
     this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-wrapper").remove()
 
     this.toggleMiniPlayerMode()
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }  
+    }  
   }   
 
   expandMiniPlayer() {
@@ -3294,9 +2767,8 @@ class _T_M_G_Video_Player {
   }
 
   toggleMiniPlayerMode(bool, behaviour) {
-  try {
     if (!this.settings.status.modes.miniPlayer) return
-    // mini player has an actual behaviour
+    // mini player has an actual behaviour :)
     if ((!this.isModeActive("miniPlayer") && !this.isModeActive("pictureInPicture") && !this.isModeActive("floatingPlayer") && !this.isModeActive("fullScreen") && !this.parentIntersecting && window.innerWidth >= this.settings.miniPlayerThreshold && !this.video.paused) || (bool === true && !this.isModeActive("miniPlayer"))) {
       this.activatePseudoMode()
       this.videoContainer.classList.add("T_M_G-video-progress-bar", "T_M_G-video-mini-player")
@@ -3313,13 +2785,9 @@ class _T_M_G_Video_Player {
       this.videoContainer.removeEventListener("mousedown", this.moveMiniPlayer)
       this.videoContainer.removeEventListener("touchstart", this.moveMiniPlayer, {passive: false})
     } 
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }                         
 
   moveMiniPlayer({target}){
-  try {
     if (this.isModeActive("miniPlayer")) {
     if (!this.DOM.videoControlsContainer.contains(target) && !this.DOM.cueContainer?.contains(target)) {
       document.addEventListener("mousemove", this._handleMiniPlayerPosition)
@@ -3328,14 +2796,10 @@ class _T_M_G_Video_Player {
       document.addEventListener("touchmove", this._handleMiniPlayerPosition, {passive: false})
       document.addEventListener("touchend", this.emptyMiniPlayerListeners, {passive: false})
     }
-  }      
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+  }            
   }   
 
   _handleMiniPlayerPosition(e) {
-  try {
     if (e.touches?.length > 1) return 
     e.preventDefault()
     this.videoContainer.classList.remove("T_M_G-video-overlay")
@@ -3348,18 +2812,14 @@ class _T_M_G_Video_Player {
       y = e.clientY ?? e.changedTouches[0].clientY,
       xR = 0,
       yR = 0,
-      posX = window.tmg.clamp(xR, ww - x - w/2, ww - w - xR),
-      posY = window.tmg.clamp(yR, wh - y - h/2, wh - h - yR)
+      posX = tmg.clamp(xR, ww - x - w/2, ww - w - xR),
+      posY = tmg.clamp(yR, wh - y - h/2, wh - h - yR)
       this.videoCurrentMiniPlayerX = `${Math.round(posX/ww * 100)}%`
       this.videoCurrentMiniPlayerY = `${Math.round(posY/wh * 100)}%`
     })
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }   
 
   emptyMiniPlayerListeners() {
-  try {
     this.cancelRAFLoop("miniPlayerDragging")
     this.videoContainer.classList.remove("T_M_G-video-movement")
     this.showOverlay()
@@ -3368,14 +2828,10 @@ class _T_M_G_Video_Player {
     document.removeEventListener("mouseleave", this.emptyMiniPlayerListeners)
     document.removeEventListener("touchmove", this._handleMiniPlayerPosition, {passive: false})
     document.removeEventListener("touchend", this.emptyMiniPlayerListeners, {passive: false})
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   //Keyboard and General Accessibility Functions
   _handleClick({target}) {
-  try {
 	if (target === this.DOM.videoOverlayControlsContainer) {
     if (this.clickId) clearTimeout(this.clickId)
     this.clickId = setTimeout(() => {
@@ -3389,22 +2845,14 @@ class _T_M_G_Video_Player {
       }
       this.showOverlay()
     }, 300)
-    } 
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    }       
   }
 
   _handleRightClick(e) {
-  try {
-    e.preventDefault()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }            
+    e.preventDefault()            
   }
 
   _handleDoubleClick(e) {
-  try {
     const {clientX: x, target, detail} = e
     //this function triggers the forward and backward skip, they then assign the function to the click event, when the trigger is pulled, skipPersist is set to true and the skip is handled by only the click event, if the position of the click changes within the skip interval and when the 'skipPosition' prop is still available, the click event assignment is revoked
     if (target === this.DOM.videoOverlayControlsContainer) {
@@ -3422,125 +2870,73 @@ class _T_M_G_Video_Player {
       if (this.skipPersist  && detail == 2) return
       this.activateSkipPersist(pos)
       pos === "right" ? this.skip(this.settings.timeSkip) : this.skip(-this.settings.timeSkip)
-      window.tmg.rippleHandler(e, this.currentNotifier);
+      tmg.rippleHandler(e, this.currentNotifier);
     }
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    }      
   }
 
   activateSkipPersist(pos) {
-  try {
     if (this.skipPersist) return
     this.videoContainer.addEventListener("click", this._handleDoubleClick)
     this.skipPersist = true
-    this.skipPersistPosition = pos
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }   
+    this.skipPersistPosition = pos   
   }
 
   deactivateSkipPersist() {
-  try {
     if (!this.skipPersist) return
     this.videoContainer.removeEventListener("click", this._handleDoubleClick)
     this.skipPersist = false
-    this.skipPersistPosition = null
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }   
+    this.skipPersistPosition = null   
   }
 
   _handleHoverPointerActive({target}) {
-  try {
     if (!(this.isMediaMobile && !this.isModeActive("miniPlayer"))) this.showOverlay()
-    if (this.DOM.videoControlsContainer.contains(target)) clearTimeout(this.overlayRestraintId)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    if (this.DOM.videoControlsContainer.contains(target)) clearTimeout(this.overlayRestraintId)               
   }
 
   _handleHoverPointerDown() {
-  try {
-    this.overlayRestraint()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }            
+    this.overlayRestraint()            
   }
 
   _handleHoverPointerOut() {
-  try {
-    if (!this.isMediaMobile && !this.videoContainer.matches(":hover")) this.removeOverlay()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    if (!this.isMediaMobile && !this.videoContainer.matches(":hover")) this.removeOverlay()               
   }
 
   showOverlay() {
-  try {
     if (this.shouldShowOverlay()) {
       this.videoContainer.classList.add("T_M_G-video-overlay")
       this.overlayRestraint()
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    }      
   }
 
   shouldShowOverlay() {
-  try {
     return !this.videoContainer.classList.contains("T_M_G-video-movement")
-  } catch(e) {
-    this.log(e, "error", "swallow")      
-  }
   }
   
-  overlayRestraint() {
-  try {      
+  overlayRestraint() {      
     if (this.overlayRestraintId) clearTimeout(this.overlayRestraintId)
     if (this.shouldRemoveOverlay()) {
       this.overlayRestraintId = setTimeout(this.removeOverlay, this.settings.overlayRestraint)
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")      
-  }   
+    }   
   }      
 
   shouldRemoveOverlay() {
-  try {
     return !this.video.paused && !this.buffering && !this.isModeActive("pictureInPicture")
-  } catch(e) {
-    this.log(e, "error", "swallow")      
-  }
   }
 
   removeOverlay() {
-  try {
-    if (this.shouldRemoveOverlay()) this.videoContainer.classList.remove("T_M_G-video-overlay")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }               
+    if (this.shouldRemoveOverlay()) this.videoContainer.classList.remove("T_M_G-video-overlay")               
   }
 
   setGestureWheelListeners() {
-  try {
     this.videoContainer.addEventListener("wheel", this._handleGestureWheel, {passive: false})
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   removeGestureWheelListeners() {
-  try {
     this.videoContainer.removeEventListener("wheel", this._handleGestureWheel, {passive: false})
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleGestureWheel(e) {
-  try {
     if (!this.gestureTouchXCheck && !this.gestureTouchYCheck && this.settings.status.beta.gestureControls && !this.speedCheck && !this.settingsView) {
       e.preventDefault()
       if (this.gestureWheelTimeoutId) clearTimeout(this.gestureWheelTimeoutId)
@@ -3548,13 +2944,9 @@ class _T_M_G_Video_Player {
       this.gestureWheelTimeoutId = setTimeout(this._handleGestureWheelStop, this.gestureWheelTimeout)
       this._handleGestureWheelMove(e)
     }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleGestureWheelInit({clientX: x, clientY: y}) {
-  try {
     const rect = this.videoContainer.getBoundingClientRect()
     this.gestureWheelZone = {
       x : x - rect.left > rect.width/2 ? "right" : "left",
@@ -3563,13 +2955,9 @@ class _T_M_G_Video_Player {
     this.gestureWheelTimePercent = 0
     this.gestureWheelTimeMultiplier = 1
     this.gestureTimeMultiplierY = 0
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleGestureWheelMove({clientX: x, deltaX, deltaY}) {
-  try {
     const width = window.innerWidth,
     height = window.innerHeight
     let xPercent = -deltaX / (width*10)
@@ -3586,7 +2974,7 @@ class _T_M_G_Video_Player {
     } 
     if (deltaY) {
       if (this.gestureWheelXCheck) {
-        const mY = window.tmg.clamp(0, Math.abs(this.gestureTimeMultiplierY += deltaY), height)
+        const mY = tmg.clamp(0, Math.abs(this.gestureTimeMultiplierY += deltaY), height)
         this.gestureWheelTimeMultiplier = 1 - (mY / height)
         this._handleGestureTimelineInput({percent: xPercent, sign: xSign, multiplier: this.gestureWheelTimeMultiplier})
         return
@@ -3599,16 +2987,12 @@ class _T_M_G_Video_Player {
       this.gestureWheelZone?.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
       const ySign = deltaY >= 0 ? "+" : "-"
       const rHeight = this.gestureWheelZone?.x === "right" ? ((height * 0.7) * this.maxVolumeRatio) : (height * this.maxBrightnessRatio)
-      const yPercent = window.tmg.clamp(0, Math.abs(deltaY), rHeight) / rHeight
+      const yPercent = tmg.clamp(0, Math.abs(deltaY), rHeight) / rHeight
       this.gestureWheelZone?.x === "right" ? this._handleGestureVolumeSliderInput({percent: yPercent, sign: ySign}) : this._handleGestureBrightnessSliderInput({percent: yPercent, sign: ySign})
     } 
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   } 
 
   _handleGestureWheelStop() {
-  try {
     this.gestureWheelTimeoutId = null
     if (this.gestureWheelYCheck) {
       this.gestureWheelYCheck = false
@@ -3621,21 +3005,13 @@ class _T_M_G_Video_Player {
       this.DOM.touchTimelineNotifier?.classList.remove("T_M_G-video-control-active")
       this.currentTime = this.gestureNextTime
     }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }   
 
   setGestureTouchCancel() {
-  try {
     this.gestureTouchCanCancel = true
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleGestureTouchStart(e) {
-  try {
     if (e.touches?.length > 1) return 
     if (e.target === this.DOM.videoControlsContainer || e.target === this.DOM.videoOverlayControlsContainer) {
     if (this.settings.status.beta.gestureControls && !this.isModeActive("miniPlayer") && !this.speedCheck) {      
@@ -3652,14 +3028,10 @@ class _T_M_G_Video_Player {
       }, this.gestureTouchThreshold)
       this.videoContainer.addEventListener("touchend", this._handleGestureTouchEnd)
     }
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }            
+    }            
   }
 
   _handleGestureTouchInit(e) {
-  try {
     if (e.touches?.length > 1) return
     if (this.settings.status.beta.gestureControls && !this.isModeActive("miniPlayer") && !this.speedCheck) {  
       e.preventDefault()
@@ -3680,13 +3052,9 @@ class _T_M_G_Video_Player {
         this.videoContainer.addEventListener("touchmove", this._handleGestureTouchYMove, {passive: false})
       }
     }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleGestureTouchXMove(e) {
-  try {
     e.preventDefault()
     if (this.gestureTouchCanCancel) return this._handleGestureTouchEnd()
     else this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
@@ -3699,18 +3067,14 @@ class _T_M_G_Video_Player {
       deltaX = x - this.lastGestureTouchX,
       deltaY = y - this.lastGestureTouchY,
       sign = deltaX >= 0 ? "+" : "-",
-      percent = window.tmg.clamp(0, Math.abs(deltaX), width) / width,
-      mY = window.tmg.clamp(0, Math.abs(deltaY), (height*0.4)),
+      percent = tmg.clamp(0, Math.abs(deltaX), width) / width,
+      mY = tmg.clamp(0, Math.abs(deltaY), (height*0.4)),
       multiplier = 1 - (mY / (height*0.4))
       this._handleGestureTimelineInput({percent, sign, multiplier})
     }, this.gestureTouchMoveThrottleDelay)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleGestureTouchYMove(e) {
-  try {
     e.preventDefault()
     if (!this.isModeActive("fullScreen") && this.gestureTouchCanCancel) return this._handleGestureTouchEnd()      
     else this.gestureTouchZone.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
@@ -3720,13 +3084,10 @@ class _T_M_G_Video_Player {
       y = e.clientY ?? e.targetTouches[0].clientY,
       deltaY = y - this.lastGestureTouchY,
       sign = deltaY >= 0 ? "-" : "+",
-      percent = window.tmg.clamp(0, Math.abs(deltaY), height) / height
+      percent = tmg.clamp(0, Math.abs(deltaY), height) / height
       this.lastGestureTouchY = y
       this.gestureTouchZone?.x === "right" ? this._handleGestureVolumeSliderInput({percent, sign}) : this._handleGestureBrightnessSliderInput({percent, sign})
     }, this.gestureTouchMoveThrottleDelay)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
 
   _handleGestureTouchEnd() {
@@ -3753,7 +3114,6 @@ class _T_M_G_Video_Player {
   }
 
   _handleSpeedPointerDown(e) {
-  try {
     if (e.target === this.DOM.videoControlsContainer || e.target === this.DOM.videoOverlayControlsContainer) {
     if (!this.isModeActive("miniPlayer")) {   
       //conditions to cancel the speed timeout
@@ -3777,22 +3137,14 @@ class _T_M_G_Video_Player {
         this.speedUp(this.speedDirection)
       }, this.speedUpThreshold)
     }
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    }      
   }   
 
   _handleSpeedPointerOut(e) {
-  try {
-    if (!this.videoContainer.matches(":hover")) this._handleSpeedPointerUp(e)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }        
+    if (!this.videoContainer.matches(":hover")) this._handleSpeedPointerUp(e)        
   }
   
   _handleSpeedPointerMove(e) {
-  try {
     if (e.touches?.length > 1) return 
     
     this.throttle("speedPointerMove", () => {
@@ -3805,13 +3157,9 @@ class _T_M_G_Video_Player {
         this.speedUp(this.speedDirection)
       }
     }, this.speedPointerMoveThrottleDelay)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }
   }
     
   _handleSpeedPointerUp() {
-  try {
     this.videoContainer.removeEventListener("mouseup", this._handleSpeedPointerUp)
     this.videoContainer.removeEventListener("mouseleave", this._handleSpeedPointerOut)     
     this.videoContainer.removeEventListener("touchend", this._handleSpeedPointerUp)
@@ -3826,172 +3174,160 @@ class _T_M_G_Video_Player {
       this.videoContainer.removeEventListener("touchmove", this._handleSpeedPointerUp, {passive: true}) 
     }
     if (this.speedCheck && this.playTriggerCounter < 1) this.slowDown()    
-  } catch(e) {
-    this.log(e, "error", "swallow")               
-  }
   }
 
   fetchKeyShortcutsForDisplay() {
-  try {
-    const shortcuts = {}
-    for (const key of Object.keys(window.tmg._DEFAULT_VIDEO_BUILD.settings.keyShortcuts)) {
-      let mods = ""
-      if (this.settings.ctrlKeys?.includes(String(key))) mods += "ctrl + "
-      if (this.settings.altKeys?.includes(String(key))) mods += "alt + "
-      if (this.settings.shiftKeys?.includes(String(key))) mods += "shift + "
-      shortcuts[key] = this.settings.keyShortcuts[key]?.toString()?.toLowerCase()?.replace(/^(.+)$/, `(${mods}$1)`) ?? ""
+    const shortcuts = {};
+    for (const action of Object.keys(tmg._DEFAULT_VIDEO_BUILD.settings.keyShortcuts)) {
+      shortcuts[action] = `(${this.settings.keyShortcuts[action]})`;
     }
-    return shortcuts
-  } catch(e) {
-    this.log(e, "error", "swallow")               
+    return shortcuts;
   }
+
+  getTermsForCombo(combo) {
+    let terms = { override: false, block: false, allowed: false, action: null };
+    const s = this.settings.strictKeyMatches;
+    const { keyOverrides, keyShortcuts, keyBlocks } = this.settings;
+    if (tmg.matchKeys(keyOverrides, combo, s)) terms.override = true;
+    if (tmg.matchKeys(keyBlocks, combo, s)) terms.block = true;
+    // Allow whitelisted system combos
+    if (tmg.matchKeys(tmg._ALLOWED_KEY_COMBOS, combo, s)) terms.allowed = true;
+    // Find action name for shortcuts
+    const action = keyShortcuts ? Object.entries(keyShortcuts).find(([, shortcut]) => tmg.matchKeys(shortcut, combo, s))?.[0] : null;
+    terms.action = action;
+    return terms;
   }
 
   keyEventAllowed(e) {
-  try {
-    const key = e.key.toString().toLowerCase() 
-    if (document.activeElement?.matches("input, textarea, [contenteditable='true']")) return false
-    if (this.isTimelineFocused)
-      if (key.startsWith("arrow")) return false
-    if (this.settings.keyShortcuts)
-      for (const [shortcut, value] of Object.entries(this.settings.keyShortcuts)) {
-        if (value === key) {
-        if (this.settings.ctrlKeys?.includes(shortcut))
-          if (!e.ctrlKey) return false
-        if (this.settings.shiftKeys?.includes(shortcut)) 
-          if (!e.shiftKey) return false
-        if (this.settings.altKeys?.includes(shortcut)) 
-          if (!e.altKey) return false
-        }
-      }
-    if (key === "i" && !this.settings.keyOverrides.includes(key))
-      if (e.ctrlKey && e.shiftKey) return false
-    if (this.settings.keyOverrides.includes(key)) e.preventDefault()
-    return true
-  } catch(e) {
-    this.log(e, "error", "swallow")               
-  }
+    const combo = tmg.stringifyKeyCombo(e);
+    const { override, block, action, allowed } = this.getTermsForCombo(combo);
+    // Special case: prevent default for overrides
+    if (override) e.preventDefault();
+    // Special case: stop for blocks
+    if (block) return false;
+    // UI safety checks
+    if ((e.key === " " || e.key === "Enter") && e.currentTarget.activeElement?.tagName === 'BUTTON') return false;
+    if (e.currentTarget.activeElement?.matches("input,textarea,[contenteditable='true']")) return false;
+    if (this.timelineFocused && e.key.startsWith("Arrow")) return false;
+    if (action) return action
+    // inner system defaults
+    if (allowed) return e.key.toLowerCase();
+    return false; // Not allowed
   }
 
   _handleKeyDown(e) {
-  try {
-  if (!this.keyEventAllowed(e)) return
-  this.throttle("keyDown", () => {
-    switch (e.key.toString().toLowerCase()) {
-      case " ":
-        if (document.activeElement.tagName === 'BUTTON') return
-        e.preventDefault()
-      case this.settings.keyShortcuts["playPause"]?.toString()?.toLowerCase():
-        this.playTriggerCounter ++
-        if (this.playTriggerCounter === 1) document.addEventListener("keyup", this._handlePlayTriggerUp)
-        if (this.playTriggerCounter === 2 && !this.speedPointerCheck) e.shiftKey ? this.speedUp("backwards") : this.speedUp("forwards")
-        break
-      case this.settings.keyShortcuts["prev"]?.toString()?.toLowerCase():
-        this.previousVideo()
-        break
-      case this.settings.keyShortcuts["next"]?.toString()?.toLowerCase():
-        this.nextVideo()
-        break   
-      case this.settings.keyShortcuts["skipBwd"]?.toString()?.toLowerCase():
-        this.deactivateSkipPersist()
-        this.skip(-this.settings.timeSkip)
-        this.fire("bwd")
-        break
-      case this.settings.keyShortcuts["skipFwd"]?.toString()?.toLowerCase():
-        this.deactivateSkipPersist()
-        this.skip(this.settings.timeSkip)
-        this.fire("fwd")
-        break
-      case this.settings.keyShortcuts["stepBwd"]?.toString()?.toLowerCase():
-        this.moveVideoFrame("backwards")
-        break
-      case this.settings.keyShortcuts["stepFwd"]?.toString()?.toLowerCase():
-        this.moveVideoFrame("forwards")
-        break
-      case this.settings.keyShortcuts["volumeUp"]?.toString()?.toLowerCase():
-        this.changeVolume(this.settings.volumeSkip)
-        break
-      case this.settings.keyShortcuts["volumeDown"]?.toString()?.toLowerCase():
-        this.changeVolume(-this.settings.volumeSkip)
-        break
-      case this.settings.keyShortcuts["brightnessUp"]?.toString()?.toLowerCase():
-        this.changeBrightness(this.settings.brightnessSkip)
-        break
-      case this.settings.keyShortcuts["brightnessDown"]?.toString()?.toLowerCase():
-        this.changeBrightness(-this.settings.brightnessSkip)
-        break
-      case this.settings.keyShortcuts["playbackRateUp"]?.toString()?.toLowerCase(): 
-        this.changePlaybackRate(this.settings.playbackRateSkip)
-        break
-      case this.settings.keyShortcuts["playbackRateDown"]?.toString()?.toLowerCase():     
-        this.changePlaybackRate(-this.settings.playbackRateSkip)
-        break                      
-      case "arrowup":
-        e.shiftKey ? this.changeVolume(10) : this.changeVolume(5)
-        break
-      case "arrowdown":
-        e.shiftKey ? this.changeVolume(-10) : this.changeVolume(-5)
-        break   
-      case "arrowleft":
-        this.deactivateSkipPersist()
-        e.shiftKey ? this.skip(-10) : this.skip(-5)
-        this.fire("bwd")
-        break
-      case "arrowright":
-        this.deactivateSkipPersist()
-        e.shiftKey ? this.skip(10) : this.skip(5)
-        this.fire("fwd")
-        break                     
-    }
-  }, this.keyDownThrottleDelay)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    const action = this.keyEventAllowed(e)
+    if (action === false) return
+    this.throttle("keyDown", () => {
+      switch (action) {
+        case " ":
+        case "playPause":
+          this.playTriggerCounter ++
+          if (this.playTriggerCounter === 1) e.currentTarget.addEventListener("keyup", this._handlePlayTriggerUp)
+          if (this.playTriggerCounter === 2 && !this.speedPointerCheck) e.shiftKey ? this.speedUp("backwards") : this.speedUp("forwards")
+          break
+        case "prev":
+          this.previousVideo()
+          break
+        case "next":
+          this.nextVideo()
+          break   
+        case "skipBwd":
+          this.deactivateSkipPersist()
+          this.skip(-this.settings.timeSkip)
+          this.fire("bwd")
+          break
+        case "skipFwd":
+          this.deactivateSkipPersist()
+          this.skip(this.settings.timeSkip)
+          this.fire("fwd")
+          break
+        case "stepBwd":
+          this.moveVideoFrame("backwards")
+          break
+        case "stepFwd":
+          this.moveVideoFrame("forwards")
+          break
+        case "volumeUp":
+          this.changeVolume(this.settings.volumeSkip)
+          break
+        case "volumeDown":
+          this.changeVolume(-this.settings.volumeSkip)
+          break
+        case "brightnessUp":
+          this.changeBrightness(this.settings.brightnessSkip)
+          break
+        case "brightnessDown":
+          this.changeBrightness(-this.settings.brightnessSkip)
+          break
+        case "playbackRateUp":
+          this.changePlaybackRate(this.settings.playbackRateSkip)
+          break
+        case "playbackRateDown":     
+          this.changePlaybackRate(-this.settings.playbackRateSkip)
+          break                      
+        case "arrowup":
+          e.shiftKey ? this.changeVolume(10) : this.changeVolume(5)
+          break
+        case "arrowdown":
+          e.shiftKey ? this.changeVolume(-10) : this.changeVolume(-5)
+          break   
+        case "arrowleft":
+          this.deactivateSkipPersist()
+          e.shiftKey ? this.skip(-10) : this.skip(-5)
+          this.fire("bwd")
+          break
+        case "arrowright":
+          this.deactivateSkipPersist()
+          e.shiftKey ? this.skip(10) : this.skip(5)
+          this.fire("fwd")
+          break                     
+      }
+    }, this.keydownThrottleDelay)
   }      
 
-  _handleKeyUp(e) {
-  try {               
-    if (!this.keyEventAllowed(e)) return
-
-    switch (e.key.toString().toLowerCase()) {             
-      case this.settings.keyShortcuts["objectFit"]?.toString()?.toLowerCase():
+  _handleKeyUp(e) {               
+    const action = this.keyEventAllowed(e)
+    if (action === false) return
+    switch (action) {             
+      case "objectFit":
         if (!this.isModeActive("pictureInPicture"))
         this.toggleObjectFit()
         break            
-      case this.settings.keyShortcuts["timeFormat"]?.toString()?.toLowerCase(): 
+      case "timeFormat":
         this.changeTimeFormat()
         break
-      case this.settings.keyShortcuts["mute"]?.toString()?.toLowerCase():
+      case "mute":
         this.toggleMute("auto")
         this.volume === 0 ? this.fire("volumemuted") : this.fire("volumeup")
         break  
-      case this.settings.keyShortcuts["dark"]?.toString()?.toLowerCase():
+      case "dark":
         this.toggleDark("auto")
         this.brightness === 0 ? this.fire("brightnessdark") : this.fire("brightnessup")
         break         
-      case this.settings.keyShortcuts["fullScreen"]?.toString()?.toLowerCase():
+      case "fullScreen":
         this.toggleFullScreenMode()
         break
-      case this.settings.keyShortcuts["theater"]?.toString()?.toLowerCase():
+      case "theater":
         if (!this.isMediaMobile && !this.isModeActive("fullScreen") && !this.isModeActive("miniPlayer") && !this.isModeActive("floatingPlayer")) this.toggleTheaterMode()
         break
-      case this.settings.keyShortcuts["expandMiniPlayer"]?.toString()?.toLowerCase():
+      case "expandMiniPlayer":
         if (this.isModeActive("miniPlayer")) 
         this.toggleMiniPlayerMode(false, "instant")
         break
-      case this.settings.keyShortcuts["removeMiniPlayer"]?.toString()?.toLowerCase():
+      case "removeMiniPlayer":
         if (this.isModeActive("miniPlayer")) this.toggleMiniPlayerMode(false) 
         break
-      case this.settings.keyShortcuts["pictureInPicture"]?.toString()?.toLowerCase():
+      case "pictureInPicture":
         if (this.settings.status.modes.pictureInPicture) this.togglePictureInPictureMode()
         break
-      case this.settings.keyShortcuts["captions"]?.toString()?.toLowerCase():
+      case "captions":
         if (this.video.textTracks[this.textTrackIndex] && !this.isModeActive("pictureInPicture")) {
         this.toggleCaptions()
         this.fire("captions")
         }
         break
-      case this.settings.keyShortcuts["settings"]?.toString()?.toLowerCase():
+      case "settings":
         this.toggleSettingsView() 
       break
       case "home":
@@ -4012,17 +3348,14 @@ class _T_M_G_Video_Player {
       case "end":
         this.moveVideoTime({to: "end"})
         break            
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    }      
   }
 
   _handlePlayTriggerUp(e) {
-  try {      
-    switch (e.key.toString().toLowerCase()) {
+    const action = this.keyEventAllowed(e)
+    switch (action) {
       case " ":
-      case this.settings.keyShortcuts["playPause"]?.toString()?.toLowerCase(): 
+      case "playPause":
         e.stopImmediatePropagation()
         if (this.playTriggerCounter === 1) {
           e.shiftKey ? this.replay() : this.togglePlay()
@@ -4032,54 +3365,34 @@ class _T_M_G_Video_Player {
         if (this.speedCheck && this.playTriggerCounter > 1 && !this.speedPointerCheck) this.slowDown()
         this.playTriggerCounter = 0
     }
-    document.removeEventListener("keyup", this._handlePlayTriggerUp)
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    e.currentTarget.removeEventListener("keyup", this._handlePlayTriggerUp)
   }   
 
   _handleDragStart({target, dataTransfer}) {
-  try {
     dataTransfer.effectAllowed = "move"
     target.classList.add("T_M_G-video-control-dragging")
-    this.dragging = target.classList.contains("T_M_G-video-vb-btn") ? target.parentElement : target
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }            
+    this.dragging = target.classList.contains("T_M_G-video-vb-btn") ? target.parentElement : target            
   }
 
   _handleDrag() {
-  try {
-    this.overlayRestraint()
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }            
+    this.overlayRestraint()            
   }
 
   _handleDragEnd({target}) {
-  try {
     this.showOverlay()
     target.classList.remove("T_M_G-video-control-dragging")
     this.dragging = null
     const leftSideStructure = this.settings.status.ui.leftSideControls && this.DOM.leftSideControlsWrapper.children ? Array.from(this.DOM.leftSideControlsWrapper.children, el => el.dataset.controlId) : []
     const rightSideStructure = this.settings.status.ui.rightSideControls && this.DOM.rightSideControlsWrapper.children ? Array.from(this.DOM.rightSideControlsWrapper.children, el => el.dataset.controlId) : []
     this.settings.controllerStructure = [...leftSideStructure, "spacer", ...rightSideStructure]
-    window.tmg.userSettings = { controllerStructure: this.settings.controllerStructure }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    tmg.userSettings = { controllerStructure: this.settings.controllerStructure }      
   }
 
   _handleDragEnter({target}) {
-  try {
-    if (target.dataset.dropzone && this.dragging) target.classList.add("T_M_G-video-dragover")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }            
+    if (target.dataset.dropzone && this.dragging) target.classList.add("T_M_G-video-dragover")            
   }
 
   _handleDragOver(e) {
-  try {
     if (e.target.dataset.dropzone && this.dragging) {
       e.preventDefault()
       e.dataTransfer.dropEffect = "move"
@@ -4090,29 +3403,18 @@ class _T_M_G_Video_Player {
         else e.target.appendChild(this.dragging)
         this.updateSideControls(e)
       }, this.dragOverThrottleDelay)
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }            
+    }            
   }
 
-  _handleDrop(e) {
-  try {      
+  _handleDrop(e) {      
     if (e.target.dataset.dropzone) {
       e.preventDefault()
       e.target.classList.remove("T_M_G-video-dragover")
-    }
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }         
+    }         
   }
 
   _handleDragLeave({target}) {
-  try {
-    if (target.dataset.dropzone) target.classList.remove("T_M_G-video-dragover")
-  } catch(e) {
-    this.log(e, "error", "swallow")
-  }      
+    if (target.dataset.dropzone) target.classList.remove("T_M_G-video-dragover")      
   }
 
   getControlAfterDragging(container, x) {
@@ -4133,7 +3435,7 @@ class _T_M_G_Media_Player {
 
   constructor(customOptions) {
     this.Player = null
-    this.#build = { ...window.tmg._DEFAULT_VIDEO_BUILD }
+    this.#build = { ...tmg._DEFAULT_VIDEO_BUILD }
     this.builder(customOptions)
   }
   
@@ -4167,7 +3469,7 @@ class _T_M_G_Media_Player {
     if (this.queryBuild()) {
     if (typeof customOptions === "object") {
       this.#build = {...this.#build, ...customOptions}
-      const df = window.tmg._DEFAULT_VIDEO_BUILD
+      const df = tmg._DEFAULT_VIDEO_BUILD
       //The general settings and nested key shortcuts can either take the value of false to signify that they are not wanted or they can be given the value of true to use all the defaults or they can use the values passed down in the parameter, any other value like null or undefined will also pass down the default values
       this.#build.settings = this.#build.settings !== false ? (this.#build.settings ?? false) || !(this.#build.settings === true) ? {...df.settings, ...this.#build.settings} : df.settings : false
       this.#build.settings.keyShortcuts = this.#build.settings.keyShortcuts !== false ? (this.#build.settings.keyShortcuts ?? false) || !(this.#build.settings.keyShortcuts !== true) ? {...df.settings.keyShortcuts, ...this.#build.settings.keyShortcuts} : df.settings.keyShortcuts : false
@@ -4176,9 +3478,9 @@ class _T_M_G_Media_Player {
   }
 
   async attach(medium) {
-    if (window.tmg.isIterable(medium)) {
+    if (tmg.isIterable(medium)) {
       console.error("An iterable argument cannot be attached to the TMG media player")
-      console.warn("Consider looping the iterable argument to get a single argument and instantiate a new 'window.tmg.Player' for each")
+      console.warn("Consider looping the iterable argument to get a single argument and instantiate a new 'tmg.Player' for each")
     } else if (!this.#active) { 
       if (medium.tmgPlayer) medium.tmgPlayer.detach()
       medium.tmgPlayer = this
@@ -4191,11 +3493,11 @@ class _T_M_G_Media_Player {
   detach() {
     if (this.#active) {
       this.#medium = this.Player?._destroy()
-      if (window.tmg.Players.indexOf(this.Player) !== -1) window.tmg.Players?.splice(window.tmg.Players.indexOf(this.Player), 1)
+      if (tmg.Players.indexOf(this.Player) !== -1) tmg.Players?.splice(tmg.Players.indexOf(this.Player), 1)
       this.Player = null
       this.#active = false
       this.#medium.tmgcontrols = false
-      window.tmg.initMedia(this.#medium, true)
+      tmg.initMedia(this.#medium, true)
     }
   }
 
@@ -4215,7 +3517,7 @@ class _T_M_G_Media_Player {
     if (customOptions && Object.keys(customOptions).length === 0) {
       const attributes = this.#medium.getAttributeNames().filter(attr => attr.startsWith("tmg--"))
       const specialProps = ["tmg--media--artwork", "tmg--playlist"]
-      attributes?.forEach(attr => !specialProps.some(sp => attr.includes(sp)) && window.tmg.putHTMLOptions(attr, customOptions, this.#medium))
+      attributes?.forEach(attr => !specialProps.some(sp => attr.includes(sp)) && tmg.putHTMLOptions(attr, customOptions, this.#medium))
       if (this.#medium.poster || attributes.includes("tmg--media-artwork")) {
         customOptions.media ? customOptions.media.artwork = [{src: this.#medium.getAttribute("tmg--media-artwork") ?? this.#medium.poster}] : customOptions.media = { artwork: [{src: this.#medium.getAttribute("tmg--media-artwork") ?? this.#medium.poster}] }
       }            
@@ -4236,7 +3538,7 @@ class _T_M_G_Media_Player {
       this.#medium.tmgcontrols = true
       this.#medium.classList.add("T_M_G-video", "T_M_G-media")
       //doing some cleanup to make sure no necessary settings were removed
-      const settings = this.#build.settings.allowOverride ? {...this.#build.settings, ...window.tmg.userSettings} : this.#build.settings
+      const settings = this.#build.settings.allowOverride ? {...this.#build.settings, ...tmg.userSettings} : this.#build.settings
       this.#build.video = this.#medium
       this.#build.mediaPlayer = 'TMG'
       this.#build.mediaType = 'video'
@@ -4268,23 +3570,26 @@ class _T_M_G_Media_Player {
         }
       }
       if (this.#build.src) {
-        window.tmg.removeSources(this.#medium)
+        tmg.removeSources(this.#medium)
         this.#medium.src = this.#build.src
       } else if (this.#build.sources) {
         this.#medium.src = ""
-        window.tmg.removeSources(this.#medium)
-        window.tmg.addSources(this.#build.sources, this.#medium)
+        tmg.removeSources(this.#medium)
+        tmg.addSources(this.#build.sources, this.#medium)
       }
       if (this.#build.tracks) {
-        window.tmg.removeTracks(this.#medium)
-        window.tmg.addTracks(this.#build.tracks, this.#medium)
+        tmg.removeTracks(this.#medium)
+        tmg.addTracks(this.#build.tracks, this.#medium)
       }
-      //doing some more work setting boolean values to indicate the status of the player
+      // parsing the key shortcuts to safe expected format
+      Object.entries(settings.keyShortcuts || {})?.forEach(([k, v]) => settings.keyShortcuts[k] = tmg.cleanKeyCombo(v))
+      settings.keyBlocks?.forEach(tmg.cleanKeyCombo)
+      settings.keyOverrides?.forEach(tmg.cleanKeyCombo)
+      // getting the status of the player to use later
       settings.status = {}
-      //beta and override can either be a boolean or an array of all the features that the developer specifies, if it is a boolean, the boolean is assigned to all props else the specified features are assigned so if value is truthy then, the props will not be assigned a false value which was assigned above except explicitly stated
       settings.status.allowOverride = {}
       for (const key of Object.keys(settings)) {
-        if (key != "allowOverride") settings.status.allowOverride[key] = false
+        if (key !== "allowOverride") settings.status.allowOverride[key] = false
       }
       settings.status.beta = {
         rewind: false,
@@ -4340,18 +3645,18 @@ class _T_M_G_Media_Player {
         draggableControls: !!(settings.controllerStructure && settings.status.allowOverride.controllerStructure)
       }
       settings.status.modes = {
-        fullScreen: settings.modes.includes("fullscreen") && window.tmg.supportsFullScreen(),
+        fullScreen: settings.modes.includes("fullscreen") && tmg.supportsFullScreen(),
         theater: settings.modes.includes("theater"),
-        pictureInPicture: settings.modes.includes("pictureinpicture") && window.tmg.supportsPictureInPicture(),
+        pictureInPicture: settings.modes.includes("pictureinpicture") && tmg.supportsPictureInPicture(),
         miniPlayer: settings.modes.includes("miniplayer")
       }  
       //Updating the build settings after the cleanup and modifications
-      this.#build.settings = {...window.tmg._DEFAULT_VIDEO_BUILD.settings, ...settings}
+      this.#build.settings = {...tmg._DEFAULT_VIDEO_BUILD.settings, ...settings}
       this.#build.video = this.#medium
-      //window.tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/drag-drop-touch-polyfill.js", "script")
-      await window.tmg.loadResource(window.tmg.VIDEO_CSS_SRC)
+      //tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/drag-drop-touch-polyfill.js", "script")
+      await tmg.loadResource(tmg.VIDEO_CSS_SRC)
       this.Player = new _T_M_G_Video_Player(this.#build)
-      window.tmg.Players.push(this.Player)
+      tmg.Players.push(this.Player)
       this.Player.fire("tmgready", this.#medium, {loaded: true})
     } else {
       console.error(`TMG could not deploy custom controls on the '${this.#medium.tagName}' element as it is not supported`)
@@ -4404,13 +3709,12 @@ class tmg {
       playsInline: true,
       overlayRestraint: 3000,
       miniPlayerThreshold: 240,
+      strictKeyMatches: false,
       keyOverrides: [" ", "arrowdown", "arrowup", "arrowleft", "arrowright", "home", "end"],
-      shiftKeys: ["prev", "next"],
-      ctrlKeys: [],
-      altKeys: [],
+      keyBlocks: ["ctrl+shift+i"],
       keyShortcuts: {
-        prev: "p", 
-        next: "n",
+        prev: "shift+p", 
+        next: "shift+n",
         playPause: "k",
         timeFormat: "q",
         skipBwd: "j",
@@ -4436,6 +3740,7 @@ class tmg {
       },
     },
   }
+  static _ALLOWED_KEY_COMBOS = [" ", "Enter", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].map(k => k.toLowerCase())
   static _RESOURCE_CACHE = {}
   static _AUDIO_CONTEXT = null
   static _INTERNAL_MUTATION_SET = new WeakSet()
@@ -4458,13 +3763,13 @@ class tmg {
     localStorage._tmgUserVideoSettings = JSON.stringify(customSettings)
   }
   static activateInternalMutation(m, check = true) {
-    if (!window.tmg._INTERNAL_MUTATION_SET.has(m) && check) window.tmg._INTERNAL_MUTATION_SET.add(m)
+    if (!tmg._INTERNAL_MUTATION_SET.has(m) && check) tmg._INTERNAL_MUTATION_SET.add(m)
   }
   static deactivateInternalMutation(m) {
-    if (window.tmg._INTERNAL_MUTATION_ID) clearTimeout(window.tmg._INTERNAL_MUTATION_ID)
-    window.tmg._INTERNAL_MUTATION_ID = setTimeout(() => {
-      window.tmg._INTERNAL_MUTATION_SET.delete(m)
-      window.tmg._INTERNAL_MUTATION_ID = null
+    if (tmg._INTERNAL_MUTATION_ID) clearTimeout(tmg._INTERNAL_MUTATION_ID)
+    tmg._INTERNAL_MUTATION_ID = setTimeout(() => {
+      tmg._INTERNAL_MUTATION_SET.delete(m)
+      tmg._INTERNAL_MUTATION_ID = null
     })
   }
   static mountMedia() {
@@ -4475,15 +3780,15 @@ class tmg {
       set: async function(value) {
         const bool = Boolean(value)
         if (bool) {
-          window.tmg.activateInternalMutation(this)
+          tmg.activateInternalMutation(this)
           await this.tmgPlayer?.attach(this)
           this.setAttribute("tmgcontrols", "")
-          window.tmg.deactivateInternalMutation(this)
+          tmg.deactivateInternalMutation(this)
         } else {
-          window.tmg.activateInternalMutation(this, this.hasAttribute("tmgcontrols"))
+          tmg.activateInternalMutation(this, this.hasAttribute("tmgcontrols"))
           this.removeAttribute("tmgcontrols")
           this.tmgPlayer?.detach()
-          window.tmg.deactivateInternalMutation(this)
+          tmg.deactivateInternalMutation(this)
         }
       },
       enumerable: true,
@@ -4494,24 +3799,24 @@ class tmg {
     delete HTMLVideoElement.tmgcontrols
   }
   static init() {
-    window.tmg.mountMedia()
+    tmg.mountMedia()
     for (const medium of document.querySelectorAll("video")) {
-      window.tmg.mutationObserver.observe(medium, { attributes: true })
-      window.tmg.initMedia(medium)
+      tmg.mutationObserver.observe(medium, { attributes: true })
+      tmg.initMedia(medium)
     }
-    window.tmg.DOMMutationObserver.observe(document.documentElement, {childList: true, subtree: true})
-    window.addEventListener("resize", window.tmg._handleWindowResize)
-    document.addEventListener("fullscreenchange", window.tmg._handleFullScreenChange)
-    document.addEventListener("webkitfullscreenchange", window.tmg._handleFullScreenChange)
-    document.addEventListener("mozfullscreenchange", window.tmg._handleFullScreenChange)
-    document.addEventListener("msfullscreenchange", window.tmg._handleFullScreenChange)
-    document.addEventListener("visibilitychange", window.tmg._handleVisibilityChange)
+    tmg.DOMMutationObserver.observe(document.documentElement, {childList: true, subtree: true})
+    window.addEventListener("resize", tmg._handleWindowResize)
+    document.addEventListener("fullscreenchange", tmg._handleFullScreenChange)
+    document.addEventListener("webkitfullscreenchange", tmg._handleFullScreenChange)
+    document.addEventListener("mozfullscreenchange", tmg._handleFullScreenChange)
+    document.addEventListener("msfullscreenchange", tmg._handleFullScreenChange)
+    document.addEventListener("visibilitychange", tmg._handleVisibilityChange)
   }
   static intersectionObserver = (typeof window !== "undefined") && new IntersectionObserver(entries => {
     for (const {target, isIntersecting} of entries) {
       target.classList.contains("T_M_G-media") ? target.tmgPlayer?.Player?._handleMediaIntersectionChange(isIntersecting) : target.querySelector(".T_M_G-media")?.tmgPlayer?.Player?._handleMediaParentIntersectionChange(isIntersecting)
     }
-  }, {root: null, rootMargin: '-10px', threshold: 0})
+  }, {root: null, rootMargin: '0px', threshold: 0.3})
   static resizeObserver = (typeof window !== "undefined") && new ResizeObserver(entries => {
     for (const { target } of entries) {
       const player =  target?.classList.contains("T_M_G-media") ? target?.tmgPlayer?.Player : (target?.querySelector(".T_M_G-media") || target?.closest(".T_M_G-media-container")?.querySelector(".T_M_G-media")).tmgPlayer?.Player
@@ -4523,7 +3828,7 @@ class tmg {
       const video = mutation.target
       if (mutation.type === "attributes") {
         if (mutation.attributeName === "tmgcontrols") {
-          if (!window.tmg._INTERNAL_MUTATION_SET.has(video)) video.tmgcontrols = video.hasAttribute("tmgcontrols")
+          if (!tmg._INTERNAL_MUTATION_SET.has(video)) video.tmgcontrols = video.hasAttribute("tmgcontrols")
         } else if (mutation.attributeName.startsWith("tmg")) {
           if (video.hasAttribute(mutation.attributeName)) video.tmgPlayer?.fetchCustomOptions()
         }
@@ -4536,8 +3841,8 @@ class tmg {
         if (node.tagName && (node.matches("video:not(.T_M_G-media") || node.querySelector("video:not(.T_M_G-media)"))) {
           const nodes = [...(node.querySelector("video:not(.T_M_G-media)") ? node.querySelectorAll("video:not(.T_M_G-media)") : [node])]
           for (const node of nodes) {
-            window.tmg.mutationObserver.observe(node, { attributes: true })
-            window.tmg.initMedia(node)
+            tmg.mutationObserver.observe(node, { attributes: true })
+            tmg.initMedia(node)
           }
         }
       }
@@ -4553,60 +3858,60 @@ class tmg {
     }
   })
   static initMedia(media, reset = false) {
-    if (window.tmg.isIterable(media)) {
+    if (tmg.isIterable(media)) {
       for (const medium of media) {
         _initMedium(medium)
       }
     } else _initMedium(media)
     function _initMedium(medium) {
       if (!medium.tmgPlayer || reset) {
-        (new window.tmg.Player())._initMedium(medium)
+        (new tmg.Player())._initMedium(medium)
         medium.tmgcontrols = medium.hasAttribute("tmgcontrols")
       }
     }
   }
   static _handleWindowResize() {
-    window.tmg.Players?.forEach(Player => Player._handleWindowResize())
+    tmg.Players?.forEach(Player => Player._handleWindowResize())
   }
   static _handleVisibilityChange() {
-    window.tmg.Players?.forEach(Player => Player._handleVisibilityChange())
+    tmg.Players?.forEach(Player => Player._handleVisibilityChange())
   }
   static _handleFullScreenChange() {
-    window.tmg._CURRENT_FULL_SCREEN_PLAYER?._handleFullScreenChange()
+    tmg._CURRENT_FULL_SCREEN_PLAYER?._handleFullScreenChange()
   }
   static initializeAudioManager(bool = true) {
-    if (!window.tmg._AUDIO_CONTEXT && bool) {
-      window.tmg._AUDIO_CONTEXT = new (window.AudioContext || window.webkitAudioContext)()
-      window.tmg.Players?.forEach(Player => Player.manageAudio())
-      document.addEventListener("visiblitychange", () => document.visiblityState === "visible" ? window.tmg.resumeAudioManager() : window.tmg.suspendAudioManager())
+    if (!tmg._AUDIO_CONTEXT && bool) {
+      tmg._AUDIO_CONTEXT = new (AudioContext || webkitAudioContext)()
+      tmg.Players?.forEach(Player => Player.manageAudio())
+      document.addEventListener("visiblitychange", () => document.visiblityState === "visible" ? tmg.resumeAudioManager() : tmg.suspendAudioManager())
     }
-    document.removeEventListener("click", window.tmg.resumeAudioManager)
-    document.addEventListener("click", window.tmg.resumeAudioManager)
-    return !!window.tmg._AUDIO_CONTEXT
+    document.removeEventListener("click", tmg.resumeAudioManager)
+    document.addEventListener("click", tmg.resumeAudioManager)
+    return !!tmg._AUDIO_CONTEXT
   }
   static connectMediaToAudioManager(medium) {
-    medium.tmgSourceNode = medium.tmgSourceNode || window.tmg._AUDIO_CONTEXT.createMediaElementSource(medium)
-    medium.tmgGainNode = medium.tmgGainNode || window.tmg._AUDIO_CONTEXT.createGain()
+    medium.tmgSourceNode = medium.tmgSourceNode || tmg._AUDIO_CONTEXT.createMediaElementSource(medium)
+    medium.tmgGainNode = medium.tmgGainNode || tmg._AUDIO_CONTEXT.createGain()
     medium.tmgSourceNode.connect(medium.tmgGainNode)
-    if (!medium.paused) window.tmg.connectAudio(medium.tmgGainNode)
+    if (!medium.paused) tmg.connectAudio(medium.tmgGainNode)
   }
   static connectAudio(gainNode) {
-    if (gainNode && window.tmg._CURRENT_AUDIO_GAIN_NODE !== gainNode) {
-      if (window.tmg._CURRENT_AUDIO_GAIN_NODE) window.tmg._CURRENT_AUDIO_GAIN_NODE.disconnect()
-      window.tmg._CURRENT_AUDIO_GAIN_NODE = gainNode
-      window.tmg._CURRENT_AUDIO_GAIN_NODE.connect(window.tmg._AUDIO_CONTEXT.destination)
+    if (gainNode && tmg._CURRENT_AUDIO_GAIN_NODE !== gainNode) {
+      if (tmg._CURRENT_AUDIO_GAIN_NODE) tmg._CURRENT_AUDIO_GAIN_NODE.disconnect()
+      tmg._CURRENT_AUDIO_GAIN_NODE = gainNode
+      tmg._CURRENT_AUDIO_GAIN_NODE.connect(tmg._AUDIO_CONTEXT.destination)
     }
   }
   static resumeAudioManager() {
-    if (window.tmg._AUDIO_CONTEXT === "suspended") window.tmg._AUDIO_CONTEXT.resume()
-    if (!window.tmg._AUDIO_CONTEXT) window.tmg.initializeAudioManager()
+    if (tmg._AUDIO_CONTEXT === "suspended") tmg._AUDIO_CONTEXT.resume()
+    if (!tmg._AUDIO_CONTEXT) tmg.initializeAudioManager()
   }
   static suspendAudioManager() {
-    if (window.tmg._AUDIO_CONTEXT === "running") window.tmg._AUDIO_CONTEXT.suspend()
+    if (tmg._AUDIO_CONTEXT === "running") tmg._AUDIO_CONTEXT.suspend()
   }
   static loadResource(src, type = "style", options = {}) {
     const { module = false, media = null, crossorigin = null, integrity = null, } = options
-    if (window.tmg._RESOURCE_CACHE[src]) return window.tmg._RESOURCE_CACHE[src]
+    if (tmg._RESOURCE_CACHE[src]) return tmg._RESOURCE_CACHE[src]
     const isLoaded = (() => {
       if (type === "script") {
       return Array.from(...document.scripts)?.some(s => s.src?.includes(src))
@@ -4616,7 +3921,7 @@ class tmg {
       return false
     })()
     if (isLoaded) return Promise.resolve(null) 
-    window.tmg._RESOURCE_CACHE[src] = new Promise((resolve, reject) => {
+    tmg._RESOURCE_CACHE[src] = new Promise((resolve, reject) => {
       if (type === "script") {
         const script = document.createElement("script")
         script.src = src
@@ -4638,15 +3943,15 @@ class tmg {
         reject(new Error(`Unsupported type: ${type}`))
       }
     })
-    return window.tmg._RESOURCE_CACHE[src]
+    return tmg._RESOURCE_CACHE[src]
   }
   static addSources(sources, medium) {
     const addSource = (source, medium) => {
       const sourceElement = document.createElement("source")
-      window.tmg.putSourceDetails(source, sourceElement)
+      tmg.putSourceDetails(source, sourceElement)
       medium.appendChild(sourceElement)
     }
-    if (window.tmg.isIterable(sources)) 
+    if (tmg.isIterable(sources)) 
       for (const source of sources) {
         addSource(source, medium)
       }
@@ -4657,7 +3962,7 @@ class tmg {
     _sources = []
     for (const source of sources) {
       const obj = {} 
-      window.tmg.putSourceDetails(source, obj)
+      tmg.putSourceDetails(source, obj)
       _sources.push(obj)
     }      
     return _sources 
@@ -4673,10 +3978,10 @@ class tmg {
   static addTracks(tracks, medium) {
     const addTrack = (track, medium) => {
       const trackElement = document.createElement("track")
-      window.tmg.putTrackDetails(track, trackElement)
+      tmg.putTrackDetails(track, trackElement)
       medium.appendChild(trackElement)
     }
-    if (window.tmg.isIterable(tracks)) 
+    if (tmg.isIterable(tracks)) 
       for (const track of tracks) {
         addTrack(track, medium)
       }
@@ -4687,7 +3992,7 @@ class tmg {
     _tracks = []
     for (const track of tracks) {
       const obj = {}
-      window.tmg.putTrackDetails(track, obj)
+      tmg.putTrackDetails(track, obj)
       _tracks.push(obj)
     }
     return _tracks
@@ -4749,12 +4054,12 @@ class tmg {
       const seconds = Math.floor(time % 60)
       const minutes = Math.floor(time / 60) % 60
       const hours = Math.floor(time / 3600)
-      if (hours === 0) return `${minutes}:${window.tmg.leadingZeroFormatter.format(seconds)}`
-      else return `${hours}:${window.tmg.leadingZeroFormatter.format(minutes)}:${window.tmg.leadingZeroFormatter.format(seconds)}`
+      if (hours === 0) return `${minutes}:${tmg.leadingZeroFormatter.format(seconds)}`
+      else return `${hours}:${tmg.leadingZeroFormatter.format(minutes)}:${tmg.leadingZeroFormatter.format(seconds)}`
     } else return '-:--'
   }
   static parseNumber(number) {
-    if (window.tmg.isValidNumber(number)) return number
+    if (tmg.isValidNumber(number)) return number
     else return 0
   }
   static formatCSSTime(time) {
@@ -4763,6 +4068,42 @@ class tmg {
   static leadingZeroFormatter = new Intl.NumberFormat(undefined, {minimumIntegerDigits: 2})
   static isIterable(obj) { 
     return obj !== null && obj !== undefined && typeof obj[Symbol.iterator] === 'function'
+  }
+  static parseKeyCombo(combo) {
+    const parts = combo.toLowerCase().split("+");
+    return {
+      ctrlKey: parts.includes("ctrl"),
+      shiftKey: parts.includes("shift"),
+      altKey: parts.includes("alt"),
+      metaKey: parts.includes("meta") || parts.includes("cmd"),
+      key: parts.find(p => !["ctrl", "shift", "alt", "meta", "cmd"].includes(p)) || ""
+    };
+  }
+  static stringifyKeyCombo(e) {
+    const parts = [];
+    if (e.ctrlKey) parts.push("ctrl");
+    if (e.altKey) parts.push("alt");
+    if (e.shiftKey) parts.push("shift");
+    if (e.metaKey) parts.push("meta");
+    parts.push(e.key?.toLowerCase());
+    return parts.join("+");
+  }
+  static cleanKeyCombo(combo) {
+    const m = ["ctrl","alt","shift","meta"];
+    if (combo === " ") return " ";
+    const p = combo.toLowerCase().split("+").map(k => k.trim() || " ");
+    return [...p.filter(k => m.includes(k)).sort((a,b) => m.indexOf(a) - m.indexOf(b)), p.find(k => !m.includes(k)) || ""].join("+");
+  }
+  static matchKeys(required, actual, strict = false) {
+    const match = (required, actual) => {
+      if (!strict) {
+        const reqKeys = required.split("+");
+        const actKeys = actual.split("+");
+        return reqKeys.every(k => actKeys.includes(k));
+      } else return required === actual
+    }
+    if (Array.isArray(required)) return required.some(req => match(req, actual))
+    return match(required, actual)
   }
   static camelizeString(str, seperator = " ") {  
     return str.toLowerCase().replace(/^\w|\b\w/g, (match, index) => index === 0 ? match.toLowerCase() : match.toUpperCase()).replaceAll(seperator, "")  
@@ -4837,7 +4178,7 @@ class tmg {
       return { left, top, width, height }
     }
   }
-  static _SCROLL_ASSIST_OBSERVER = (typeof window !== "undefined") && new ResizeObserver(entries => entries.forEach(({ target }) => window.tmg._SCROLL_ASSIST_DATA.get(target)?.update()));
+  static _SCROLL_ASSIST_OBSERVER = (typeof window !== "undefined") && new ResizeObserver(entries => entries.forEach(({ target }) => tmg._SCROLL_ASSIST_DATA.get(target)?.update()));
   static _SCROLL_ASSIST_DATA = new WeakMap();
   static initScrollAssist(container, {
     pxPerSecond = 80,
@@ -4846,7 +4187,7 @@ class tmg {
     horizontal = true
   } = {}) {
     const parent = container.parentElement;
-    if (!parent || window.tmg._SCROLL_ASSIST_DATA.has(container)) return;
+    if (!parent || tmg._SCROLL_ASSIST_DATA.has(container)) return;
     const assist = {};
     let scrollId = null,
     last = performance.now(),
@@ -4901,22 +4242,22 @@ class tmg {
     if (horizontal) ["left", "right"].forEach(addAssist);
     if (vertical) ["up", "down"].forEach(addAssist);
     container.addEventListener("scroll", update);
-    window.tmg._SCROLL_ASSIST_OBSERVER.observe(container);
-    window.tmg._SCROLL_ASSIST_DATA.set(container, {
+    tmg._SCROLL_ASSIST_OBSERVER.observe(container);
+    tmg._SCROLL_ASSIST_DATA.set(container, {
       update,
       destroy() {
         stop();
         container.removeEventListener("scroll", update);
-        window.tmg._SCROLL_ASSIST_OBSERVER.unobserve(container);
-        window.tmg._SCROLL_ASSIST_DATA.delete(container);
+        tmg._SCROLL_ASSIST_OBSERVER.unobserve(container);
+        tmg._SCROLL_ASSIST_DATA.delete(container);
         Object.values(assist).forEach(el => el.remove());
       }
     });
     update();
-    return window.tmg._SCROLL_ASSIST_DATA.get(container);
+    return tmg._SCROLL_ASSIST_DATA.get(container);
   }
   static removeScrollAssist(container) {
-    window.tmg._SCROLL_ASSIST_DATA.get(container)?.destroy();
+    tmg._SCROLL_ASSIST_DATA.get(container)?.destroy();
   }
   static rippleHandler(e, target) {
     const currentTarget  = target || e.currentTarget;
@@ -4941,7 +4282,7 @@ class tmg {
       if (!canRelease) return ripple.addEventListener("animationend", release, { once: true });
       ripple.classList.replace("T_M_G-video-ripple-hold", "T_M_G-video-ripple-fade");
       ripple.addEventListener("animationend", () => {
-        (window.requestIdleCallback || setTimeout)(() => wrapper.remove());
+        (requestIdleCallback || setTimeout)(() => wrapper.remove());
       });
       el.ownerDocument.defaultView.removeEventListener("pointerup", release);
       el.ownerDocument.defaultView.removeEventListener("pointercancel", release);
@@ -4956,7 +4297,7 @@ class tmg {
       let promises = []
       if (media) {
         for (const medium of media) {
-          promises.push(window.tmg.launch(medium))
+          promises.push(tmg.launch(medium))
         }
         return Promise.all(promises)
       }
@@ -4976,7 +4317,7 @@ class tmg {
 
 if (typeof window !== "undefined") {
   window.tmg = tmg
-  window.tmg.init()
+  tmg.init()
 } else {
   console.error("TMG Media Player cannot run in a terminal!")
   console.warn("Consider moving to a browser environment to use the TMG Media Player")

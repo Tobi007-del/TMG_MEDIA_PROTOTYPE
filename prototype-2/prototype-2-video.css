@@ -1628,6 +1628,7 @@ button:has(.T_M_G-video-next-icon) svg {
   border-radius: var(--T_M_G-video-current-unit);
   background: var(--T_M_G-video-volume-slider-content-background);
   color: var(--T_M_G-video-volume-slider-content-text-color);
+  text-shadow: 0.5px 0.5px 1px rgba(0, 0, 0, 0.45);
   text-align: center;
   font-size: calc(var(--T_M_G-video-current-unit)/3);
   font-weight: bolder;
