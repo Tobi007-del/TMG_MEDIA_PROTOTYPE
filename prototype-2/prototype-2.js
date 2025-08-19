@@ -49,7 +49,6 @@ class _T_M_G_Video_Player {
     this.isScrubbing = false
     this.parentIntersecting = true
     this.isIntersecting = true
-    this.timelineFocused = false
     this.buffering = false
     this.clickId = null 
     this.overlayRestraintId = null
@@ -397,32 +396,30 @@ class _T_M_G_Video_Player {
   }
 
   toggleSettingsView() {
-    !this.settingsView ? this.enterSettingsView() : this.leaveSettingsView()                  
+    !this.isModeActive("settings") ? this.enterSettingsView() : this.leaveSettingsView()                  
   }
 
-  enterSettingsView() {
-    if (!this.isModeActive("settings")) {
+  enterSettingsView() {    
+    if (this.isModeActive("settings")) return
     this.DOM.settingsCloseBtn.focus()
     this.wasPaused = this.video.paused
     if (!this.wasPaused) this.togglePlay(false)
     this.videoContainer.classList.add("T_M_G-video-settings-view")
-    document.addEventListener("keyup", this._handleSettingsKeyUp)
-    this.floatingPlayer?.document.addEventListener("keyup", this._handleSettingsKeyUp)
+    window.addEventListener("keyup", this._handleSettingsKeyUp)
+    this.floatingPlayer?.addEventListener("keyup", this._handleSettingsKeyUp)
     this.removeKeyEventListeners("all")
-    this.disableFocusableControls()
-    }               
+    this.disableFocusableControls()       
   }
 
   leaveSettingsView() {
-    if (this.isModeActive("settings")) {
+    if (!this.isModeActive("settings")) return
     this.DOM.settingsCloseBtn.blur()
     this.videoContainer.classList.remove("T_M_G-video-settings-view")
-    document.removeEventListener("keyup", this._handleSettingsKeyUp)
-    this.floatingPlayer?.document.removeEventListener("keyup", this._handleSettingsKeyUp)
+    window.removeEventListener("keyup", this._handleSettingsKeyUp)
+    this.floatingPlayer?.removeEventListener("keyup", this._handleSettingsKeyUp)
     this.setKeyEventListeners("all")
     this.enableFocusableControls()
-    if (!this.wasPaused) this.togglePlay(true)
-    }                  
+    if (!this.wasPaused) this.togglePlay(true)              
   }
   
   _handleSettingsKeyUp(e) {
@@ -667,7 +664,35 @@ class _T_M_G_Video_Player {
             <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
           </svg>            
         </div>   
-      ` : null,         
+      ` : null,
+      scrubnotifier : this.settings.status.ui.notifiers ?
+      `
+      <div class="T_M_G-video-notifiers T_M_G-video-scrub-notifier">
+        <span>
+          <svg style="transform: scaleX(-1);">
+            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+          </svg>
+          <svg style="transform: scaleX(-1);">
+            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+          </svg>
+          <svg style="transform: scaleX(-1);">
+            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+          </svg>            
+        </span>
+        <p>Double tap left or right to skip ${this.settings.timeSkip} seconds</p>
+        <span>
+          <svg>
+            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+          </svg>
+          <svg>
+            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+          </svg>
+          <svg>
+            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+          </svg>            
+        </span>
+      </div>
+      ` : null,     
       touchtimelinenotifier : this.settings.status.ui.notifiers ? 
       `
         <div class="T_M_G-video-notifiers T_M_G-video-touch-timeline-notifier T_M_G-video-touch-notifier"></div>
@@ -969,7 +994,7 @@ class _T_M_G_Video_Player {
     if (this.settings.status.ui.notifiers) {
       notifiersContainerBuild.classList = "T_M_G-video-notifiers-container"
       notifiersContainerBuild.setAttribute("data-current-notifier", "")
-      notifiersContainerBuild.innerHTML += ``.concat(this.HTML.playpausenotifier ?? "", this.HTML.captionsnotifier ?? "", this.HTML.objectfitnotifier ?? "", this.HTML.playbackratenotifier ?? "", this.HTML.volumenotifier ?? "", this.HTML.brightnessnotifier ?? "", this.HTML.fwdnotifier ?? "", this.HTML.bwdnotifier ?? "", this.HTML.touchtimelinenotifier ?? "", this.HTML.touchvolumenotifier ?? "", this.HTML.touchbrightnessnotifier ?? "")
+      notifiersContainerBuild.innerHTML += ``.concat(this.HTML.playpausenotifier ?? "", this.HTML.captionsnotifier ?? "", this.HTML.objectfitnotifier ?? "", this.HTML.playbackratenotifier ?? "", this.HTML.volumenotifier ?? "", this.HTML.brightnessnotifier ?? "", this.HTML.fwdnotifier ?? "", this.HTML.bwdnotifier ?? "", this.HTML.scrubnotifier ?? "", this.HTML.touchtimelinenotifier ?? "", this.HTML.touchvolumenotifier ?? "", this.HTML.touchbrightnessnotifier ?? "")
       overlayControlsContainerBuild.append(notifiersContainerBuild)
     }
   
@@ -1034,6 +1059,7 @@ class _T_M_G_Video_Player {
       brightnessDarkNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-brightness-dark-notifier") : null,
       fwdNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-fwd-notifier") : null,
       bwdNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-bwd-notifier") : null,
+      scrubNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-scrub-notifier") : null,
       touchTimelineNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-touch-timeline-notifier") : null,
       touchVolumeContent : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-touch-volume-content") : null,
       touchVolumeNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-touch-volume-notifier") : null,
@@ -1171,7 +1197,8 @@ class _T_M_G_Video_Player {
       this.video.textTracks[this.textTrackIndex].mode = this.settings.autocaptions ? "showing" : "hidden"
       this.videoContainer.classList.toggle("T_M_G-video-captions", this.settings.autocaptions)
       this.videoContainer.setAttribute("data-track-kind", this.video.textTracks[this.textTrackIndex].kind)
-    } 
+    }
+    this.updateCaptionsSettings()
   }
 
   setPreviewImagesState() {
@@ -1280,30 +1307,30 @@ class _T_M_G_Video_Player {
   setKeyEventListeners(all) {      
     if (this.settings.keyShortcuts) {
     if (all !== "floating") {
-      document.addEventListener("keydown", this._handleKeyDown)
-      document.addEventListener("keyup", this._handleKeyUp)
+      window.addEventListener("keydown", this._handleKeyDown)
+      window.addEventListener("keyup", this._handleKeyUp)
     } 
     if (all === "all" || all === "floating") {
-      this.floatingPlayer?.document.addEventListener("keydown", this._handleKeyDown)
-      this.floatingPlayer?.document.addEventListener("keyup", this._handleKeyUp)
+      this.floatingPlayer?.addEventListener("keydown", this._handleKeyDown)
+      this.floatingPlayer?.addEventListener("keyup", this._handleKeyUp)
     }
-    }      
+    }
   }
 
   removeKeyEventListeners(all) {      
     if (all !== "floating") {
-      document.removeEventListener("keydown", this._handleKeyDown)
-      document.removeEventListener("keyup", this._handleKeyUp)
+      window.removeEventListener("keydown", this._handleKeyDown)
+      window.removeEventListener("keyup", this._handleKeyUp)
     } 
     if (all === "all" || all === "floating") {
-      this.floatingPlayer?.document.removeEventListener("keydown", this._handleKeyDown)
-      this.floatingPlayer?.document.removeEventListener("keyup", this._handleKeyUp)
+      this.floatingPlayer?.removeEventListener("keydown", this._handleKeyDown)
+      this.floatingPlayer?.removeEventListener("keyup", this._handleKeyUp)
     }      
   }
 
   setVideoContainerEventListeners() {
-    this.DOM.videoControlsContainer.addEventListener("contextmenu", this._handleRightClick)
     this.DOM.videoOverlayControlsContainer.addEventListener("contextmenu", this._handleRightClick)
+    this.DOM.videoControlsContainer.addEventListener("contextmenu", this._handleRightClick)
     this.DOM.videoOverlayControlsContainer.addEventListener("click", this._handleHoverPointerDown, true)
     this.DOM.videoControlsContainer.addEventListener("click", this._handleHoverPointerDown, true)
     this.DOM.videoOverlayControlsContainer.addEventListener("pointerover", this._handleHoverPointerActive, true)
@@ -1317,7 +1344,6 @@ class _T_M_G_Video_Player {
     this.DOM.videoOverlayControlsContainer.addEventListener("mousedown", this._handleSpeedPointerDown, true)
     this.DOM.videoOverlayControlsContainer.addEventListener("touchstart", this._handleSpeedPointerDown, {passive:true, useCapture:true})
     this.DOM.videoOverlayControlsContainer.addEventListener("touchstart", this._handleGestureTouchStart, {passive:false, useCapture:true})
-         
   }   
 
   setVideoEventListeners() {
@@ -1383,8 +1409,7 @@ class _T_M_G_Video_Player {
     this.DOM.timelineContainer?.addEventListener("mouseleave", this.hidePreviewImages)
     this.DOM.timelineContainer?.addEventListener("touchend", this.hidePreviewImages)
     this.DOM.timelineContainer?.addEventListener("mousemove", this._handleTimelineInput)
-    this.DOM.timelineContainer?.addEventListener("focus", this._handleTimelineFocus)
-    this.DOM.timelineContainer?.addEventListener("blur", this._handleTimelineBlur)
+    this.DOM.timelineContainer?.addEventListener("keydown", this._handleTimelineKeyDown)
 
     //cue container listeners
     this.DOM.cueContainer?.addEventListener("pointerdown", this._handleCueDragStart);
@@ -1514,7 +1539,7 @@ class _T_M_G_Video_Player {
 
   _handleMediaIntersectionChange(isIntersecting) {
     this.isIntersecting = isIntersecting
-    this.isIntersecting && !this.settingsView ? this.setKeyEventListeners() : this.removeKeyEventListeners() 
+    this.isIntersecting && !this.isModeActive("settings") ? this.setKeyEventListeners() : this.removeKeyEventListeners() 
   }
 
   _handleMediaParentIntersectionChange(isIntersecting) {
@@ -1745,7 +1770,7 @@ class _T_M_G_Video_Player {
   movePlaylistTo(index, shouldPlay = true) {
     if (this._playlist) {
       if (this.settings.status.allowOverride.startTime) {
-        this._playlist[this.currentPlaylistIndex].settings.startTime = this.currentTime < (this.duration - (this.settings.endTime || this.settings.automoveCountdown)) ? this.playlistCurrentTime : null
+        this._playlist[this.currentPlaylistIndex].settings.startTime = this.currentTime < (this.duration - (this.settings.endTime || this.settings.automove)) ? this.playlistCurrentTime : null
       }
       this.stall()
       this.lastRate = this.video.playbackRate
@@ -1770,7 +1795,7 @@ class _T_M_G_Video_Player {
   }
 
   automovePlaylist() {      
-    if (this.loaded && this._playlist && this.settings.automove && this.canAutoMovePlaylist && (this.currentPlaylistIndex < this._playlist.length - 1) && !this.video.paused) {
+    if (this.loaded && this._playlist && (this.settings.automove >= 0) && this.canAutoMovePlaylist && (this.currentPlaylistIndex < this._playlist.length - 1) && !this.video.paused) {
       this.canAutoMovePlaylist = false
       const count = Math.floor((this.settings.endTime || this.duration) - this.currentTime)
       const {src, media: {title}} = this._playlist[this.currentPlaylistIndex + 1]
@@ -1827,7 +1852,7 @@ class _T_M_G_Video_Player {
         if (!(this.currentTime === this.duration)) cleanUpPlaylistToast()
       },
       autoCleanUpPlaylistToast = () => {
-        if (Math.floor((this.settings.endTime || this.duration) - this.currentTime) > this.settings.automoveCountdown) cleanUpPlaylistToast()
+        if (Math.floor((this.settings.endTime || this.duration) - this.currentTime) > this.settings.automove) cleanUpPlaylistToast()
       },
       cleanUpPlaylistToast = (permanent = false) => {
         playlistToastContainer.remove()
@@ -2058,20 +2083,6 @@ class _T_M_G_Video_Player {
     if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${tmg.formatTime(Math.abs(this.gestureNextTime - this.currentTime))} (${tmg.formatTime(this.gestureNextTime)}) ${multiplier < 1 ? `x${multiplier}` : ''}`     
   }
 
-  _handleTimelineFocus() {      
-    if (this.DOM.timelineContainer?.matches(":focus-visible")) {
-      this.timelineFocused = true
-      document.addEventListener("keydown", this._handleTimelineKeyDown)
-      this.floatingPlayer?.document.addEventListener("keydown", this._handleTimelineKeyDown)
-    }      
-  }
-
-  _handleTimelineBlur() { 
-    this.timelineFocused = false
-    document.removeEventListener('keydown', this._handleTimelineKeyDown)
-    this.floatingPlayer?.document.removeEventListener('keydown', this._handleTimelineKeyDown)         
-  }
-
   _handleTimelineKeyDown(e) {
     switch (e.key?.toLowerCase()) {
       case "arrowleft":
@@ -2095,7 +2106,7 @@ class _T_M_G_Video_Player {
     if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.timeFormat !== "timespent" ? tmg.formatTime(this.video.currentTime) : `-${tmg.formatTime(this.video.duration - this.video.currentTime)}`
     if (this.speedCheck && this.speedToken === 1) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", tmg.formatTime(this.video.currentTime))
     if (this._playlist && this.currentTime > 3) this.playlistCurrentTime = this.currentTime
-    if (Math.floor((this.settings.endTime || this.duration) - this.currentTime) <= this.settings.automoveCountdown) this.automovePlaylist()
+    if (Math.floor((this.settings.endTime || this.duration) - this.currentTime) <= this.settings.automove) this.automovePlaylist()
     if (this.videoContainer.classList.contains("T_M_G-video-replay")) this.videoContainer.classList.remove("T_M_G-video-replay")   
   }
   
@@ -2175,9 +2186,7 @@ class _T_M_G_Video_Player {
     const rate = this.video.playbackRate
     switch(sign) {
       case "-":
-        if (rate > 0.25) {
-          this.video.playbackRate -= (rate%value) ? (rate%value) : value
-        }
+        if (rate > this.settings.playbackRateSkip) this.video.playbackRate -= (rate%value) ? (rate%value) : value
         this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-rewind")
         this.fire("playbackratechange")
         break
@@ -2254,7 +2263,42 @@ class _T_M_G_Video_Player {
   }
 
   toggleCaptions() {      
-    if (this.video.textTracks[this.textTrackIndex]) this.videoContainer.classList.toggle("T_M_G-video-captions")      
+    if (this.video.textTracks[this.textTrackIndex]) this.videoContainer.classList.toggle("T_M_G-video-captions")
+  }
+
+  updateCaptionsSettings() {
+    this.videoCaptionsMinSize = this.settings.captionsSizeSkip
+    this.videoCaptionsMaxSize = this.settings.maxCaptionsSize
+  }
+
+  previewCaptions() {
+    this.videoContainer.classList.add("T_M_G-video-captions-preview")
+    if (!this.videoContainer.classList.contains("T_M_G-video-captions") || !this.DOM.cueContainer.innerHTML) this._handleCueChange({ text: "Captions will look like this!" })
+    setTimeout(() => this.videoContainer.classList.remove("T_M_G-video-captions-preview"), 1500)
+  }
+
+  changeCaptionsSize(value) {
+    const sign = Math.sign(value) === 1 ? "+" : "-"
+    value = Math.abs(value)
+    const size = Number(this.videoCaptionsSize)
+    switch(sign) {
+      case "-":
+        if (size > this.settings.captionsSizeSkip) this.videoCaptionsSize = size - ((size%value) ? (size%value) : value)
+        break
+      default: 
+        if (size < this.settings.maxCaptionsSize) this.videoCaptionsSize = size + ((size%value) ? (size%value) : value)
+    }
+    this.previewCaptions()
+  }
+
+  toggleCaptionsOpacity() {
+    this.videoCaptionsOpacity = Number(this.videoCaptionsOpacity) === 1 ? 0.5 : 1;
+    this.previewCaptions()
+  }
+
+  toggleCaptionsWindowOpacity() {
+    this.videoCaptionsWindowOpacity = Number(this.videoCaptionsWindowOpacity) === 1 ? 0 : 1;
+    this.previewCaptions()
   }
 
   _handleCueChange(cue) {
@@ -2278,7 +2322,7 @@ class _T_M_G_Video_Player {
     this.DOM.cueContainer.appendChild(cueWrapper)
     this.videoCurrentCueContainerHeight = this.DOM.cueContainer.offsetHeight + 'px'
     this.videoCurrentCueContainerWidth = this.DOM.cueContainer.offsetWidth + 'px'
-    this.changeCuePosition()
+    this._handleCuePosition()
   }
 
   _handleCueDragStart(e) {
@@ -2292,10 +2336,10 @@ class _T_M_G_Video_Player {
     this.DOM.videoContainer.classList.add("T_M_G-video-cue-dragging")
     this.cuePositionX = clientX
     this.cuePositionY = clientY
-    this.changeCuePosition()
+    this._handleCuePosition()
   } 
 
-  changeCuePosition() {
+  _handleCuePosition() {
     if (!this.cuePositionX || !this.cuePositionY) return
     this.RAFLoop("cueDragging", () => {
       const rect = this.videoContainer.getBoundingClientRect(),
@@ -2420,7 +2464,7 @@ class _T_M_G_Video_Player {
         this.videoCurrentVolumeSliderBoostPosition = 0
         this.videoCurrentVolumeSliderPosition = (volume - 0) / (100 - 0)
       } else if (volume > 100) {
-        this.videoVolumeSliderBoostPercent = parseInt(this.videoVolumeSliderPercent) + 5
+        this.videoVolumeSliderBoostPercent = Number(this.videoVolumeSliderPercent) + 5
         this.videoCurrentVolumeSliderBoostPosition = (volume - 100) / (this.settings.maxVolume - 100)
       }
     } else this.videoCurrentVolumeSliderPosition = volumePercent      
@@ -2484,7 +2528,7 @@ class _T_M_G_Video_Player {
   }
 
   get brightness() {
-    return parseInt(this.videoBrightness ?? 100)
+    return Number(this.videoBrightness ?? 100)
   }
 
   toggleDark(auto) {
@@ -2536,7 +2580,7 @@ class _T_M_G_Video_Player {
         this.videoCurrentBrightnessSliderBoostPosition = 0
         this.videoCurrentBrightnessSliderPosition = (brightness - 0) / (100 - 0)
       } else if (brightness > 100) {
-        this.videoBrightnessSliderBoostPercent = parseInt(this.videoBrightnessSliderPercent) + 5
+        this.videoBrightnessSliderBoostPercent = Number(this.videoBrightnessSliderPercent) + 5
         this.videoCurrentBrightnessSliderBoostPosition = (brightness - 100) / (this.settings.maxBrightness - 100)
       }
     } else this.videoCurrentBrightnessSliderPosition = brightnessPercent      
@@ -2685,12 +2729,12 @@ class _T_M_G_Video_Player {
 
   async initFloatingPlayer() {
     if (!this.floatingPlayerActive) {
-    window.documentPictureInPicture.window?.close?.()
+    documentPictureInPicture.window?.close?.()
     this.toggleMiniPlayerMode(false)
 
     this.floatingPlayerActive = true
     this.floatingPlayerOptions = { width: 378, height: 199 }
-    this.floatingPlayer = await window.documentPictureInPicture.requestWindow(this.floatingPlayerOptions)
+    this.floatingPlayer = await documentPictureInPicture.requestWindow(this.floatingPlayerOptions)
     
     this.pseudoVideoContainer.append(this.DOM.pictureInPictureWrapper.cloneNode(true))
     this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-icon-wrapper").addEventListener("click", this.toggleFloatingPlayer)
@@ -2703,9 +2747,7 @@ class _T_M_G_Video_Player {
     for (const sheet of document.styleSheets) {
       try {
         for (const cssRule of sheet.cssRules) {
-          if (cssRule.selectorText?.includes(":root") || cssRule.cssText.includes("T_M_G")) {
-            cssText += cssRule.cssText
-          }
+          if (cssRule.selectorText?.includes(":root") || cssRule.cssText.includes("T_M_G")) cssText += cssRule.cssText
         }
       } catch (e) {
         continue
@@ -2912,7 +2954,7 @@ class _T_M_G_Video_Player {
   }
 
   _handleGestureWheel(e) {
-    if (!this.gestureTouchXCheck && !this.gestureTouchYCheck && this.settings.status.beta.gestureControls && !this.speedCheck && !this.settingsView) {
+    if (!this.gestureTouchXCheck && !this.gestureTouchYCheck && this.settings.status.beta.gestureControls && !this.speedCheck && !this.isModeActive("settings")) {
       e.preventDefault()
       if (this.gestureWheelTimeoutId) clearTimeout(this.gestureWheelTimeoutId)
       else this._handleGestureWheelInit(e)
@@ -2932,21 +2974,23 @@ class _T_M_G_Video_Player {
     this.gestureTimeMultiplierY = 0
   }
 
-  _handleGestureWheelMove({clientX: x, deltaX, deltaY}) {
+  _handleGestureWheelMove({clientX: x, deltaX, deltaY, shiftKey}) {
+    deltaX = shiftKey ? deltaY : deltaX
     const rect = this.videoContainer.getBoundingClientRect()
-    const width = rect.width,
-    height = rect.height
-    let xPercent = -deltaX / (width*10)
+    const width = shiftKey ? rect.height : rect.width,
+    height = shiftKey ? rect.width : rect.height
+    let xPercent = -deltaX / (width*(shiftKey ? 6 : 10))
     xPercent = this.gestureWheelTimePercent += xPercent
     const xSign = Math.sign(xPercent) === 1 ? "+" : "-"
     xPercent = Math.abs(xPercent)
 
-    if (deltaX) {
+    if (deltaX || shiftKey) {
       if (this.gestureWheelYCheck) return this._handleGestureWheelStop()
         
       this.gestureWheelXCheck = true
       this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active")
       this._handleGestureTimelineInput({percent: xPercent, sign: xSign, multiplier: this.gestureWheelTimeMultiplier})
+      if (shiftKey) return
     } 
     if (deltaY) {
       if (this.gestureWheelXCheck) {
@@ -2961,8 +3005,7 @@ class _T_M_G_Video_Player {
       this.gestureWheelYCheck = true
       this.gestureWheelZone?.x === "right" ? this.DOM.touchVolumeNotifier?.classList.add("T_M_G-video-control-active") : this.DOM.touchBrightnessNotifier?.classList.add("T_M_G-video-control-active")
       const ySign = deltaY >= 0 ? "+" : "-"
-      const rHeight = this.gestureWheelZone?.x === "right" ? ((height * 0.7) * this.maxVolumeRatio) : (height * this.maxBrightnessRatio)
-      const yPercent = tmg.clamp(0, Math.abs(deltaY), rHeight) / rHeight
+      const yPercent = tmg.clamp(0, Math.abs(deltaY), height) / height
       this.gestureWheelZone?.x === "right" ? this._handleGestureVolumeSliderInput({percent: yPercent, sign: ySign}) : this._handleGestureBrightnessSliderInput({percent: yPercent, sign: ySign})
     } 
   } 
@@ -3182,7 +3225,7 @@ class _T_M_G_Video_Player {
     // UI safety checks
     if ((e.key === " " || e.key === "Enter") && e.currentTarget.activeElement?.tagName === 'BUTTON') return false;
     if (e.currentTarget.activeElement?.matches("input,textarea,[contenteditable='true']")) return false;
-    if (this.timelineFocused && e.key.startsWith("Arrow")) return false;
+    if (this.DOM.timelineContainer?.matches(":focus") && e.key.startsWith("Arrow")) return false;
     if (action) return action
     // inner system defaults
     if (allowed) return e.key.toLowerCase();
@@ -3239,7 +3282,29 @@ class _T_M_G_Video_Player {
           break
         case "playbackRateDown":     
           this.changePlaybackRate(-this.settings.playbackRateSkip)
-          break                      
+          break
+        case "captionsSizeUp":
+          this.changeCaptionsSize(this.settings.captionsSizeSkip)
+          break
+        case "captionsSizeDown":
+          this.changeCaptionsSize(-this.settings.captionsSizeSkip)
+          break
+        case "captionsOpacity":
+          this.toggleCaptionsOpacity()
+          break
+        case "captionsWindowOpacity":
+          this.toggleCaptionsWindowOpacity()
+          break
+        case "expandMiniPlayer":
+          this.toggleMiniPlayerMode(false, "instant")
+          break
+        case "removeMiniPlayer":
+          this.toggleMiniPlayerMode(false) 
+          break
+        case "escape": // -w
+          this.isModeActive("miniPlayer") && this.toggleMiniPlayerMode(false)
+          this.isModeActive("floatingPlayer") && this.togglePictureInPictureMode()
+          break
         case "arrowup": // -w
           e.shiftKey ? this.changeVolume(10) : this.changeVolume(5)
           break
@@ -3263,7 +3328,7 @@ class _T_M_G_Video_Player {
   _handleKeyUp(e) {               
     const action = this.keyEventAllowed(e)
     if (action === false) return
-    switch (action) {             
+    switch (action) {
       case "objectFit":
         if (!this.isModeActive("pictureInPicture"))
         this.toggleObjectFit()
@@ -3285,15 +3350,8 @@ class _T_M_G_Video_Player {
       case "theater":
         if (!this.isMediaMobile && !this.isModeActive("fullScreen") && !this.isModeActive("miniPlayer") && !this.isModeActive("floatingPlayer")) this.toggleTheaterMode()
         break
-      case "expandMiniPlayer":
-        if (this.isModeActive("miniPlayer")) 
-        this.toggleMiniPlayerMode(false, "instant")
-        break
-      case "removeMiniPlayer":
-        if (this.isModeActive("miniPlayer")) this.toggleMiniPlayerMode(false) 
-        break
       case "pictureInPicture":
-        if (this.settings.status.modes.pictureInPicture) this.togglePictureInPictureMode()
+        this.togglePictureInPictureMode()
         break
       case "captions":
         if (this.video.textTracks[this.textTrackIndex] && !this.isModeActive("pictureInPicture")) {
@@ -3557,8 +3615,8 @@ class _T_M_G_Media_Player {
       }
       // parsing the key shortcuts to safe expected format
       Object.entries(settings.keyShortcuts || {})?.forEach(([k, v]) => settings.keyShortcuts[k] = tmg.cleanKeyCombo(v))
-      settings.keyBlocks?.forEach(tmg.cleanKeyCombo)
-      settings.keyOverrides?.forEach(tmg.cleanKeyCombo)
+      settings.keyBlocks = tmg.cleanKeyCombo(settings.keyBlocks)
+      settings.keyOverrides = tmg.cleanKeyCombo(settings.keyOverrides)
       // getting the status of the player to use later
       settings.status = {}
       settings.status.allowOverride = {}
@@ -3660,7 +3718,7 @@ class tmg {
       beta: ["rewind", "draggablecontrols", "gesturecontrols", "floatingplayer"],
       modes: ["normal", "fullscreen", "theater", "pictureinpicture", "miniplayer"],
       controllerStructure: ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"],
-      timelinePosition: "bottom",
+      timelinePosition: "top",
       timeFormat: "timeleft",
       startTime: null,
       endTime: null,
@@ -3668,14 +3726,15 @@ class tmg {
       volumeSkip: 5,
       brightnessSkip: 5,
       playbackRateSkip: 0.25,
-      automoveCountdown: 10,
+      captionsSizeSkip: 100,
       maxBrightness: 150,
       maxVolume: 300,
       maxPlaybackRate: 16,
+      maxCaptionsSize: 400,
       notifiers: true,
       progressBar: false,
       persist: true,
-      automove: true,
+      automove: 10,
       autocaptions: false,
       autoplay: false,
       loop: false,
@@ -3684,11 +3743,36 @@ class tmg {
       overlayRestraint: 3000,
       miniPlayerThreshold: 240,
       strictKeyMatches: false,
-      keyOverrides: [" ", "arrowdown", "arrowup", "arrowleft", "arrowright", "home", "end"],
-      keyBlocks: ["ctrl+shift+i"],
+      keyOverrides: [" ", "ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Home", "End"],
+      keyBlocks: [
+        // Tab navigation
+        "Ctrl+Tab", "Ctrl+Shift+Tab",
+        "Ctrl+PageUp", "Ctrl+PageDown",
+        "Cmd+Option+RightArrow", "Cmd+Option+LeftArrow",
+        "Ctrl+1", "Ctrl+2", "Ctrl+3", "Ctrl+4", "Ctrl+5", "Ctrl+6", "Ctrl+7", "Ctrl+8", "Ctrl+9",
+        "Cmd+1", "Cmd+2", "Cmd+3", "Cmd+4", "Cmd+5", "Cmd+6", "Cmd+7", "Cmd+8", "Cmd+9",
+        // Navigation
+        "Alt+LeftArrow", "Alt+RightArrow",
+        "Cmd+LeftArrow", "Cmd+RightArrow",
+        // Refresh
+        "Ctrl+r", "Ctrl+Shift+r", "F5", "Shift+F5",
+        "Cmd+r", "Cmd+Shift+r",
+        // History / Bookmarks / Find
+        "Ctrl+h", "Ctrl+j", "Ctrl+d", "Ctrl+f",
+        "Cmd+y", "Cmd+Option+b", "Cmd+d", "Cmd+f",
+        // Dev Tools / Source View
+        "Ctrl+Shift+i", "Ctrl+Shift+j", "Ctrl+Shift+c", "Ctrl+u", "F12",
+        "Cmd+Option+i", "Cmd+Option+j", "Cmd+Option+c", "Cmd+Option+u",
+        // Zoom
+        "Ctrl+=", "Ctrl+-", "Ctrl+0",
+        "Cmd+=", "Cmd+-", "Cmd+0",
+        // Print / Save / Open
+        "Ctrl+p", "Ctrl+s", "Ctrl+o",
+        "Cmd+p", "Cmd+s", "Cmd+o",
+      ],
       keyShortcuts: {
-        prev: "shift+p", 
-        next: "shift+n",
+        prev: "Shift+p", 
+        next: "Shift+n",
         playPause: "k",
         timeFormat: "q",
         skipBwd: "j",
@@ -3697,10 +3781,10 @@ class tmg {
         stepBwd: ",",
         mute: "m",
         dark: "d",
-        volumeUp: "arrowup",
-        volumeDown: "arrowdown",
-        brightnessUp: "w",
-        brightnessDown: "s",
+        volumeUp: "ArrowUp",
+        volumeDown: "ArrowDown",
+        brightnessUp: "y",
+        brightnessDown: "h",
         playbackRateUp: ">",
         playbackRateDown: "<",
         objectFit: "a",
@@ -3710,11 +3794,15 @@ class tmg {
         removeMiniPlayer: "r",
         pictureInPicture: "i",
         captions: "c",
-        settings: "?"
+        captionsSizeUp: "=",
+        captionsSizeDown: "-",
+        captionsOpacity: "o",
+        captionsWindowOpacity: "w",
+        settings: "?",
       },
     },
   }
-  static _ALLOWED_KEYS = [" ", "Enter", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].map(k => k.toLowerCase())
+  static _ALLOWED_KEYS = [" ", "Enter", "Escape", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",].map(k => k.toLowerCase())
   static _RESOURCE_CACHE = {}
   static _AUDIO_CONTEXT = null
   static _INTERNAL_MUTATION_SET = new WeakSet()
@@ -4063,10 +4151,15 @@ class tmg {
     return parts.join("+");
   }
   static cleanKeyCombo(combo) {
-    const m = ["ctrl","alt","shift","meta"];
-    if (combo === " ") return " ";
-    const p = combo.toLowerCase().split("+").map(k => k.trim() || " ");
-    return [...p.filter(k => m.includes(k)).sort((a,b) => m.indexOf(a) - m.indexOf(b)), p.find(k => !m.includes(k)) || ""].join("+");
+    const clean = (combo) => {
+      const m = ["ctrl","alt","shift","meta"];
+      const alias = { cmd: "meta" } // allow cmd - meta
+      if (combo === " " || combo === "+") return combo;
+      combo = combo.replace(/\+\s*\+$/, "+plus");
+      const p = combo.toLowerCase().split("+").filter(k => k !== "").map(k => alias[k] || (k === "plus" ? "+" : k.trim() || " "));
+      return [...p.filter(k => m.includes(k)).sort((a,b) => m.indexOf(a) - m.indexOf(b)), ...p.filter(k => !m.includes(k)) || ""].join("+");
+    }
+    return Array.isArray(combo) ? combo.map(clean) : clean(combo)
   }
   static matchKeys(required, actual, strict = false) {
     const match = (required, actual) => {
@@ -4076,8 +4169,7 @@ class tmg {
         return reqKeys.every(k => actKeys.includes(k));
       } else return required === actual
     }
-    if (Array.isArray(required)) return required.some(req => match(req, actual))
-    return match(required, actual)
+    return Array.isArray(required) ? required.some(req => match(req, actual)) : match(required, actual)
   }
   static camelizeString(str, seperator = " ") {  
     return str.toLowerCase().replace(/^\w|\b\w/g, (match, index) => index === 0 ? match.toLowerCase() : match.toUpperCase()).replaceAll(seperator, "")  
