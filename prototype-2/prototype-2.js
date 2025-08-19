@@ -534,9 +534,7 @@ class _T_M_G_Video_Player {
       `
         <div class="T_M_G-video-title-wrapper">
           <div class="T_M_G-video-title-content">
-            <div class="T_M_G-video-title-casing" tabindex="-1">
-              <p class="T_M_G-video-title"></p>
-            </div>
+            <p class="T_M_G-video-title"></p>
           </div>
         </div>      
       `,
@@ -679,7 +677,9 @@ class _T_M_G_Video_Player {
             <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
           </svg>            
         </span>
-        <p>Double tap left or right to skip ${this.settings.timeSkip} seconds</p>
+        <div class="T_M_G-video-scrub-notifier-content">
+          <p class="T_M_G-video-scrub-notifier-text">Double tap left or right to skip ${this.settings.timeSkip} seconds</p>
+        </div>
         <span>
           <svg>
             <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
@@ -1038,7 +1038,7 @@ class _T_M_G_Video_Player {
       videoContainerContentWrapper: this.videoContainer.querySelector(".T_M_G-video-container-content-wrapper"),
       videoContainerContent: this.videoContainer.querySelector(".T_M_G-video-container-content"),
       videoTitleWrapper: this.videoContainer.querySelector(".T_M_G-video-title-wrapper"),
-      videoTitleCasing: this.videoContainer.querySelector(".T_M_G-video-title-casing"),
+      videoTitle: this.videoContainer.querySelector(".T_M_G-video-title"),
       videoTitle: this.videoContainer.querySelector(".T_M_G-video-title"),
       thumbnailImg : this.videoContainer.querySelector(".T_M_G-video-thumbnail-image"),
       thumbnailCanvas : this.videoContainer.querySelector(".T_M_G-video-thumbnail-canvas"),
@@ -1473,7 +1473,8 @@ class _T_M_G_Video_Player {
 
   observeResize() {
     this._handleMediaParentResize();
-    tmg.initScrollAssist(this.DOM.videoTitleCasing, { pxPerSecond: 60 });
+    tmg.initScrollAssist(this.DOM.videoTitle, { pxPerSecond: 60 });
+    tmg.initScrollAssist(this.DOM.scrubNotifier.children?.[1]?.children?.[0], { pxPerSecond: 60 });
     [this.DOM.leftSideControlsWrapper, this.DOM.rightSideControlsWrapper].forEach(el => {
       this._handleSideControlsWrapperResize(el);
       tmg.initScrollAssist(el, { pxPerSecond: 60 });
@@ -1485,7 +1486,8 @@ class _T_M_G_Video_Player {
   }
 
   unobserveResize() {
-    tmg.removeScrollAssist(this.DOM.videoTitleCasing);
+    tmg.removeScrollAssist(this.DOM.videoTitle);
+    tmg.removeScrollAssist(this.DOM.scrubNotifier.children?.[1]?.children?.[0], { pxPerSecond: 60 });
     [this.DOM.leftSideControlsWrapper, this.DOM.rightSideControlsWrapper].forEach(el => {
       tmg.removeScrollAssist(el);
       tmg.resizeObserver.unobserve(el);
@@ -3225,7 +3227,6 @@ class _T_M_G_Video_Player {
     // UI safety checks
     if ((e.key === " " || e.key === "Enter") && e.currentTarget.activeElement?.tagName === 'BUTTON') return false;
     if (e.currentTarget.activeElement?.matches("input,textarea,[contenteditable='true']")) return false;
-    if (this.DOM.timelineContainer?.matches(":focus") && e.key.startsWith("Arrow")) return false;
     if (action) return action
     // inner system defaults
     if (allowed) return e.key.toLowerCase();
