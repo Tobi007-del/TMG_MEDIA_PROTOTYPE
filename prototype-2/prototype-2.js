@@ -27,76 +27,36 @@ class _T_M_G_Video_Player {
     this.log(videoOptions)
     //some general variables
     this.isMediaMobile = tmg.queryMediaMobile()
-    this.audioSetup = false
-    this.loaded = false
-    this.fps = 30 // just for frame stepping, not accurate :(
-    this.CSSCustomPropertiesCache = {}
-    this.currentPlaylistIndex = this._playlist ? 0 : null
-    this.playlistCurrentTime = null
-    this.inFullScreen = false
-    this.wasPaused = !this.video.autoplay
-    this.throttleMap = new Map()
-    this.rafLoopMap = new Map()
-    this.rafLoopFnMap = new Map()
-    this.keyDownThrottleDelay = 10
-    this.gestureTouchMoveThrottleDelay = 10
-    this.dragOverThrottleDelay = 20
-    this.timelineInputThrottleDelay = 50
-    this.speedPointerMoveThrottleDelay = 100
-    this.frameStepThrottleDelay = 1000 / this.fps
-    this.cuePositionX = this.cuePositionY = null
-    this.lastRate = this.video.playbackRate ?? 1
-    this.isScrubbing = false
-    this.parentIntersecting = true
-    this.isIntersecting = true
-    this.buffering = false
-    this.clickId = null 
-    this.overlayRestraintId = null
-    this.floatingPlayerActive = false
-    this.floatingPlayerOptions = null
-    this.lastGestureTouchX = null
-    this.lastGestureTouchY = null
-    this.gestureTouchCanCancel = true
-    this.gestureTouchZone = null
-    this.gestureNextTime = null
-    this.gestureTouchTimeoutId = null
-    this.gestureTouchThreshold = 150
-    this.gestureTouchFingerXRatio = this.gestureTouchFingerYRatio = 3
-    this.gestureTouchXCheck = false
-    this.gestureTouchYCheck = false
-    this.gestureWheelZone = null
-    this.gestureWheelXCheck = false
-    this.gestureWheelYCheck = false
-    this.gestureWheelTimeout = 2000
-    this.gestureWheelTimeoutId = null
-    this.gestureWheelTimePercent = 0
-    this.gestureWheelTimeMultiplier = 1
-    this.gestureTimeMultiplierY = 0
-    this.lastVolume = this.lastBrightness = 100
-    this.volumeSliderVolume = this.brightnessSliderBrightness = 5
-    this.shouldSetLastVolume = this.shouldSetLastBrightness = false
-    this.volumeActiveRestraintId = null
-    this.brightnessActiveRestraintId = null
-    this.playTriggerCounter = 0
-    this.speedUpThreshold = 1000
-    this.speedPointerCheck = false
-    this.speedCheck = false
-    this.speedToken = null
-    this.speedTimeoutId = null
-    this.speedIntervalId = null
-    this.speedIntervalTime = 0.08
-    this.speedIntervalDelay = 5
-    this.speedVideoTime = null
-    this.speedDirection = null
-    this.skipDurationId = null
-    this.skipDuration = 0
-    this.skipPersistPosition = null
-    this.skipPersist = false
-    this.currentNotifier = null
-    this.dragging = null
-    this.textTrackIndex = 0
-    this.canAutoMovePlaylist = true
-    this.aspectRatio = null
+    this.audioSetup = this.loaded = this.inFullScreen = this.isScrubbing = this.buffering = this.floatingPlayerActive = this.gestureTouchXCheck = this.gestureTouchYCheck = this.gestureWheelXCheck = this.gestureWheelYCheck = this.shouldSetLastVolume = this.shouldSetLastBrightness = this.speedPointerCheck = this.speedCheck = this.skipPersist = false;
+    this.parentIntersecting = this.isIntersecting = this.gestureTouchCanCancel = this.canAutoMovePlaylist = true;
+    this.fps = 30; // just for frame stepping, not accurate :(
+    this.CSSCustomPropertiesCache = {};
+    this.currentPlaylistIndex = this._playlist ? 0 : null;
+    this.wasPaused = !this.video.autoplay;
+    this.throttleMap = new Map();
+    this.rafLoopMap = new Map();
+    this.rafLoopFnMap = new Map();
+    this.keyDownThrottleDelay = 10;
+    this.gestureTouchMoveThrottleDelay = 10;
+    this.dragOverThrottleDelay = 20;
+    this.timelineInputThrottleDelay = 50;
+    this.speedPointerMoveThrottleDelay = 100;
+    this.frameStepThrottleDelay = 1000 / this.fps;
+    this.lastRate = this.video.playbackRate ?? 1;
+    this.gestureTouchThreshold = 150;
+    this.gestureTouchFingerXRatio = this.gestureTouchFingerYRatio = 3;
+    this.gestureWheelTimeout = 2000;
+    this.gestureWheelTimePercent = 0;
+    this.gestureWheelTimeMultiplier = 1;
+    this.gestureTimeMultiplierY = 0;
+    this.lastVolume = this.lastBrightness = 100;
+    this.volumeSliderVolume = this.brightnessSliderBrightness = 5;
+    this.playTriggerCounter = 0;
+    this.speedUpThreshold = 1000;
+    this.speedIntervalTime = 0.08;
+    this.speedIntervalDelay = 5;
+    this.skipDuration = 0;
+    this.textTrackIndex = 0;
     this.exportCanvas = document.createElement("canvas")
     this.contentContext = this.exportCanvas.getContext("2d")
     this.pseudoVideo = document.createElement("video")
@@ -208,7 +168,8 @@ class _T_M_G_Video_Player {
     if (!this.debug) return
     switch (type) {
       case "error":
-        action === "swallow" ? console.warn(`TMG silenced a rendering error:`, message) : console.error(`TMG rendering error:`, message)
+        if (action === "swallow") console.warn(`TMG swallowed a rendering error:`, message)
+        else throw message;
         break
       case "warn":
         console.warn(message)
@@ -314,7 +275,7 @@ class _T_M_G_Video_Player {
     if (this.video.playsInline) clonedVideo.playsInline = true;
     if (this.video.controlsList && this.video.controlsList.length) clonedVideo.controlsList = this.video.controlsList;
     if (this.video.disablePictureInPicture) clonedVideo.disablePictureInPicture = true; 
-    if (!this.video.paused && clonedVideo.parentElement) clonedVideo.play()
+    if (!this.video.paused && document.documentElement.contains(clonedVideo)) clonedVideo.play()
     this.video = clonedVideo
     // setTimeout(() => this.mutatingDOMNodes = false)
   }
@@ -364,7 +325,7 @@ class _T_M_G_Video_Player {
       for (const property of cssRule.style) {
         if (!property.startsWith("--T_M_G-video-")) continue
         const value = cssRule.style.getPropertyValue(property)
-        const field = tmg.camelizeString(property.replace("--T_M_G-", ""), "-")
+        const field = tmg.camelize(property.replace("--T_M_G-", ""), "-")
         this.CSSCustomPropertiesCache[field] = value
 
         Object.defineProperty(this, field, {
@@ -441,7 +402,7 @@ class _T_M_G_Video_Player {
     this.videoContainer.classList.add("T_M_G-video-container", "T_M_G-media-container")
     if (this.isMediaMobile) this.videoContainer.classList.add("T_M_G-video-mobile")
     if (this.video.paused) this.videoContainer.classList.add("T_M_G-video-paused")
-    if (this.initialMode && this.initialMode !== "normal") this.videoContainer.classList.add(`T_M_G-video-${tmg.uncamelizeString(this.initialMode, "-")}`)
+    if (this.initialMode && this.initialMode !== "normal") this.videoContainer.classList.add(`T_M_G-video-${tmg.uncamelize(this.initialMode, "-")}`)
     if (this.settings.progressBar) this.videoContainer.classList.add("T_M_G-video-progress-bar")
     this.videoContainer.setAttribute("data-timeline-position", this.settings.timelinePosition)
     this.videoContainer.setAttribute("data-object-fit", this.videoObjectFit ?? "contain")
@@ -479,7 +440,7 @@ class _T_M_G_Video_Player {
     <!-- Code injected by TMG ends -->
     `)   
 
-    this.videoContainer.querySelector(".T_M_G-video-container-content").appendChild(this.video)              
+    this.queryDOM(".T_M_G-video-container-content").appendChild(this.video)              
   }
 
   buildVideoControllerStructure() {     
@@ -487,8 +448,8 @@ class _T_M_G_Video_Player {
     leftSideControls = spacerIndex > -1 ? this.settings.controllerStructure.slice(0, spacerIndex) : null,
     rightSideControls = spacerIndex > -1 ? this.settings.controllerStructure.slice(spacerIndex + 1) : null,
     //breaking HTML into smaller units to use as building blocks
-    overlayControlsContainerBuild = this.videoContainer.querySelector(".T_M_G-video-overlay-controls-container"),
-    controlsContainerBuild = this.videoContainer.querySelector(".T_M_G-video-controls-container"),
+    overlayControlsContainerBuild = this.queryDOM(".T_M_G-video-overlay-controls-container"),
+    controlsContainerBuild = this.queryDOM(".T_M_G-video-controls-container"),
     notifiersContainerBuild = this.settings.status.ui.notifiers ? document.createElement("div") : null,
     overlayMainControlsWrapperBuild = document.createElement("div"),
     controlsWrapperBuild = document.createElement("div"),
@@ -1031,85 +992,90 @@ class _T_M_G_Video_Player {
     controlsContainerBuild.append(controlsWrapperBuild)                    
   }
 
+  queryDOM(query, isPseudo = false) {
+    return (isPseudo ? this.pseudoVideoContainer : this.videoContainer).querySelector(query)
+  }
+
   retrieveVideoPlayerDOM() {
+    const { ui, modes } = this.settings.status;
     this.DOM = {
       video: this.video,
       videoContainer : this.videoContainer,
-      videoContainerContentWrapper: this.videoContainer.querySelector(".T_M_G-video-container-content-wrapper"),
-      videoContainerContent: this.videoContainer.querySelector(".T_M_G-video-container-content"),
-      videoTitleWrapper: this.videoContainer.querySelector(".T_M_G-video-title-wrapper"),
-      videoTitle: this.videoContainer.querySelector(".T_M_G-video-title"),
-      videoTitle: this.videoContainer.querySelector(".T_M_G-video-title"),
-      thumbnailImg : this.videoContainer.querySelector(".T_M_G-video-thumbnail-image"),
-      thumbnailCanvas : this.videoContainer.querySelector(".T_M_G-video-thumbnail-canvas"),
-      videoBuffer : this.videoContainer.querySelector(".T_M_G-video-buffer"),
-      notifiersContainer: this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-notifiers-container") : null,
-      playNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-play-notifier") : null,
-      pauseNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-pause-notifier") : null,
-      captionsNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-captions-notifier") : null,
-      objectFitNotifier: this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-object-fit-notifier") : null,
-      playbackRateNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-playback-rate-notifier") : null,
-      volumeNotifierContent : this.settings.status.ui.notifiers ?  this.videoContainer.querySelector(".T_M_G-video-volume-notifier-content") : null,
-      volumeUpNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-volume-up-notifier") : null,
-      volumeDownNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-volume-down-notifier") : null,
-      volumeMutedNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-volume-muted-notifier") : null,
-      brightnessNotifierContent : this.settings.status.ui.notifiers ?  this.videoContainer.querySelector(".T_M_G-video-brightness-notifier-content") : null,
-      brightnessUpNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-brightness-up-notifier") : null,
-      brightnessDownNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-brightness-down-notifier") : null,
-      brightnessDarkNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-brightness-dark-notifier") : null,
-      fwdNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-fwd-notifier") : null,
-      bwdNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-bwd-notifier") : null,
-      scrubNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-scrub-notifier") : null,
-      touchTimelineNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-touch-timeline-notifier") : null,
-      touchVolumeContent : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-touch-volume-content") : null,
-      touchVolumeNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-touch-volume-notifier") : null,
-      touchVolumeSlider : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-touch-volume-slider") : null,
-      touchBrightnessContent : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-touch-brightness-content") : null,
-      touchBrightnessNotifier : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-touch-brightness-notifier") : null,
-      touchBrightnessSlider : this.settings.status.ui.notifiers ? this.videoContainer.querySelector(".T_M_G-video-touch-brightness-slider") : null,
-      videoOverlayControlsContainer: this.videoContainer.querySelector(".T_M_G-video-overlay-controls-container"),
-      videoOverlayMainControlsWrapper: this.videoContainer.querySelector(".T_M_G-video-overlay-main-controls-wrapper"),
-      videoControlsContainer : this.videoContainer.querySelector(".T_M_G-video-controls-container"),
-      videoControlsWrapper : this.settings.status.ui.leftSideControls || this.settings.status.ui.rightSideControls ? this.videoContainer.querySelector(".T_M_G-video-controls-wrapper") : null,
-      leftSideControlsWrapper : this.settings.status.ui.leftSideControls ? this.videoContainer.querySelector(".T_M_G-video-left-side-controls-wrapper") : null,
-      rightSideControlsWrapper : this.settings.status.ui.rightSideControls ? this.videoContainer.querySelector(".T_M_G-video-right-side-controls-wrapper") : null,
-      pictureInPictureWrapper : this.videoContainer.querySelector(".T_M_G-video-picture-in-picture-wrapper"),
-      pictureInPictureActiveIconWrapper : this.videoContainer.querySelector(".T_M_G-video-picture-in-picture-icon-wrapper"),
-      cueContainer: this.videoContainer.querySelector(".T_M_G-video-cue-container"),
-      fullScreenOrientationBtn : this.settings.status.ui.fullScreen ? this.videoContainer.querySelector(".T_M_G-video-full-screen-orientation-btn") : null,
-      miniPlayerExpandBtn : this.settings.status.modes.miniPlayer ? this.videoContainer.querySelector(".T_M_G-video-mini-player-expand-btn") : null,
-      miniPlayerCancelBtn : this.settings.status.modes.miniPlayer ? this.videoContainer.querySelector(".T_M_G-video-mini-player-cancel-btn") : null,
-      mainPrevBtn : this.settings.status.ui.prev ? this.videoContainer.querySelector(".T_M_G-video-main-prev-btn") : null,
-      mainPlayPauseBtn : this.settings.status.ui.playPause ? this.videoContainer.querySelector(".T_M_G-video-main-play-pause-btn") : null,
-      mainNextBtn : this.settings.status.ui.next ? this.videoContainer.querySelector(".T_M_G-video-main-next-btn") : null,
-      timelineContainer : this.settings.status.ui.timeline ? this.videoContainer.querySelector(".T_M_G-video-timeline-container") : null,
-      previewContainer : this.settings.status.ui.timeline ? this.videoContainer.querySelector(".T_M_G-video-preview-container") : null,
-      previewImg : this.settings.status.ui.timeline ? this.videoContainer.querySelector(".T_M_G-video-preview-image") : null,
-      previewCanvas : this.settings.status.ui.timeline ? this.videoContainer.querySelector(".T_M_G-video-preview-canvas") : null,
-      prevBtn : this.settings.status.ui.prev ? this.videoContainer.querySelector(".T_M_G-video-prev-btn") : null,
-      playPauseBtn : this.settings.status.ui.playPause ? this.videoContainer.querySelector(".T_M_G-video-play-pause-btn") : null,
-      nextBtn : this.settings.status.ui.next ? this.videoContainer.querySelector(".T_M_G-video-next-btn") : null,
-      objectFitBtn : this.settings.status.ui.objectFit ? this.videoContainer.querySelector(".T_M_G-video-object-fit-btn") : null,
-      volumeContainer : this.settings.status.ui.volume ? this.videoContainer.querySelector(".T_M_G-video-volume-container") : null,
-      volumeSlider : this.settings.status.ui.volume ? this.videoContainer.querySelector(".T_M_G-video-volume-slider") : null,
-      brightnessContainer : this.settings.status.ui.brightness ? this.videoContainer.querySelector(".T_M_G-video-brightness-container") : null,
-      brightnessSlider : this.settings.status.ui.brightness ? this.videoContainer.querySelector(".T_M_G-video-brightness-slider") : null,
-      durationContainer : this.settings.status.ui.duration ? this.videoContainer.querySelector(".T_M_G-video-duration-container") : null,
-      currentTimeElement : this.settings.status.ui.duration ? this.videoContainer.querySelector(".T_M_G-video-current-time") : null,
-      totalTimeElement : this.settings.status.ui.duration ? this.videoContainer.querySelector(".T_M_G-video-total-time") : null,
-      muteBtn : this.settings.status.ui.volume ? this.videoContainer.querySelector(".T_M_G-video-mute-btn") : null,
-      darkBtn : this.settings.status.ui.volume ? this.videoContainer.querySelector(".T_M_G-video-dark-btn") : null,
-      captionsBtn : this.settings.status.ui.captions ?  this.videoContainer.querySelector(".T_M_G-video-captions-btn") : null,
-      settingsBtn : this.settings.status.ui.settings ? this.videoContainer.querySelector(".T_M_G-video-settings-btn") : null,
-      playbackRateBtn : this.settings.status.ui.playbackRate ? this.videoContainer.querySelector(".T_M_G-video-playback-rate-btn") : null,
-      pictureInPictureBtn : this.settings.status.ui.pictureInPicture ? this.videoContainer.querySelector(".T_M_G-video-picture-in-picture-btn") : null,
-      theaterBtn : this.settings.status.ui.theater ? this.videoContainer.querySelector(".T_M_G-video-theater-btn") : null,
-      fullScreenBtn : this.settings.status.ui.fullScreen ? this.videoContainer.querySelector(".T_M_G-video-full-screen-btn") : null,
+      videoContainerContentWrapper: this.queryDOM(".T_M_G-video-container-content-wrapper"),
+      videoContainerContent: this.queryDOM(".T_M_G-video-container-content"),
+      videoTitleWrapper: this.queryDOM(".T_M_G-video-title-wrapper"),
+      videoTitle: this.queryDOM(".T_M_G-video-title"),
+      videoTitle: this.queryDOM(".T_M_G-video-title"),
+      thumbnailImg : this.queryDOM(".T_M_G-video-thumbnail-image"),
+      thumbnailCanvas : this.queryDOM(".T_M_G-video-thumbnail-canvas"),
+      videoBuffer : this.queryDOM(".T_M_G-video-buffer"),
+      notifiersContainer: ui.notifiers ? this.queryDOM(".T_M_G-video-notifiers-container") : null,
+      playNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-play-notifier") : null,
+      pauseNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-pause-notifier") : null,
+      captionsNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-captions-notifier") : null,
+      objectFitNotifier: ui.notifiers ? this.queryDOM(".T_M_G-video-object-fit-notifier") : null,
+      playbackRateNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-playback-rate-notifier") : null,
+      volumeNotifierContent : ui.notifiers ?  this.queryDOM(".T_M_G-video-volume-notifier-content") : null,
+      volumeUpNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-volume-up-notifier") : null,
+      volumeDownNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-volume-down-notifier") : null,
+      volumeMutedNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-volume-muted-notifier") : null,
+      brightnessNotifierContent : ui.notifiers ?  this.queryDOM(".T_M_G-video-brightness-notifier-content") : null,
+      brightnessUpNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-brightness-up-notifier") : null,
+      brightnessDownNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-brightness-down-notifier") : null,
+      brightnessDarkNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-brightness-dark-notifier") : null,
+      fwdNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-fwd-notifier") : null,
+      bwdNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-bwd-notifier") : null,
+      scrubNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-scrub-notifier") : null,
+      touchTimelineNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-touch-timeline-notifier") : null,
+      touchVolumeContent : ui.notifiers ? this.queryDOM(".T_M_G-video-touch-volume-content") : null,
+      touchVolumeNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-touch-volume-notifier") : null,
+      touchVolumeSlider : ui.notifiers ? this.queryDOM(".T_M_G-video-touch-volume-slider") : null,
+      touchBrightnessContent : ui.notifiers ? this.queryDOM(".T_M_G-video-touch-brightness-content") : null,
+      touchBrightnessNotifier : ui.notifiers ? this.queryDOM(".T_M_G-video-touch-brightness-notifier") : null,
+      touchBrightnessSlider : ui.notifiers ? this.queryDOM(".T_M_G-video-touch-brightness-slider") : null,
+      videoOverlayControlsContainer: this.queryDOM(".T_M_G-video-overlay-controls-container"),
+      videoOverlayMainControlsWrapper: this.queryDOM(".T_M_G-video-overlay-main-controls-wrapper"),
+      videoControlsContainer : this.queryDOM(".T_M_G-video-controls-container"),
+      videoControlsWrapper : ui.leftSideControls || ui.rightSideControls ? this.queryDOM(".T_M_G-video-controls-wrapper") : null,
+      leftSideControlsWrapper : ui.leftSideControls ? this.queryDOM(".T_M_G-video-left-side-controls-wrapper") : null,
+      rightSideControlsWrapper : ui.rightSideControls ? this.queryDOM(".T_M_G-video-right-side-controls-wrapper") : null,
+      pictureInPictureWrapper : this.queryDOM(".T_M_G-video-picture-in-picture-wrapper"),
+      pictureInPictureActiveIconWrapper : this.queryDOM(".T_M_G-video-picture-in-picture-icon-wrapper"),
+      cueContainer: this.queryDOM(".T_M_G-video-cue-container"),
+      fullScreenOrientationBtn : ui.fullScreen ? this.queryDOM(".T_M_G-video-full-screen-orientation-btn") : null,
+      miniPlayerExpandBtn : modes.miniPlayer ? this.queryDOM(".T_M_G-video-mini-player-expand-btn") : null,
+      miniPlayerCancelBtn : modes.miniPlayer ? this.queryDOM(".T_M_G-video-mini-player-cancel-btn") : null,
+      mainPrevBtn : ui.prev ? this.queryDOM(".T_M_G-video-main-prev-btn") : null,
+      mainPlayPauseBtn : ui.playPause ? this.queryDOM(".T_M_G-video-main-play-pause-btn") : null,
+      mainNextBtn : ui.next ? this.queryDOM(".T_M_G-video-main-next-btn") : null,
+      timelineContainer : ui.timeline ? this.queryDOM(".T_M_G-video-timeline-container") : null,
+      previewContainer : ui.timeline ? this.queryDOM(".T_M_G-video-preview-container") : null,
+      previewImg : ui.timeline ? this.queryDOM(".T_M_G-video-preview-image") : null,
+      previewCanvas : ui.timeline ? this.queryDOM(".T_M_G-video-preview-canvas") : null,
+      prevBtn : ui.prev ? this.queryDOM(".T_M_G-video-prev-btn") : null,
+      playPauseBtn : ui.playPause ? this.queryDOM(".T_M_G-video-play-pause-btn") : null,
+      nextBtn : ui.next ? this.queryDOM(".T_M_G-video-next-btn") : null,
+      objectFitBtn : ui.objectFit ? this.queryDOM(".T_M_G-video-object-fit-btn") : null,
+      volumeContainer : ui.volume ? this.queryDOM(".T_M_G-video-volume-container") : null,
+      volumeSlider : ui.volume ? this.queryDOM(".T_M_G-video-volume-slider") : null,
+      brightnessContainer : ui.brightness ? this.queryDOM(".T_M_G-video-brightness-container") : null,
+      brightnessSlider : ui.brightness ? this.queryDOM(".T_M_G-video-brightness-slider") : null,
+      durationContainer : ui.duration ? this.queryDOM(".T_M_G-video-duration-container") : null,
+      currentTimeElement : ui.duration ? this.queryDOM(".T_M_G-video-current-time") : null,
+      totalTimeElement : ui.duration ? this.queryDOM(".T_M_G-video-total-time") : null,
+      muteBtn : ui.volume ? this.queryDOM(".T_M_G-video-mute-btn") : null,
+      darkBtn : ui.volume ? this.queryDOM(".T_M_G-video-dark-btn") : null,
+      captionsBtn : ui.captions ?  this.queryDOM(".T_M_G-video-captions-btn") : null,
+      settingsBtn : ui.settings ? this.queryDOM(".T_M_G-video-settings-btn") : null,
+      playbackRateBtn : ui.playbackRate ? this.queryDOM(".T_M_G-video-playback-rate-btn") : null,
+      pictureInPictureBtn : ui.pictureInPicture ? this.queryDOM(".T_M_G-video-picture-in-picture-btn") : null,
+      theaterBtn : ui.theater ? this.queryDOM(".T_M_G-video-theater-btn") : null,
+      fullScreenBtn : ui.fullScreen ? this.queryDOM(".T_M_G-video-full-screen-btn") : null,
       svgs : this.videoContainer.querySelectorAll("svg"),
       focusableControls: this.videoContainer.querySelectorAll("[data-focusable-control]"),
-      draggableControls: this.settings.status.ui.draggableControls ? this.videoContainer.querySelectorAll("[data-draggable-control]") : null,
-      draggableControlContainers: this.settings.status.ui.draggableControls ? this.videoContainer.querySelectorAll(".T_M_G-video-side-controls-wrapper") : null,
-      settingsCloseBtn: this.settings ? this.videoContainer.querySelector(".T_M_G-video-settings-close-btn") : null,
+      draggableControls: ui.draggableControls ? this.videoContainer.querySelectorAll("[data-draggable-control]") : null,
+      draggableControlContainers: ui.draggableControls ? this.videoContainer.querySelectorAll(".T_M_G-video-side-controls-wrapper") : null,
+      settingsCloseBtn: this.settings ? this.queryDOM(".T_M_G-video-settings-close-btn") : null,
     }                  
   }
 
@@ -1122,6 +1088,7 @@ class _T_M_G_Video_Player {
     else {
       this.setVideoTitleState()
       this.setVideoEventListeners()
+      this.setBtnsState()
     }
     if (this.initialState && this.video.paused) this.addInitialState()
     else this.initializeVideoControls()
@@ -1189,8 +1156,7 @@ class _T_M_G_Video_Player {
         }
         if (track.mode === "showing") {
           this.textTrackIndex = index
-          track.mode = "hidden"
-          return
+          return track.mode = "hidden"
         }
         track.mode = "hidden"
       })
@@ -1642,7 +1608,7 @@ class _T_M_G_Video_Player {
     this.disableFocusableControls("all")
     this.removeKeyEventListeners("all")
     this.disabled = true
-    this.log("You have to enable the TMG controller to access the custom controls", "warn")
+    this.log("You have to enable the TMG Player to access the custom controls", "warn")
   }
 
   enable() {
@@ -1892,9 +1858,9 @@ class _T_M_G_Video_Player {
         playlistToastContainer.style.removeProperty("opacity")
         isPaused = false
       },
-      playlistNextVideoPreviewWrapper = this.videoContainer.querySelector(".T_M_G-video-playlist-next-video-preview-wrapper"),
-      playlistNextVideoCountdown = this.videoContainer.querySelector(".T_M_G-video-playlist-next-video-countdown"),
-      playlistNextVideoCancelBtn = this.videoContainer.querySelector(".T_M_G-video-playlist-next-video-cancel-btn")
+      playlistNextVideoPreviewWrapper = this.queryDOM(".T_M_G-video-playlist-next-video-preview-wrapper"),
+      playlistNextVideoCountdown = this.queryDOM(".T_M_G-video-playlist-next-video-countdown"),
+      playlistNextVideoCancelBtn = this.queryDOM(".T_M_G-video-playlist-next-video-cancel-btn")
 
       let isPaused = false, shouldUnPause, lastTime, pointerStartX, pointerDeltaX,
       constraint = 0,
@@ -1947,8 +1913,12 @@ class _T_M_G_Video_Player {
     this.fire("objectfitchange")  
   }
 
-  async togglePlay(bool) {      
-    this.video.ended ? this.replay() : typeof bool == "boolean" ? await this.video[bool ? 'play' : 'pause']() : await this.video[this.video.paused ? 'play' : 'pause']()   
+  async togglePlay(bool) {
+    try { 
+      this.video.ended ? this.replay() : typeof bool == "boolean" ? await this.video[bool ? 'play' : 'pause']() : await this.video[this.video.paused ? 'play' : 'pause']()
+    } catch(e) {
+      this.video.error ? this._handleLoadedError() : this.log(e, "error", "swallow")
+    }
   }
 
   replay() {      
@@ -2161,7 +2131,6 @@ class _T_M_G_Video_Player {
   }
 
   moveVideoFrame(dir = "forwards") {
-
     if (!this.video.paused) return;
     this.throttle("frameStepping", () => {
       if (!this.video.paused) return;
@@ -2171,15 +2140,14 @@ class _T_M_G_Video_Player {
       this.currentTime = Math.min(maxFrame, Math.max(0, frame + delta)) / this.fps;
     }, this.frameStepThrottleDelay)
   }
-      
-  togglePlaybackRate(dir = "forwards") {
 
-      const delta = dir === "backwards" ? -0.25 : 0.25;
-      this.DOM.playbackRateNotifier?.classList.toggle("T_M_G-video-rewind", dir === "backwards");
-      let rate = this.video.playbackRate + delta;
-      if (rate < 0.25) rate = 2;
-      else if (rate > 2) rate = 0.25;
-      this.video.playbackRate = rate;
+  togglePlaybackRate(dir = "forwards") {
+    const delta = dir === "backwards" ? -0.25 : 0.25;
+    this.DOM.playbackRateNotifier?.classList.toggle("T_M_G-video-rewind", dir === "backwards");
+    let rate = this.video.playbackRate + delta;
+    if (rate < 0.25) rate = 2;
+    else if (rate > 2) rate = 0.25;
+    this.video.playbackRate = rate;
   }
 
   changePlaybackRate(value) {    
@@ -2266,6 +2234,7 @@ class _T_M_G_Video_Player {
 
   toggleCaptions() {      
     if (this.video.textTracks[this.textTrackIndex]) this.videoContainer.classList.toggle("T_M_G-video-captions")
+    else this.previewCaptions("No captions available for this video")
   }
 
   updateCaptionsSettings() {
@@ -2273,10 +2242,11 @@ class _T_M_G_Video_Player {
     this.videoCaptionsMaxSize = this.settings.maxCaptionsSize
   }
 
-  previewCaptions() {
+  previewCaptions(show = "") {
     this.videoContainer.classList.add("T_M_G-video-captions-preview")
-    if (!this.videoContainer.classList.contains("T_M_G-video-captions") || !this.DOM.cueContainer.innerHTML) this._handleCueChange({ text: "Captions will look like this!" })
-    setTimeout(() => this.videoContainer.classList.remove("T_M_G-video-captions-preview"), 1500)
+    if (!this.videoContainer.classList.contains("T_M_G-video-captions") || !this.DOM.cueContainer.innerHTML) this._handleCueChange({ text: show || `${tmg.capitalize(this.videoContainer.dataset.trackKind) || 'Captions'} look like this` })
+    if (this.previewCaptionsTimeoutId) clearTimeout(this.previewCaptionsTimeoutId)
+    this.previewCaptionsTimeoutId = setTimeout(() => this.videoContainer.classList.remove("T_M_G-video-captions-preview"), 1500)
   }
 
   changeCaptionsSize(value) {
@@ -2730,7 +2700,7 @@ class _T_M_G_Video_Player {
   }
 
   async initFloatingPlayer() {
-    if (!this.floatingPlayerActive) {
+    if (this.floatingPlayerActive) return
     documentPictureInPicture.window?.close?.()
     this.toggleMiniPlayerMode(false)
 
@@ -2739,7 +2709,7 @@ class _T_M_G_Video_Player {
     this.floatingPlayer = await documentPictureInPicture.requestWindow(this.floatingPlayerOptions)
     
     this.pseudoVideoContainer.append(this.DOM.pictureInPictureWrapper.cloneNode(true))
-    this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-icon-wrapper").addEventListener("click", this.toggleFloatingPlayer)
+    this.queryDOM(".T_M_G-video-picture-in-picture-icon-wrapper", true).addEventListener("click", this.toggleFloatingPlayer)
     this.activatePseudoMode()
 
     this.videoContainer.classList.add("T_M_G-video-progress-bar", "T_M_G-video-floating-player")
@@ -2767,21 +2737,19 @@ class _T_M_G_Video_Player {
     this.floatingPlayer?.addEventListener("resize", this._handleMediaParentResize)
     this.floatingPlayer?.addEventListener("wheel", this._handleGestureWheel, {passive: false})
     this.setKeyEventListeners("floating")
-    }
   }
 
   _handleFloatingPlayerClose() {
-    if (this.floatingPlayerActive) {
+    if (!this.floatingPlayerActive) return
     this.floatingPlayerActive = false
 
     this.videoContainer.classList.toggle("T_M_G-video-progress-bar", this.settings.progressBar)
     this.videoContainer.classList.remove("T_M_G-video-floating-player")
 
     this.deactivatePseudoMode()
-    this.pseudoVideoContainer.querySelector(".T_M_G-video-picture-in-picture-wrapper").remove()
+    this.queryDOM(".T_M_G-video-picture-in-picture-wrapper", true).remove()
     
     this.toggleMiniPlayerMode()
-    }  
   }   
 
   expandMiniPlayer() {
@@ -2789,7 +2757,7 @@ class _T_M_G_Video_Player {
   }
 
   cancelMiniPlayer() {
-    if (!this.video.paused) this.togglePlay(false)
+    this.togglePlay(false)
     this.toggleMiniPlayerMode(false)
   }
 
@@ -2804,8 +2772,7 @@ class _T_M_G_Video_Player {
       return
     } 
     if ((this.isModeActive("miniPlayer") && this.parentIntersecting) || (this.isModeActive("miniPlayer") && window.innerWidth < this.settings.miniPlayerThreshold) || (bool === false && this.isModeActive("miniPlayer"))) {
-      if (behaviour) 
-      this.pseudoVideoContainer.scrollIntoView({behavior: behaviour, block: "center", inline: "center"})// british and american spellings :(
+      if (behaviour && tmg.isInViewport(this.pseudoVideoContainer)) this.pseudoVideoContainer.scrollIntoView({behavior: behaviour, block: "center", inline: "center"}) // british and american spellings :(
       this.deactivatePseudoMode()
       this.videoContainer.classList.toggle("T_M_G-video-progress-bar", this.settings.progressBar)
       this.videoContainer.classList.remove("T_M_G-video-mini-player")
@@ -3218,15 +3185,15 @@ class _T_M_G_Video_Player {
   }
 
   keyEventAllowed(e) {
+    // UI safety checks
+    if ((e.key === " " || e.key === "Enter") && e.currentTarget.document.activeElement?.tagName === 'BUTTON') return false;
+    if (e.currentTarget.document.activeElement?.matches("input,textarea,[contenteditable='true']")) return false;
     const combo = tmg.stringifyKeyCombo(e);
     const { override, block, action, allowed } = this.getTermsForCombo(combo);
-    // Special case: prevent default for overrides
-    if (override) e.preventDefault();
     // Special case: stop for blocks
     if (block) return false;
-    // UI safety checks
-    if ((e.key === " " || e.key === "Enter") && e.currentTarget.activeElement?.tagName === 'BUTTON') return false;
-    if (e.currentTarget.activeElement?.matches("input,textarea,[contenteditable='true']")) return false;
+    // Special case: prevent default for overrides
+    if (override) e.preventDefault();
     if (action) return action
     // inner system defaults
     if (allowed) return e.key.toLowerCase();
@@ -3355,10 +3322,11 @@ class _T_M_G_Video_Player {
         this.togglePictureInPictureMode()
         break
       case "captions":
-        if (this.video.textTracks[this.textTrackIndex] && !this.isModeActive("pictureInPicture")) {
+        if (!this.isModeActive("pictureInPicture"))
+        if (this.video.textTracks[this.textTrackIndex]) {
         this.toggleCaptions()
         this.fire("captions")
-        }
+        } else this.previewCaptions("No captions available for this video")
         break
       case "settings":
         this.toggleSettingsView() 
@@ -3693,7 +3661,7 @@ class _T_M_G_Media_Player {
       this.Player.fire("tmgready", this.#medium, {loaded: true})
     } else {
       console.error(`TMG could not deploy custom controls on the '${this.#medium.tagName}' element as it is not supported`)
-      console.warn("TMG only supports the 'video' element currently")
+      console.warn("TMG only supports the 'VIDEO' element currently")
     }
     }
   }
@@ -4172,11 +4140,23 @@ class tmg {
     }
     return Array.isArray(required) ? required.some(req => match(req, actual)) : match(required, actual)
   }
-  static camelizeString(str, seperator = " ") {  
+  static capitalize(word = "") {
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }
+  static camelize(str, seperator = " ") {  
     return str.toLowerCase().replace(/^\w|\b\w/g, (match, index) => index === 0 ? match.toLowerCase() : match.toUpperCase()).replaceAll(seperator, "")  
   }
-  static uncamelizeString(str, separator = " ") {
+  static uncamelize(str, separator = " ") {
     return str.replace(/(?:[a-z])(?:[A-Z])/g, match => `${match[0]}${separator ?? " "}${match[1].toLowerCase()}`)
+  }
+  static isInViewport(el) {
+    const rect = el.getBoundingClientRect();
+    return (
+      rect.top >= 0 &&
+      rect.left >= 0 &&
+      rect.bottom <= (el.ownerDocument.defaultView.innerHeight || document.documentElement.clientHeight) &&
+      rect.right <= (el.ownerDocument.defaultView.innerWidth || document.documentElement.clientWidth)
+    );
   }
   static getRenderedBox(elem) {
     function getResourceDimensions(source) {

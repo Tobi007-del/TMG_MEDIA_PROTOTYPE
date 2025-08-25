@@ -619,7 +619,8 @@ body:has(.T_M_G-video-container.T_M_G-video-mini-player) .T_M_G-pseudo-video-con
   --T_M_G-video-border-radius: 0;
 }
 
-body:has(.T_M_G-video-floating-player) {
+body:where(:has(.T_M_G-video-floating-player)) {
+  font-family: system-ui, sans-serif;
   background-color: black;
   padding: 0; 
   margin: 0;
@@ -888,7 +889,7 @@ body:has(.T_M_G-video-floating-player) {
   top: 0;
   left: 0;
   width: 100%;
-  padding-block: calc(var(--T_M_G-video-current-unit)/1.5);
+  padding-block: calc(var(--T_M_G-video-current-unit)/1.75);
   color: var(--T_M_G-video-text-color);
   font-size: calc(var(--T_M_G-video-current-unit)/1.25);
   font-weight: 500;
@@ -1326,6 +1327,7 @@ body:has(.T_M_G-video-floating-player) {
 
 .T_M_G-video-side-controls-wrapper {
   display: flex;
+  align-items: center;
   gap: var(--T_M_G-video-current-controls-gap);
   padding-block: calc(var(--T_M_G-video-current-unit)/2.5);
   padding-inline: calc(var(--T_M_G-video-current-controls-gap)/2);
@@ -1336,7 +1338,7 @@ body:has(.T_M_G-video-floating-player) {
 }
 
 .T_M_G-video-right-side-controls-wrapper {
-  padding-right: var(--T_M_G-video-current-controls-gap)
+  padding-right: var(--T_M_G-video-current-controls-gap);
 }
 
 .T_M_G-video-right-side-controls-wrapper > [data-spacer="true"] {
