@@ -1,6 +1,6 @@
 {
   "media": {
-    "title": "Justice League Teaser", 
+    "title": "Justice League Teaser",
     "author": "TMG MEDIA PROTOTYPE 2",
     "artwork": [
       {
@@ -13,7 +13,7 @@
     "progressBar": true,
     "beta": true,
     "previewImages": {
-      "address": "../assets/previewImgs/preview$.jpg", 
+      "address": "../assets/previewImgs/preview$.jpg",
       "fps": 10
     }
   }

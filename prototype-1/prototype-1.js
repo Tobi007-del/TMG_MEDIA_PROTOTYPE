@@ -1,11 +1,11 @@
-const videos = document.querySelectorAll("video")
-const mobileThreshold = 600
+const videos = document.querySelectorAll("video");
+const mobileThreshold = 600;
 
-videos.forEach((video,i) => {
-    if (video.dataset.controls === "tmg-controls") {
-        const videoContainer = document.createElement('div')
-        videoContainer.classList = "video-container paused"
-        videoContainer.innerHTML = `<img class="thumbnail-img" alt="movie-image">
+videos.forEach((video, i) => {
+  if (video.dataset.controls === "tmg-controls") {
+    const videoContainer = document.createElement("div");
+    videoContainer.classList = "video-container paused";
+    videoContainer.innerHTML = `<img class="thumbnail-img" alt="movie-image">
         <div class="notifiers-container" data-current-notifier="">
             <div class="notifiers play-notifier">
                 <svg class="play-notifier-icon" data-tooltip-text="Play(k)" data-tooltip-position="top">
@@ -134,606 +134,618 @@ videos.forEach((video,i) => {
                     </svg>
                 </button>
             </div>
-        </div>`
-        const parentDiv = video.parentNode;
-        parentDiv.insertBefore(videoContainer, video)
-        videoContainer.append(video)
+        </div>`;
+    const parentDiv = video.parentNode;
+    parentDiv.insertBefore(videoContainer, video);
+    videoContainer.append(video);
 
-        const replayBtn = videoContainer.querySelector(".replay-btn") 
-        const playPauseBtn = videoContainer.querySelector(".play-pause-btn")
-        const theaterBtn = videoContainer.querySelector(".theater-btn")
-        const fullScreenBtn = videoContainer.querySelector(".full-screen-btn")
-        const pictureInPictureBtn = videoContainer.querySelector(".picture-in-picture-btn")
-        const miniPlayerExpandBtn = videoContainer.querySelector(".mini-player-expand-btn")
-        const miniPlayerCancelBtn = videoContainer.querySelector(".mini-player-cancel-btn")
-        const muteBtn = videoContainer.querySelector(".mute-btn")
-        const captionsBtn = videoContainer.querySelector(".captions-btn")
-        const speedBtn = videoContainer.querySelector(".speed-btn")
-        const currentTimeElem = videoContainer.querySelector(".current-time")
-        const totalTimeElem = videoContainer.querySelector(".total-time")
-        const previewImg = videoContainer.querySelector(".preview-img")
-        const thumbnailImg = videoContainer.querySelector(".thumbnail-img")
-        const volumeSlider = videoContainer.querySelector(".volume-slider")
-        const previewImgContainer = videoContainer.querySelector(".preview-img-container")
-        const timelineContainer = videoContainer.querySelector(".timeline-container")
-        const svgs = videoContainer.querySelectorAll("svg")
-        const notifiersContainer = videoContainer.querySelector(".notifiers-container")
+    const replayBtn = videoContainer.querySelector(".replay-btn");
+    const playPauseBtn = videoContainer.querySelector(".play-pause-btn");
+    const theaterBtn = videoContainer.querySelector(".theater-btn");
+    const fullScreenBtn = videoContainer.querySelector(".full-screen-btn");
+    const pictureInPictureBtn = videoContainer.querySelector(".picture-in-picture-btn");
+    const miniPlayerExpandBtn = videoContainer.querySelector(".mini-player-expand-btn");
+    const miniPlayerCancelBtn = videoContainer.querySelector(".mini-player-cancel-btn");
+    const muteBtn = videoContainer.querySelector(".mute-btn");
+    const captionsBtn = videoContainer.querySelector(".captions-btn");
+    const speedBtn = videoContainer.querySelector(".speed-btn");
+    const currentTimeElem = videoContainer.querySelector(".current-time");
+    const totalTimeElem = videoContainer.querySelector(".total-time");
+    const previewImg = videoContainer.querySelector(".preview-img");
+    const thumbnailImg = videoContainer.querySelector(".thumbnail-img");
+    const volumeSlider = videoContainer.querySelector(".volume-slider");
+    const previewImgContainer = videoContainer.querySelector(".preview-img-container");
+    const timelineContainer = videoContainer.querySelector(".timeline-container");
+    const svgs = videoContainer.querySelectorAll("svg");
+    const notifiersContainer = videoContainer.querySelector(".notifiers-container");
 
-
-        //resizing controls
-        function controlsResize() {           
-            let controlsSize = 25;
-            // controlsSize = getComputedStyle(videoContainer).getPropertyValue("--controls-size")
-            svgs.forEach(svg => {
-                svg.setAttribute("preserveAspectRatio", "xMidYMid meet")
-                if(!svg.classList.contains("settings-icon"))
-                if(!svg.classList.contains("mini-player-expand-icon"))  
-                if(!svg.classList.contains("mini-player-cancel-icon"))
-                if(!svg.classList.contains("replay-icon")) 
-                if(!svg.classList.contains("fwd-notifier-icon")) 
-                if(!svg.classList.contains("bwd-notifier-icon"))
-                    svg.setAttribute("viewBox", `0 0 ${controlsSize} ${controlsSize}`)
-            })
-        }
-        controlsResize()
-        //skip variable for time skips
-        let skipped;
-        
-        //variable to check if video is in view
-        let videoInView = true;
-
-        //a variable containing the delay for all delay required events
-        let notifierDelay = getComputedStyle(notifiersContainer).getPropertyValue("--delay")
-        notifierDelay = notifierDelay.replace("s","")
-        notifierDelay = Number(notifierDelay)*1000
-
-        //a debounce function to prevent execution too many keypresses at a given time
-        const debounceKeyPresses = (mainFunction, delay = notifierDelay) => {
-            let timer;
-            return function(...args) {
-                //Clear the timeout of previeous timer to prevent the execution of 'mainFunction'
-                clearTimeout(timer)
-
-                timer = setTimeout(() => {
-                    mainFunction(...args)
-                }, delay)
-            }
-        }
-        //a throttle function to limit number of clicks in a certain time
-        const throttleKeyPresses = (mainFunction, delay = notifierDelay) => {
-            let runTimerFlag = null;
-            return function(...args) {
-                if (runTimerFlag === null) {
-                    mainFunction(...args)
-                    runTimerFlag = setTimeout(() => {
-                        runTimerFlag = null
-                    }, delay)
-                }
-            }
-        }
-
-        document.addEventListener("keydown", throttleKeyPresses(function(e) {
-        if(videoInView) {
-            const tagName = document.activeElement.tagName.toLowerCase()
-        
-            if(tagName === "input") return
-        
-            switch (e.key.toLowerCase()) {
-                case " ":
-                    if(tagName === "button") return
-                e.preventDefault()
-                case "p":
-                case "l":
-                case "a":
-                case "y":
-                case "k":
-                    togglePlay()
-                    break
-                case "f":
-                    toggleFullScreenMode()
-                    break
-                case "t":
-                    toggleTheaterMode()
-                    break
-                case "e":
-                    expandMiniPlayer()
-                    break
-                case "r":
-                    toggleMiniPlayerMode(false)
-                    break
-                case "i":
-                    if(!e.shiftKey)
-                        togglePictureInPictureMode()
-                        break
-                case "m":
-                    toggleMute()
-                    if(video.muted) fire("volumemuted") 
-                    else fire("volumeup")
-                    break
-                case "s": 
-                    changePlaybackSpeed()
-                    break
-                case "c":
-                    toggleCaptions()
-                    break
-                case "arrowleft":
-                        skip(-5)
-                        skipped = 5
-                        if(e.shiftKey) {
-                            skip(-10)
-                            skipped = 10
-                        }
-                        fire("bwd")
-                        break
-                case "arrowright":
-                    case "":
-                        skip(5)
-                        skipped = 5
-                        if(e.shiftKey) { 
-                            skip(10)
-                            skipped = 10
-                        }
-                        fire("fwd")
-                        break
-                case "arrowup":
-                    e.preventDefault()
-                    if(video.volume < 1) {video.volume += (video.volume*100)%5 ? (0.05 - video.volume%0.05) : 0.05}
-                    fire("volumeup")
-                    break
-                case "arrowdown":
-                    e.preventDefault()
-                    if(video.volume == 0) {
-                        fire("volumemuted")
-                        break
-                    }
-                    if((video.volume*100).toFixed() == 5) {
-                        fire("volumemuted")
-                        video.volume = 0;
-                        break
-                    }
-                    if(video.volume) {video.volume -= ((video.volume*100).toFixed()%5) ? (video.volume%0.05) : 0.05}
-                    fire("volumedown")
-            }
-        }
-        })
-        )
-
-        //Disabling right click
-        video.addEventListener("contextmenu", (e) => {
-            e.preventDefault()
-        })
-        
-        //Loading 
-        video.addEventListener("waiting", () => {
-            videoContainer.classList.add("buffer")
-        })
-        video.addEventListener("playing", () => {
-            videoContainer.classList.remove("buffer")
-        })
-        
-        //Timeline
-        timelineContainer.addEventListener("mousemove", handleTimelineUpdate)
-        // timelineContainer.addEventListener("mousedown", toggleScrubbing)
-        // document.addEventListener("mouseup", e => {
-        //     if (isScrubbing) toggleScrubbing(e)
-        // })
-        // document.addEventListener("mousemove", e => {
-        //     if (isScrubbing) handleTimelineUpdate(e)
-        // })
-        
-        timelineContainer.addEventListener('pointerdown', e => {
-            timelineContainer.setPointerCapture(e.pointerId)
-            isScrubbing = true
-            toggleScrubbing(e)
-            timelineContainer.addEventListener("pointermove", handleTimelineUpdate)
-            timelineContainer.addEventListener("pointerup", (e) => {
-                isScrubbing = false
-                toggleScrubbing(e)
-                timelineContainer.removeEventListener("pointermove",handleTimelineUpdate)
-            },{once:true})
-        })
-        
-        let isScrubbing = false
-        function toggleScrubbing(e) {
-            const rect = timelineContainer.getBoundingClientRect()
-            const percent = Math.min(Math.max(0, e.clientX - rect.x), rect.width) / rect.width
-            // isScrubbing = e.buttons & 1
-            videoContainer.classList.toggle("scrubbing", isScrubbing)
-            if (isScrubbing) {
-                wasPaused = video.paused
-                video.pause()
-            } else {
-                video.currentTime = percent * video.duration
-                if (!wasPaused) video.play()     
-                videoContainer.classList.remove("seeking");
-            }
-        
-            handleTimelineUpdate(e)
-        }
-         
-        function handleTimelineUpdate(e) { 
-            const rect = timelineContainer.getBoundingClientRect()
-            const percent = Math.min(Math.max(0, e.clientX - rect.x), rect.width) / rect.width
-            const previewImgMin = (previewImg.offsetWidth / 2) / rect.width
-            const previewImgPercent = Math.min(Math.max(percent, previewImgMin),(1 - previewImgMin))
-            const previewImgNumber = Math.max(1, Math.floor((percent * video.duration) / 10))
-            const previewImgSrc = `../assets/previewImgs/preview${previewImgNumber}.jpg`
-            previewImg.src = previewImgSrc
-            timelineContainer.style.setProperty("--preview-position", percent)
-            timelineContainer.style.setProperty("--preview-img-position", previewImgPercent)
-        
-            if(isScrubbing) {
-                thumbnailImg.src = previewImgSrc
-                timelineContainer.style.setProperty("--progress-position", percent)
-                videoContainer.classList.add("seeking");
-            }
-        
-            const previewTime = parseInt(percent * video.duration) > 0 ? formatDuration(percent * video.duration) : ''
-            previewImgContainer.dataset.previewTime = previewTime  
-        }
-        
-        //Playback Speed
-        speedBtn.addEventListener("click", changePlaybackSpeed)
-        
-        function changePlaybackSpeed() {
-            let newPlaybackRate = video.playbackRate + .25
-            if (newPlaybackRate > 2) newPlaybackRate = .25
-            video.playbackRate = newPlaybackRate
-        }
-        
-        video.addEventListener("ratechange", () => {
-            speedBtn.textContent = `${video.playbackRate}x`    
-        })
-        
-        //Captions
-        const captions = video.textTracks[0]
-        captions.mode = "hidden"
-        
-        captionsBtn.addEventListener("click", toggleCaptions)
-        
-        function toggleCaptions() {
-            const isHidden = captions.mode === "hidden"
-            captions.mode = isHidden ? "showing" : "hidden"
-            videoContainer.classList.toggle("captions", isHidden)
-        }
-        
-        //Duration
-        video.addEventListener("loadeddata", () => {
-            totalTimeElem.textContent = formatDuration(video.duration)
-        })
-        
-        video.addEventListener("timeupdate", () => {
-            currentTimeElem.textContent = formatDuration(video.currentTime)
-            const percent = video.currentTime / video.duration
-            timelineContainer.style.setProperty("--progress-position", percent)
-            if(video.currentTime < video.duration)
-                videoContainer.classList.remove("replay")
-        })
-        
-        const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
-            minimumIntegerDigits: 2,
-        })
-        
-        function formatDuration(time) {
-            const seconds = Math.floor(time % 60)
-            const minutes = Math.floor(time / 60) % 60
-            const hours = Math.floor(time / 3600)
-            if(hours === 0)
-                return `${minutes}:${leadingZeroFormatter.format(seconds)}`
-            else 
-                return `${hours}:${leadingZeroFormatter.format(minutes)}:${leadingZeroFormatter.format(seconds)}`
-        }
-        
-        function skip(duration) {
-            video.currentTime += duration
-        }
-        
-        //Volume
-        muteBtn.addEventListener("click", toggleMute)
-        
-        volumeSlider.addEventListener("input", e => {
-            video.volume = (e.target.value / 100)
-            video.muted = e.target.value === 0
-        })
-        
-        function toggleMute() {
-            video.muted = !video.muted
-        }
-        
-        video.addEventListener("volumechange", volumeState)
-            
-        function volumeState() {
-            let { min, max, value, offsetWidth } = volumeSlider
-            value = video.volume * 100
-            let volumeLevel = ""
-            if(video.muted || value === 0) {
-                value = 0;
-                volumeLevel = "muted"
-            } else if(value > (max/2)) {
-                volumeLevel = "high"
-            } else {
-                volumeLevel = "low"
-            }
-            let volumePosition = `${((value - min) / (max - min)) * ((offsetWidth - 5) > 0 ? (offsetWidth - 5) : 55) }px`
-            let volumePercent = `${((value-min) / (max - min)) * 100}%`
-            volumeSlider.value = value
-            volumeSlider.dataset.volume = `${value.toFixed()}`
-            videoContainer.querySelectorAll(".volume-up-notifier,.volume-down-notifier,.volume-muted-notifier").forEach((elem) => {
-                elem.dataset.volume = `${value.toFixed()}%`
-            })
-            volumeSlider.style.setProperty("--volume-position", volumePosition)
-            volumeSlider.style.setProperty("--volume-percent", volumePercent)
-            videoContainer.dataset.volumeLevel = volumeLevel
-        }
-        
-        volumeState()
-        
-        video.addEventListener("ended", () => {
-            videoContainer.classList.add("replay")
-        })
-        replayBtn.addEventListener("click", () => {
-            video.currentTime = 0
-            video.play()
-            videoContainer.classList.remove("replay")
-        })
-        
-        // View Modes
-        theaterBtn.addEventListener("click", toggleTheaterMode)
-        fullScreenBtn.addEventListener("click", toggleFullScreenMode)
-        pictureInPictureBtn.addEventListener("click", togglePictureInPictureMode)
-        miniPlayerExpandBtn.addEventListener("click", () => {
-            expandMiniPlayer()
-        })
-        const doubletapToSkip = e => {
-            const rect = video.getBoundingClientRect()
-            if (((e.clientX-rect.left) > (video.offsetWidth*0.65))) {
-                skip(10)
-                skipped = 10
-                fire("fwd")
-            } else if ((e.clientX-rect.left) < (video.offsetWidth*0.35)) {
-                skip(-10)
-                skipped = 10
-                fire("bwd")
-            }
-        }
-
-        const tapHandler = () => {
-        if ((navigator.maxTouchPoints > 0) && (window.innerWidth < (mobileThreshold+300))) {
-            video.removeEventListener("dblclick", toggleFullScreenMode)
-            video.addEventListener("dblclick", doubletapToSkip)
-        } else {
-            video.removeEventListener("dblclick", doubletapToSkip)
-            video.addEventListener("dblclick", toggleFullScreenMode)
-        }
-        }
-        tapHandler()   
-
-        function expandMiniPlayer() {
-            concerned = true
-            toggleMiniPlayerMode(false)
-            window.scroll({
-                top: video.parentNode.offsetTop,
-                left: 0,
-                behavior: "instant",
-            })
-        }
-        miniPlayerCancelBtn.addEventListener("click", () => {
-            toggleMiniPlayerMode(false) 
-        })
-
-        function toggleTheaterMode() {
-            videoContainer.classList.toggle("theater")
-        }
-        
-        function toggleFullScreenMode() {
-            if (document.fullscreenElement == null) {
-                if (screen.orientation && screen.orientation.lock && screen.orientation.type.startsWith("portrait")) {  
-                    screen.orientation.lock('landscape').then(() => {  
-                        console.log('Video was changed to fullscreen so orientation was locked to landscape.');  
-                    }).catch(function(error) {  
-                        console.error('Failed to lock orientation:', error);  
-                    });  
-                }  
-                videoContainer.requestFullscreen()
-            } else {
-                if (screen.orientation && screen.orientation.lock && screen.orientation.type.startsWith('portrait')) {  
-                    screen.orientation.unlock()
-                }
-                document.exitFullscreen()
-            }
-        }
-
-        function togglePictureInPictureMode() {
-            if(videoContainer.classList.contains("picture-in-picture")) {
-                document.exitPictureInPicture()
-            } else {
-                video.requestPictureInPicture()
-            }
-        } 
-
-        //a variable to check if the user is concerned in the current video while in mini-player mode
-        let concerned = false
-        function toggleMiniPlayerMode(bool = true) {
-        if(!document.fullscreenElement) {
-            if (!bool) {
-                videoContainer.classList.remove("mini-player")
-                if(!video.paused && !concerned) {
-                    video.pause() 
-                }
-                concerned = false
-                volumeState()
-                return
-            }
-            if (!video.paused && window.innerWidth > mobileThreshold && !document.pictureInPictureElement && !intersect) {
-                videoContainer.classList.add("mini-player")
-            } 
-            if ((videoContainer.classList.contains("mini-player") && intersect) || (videoContainer.classList.contains("mini-player") && window.innerWidth < mobileThreshold)) {
-                videoContainer.classList.remove("mini-player")
-                if(!video.paused) {video.pause()}
-            }
-            volumeState()
-        }
-        }
-        
-        //Intersection Observer Setup to watch the video
-        let intersect = false;
-        let videoOptions = {
-            root: null,
-            rootMargin: '0px',
-            threshold: (() => {
-                let threshold = []
-                let step = 20
-                for(let i = 1.0; i <= step; i++) {
-                    let ratio = i/step
-                    threshold.push(ratio)
-                }
-                threshold.push(0)
-                return threshold;
-            })(),
-        }
-        const videoObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if(entry.target != video) {
-                    intersect = entry.isIntersecting
-                    toggleMiniPlayerMode()
-                } else {
-                    videoInView = entry.isIntersecting
-                }
-        })
-        }, videoOptions)
-        videoObserver.observe(videoContainer.parentElement)
-        videoObserver.observe(video)
-        
-        document.addEventListener("fullscreenchange", ()=> {
-            videoContainer.classList.toggle("full-screen", document.fullscreenElement)            
-            if(videoContainer.classList.contains("mini-player") && videoContainer.classList.contains("full-screen")) {
-                videoContainer.classList.remove("mini-player")
-            }
-            playbtnPosition()
-        })
-        document.addEventListener("webkitfullscreenchange", ()=> {
-            videoContainer.classList.toggle("full-screen", document.fullscreenElement)
-            if(videoContainer.classList.contains("mini-player") && videoContainer.classList.contains("full-screen")) {
-                videoContainer.classList.remove("mini-player")
-            }
-        })
-
-        window.addEventListener('resize', () => {
-            toggleMiniPlayerMode()
-            playbtnPosition()
-            tapHandler()
-        })
-        
-        //For the mobile play btn since the video height is not fixed value
-        const playbtnPosition = () => {
-            if (window.innerWidth <= mobileThreshold) {
-                let btnOffset = (videoContainer.offsetHeight/2) - 25
-                if (btnOffset < 50) {
-                    btnOffset = 100
-                }
-                playPauseBtn.style.setProperty("--mobile-btn-position", `${btnOffset}px`)
-            }   
-        }
-        playbtnPosition()
-
-
-        video.addEventListener("enterpictureinpicture", () => {
-            videoContainer.classList.add("picture-in-picture")
-            toggleMiniPlayerMode(false)
-        })
-        
-        video.addEventListener("leavepictureinpicture", () => {
-            videoContainer.classList.remove("picture-in-picture")
-            toggleMiniPlayerMode()
-        })
-        
-        // Play/Pause
-        playPauseBtn.addEventListener("click", togglePlay)
-        video.addEventListener("click", e => {
-            const rect = video.getBoundingClientRect()
-            if (((e.clientX-rect.left) > (video.offsetWidth*0.35)) && ((e.clientX-rect.left) < (video.offsetWidth*0.75))) {
-                togglePlay()
-            } else if(window.innerWidth > (mobileThreshold+300)) {
-                togglePlay()
-            }
-        })
-        
-        function togglePlay() {
-            video.paused ? video.play() : video.pause()
-        }
-        
-        video.addEventListener("play", ()=> {
-            videoContainer.classList.remove("paused")
-            fire("videoplay")
-        })
-        
-        video.addEventListener("pause", ()=> {
-            videoContainer.classList.add("paused")
-            fire("videopause")
-        })        
-
-        if('mediaSession' in navigator) {
-            navigator.mediaSession.metadata = new MediaMetadata({
-                title: "Zack Snyder's Justice League Teaser",
-                artwork: [
-                    {src: 'assets/justice-league-b-s.jpeg'}
-                ]
-            })
-
-            navigator.mediaSession.setActionHandler('play', ()=>{video.play()})
-            navigator.mediaSession.setActionHandler('pause', ()=>{video.pause()})
-            navigator.mediaSession.setActionHandler('seekbackward', ()=>{skip(-30)})
-            navigator.mediaSession.setActionHandler('seekforward', ()=>{skip(30)})
-        }
-        
-        //custom event function for notifier events
-        const fire = (eventName, el = notifiersContainer, detail=null, bubbles=true, cancellable=true) => {
-            let evt = new CustomEvent(eventName, {
-                detail, bubbles, cancellable
-            })
-            el.dispatchEvent(evt)
-        }
-
-        //event listeners for notifiers
-        notifiersContainer.addEventListener("videopause", () => {
-            notifiersContainer.dataset.currentNotifier = "videopause"
-            emptyDataset()
-        })
-        notifiersContainer.addEventListener("videoplay", () => {
-            notifiersContainer.dataset.currentNotifier = "videoplay"
-            emptyDataset()
-        })
-        notifiersContainer.addEventListener("volumeup", () => {
-            notifiersContainer.dataset.currentNotifier = "volumeup"
-            emptyDataset()
-        })
-        notifiersContainer.addEventListener("volumedown", () => {
-            notifiersContainer.dataset.currentNotifier = "volumedown"
-            emptyDataset()
-        })
-        notifiersContainer.addEventListener("volumemuted", () => {
-            notifiersContainer.dataset.currentNotifier = "volumemuted"
-            emptyDataset()
-        })
-        notifiersContainer.addEventListener("fwd", () => {
-            notifiersContainer.querySelectorAll(".fwd-notifier,.bwd-notifier").forEach(elem => {
-                elem.dataset.skip = `${skipped} seconds`
-            })
-            notifiersContainer.dataset.currentNotifier = "fwd"
-            emptyDataset()
-        })
-        notifiersContainer.addEventListener("bwd", () => {
-            notifiersContainer.querySelectorAll(".fwd-notifier,.bwd-notifier").forEach(elem => {
-                elem.dataset.skip = `${skipped} seconds`
-            })
-            notifiersContainer.dataset.currentNotifier = "bwd"
-            emptyDataset()
-        })
-        const emptyDataset = () => {
-            setTimeout(()=>{notifiersContainer.dataset.currentNotifier = ''}, notifierDelay)
-        }
-    } else {
-        return
+    //resizing controls
+    function controlsResize() {
+      let controlsSize = 25;
+      // controlsSize = getComputedStyle(videoContainer).getPropertyValue("--controls-size")
+      svgs.forEach((svg) => {
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        if (!svg.classList.contains("settings-icon")) if (!svg.classList.contains("mini-player-expand-icon")) if (!svg.classList.contains("mini-player-cancel-icon")) if (!svg.classList.contains("replay-icon")) if (!svg.classList.contains("fwd-notifier-icon")) if (!svg.classList.contains("bwd-notifier-icon")) svg.setAttribute("viewBox", `0 0 ${controlsSize} ${controlsSize}`);
+      });
     }
-})
+    controlsResize();
+    //skip variable for time skips
+    let skipped;
 
+    //variable to check if video is in view
+    let videoInView = true;
+
+    //a variable containing the delay for all delay required events
+    let notifierDelay = getComputedStyle(notifiersContainer).getPropertyValue("--delay");
+    notifierDelay = notifierDelay.replace("s", "");
+    notifierDelay = Number(notifierDelay) * 1000;
+
+    //a debounce function to prevent execution too many keypresses at a given time
+    const debounceKeyPresses = (mainFunction, delay = notifierDelay) => {
+      let timer;
+      return function (...args) {
+        //Clear the timeout of previeous timer to prevent the execution of 'mainFunction'
+        clearTimeout(timer);
+
+        timer = setTimeout(() => {
+          mainFunction(...args);
+        }, delay);
+      };
+    };
+    //a throttle function to limit number of clicks in a certain time
+    const throttleKeyPresses = (mainFunction, delay = notifierDelay) => {
+      let runTimerFlag = null;
+      return function (...args) {
+        if (runTimerFlag === null) {
+          mainFunction(...args);
+          runTimerFlag = setTimeout(() => {
+            runTimerFlag = null;
+          }, delay);
+        }
+      };
+    };
+
+    document.addEventListener(
+      "keydown",
+      throttleKeyPresses(function (e) {
+        if (videoInView) {
+          const tagName = document.activeElement.tagName.toLowerCase();
+
+          if (tagName === "input") return;
+
+          switch (e.key.toLowerCase()) {
+            case " ":
+              if (tagName === "button") return;
+              e.preventDefault();
+            case "p":
+            case "l":
+            case "a":
+            case "y":
+            case "k":
+              togglePlay();
+              break;
+            case "f":
+              toggleFullScreenMode();
+              break;
+            case "t":
+              toggleTheaterMode();
+              break;
+            case "e":
+              expandMiniPlayer();
+              break;
+            case "r":
+              toggleMiniPlayerMode(false);
+              break;
+            case "i":
+              if (!e.shiftKey) togglePictureInPictureMode();
+              break;
+            case "m":
+              toggleMute();
+              if (video.muted) fire("volumemuted");
+              else fire("volumeup");
+              break;
+            case "s":
+              changePlaybackSpeed();
+              break;
+            case "c":
+              toggleCaptions();
+              break;
+            case "arrowleft":
+              skip(-5);
+              skipped = 5;
+              if (e.shiftKey) {
+                skip(-10);
+                skipped = 10;
+              }
+              fire("bwd");
+              break;
+            case "arrowright":
+            case "":
+              skip(5);
+              skipped = 5;
+              if (e.shiftKey) {
+                skip(10);
+                skipped = 10;
+              }
+              fire("fwd");
+              break;
+            case "arrowup":
+              e.preventDefault();
+              if (video.volume < 1) {
+                video.volume += (video.volume * 100) % 5 ? 0.05 - (video.volume % 0.05) : 0.05;
+              }
+              fire("volumeup");
+              break;
+            case "arrowdown":
+              e.preventDefault();
+              if (video.volume == 0) {
+                fire("volumemuted");
+                break;
+              }
+              if ((video.volume * 100).toFixed() == 5) {
+                fire("volumemuted");
+                video.volume = 0;
+                break;
+              }
+              if (video.volume) {
+                video.volume -= (video.volume * 100).toFixed() % 5 ? video.volume % 0.05 : 0.05;
+              }
+              fire("volumedown");
+          }
+        }
+      }),
+    );
+
+    //Disabling right click
+    video.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+    });
+
+    //Loading
+    video.addEventListener("waiting", () => {
+      videoContainer.classList.add("buffer");
+    });
+    video.addEventListener("playing", () => {
+      videoContainer.classList.remove("buffer");
+    });
+
+    //Timeline
+    timelineContainer.addEventListener("mousemove", handleTimelineUpdate);
+    // timelineContainer.addEventListener("mousedown", toggleScrubbing)
+    // document.addEventListener("mouseup", e => {
+    //     if (isScrubbing) toggleScrubbing(e)
+    // })
+    // document.addEventListener("mousemove", e => {
+    //     if (isScrubbing) handleTimelineUpdate(e)
+    // })
+
+    timelineContainer.addEventListener("pointerdown", (e) => {
+      timelineContainer.setPointerCapture(e.pointerId);
+      isScrubbing = true;
+      toggleScrubbing(e);
+      timelineContainer.addEventListener("pointermove", handleTimelineUpdate);
+      timelineContainer.addEventListener(
+        "pointerup",
+        (e) => {
+          isScrubbing = false;
+          toggleScrubbing(e);
+          timelineContainer.removeEventListener("pointermove", handleTimelineUpdate);
+        },
+        { once: true },
+      );
+    });
+
+    let isScrubbing = false;
+    function toggleScrubbing(e) {
+      const rect = timelineContainer.getBoundingClientRect();
+      const percent = Math.min(Math.max(0, e.clientX - rect.x), rect.width) / rect.width;
+      // isScrubbing = e.buttons & 1
+      videoContainer.classList.toggle("scrubbing", isScrubbing);
+      if (isScrubbing) {
+        wasPaused = video.paused;
+        video.pause();
+      } else {
+        video.currentTime = percent * video.duration;
+        if (!wasPaused) video.play();
+        videoContainer.classList.remove("seeking");
+      }
+
+      handleTimelineUpdate(e);
+    }
+
+    function handleTimelineUpdate(e) {
+      const rect = timelineContainer.getBoundingClientRect();
+      const percent = Math.min(Math.max(0, e.clientX - rect.x), rect.width) / rect.width;
+      const previewImgMin = previewImg.offsetWidth / 2 / rect.width;
+      const previewImgPercent = Math.min(Math.max(percent, previewImgMin), 1 - previewImgMin);
+      const previewImgNumber = Math.max(1, Math.floor((percent * video.duration) / 10));
+      const previewImgSrc = `../assets/previewImgs/preview${previewImgNumber}.jpg`;
+      previewImg.src = previewImgSrc;
+      timelineContainer.style.setProperty("--preview-position", percent);
+      timelineContainer.style.setProperty("--preview-img-position", previewImgPercent);
+
+      if (isScrubbing) {
+        thumbnailImg.src = previewImgSrc;
+        timelineContainer.style.setProperty("--progress-position", percent);
+        videoContainer.classList.add("seeking");
+      }
+
+      const previewTime = parseInt(percent * video.duration) > 0 ? formatDuration(percent * video.duration) : "";
+      previewImgContainer.dataset.previewTime = previewTime;
+    }
+
+    //Playback Speed
+    speedBtn.addEventListener("click", changePlaybackSpeed);
+
+    function changePlaybackSpeed() {
+      let newPlaybackRate = video.playbackRate + 0.25;
+      if (newPlaybackRate > 2) newPlaybackRate = 0.25;
+      video.playbackRate = newPlaybackRate;
+    }
+
+    video.addEventListener("ratechange", () => {
+      speedBtn.textContent = `${video.playbackRate}x`;
+    });
+
+    //Captions
+    const captions = video.textTracks[0];
+    captions.mode = "hidden";
+
+    captionsBtn.addEventListener("click", toggleCaptions);
+
+    function toggleCaptions() {
+      const isHidden = captions.mode === "hidden";
+      captions.mode = isHidden ? "showing" : "hidden";
+      videoContainer.classList.toggle("captions", isHidden);
+    }
+
+    //Duration
+    video.addEventListener("loadeddata", () => {
+      totalTimeElem.textContent = formatDuration(video.duration);
+    });
+
+    video.addEventListener("timeupdate", () => {
+      currentTimeElem.textContent = formatDuration(video.currentTime);
+      const percent = video.currentTime / video.duration;
+      timelineContainer.style.setProperty("--progress-position", percent);
+      if (video.currentTime < video.duration) videoContainer.classList.remove("replay");
+    });
+
+    const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
+      minimumIntegerDigits: 2,
+    });
+
+    function formatDuration(time) {
+      const seconds = Math.floor(time % 60);
+      const minutes = Math.floor(time / 60) % 60;
+      const hours = Math.floor(time / 3600);
+      if (hours === 0) return `${minutes}:${leadingZeroFormatter.format(seconds)}`;
+      else return `${hours}:${leadingZeroFormatter.format(minutes)}:${leadingZeroFormatter.format(seconds)}`;
+    }
+
+    function skip(duration) {
+      video.currentTime += duration;
+    }
+
+    //Volume
+    muteBtn.addEventListener("click", toggleMute);
+
+    volumeSlider.addEventListener("input", (e) => {
+      video.volume = e.target.value / 100;
+      video.muted = e.target.value === 0;
+    });
+
+    function toggleMute() {
+      video.muted = !video.muted;
+    }
+
+    video.addEventListener("volumechange", volumeState);
+
+    function volumeState() {
+      let { min, max, value, offsetWidth } = volumeSlider;
+      value = video.volume * 100;
+      let volumeLevel = "";
+      if (video.muted || value === 0) {
+        value = 0;
+        volumeLevel = "muted";
+      } else if (value > max / 2) {
+        volumeLevel = "high";
+      } else {
+        volumeLevel = "low";
+      }
+      let volumePosition = `${((value - min) / (max - min)) * (offsetWidth - 5 > 0 ? offsetWidth - 5 : 55)}px`;
+      let volumePercent = `${((value - min) / (max - min)) * 100}%`;
+      volumeSlider.value = value;
+      volumeSlider.dataset.volume = `${value.toFixed()}`;
+      videoContainer.querySelectorAll(".volume-up-notifier,.volume-down-notifier,.volume-muted-notifier").forEach((elem) => {
+        elem.dataset.volume = `${value.toFixed()}%`;
+      });
+      volumeSlider.style.setProperty("--volume-position", volumePosition);
+      volumeSlider.style.setProperty("--volume-percent", volumePercent);
+      videoContainer.dataset.volumeLevel = volumeLevel;
+    }
+
+    volumeState();
+
+    video.addEventListener("ended", () => {
+      videoContainer.classList.add("replay");
+    });
+    replayBtn.addEventListener("click", () => {
+      video.currentTime = 0;
+      video.play();
+      videoContainer.classList.remove("replay");
+    });
+
+    // View Modes
+    theaterBtn.addEventListener("click", toggleTheaterMode);
+    fullScreenBtn.addEventListener("click", toggleFullScreenMode);
+    pictureInPictureBtn.addEventListener("click", togglePictureInPictureMode);
+    miniPlayerExpandBtn.addEventListener("click", () => {
+      expandMiniPlayer();
+    });
+    const doubletapToSkip = (e) => {
+      const rect = video.getBoundingClientRect();
+      if (e.clientX - rect.left > video.offsetWidth * 0.65) {
+        skip(10);
+        skipped = 10;
+        fire("fwd");
+      } else if (e.clientX - rect.left < video.offsetWidth * 0.35) {
+        skip(-10);
+        skipped = 10;
+        fire("bwd");
+      }
+    };
+
+    const tapHandler = () => {
+      if (navigator.maxTouchPoints > 0 && window.innerWidth < mobileThreshold + 300) {
+        video.removeEventListener("dblclick", toggleFullScreenMode);
+        video.addEventListener("dblclick", doubletapToSkip);
+      } else {
+        video.removeEventListener("dblclick", doubletapToSkip);
+        video.addEventListener("dblclick", toggleFullScreenMode);
+      }
+    };
+    tapHandler();
+
+    function expandMiniPlayer() {
+      concerned = true;
+      toggleMiniPlayerMode(false);
+      window.scroll({
+        top: video.parentNode.offsetTop,
+        left: 0,
+        behavior: "instant",
+      });
+    }
+    miniPlayerCancelBtn.addEventListener("click", () => {
+      toggleMiniPlayerMode(false);
+    });
+
+    function toggleTheaterMode() {
+      videoContainer.classList.toggle("theater");
+    }
+
+    function toggleFullScreenMode() {
+      if (document.fullscreenElement == null) {
+        if (screen.orientation && screen.orientation.lock && screen.orientation.type.startsWith("portrait")) {
+          screen.orientation
+            .lock("landscape")
+            .then(() => {
+              console.log("Video was changed to fullscreen so orientation was locked to landscape.");
+            })
+            .catch(function (error) {
+              console.error("Failed to lock orientation:", error);
+            });
+        }
+        videoContainer.requestFullscreen();
+      } else {
+        if (screen.orientation && screen.orientation.lock && screen.orientation.type.startsWith("portrait")) {
+          screen.orientation.unlock();
+        }
+        document.exitFullscreen();
+      }
+    }
+
+    function togglePictureInPictureMode() {
+      if (videoContainer.classList.contains("picture-in-picture")) {
+        document.exitPictureInPicture();
+      } else {
+        video.requestPictureInPicture();
+      }
+    }
+
+    //a variable to check if the user is concerned in the current video while in mini-player mode
+    let concerned = false;
+    function toggleMiniPlayerMode(bool = true) {
+      if (!document.fullscreenElement) {
+        if (!bool) {
+          videoContainer.classList.remove("mini-player");
+          if (!video.paused && !concerned) {
+            video.pause();
+          }
+          concerned = false;
+          volumeState();
+          return;
+        }
+        if (!video.paused && window.innerWidth > mobileThreshold && !document.pictureInPictureElement && !intersect) {
+          videoContainer.classList.add("mini-player");
+        }
+        if ((videoContainer.classList.contains("mini-player") && intersect) || (videoContainer.classList.contains("mini-player") && window.innerWidth < mobileThreshold)) {
+          videoContainer.classList.remove("mini-player");
+          if (!video.paused) {
+            video.pause();
+          }
+        }
+        volumeState();
+      }
+    }
+
+    //Intersection Observer Setup to watch the video
+    let intersect = false;
+    let videoOptions = {
+      root: null,
+      rootMargin: "0px",
+      threshold: (() => {
+        let threshold = [];
+        let step = 20;
+        for (let i = 1.0; i <= step; i++) {
+          let ratio = i / step;
+          threshold.push(ratio);
+        }
+        threshold.push(0);
+        return threshold;
+      })(),
+    };
+    const videoObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.target != video) {
+          intersect = entry.isIntersecting;
+          toggleMiniPlayerMode();
+        } else {
+          videoInView = entry.isIntersecting;
+        }
+      });
+    }, videoOptions);
+    videoObserver.observe(videoContainer.parentElement);
+    videoObserver.observe(video);
+
+    document.addEventListener("fullscreenchange", () => {
+      videoContainer.classList.toggle("full-screen", document.fullscreenElement);
+      if (videoContainer.classList.contains("mini-player") && videoContainer.classList.contains("full-screen")) {
+        videoContainer.classList.remove("mini-player");
+      }
+      playbtnPosition();
+    });
+    document.addEventListener("webkitfullscreenchange", () => {
+      videoContainer.classList.toggle("full-screen", document.fullscreenElement);
+      if (videoContainer.classList.contains("mini-player") && videoContainer.classList.contains("full-screen")) {
+        videoContainer.classList.remove("mini-player");
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      toggleMiniPlayerMode();
+      playbtnPosition();
+      tapHandler();
+    });
+
+    //For the mobile play btn since the video height is not fixed value
+    const playbtnPosition = () => {
+      if (window.innerWidth <= mobileThreshold) {
+        let btnOffset = videoContainer.offsetHeight / 2 - 25;
+        if (btnOffset < 50) {
+          btnOffset = 100;
+        }
+        playPauseBtn.style.setProperty("--mobile-btn-position", `${btnOffset}px`);
+      }
+    };
+    playbtnPosition();
+
+    video.addEventListener("enterpictureinpicture", () => {
+      videoContainer.classList.add("picture-in-picture");
+      toggleMiniPlayerMode(false);
+    });
+
+    video.addEventListener("leavepictureinpicture", () => {
+      videoContainer.classList.remove("picture-in-picture");
+      toggleMiniPlayerMode();
+    });
+
+    // Play/Pause
+    playPauseBtn.addEventListener("click", togglePlay);
+    video.addEventListener("click", (e) => {
+      const rect = video.getBoundingClientRect();
+      if (e.clientX - rect.left > video.offsetWidth * 0.35 && e.clientX - rect.left < video.offsetWidth * 0.75) {
+        togglePlay();
+      } else if (window.innerWidth > mobileThreshold + 300) {
+        togglePlay();
+      }
+    });
+
+    function togglePlay() {
+      video.paused ? video.play() : video.pause();
+    }
+
+    video.addEventListener("play", () => {
+      videoContainer.classList.remove("paused");
+      fire("videoplay");
+    });
+
+    video.addEventListener("pause", () => {
+      videoContainer.classList.add("paused");
+      fire("videopause");
+    });
+
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: "Zack Snyder's Justice League Teaser",
+        artwork: [{ src: "assets/justice-league-b-s.jpeg" }],
+      });
+
+      navigator.mediaSession.setActionHandler("play", () => {
+        video.play();
+      });
+      navigator.mediaSession.setActionHandler("pause", () => {
+        video.pause();
+      });
+      navigator.mediaSession.setActionHandler("seekbackward", () => {
+        skip(-30);
+      });
+      navigator.mediaSession.setActionHandler("seekforward", () => {
+        skip(30);
+      });
+    }
+
+    //custom event function for notifier events
+    const fire = (eventName, el = notifiersContainer, detail = null, bubbles = true, cancellable = true) => {
+      let evt = new CustomEvent(eventName, {
+        detail,
+        bubbles,
+        cancellable,
+      });
+      el.dispatchEvent(evt);
+    };
+
+    //event listeners for notifiers
+    notifiersContainer.addEventListener("videopause", () => {
+      notifiersContainer.dataset.currentNotifier = "videopause";
+      emptyDataset();
+    });
+    notifiersContainer.addEventListener("videoplay", () => {
+      notifiersContainer.dataset.currentNotifier = "videoplay";
+      emptyDataset();
+    });
+    notifiersContainer.addEventListener("volumeup", () => {
+      notifiersContainer.dataset.currentNotifier = "volumeup";
+      emptyDataset();
+    });
+    notifiersContainer.addEventListener("volumedown", () => {
+      notifiersContainer.dataset.currentNotifier = "volumedown";
+      emptyDataset();
+    });
+    notifiersContainer.addEventListener("volumemuted", () => {
+      notifiersContainer.dataset.currentNotifier = "volumemuted";
+      emptyDataset();
+    });
+    notifiersContainer.addEventListener("fwd", () => {
+      notifiersContainer.querySelectorAll(".fwd-notifier,.bwd-notifier").forEach((elem) => {
+        elem.dataset.skip = `${skipped} seconds`;
+      });
+      notifiersContainer.dataset.currentNotifier = "fwd";
+      emptyDataset();
+    });
+    notifiersContainer.addEventListener("bwd", () => {
+      notifiersContainer.querySelectorAll(".fwd-notifier,.bwd-notifier").forEach((elem) => {
+        elem.dataset.skip = `${skipped} seconds`;
+      });
+      notifiersContainer.dataset.currentNotifier = "bwd";
+      emptyDataset();
+    });
+    const emptyDataset = () => {
+      setTimeout(() => {
+        notifiersContainer.dataset.currentNotifier = "";
+      }, notifierDelay);
+    };
+  } else {
+    return;
+  }
+});
