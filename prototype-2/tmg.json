@@ -12,9 +12,11 @@
     "muted": true,
     "progressBar": true,
     "beta": true,
-    "previewImages": {
-      "address": "../assets/previewImgs/preview$.jpg",
-      "fps": 10
+    "time": {
+      "previewImages": {
+        "address": "../assets/previewImgs/preview$.jpg",
+        "": 10
+      }
     }
   }
 }
