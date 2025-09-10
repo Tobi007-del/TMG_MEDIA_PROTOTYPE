@@ -49,13 +49,13 @@ class T_M_G_Video_Player {
     this.exportCanvas = document.createElement("canvas");
     this.exportContext = this.exportCanvas.getContext("2d");
     this.initCSSVariablesManager();
-    this.initSettingsManager();
     this.mutatingDOMNodes = true;
     this.buildContainers();
     this.buildPlayerInterface();
     this.buildControllerStructure();
     setTimeout(() => (this.mutatingDOMNodes = false));
-    this.initializeVideoPlayer();
+    this.initSettingsManager();
+    this.initPlayer();
   }
 
   get playlist() {
@@ -292,6 +292,8 @@ class T_M_G_Video_Player {
     // this.log("TMG Video Settings Manager started")
   }
 
+  getIcons() {}
+
   buildContainers() {
     this.setPosterState();
     if (!this.videoContainer) {
@@ -331,7 +333,7 @@ class T_M_G_Video_Player {
       <div class="T_M_G-video-settings">
         <div class="T_M_G-video-settings-content">
           <div class="T_M_G-video-settings-top-panel">
-            <button type="button" title="Close Settings" class="T_M_G-video-settings-close-btn" data-focusable-control="false" tabindex="-1">
+            <button type="button" title="Close settings" class="T_M_G-video-settings-close-btn" data-focusable-control="false" tabindex="-1">
               <span>
                 <svg class="T_M_G-video-settings-close-btn-icon">
                   <path fill="currentColor" d="M1.307,5.988 L6.616,1.343 C7.027,0.933 7.507,0.864 7.918,1.275 L7.918,4.407 C8.014,4.406 8.098,4.406 8.147,4.406 C13.163,4.406 16.885,7.969 16.885,12.816 C16.885,14.504 16.111,13.889 15.788,13.3 C14.266,10.52 11.591,8.623 8.107,8.623 C8.066,8.623 7.996,8.624 7.917,8.624 L7.917,11.689 C7.506,12.099 6.976,12.05 6.615,11.757 L1.306,7.474 C0.897,7.064 0.897,6.399 1.307,5.988 L1.307,5.988 Z"></path>
@@ -352,23 +354,10 @@ class T_M_G_Video_Player {
     this.queryDOM(".T_M_G-video-container-content").appendChild(this.video);
   }
 
-  buildControllerStructure() {
-    const spacerIndex = this.settings.controllerStructure.indexOf("spacer"),
-      leftSideControls = spacerIndex > -1 ? this.settings.controllerStructure.slice(0, spacerIndex) : null,
-      rightSideControls = spacerIndex > -1 ? this.settings.controllerStructure.slice(spacerIndex + 1) : null,
-      //breaking HTML into smaller units to use as building blocks
-      overlayControlsContainerBuild = this.queryDOM(".T_M_G-video-overlay-controls-container"),
-      controlsContainerBuild = this.queryDOM(".T_M_G-video-controls-container"),
-      notifiersContainerBuild = this.settings.status.ui.notifiers ? document.createElement("div") : null,
-      overlayMainControlsWrapperBuild = document.createElement("div"),
-      controlsWrapperBuild = document.createElement("div"),
-      leftSideControlsWrapperBuild = this.settings.status.ui.leftSideControls ? document.createElement("div") : null,
-      rightSideControlsWrapperBuild = this.settings.status.ui.rightSideControls ? document.createElement("div") : null;
-    //html string build
-    this.HTML = (() => {
-      const keyShortcuts = this.fetchKeyShortcutsForDisplay();
-      return {
-        pictureinpicturewrapper: `
+  getPlayerHTML() {
+    const keyShortcuts = this.fetchKeyShortcutsForDisplay();
+    return {
+      pictureinpicturewrapper: `
         <div class="T_M_G-video-picture-in-picture-wrapper">
           <span class="T_M_G-video-picture-in-picture-icon-wrapper">
             <svg class="T_M_G-video-picture-in-picture-icon" viewBox="0 0 73 73" data-no-resize="true">
@@ -399,14 +388,14 @@ class T_M_G_Video_Player {
           <p>Playing in picture-in-picture</p>
         </div>      
       `,
-        playlisttitle: `
+      playlisttitle: `
         <div class="T_M_G-video-title-wrapper">
           <div class="T_M_G-video-title-content">
             <p class="T_M_G-video-title"></p>
           </div>
         </div>      
       `,
-        videobuffer: `
+      videobuffer: `
         <div class="T_M_G-video-buffer">
           <div class="T_M_G-video-buffer-plain"></div>
           <div class="T_M_G-video-buffer-rotator">
@@ -420,15 +409,15 @@ class T_M_G_Video_Player {
           </div>
         </div>
       `,
-        thumbnail: `
+      thumbnail: `
         <img class="T_M_G-video-thumbnail T_M_G-video-thumbnail-image" alt="movie-image" src="${tmg.ALT_IMG_SRC}">
         <canvas class="T_M_G-video-thumbnail T_M_G-video-thumbnail-canvas"></canvas>
       `,
-        cueContainer: `
+      cueContainer: `
       <div class="T_M_G-video-cue-container"></div>
       `,
-        playpausenotifier: this.settings.status.ui.notifiers
-          ? `
+      playpausenotifier: this.settings.status.ui.notifiers
+        ? `
         <div class="T_M_G-video-notifiers T_M_G-video-play-notifier">
           <svg class="T_M_G-video-play-notifier-icon">
             <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
@@ -440,9 +429,9 @@ class T_M_G_Video_Player {
           </svg>
         </div>   
       `
-          : null,
-        captionsnotifier: this.settings.status.ui.notifiers
-          ? `
+        : null,
+      captionsnotifier: this.settings.status.ui.notifiers
+        ? `
         <div class="T_M_G-video-notifiers T_M_G-video-captions-notifier">
           <svg class="T_M_G-video-subtitles-icon">
             <path fill="currentColor" transform="scale(0.5)" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" />
@@ -452,19 +441,42 @@ class T_M_G_Video_Player {
           <svg>
         </div>
       `
-          : null,
-        objectfitnotifier: this.settings.status.ui.notifiers
-          ? `
+        : null,
+      objectfitnotifier: this.settings.status.ui.notifiers
+        ? `
         <div class="T_M_G-video-notifiers T_M_G-video-object-fit-notifier"></div>
       `
-          : null,
-        playbackratenotifier: this.settings.status.ui.notifiers
-          ? `
-        <div class="T_M_G-video-notifiers T_M_G-video-playback-rate-notifier"></div>
+        : null,
+      playbackratenotifier: this.settings.status.ui.notifiers
+        ? `
+        <div class="T_M_G-video-notifiers T_M_G-video-playback-rate-notifier">
+          <svg viewBox="0 0 30 24" data-no-resize="true">
+            <path fill="currentColor" d="M22,5.14V19.14L11,12.14L22,5.14Z" />
+            <path fill="currentColor" d="M11,5.14V19.14L0,12.14L11,5.14Z" />
+          </svg>
+          <p class="T_M_G-video-playback-rate-notifier-text"></p>
+          <svg viewBox="0 0 30 24" data-no-resize="true">
+            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+            <path fill="currentColor" d="M19,5.14V19.14L30,12.14L19,5.14Z" />
+          </svg>
+        </div>
+        <div class="T_M_G-video-notifiers T_M_G-video-playback-rate-notifier-content"></div>
+        <div class="T_M_G-video-notifiers T_M_G-video-playback-rate-up-notifier">
+          <svg class="T_M_G-video-playback-rate-up-notifier-icon" viewBox="0 0 30 24" data-no-resize="true">
+            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" transform="translate(-2.5, 0)" />
+            <path fill="currentColor" d="M19,5.14V19.14L30,12.14L19,5.14Z" transform="translate(-2.5, 0)" />
+          </svg>  
+        </div>
+        <div class="T_M_G-video-notifiers T_M_G-video-playback-rate-down-notifier">
+          <svg class="T_M_G-video-playback-rate-down-notifier-icon" viewBox="0 0 30 24" data-no-resize="true">
+            <path fill="currentColor" d="M22,5.14V19.14L11,12.14L22,5.14Z" transform="translate(2.5, 0)" />
+            <path fill="currentColor" d="M11,5.14V19.14L0,12.14L11,5.14Z" transform="translate(2.5, 0)" />
+          </svg>
+        </div>
       `
-          : null,
-        volumenotifier: this.settings.status.ui.notifiers
-          ? `
+        : null,
+      volumenotifier: this.settings.status.ui.notifiers
+        ? `
         <div class="T_M_G-video-notifiers T_M_G-video-volume-notifier-content"></div>
         <div class="T_M_G-video-notifiers T_M_G-video-volume-up-notifier">
           <svg class="T_M_G-video-volume-up-notifier-icon" >
@@ -482,9 +494,9 @@ class T_M_G_Video_Player {
           </svg>
         </div>
       `
-          : null,
-        brightnessnotifier: this.settings.status.ui.notifiers
-          ? `
+        : null,
+      brightnessnotifier: this.settings.status.ui.notifiers
+        ? `
         <div class="T_M_G-video-notifiers T_M_G-video-brightness-notifier-content"></div>
         <div class="T_M_G-video-notifiers T_M_G-video-brightness-up-notifier">
           <svg class="T_M_G-video-brightness-up-icon">
@@ -505,9 +517,9 @@ class T_M_G_Video_Player {
           </svg>
         </div>
       `
-          : null,
-        fwdnotifier: this.settings.status.ui.notifiers
-          ? `
+        : null,
+      fwdnotifier: this.settings.status.ui.notifiers
+        ? `
         <div class="T_M_G-video-notifiers T_M_G-video-fwd-notifier">
           <svg>
             <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
@@ -520,35 +532,35 @@ class T_M_G_Video_Player {
           </svg>            
         </div>
       `
-          : null,
-        bwdnotifier: this.settings.status.ui.notifiers
-          ? `
+        : null,
+      bwdnotifier: this.settings.status.ui.notifiers
+        ? `
         <div class="T_M_G-video-notifiers T_M_G-video-bwd-notifier">
-          <svg style="transform: scaleX(-1);">
-            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+          <svg>          
+            <path fill="currentColor" d="M19,5.14V19.14L8,12.14L19,5.14Z" />
           </svg>
-          <svg style="transform: scaleX(-1);">
-            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+          <svg>          
+            <path fill="currentColor" d="M19,5.14V19.14L8,12.14L19,5.14Z" />
           </svg>
-          <svg style="transform: scaleX(-1);">
-            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+          <svg>          
+            <path fill="currentColor" d="M19,5.14V19.14L8,12.14L19,5.14Z" />
           </svg>            
         </div>   
       `
-          : null,
-        scrubnotifier: this.settings.status.ui.notifiers
-          ? `
+        : null,
+      scrubnotifier: this.settings.status.ui.notifiers
+        ? `
       <div class="T_M_G-video-notifiers T_M_G-video-scrub-notifier">
         <span>
-          <svg style="transform: scaleX(-1);">
-            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+          <svg>          
+            <path fill="currentColor" d="M19,5.14V19.14L8,12.14L19,5.14Z" />
           </svg>
-          <svg style="transform: scaleX(-1);">
-            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+          <svg>          
+            <path fill="currentColor" d="M19,5.14V19.14L8,12.14L19,5.14Z" />
           </svg>
-          <svg style="transform: scaleX(-1);">
-            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
-          </svg>            
+          <svg>          
+            <path fill="currentColor" d="M19,5.14V19.14L8,12.14L19,5.14Z" />
+          </svg>
         </span>
         <div class="T_M_G-video-scrub-notifier-content">
           <p class="T_M_G-video-scrub-notifier-text">Double tap left or right to skip ${this.settings.time.skip} seconds</p>
@@ -566,14 +578,14 @@ class T_M_G_Video_Player {
         </span>
       </div>
       `
-          : null,
-        touchtimelinenotifier: this.settings.status.ui.notifiers
-          ? `
+        : null,
+      touchtimelinenotifier: this.settings.status.ui.notifiers
+        ? `
         <div class="T_M_G-video-notifiers T_M_G-video-touch-timeline-notifier T_M_G-video-touch-notifier"></div>
       `
-          : null,
-        touchvolumenotifier: this.settings.status.ui.notifiers
-          ? `
+        : null,
+      touchvolumenotifier: this.settings.status.ui.notifiers
+        ? `
         <div class="T_M_G-video-notifiers T_M_G-video-touch-volume-notifier T_M_G-video-touch-vb-notifier">
           <span class="T_M_G-video-touch-volume-content T_M_G-video-touch-vb-content">0</span>
           <div class="T_M_G-video-touch-volume-slider T_M_G-video-touch-vb-slider"></div>
@@ -592,9 +604,9 @@ class T_M_G_Video_Player {
           </span>
         </div>
       `
-          : null,
-        touchbrightnessnotifier: this.settings.status.ui.notifiers
-          ? `
+        : null,
+      touchbrightnessnotifier: this.settings.status.ui.notifiers
+        ? `
         <div class="T_M_G-video-notifiers T_M_G-video-touch-brightness-notifier T_M_G-video-touch-vb-notifier">
           <span class="T_M_G-video-touch-brightness-content T_M_G-video-touch-vb-content">0</span>
           <div class="T_M_G-video-touch-brightness-slider T_M_G-video-touch-vb-slider"></div>
@@ -614,76 +626,76 @@ class T_M_G_Video_Player {
           </span>
         </div>      
       `
-          : null,
-        fullscreenorientation: this.settings.status.modes.fullScreen
-          ? `
+        : null,
+      fullscreenorientation: this.settings.status.modes.fullScreen
+        ? `
         <div class="T_M_G-video-full-screen-orientation-btn-wrapper">
-          <button type="button" class="T_M_G-video-full-screen-orientation-btn T_M_G-video-control-hidden" title="Change Orientation" data-focusable-control="false" tabindex="-1"> 
-            <svg viewBox="0 0 512 512" class="T_M_G-video-full-screen-orientation-icon" data-tooltip-text="Toggle Orientation" data-tooltip-position="top" data-no-resize="true">
+          <button type="button" class="T_M_G-video-full-screen-orientation-btn T_M_G-video-control-hidden" data-focusable-control="false" tabindex="-1"> 
+            <svg viewBox="0 0 512 512" class="T_M_G-video-full-screen-orientation-icon" data-control-title="Change orientation" data-no-resize="true">
               <path fill="currentColor" d="M446.81,275.82H236.18V65.19c0-20.78-16.91-37.69-37.69-37.69H65.19c-20.78,0-37.69,16.91-37.69,37.69v255.32   c0,20.78,16.91,37.68,37.69,37.68h88.62v88.62c0,20.78,16.9,37.69,37.68,37.69h255.32c20.78,0,37.69-16.91,37.69-37.69v-133.3   C484.5,292.73,467.59,275.82,446.81,275.82z M65.19,326.19c-3.14,0-5.69-2.55-5.69-5.68V65.19c0-3.14,2.55-5.69,5.69-5.69h133.3   c3.14,0,5.69,2.55,5.69,5.69v210.63h-12.69c-20.78,0-37.68,16.91-37.68,37.69v12.68H65.19z M452.5,446.81   c0,3.14-2.55,5.69-5.69,5.69H191.49c-3.13,0-5.68-2.55-5.68-5.69V342.19v-28.68c0-2.94,2.24-5.37,5.1-5.66   c0.19-0.02,0.38-0.03,0.58-0.03h28.69h226.63c3.14,0,5.69,2.55,5.69,5.69V446.81z"/>
               <path fill="currentColor" d="M369.92,181.53c-6.25-6.25-16.38-6.25-22.63,0c-6.25,6.25-6.25,16.38,0,22.63l44.39,44.39   c3.12,3.13,7.22,4.69,11.31,4.69c0.21,0,0.42-0.02,0.63-0.03c0.2,0.01,0.4,0.03,0.6,0.03c6.31,0,11.74-3.66,14.35-8.96   l37.86-37.86c6.25-6.25,6.25-16.38,0-22.63c-6.25-6.25-16.38-6.25-22.63,0l-13.59,13.59v-86.58c0-8.84-7.16-16-16-16h-86.29   l15.95-15.95c6.25-6.25,6.25-16.38,0-22.63c-6.25-6.25-16.38-6.25-22.63,0l-40.33,40.33c-5.19,2.65-8.75,8.03-8.75,14.25   c0,0.19,0.02,0.37,0.03,0.56c-0.01,0.19-0.03,0.38-0.03,0.57c0,4.24,1.69,8.31,4.69,11.31l42.14,42.14   c3.12,3.12,7.22,4.69,11.31,4.69s8.19-1.56,11.31-4.69c6.25-6.25,6.25-16.38,0-22.63l-15.95-15.95h72.54v73.05L369.92,181.53z"/>
             </svg>                        
           </button>
         </div>            
       `
-          : null,
-        expandminiplayer: this.settings.status.modes.miniPlayer
-          ? `
+        : null,
+      expandminiplayer: this.settings.status.modes.miniPlayer
+        ? `
         <div class="T_M_G-video-mini-player-expand-btn-wrapper">
-          <button type="button" class="T_M_G-video-mini-player-expand-btn" title="Expand mini-player${keyShortcuts["expandMiniPlayer"]}" data-focusable-control="false" tabindex="-1">
-            <svg class="T_M_G-video-mini-player-expand-icon" viewBox="0 -960 960 960" data-tooltip-text="Expand Mini Player${keyShortcuts["expandMiniPlayer"]}" data-tooltip-position="top" data-no-resize="true">
+          <button type="button" class="T_M_G-video-mini-player-expand-btn" data-focusable-control="false" tabindex="-1">
+            <svg class="T_M_G-video-mini-player-expand-icon" viewBox="0 -960 960 960" data-control-title="Expand miniplayer${keyShortcuts["expandMiniPlayer"]}" data-no-resize="true">
               <path d="M120-120v-320h80v184l504-504H520v-80h320v320h-80v-184L256-200h184v80H120Z"/>
             </svg>
           </button>
         </div>   
       `
-          : null,
-        removeminiplayer: this.settings.status.modes.miniPlayer
-          ? `
+        : null,
+      removeminiplayer: this.settings.status.modes.miniPlayer
+        ? `
         <div class="T_M_G-video-mini-player-cancel-btn-wrapper">
-          <button type="button" class="T_M_G-video-mini-player-cancel-btn" title="Remove Mini-player${keyShortcuts["removeMiniPlayer"]}" data-focusable-control="false" tabindex="-1">
-            <svg class="T_M_G-video-mini-player-cancel-icon" viewBox="0 -960 960 960" data-tooltip-text="Remove Mini Player${keyShortcuts["removeMiniPlayer"]}" data-tooltip-position="top" data-no-resize="true">
+          <button type="button" class="T_M_G-video-mini-player-cancel-btn" data-focusable-control="false" tabindex="-1">
+            <svg class="T_M_G-video-mini-player-cancel-icon" viewBox="0 -960 960 960" data-control-title="Remove miniplayer${keyShortcuts["removeMiniPlayer"]}" data-no-resize="true">
               <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
             </svg>
           </button>
         </div>   
       `
-          : null,
-        mainprev: this.settings.status.ui.prev
-          ? `
-        <button type="button" class="T_M_G-video-main-prev-btn" title="Previous Video${keyShortcuts["prev"]}" data-focusable-control="false" tabindex="-1">
-          <svg class="T_M_G-video-prev-icon" data-tooltip-text="Previous Video${keyShortcuts["prev"]}" data-tooltip-position="top" style="transform: scaleX(-1);">
-            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+        : null,
+      mainprev: this.settings.status.ui.prev
+        ? `
+        <button type="button" class="T_M_G-video-main-prev-btn" tabindex="-1">
+          <svg class="T_M_G-video-prev-icon" data-control-title="Previous video${keyShortcuts["prev"]}">
+            <path fill="currentColor" d="M19,5.14V19.14L8,12.14L19,5.14Z" />
           </svg>
         </button>      
       `
-          : null,
-        mainplaypause: this.settings.status.ui.playPause
-          ? `
-        <button type="button" class="T_M_G-video-main-play-pause-btn" title="Play/Pause${keyShortcuts["playPause"]}" data-focusable-control="false" tabindex="${this.initialState ? "0" : "-1"}">
-          <svg class="T_M_G-video-play-icon" data-tooltip-text="Play${keyShortcuts["playPause"]}" data-tooltip-position="top">
+        : null,
+      mainplaypause: this.settings.status.ui.playPause
+        ? `
+        <button type="button" class="T_M_G-video-main-play-pause-btn" data-focusable-control="false" tabindex="${this.initialState ? "0" : "-1"}">
+          <svg class="T_M_G-video-play-icon" data-control-title="Play${keyShortcuts["playPause"]}">
             <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
           </svg>
-          <svg class="T_M_G-video-pause-icon" data-tooltip-text="Pause${keyShortcuts["playPause"]}" data-tooltip-position="top">
+          <svg class="T_M_G-video-pause-icon" data-control-title="Pause${keyShortcuts["playPause"]}">
             <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z" />
           </svg>
-          <svg class="T_M_G-video-replay-icon" viewBox="0 -960 960 960" data-tooltip-text="Replay" data-tooltip-position="top"  data-no-resize="true">
+          <svg class="T_M_G-video-replay-icon" viewBox="0 -960 960 960" data-control-title="Replay${keyShortcuts["playPause"]}"  data-no-resize="true">
             <path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/>
           </svg> 
         </button>         
       `
-          : null,
-        mainnext: this.settings.status.ui.next
-          ? `
-        <button type="button" class="T_M_G-video-main-next-btn" title="Next Video${keyShortcuts["next"]}" data-focusable-control="false" tabindex="-1">
-          <svg class="T_M_G-video-next-icon" data-tooltip-text="Next Video${keyShortcuts["next"]}" data-tooltip-position="top">
+        : null,
+      mainnext: this.settings.status.ui.next
+        ? `
+        <button type="button" class="T_M_G-video-main-next-btn" data-focusable-control="false" tabindex="-1">
+          <svg class="T_M_G-video-next-icon" data-control-title="Next video${keyShortcuts["next"]}">
             <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
           </svg>
         </button>      
       `
-          : null,
-        timeline: this.settings.status.ui.timeline
-          ? `
+        : null,
+      timeline: this.settings.status.ui.timeline
+        ? `
         <div class="T_M_G-video-timeline-container" data-focusable-control="false" tabindex="-1">
           <div class="T_M_G-video-timeline">
             <div class="T_M_G-video-loaded-timeline"></div>
@@ -695,71 +707,71 @@ class T_M_G_Video_Player {
           </div>
         </div>
       `
-          : null,
-        prev: this.settings.status.ui.prev
-          ? `
-        <button type="button" class="T_M_G-video-prev-btn" title="Previous Video${keyShortcuts["prev"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="prev" data-focusable-control="false" tabindex="-1">
-          <svg class="T_M_G-video-prev-icon" data-tooltip-text="Previous Video${keyShortcuts["prev"]}" data-tooltip-position="top" style="transform: scaleX(-1);">
-            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
+        : null,
+      prev: this.settings.status.ui.prev
+        ? `
+        <button type="button" class="T_M_G-video-prev-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="prev" data-focusable-control="false" tabindex="-1">
+          <svg class="T_M_G-video-prev-icon" data-control-title="Previous video${keyShortcuts["prev"]}">
+            <path fill="currentColor" d="M19,5.14V19.14L8,12.14L19,5.14Z" />
           </svg>
         </button>      
       `
-          : null,
-        playpause: this.settings.status.ui.playPause
-          ? `
-        <button type="button" class="T_M_G-video-play-pause-btn" title="Play/Pause${keyShortcuts["playPause"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="playpause" data-focusable-control="false" tabindex="-1">
-          <svg class="T_M_G-video-play-icon" data-tooltip-text="Play${keyShortcuts["playPause"]}" data-tooltip-position="top">
+        : null,
+      playpause: this.settings.status.ui.playPause
+        ? `
+        <button type="button" class="T_M_G-video-play-pause-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="playpause" data-focusable-control="false" tabindex="-1">
+          <svg class="T_M_G-video-play-icon" data-control-title="Play${keyShortcuts["playPause"]}">
             <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
           </svg>
-          <svg class="T_M_G-video-pause-icon" data-tooltip-text="Pause${keyShortcuts["playPause"]}" data-tooltip-position="top">
+          <svg class="T_M_G-video-pause-icon" data-control-title="Pause${keyShortcuts["playPause"]}">
             <path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z" />
           </svg>
-          <svg class="T_M_G-video-replay-icon" viewBox="0 -960 960 960" data-tooltip-text="Replay" data-tooltip-position="top" data-no-resize="true">
+          <svg class="T_M_G-video-replay-icon" viewBox="0 -960 960 960" data-control-title="Replay${keyShortcuts["playPause"]}" data-no-resize="true">
             <path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/>
           </svg> 
         </button>   
       `
-          : null,
-        next: this.settings.status.ui.next
-          ? `
-        <button type="button" class="T_M_G-video-next-btn" title="Next Video${keyShortcuts["next"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="next" data-focusable-control="false" tabindex="-1">
-          <svg class="T_M_G-video-next-icon" data-tooltip-text="Next Video${keyShortcuts["next"]}" data-tooltip-position="top">
+        : null,
+      next: this.settings.status.ui.next
+        ? `
+        <button type="button" class="T_M_G-video-next-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="next" data-focusable-control="false" tabindex="-1">
+          <svg class="T_M_G-video-next-icon" data-control-title="Next video${keyShortcuts["next"]}">
             <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
           </svg>
         </button>   
       `
-          : null,
-        volume: this.settings.status.ui.volume
-          ? `
+        : null,
+      volume: this.settings.status.ui.volume
+        ? `
         <div class="T_M_G-video-volume-container T_M_G-video-vb-container" data-control-id="volume">
-          <button type="button" class="T_M_G-video-mute-btn T_M_G-video-vb-btn" title="Toggle Volume${keyShortcuts["mute"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1">
-            <svg class="T_M_G-video-volume-high-icon" data-tooltip-text="Mute${keyShortcuts["mute"]}" data-tooltip-position="top">
+          <button type="button" class="T_M_G-video-mute-btn data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1">
+            <svg class="T_M_G-video-volume-high-icon" data-control-title="Mute${keyShortcuts["mute"]}">
               <path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
             </svg>
-            <svg class="T_M_G-video-volume-low-icon" data-tooltip-text="Mute${keyShortcuts["mute"]}" data-tooltip-position="top">
+            <svg class="T_M_G-video-volume-low-icon" data-control-title="Mute${keyShortcuts["mute"]}">
               <path fill="currentColor" d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z" />
             </svg>
-            <svg class="T_M_G-video-volume-muted-icon" data-tooltip-text="Unmute${keyShortcuts["mute"]}" data-tooltip-position="top">
+            <svg class="T_M_G-video-volume-muted-icon" data-control-title="Unmute${keyShortcuts["mute"]}">
               <path fill="currentColor" d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" />
             </svg>
           </button>
           <input class="T_M_G-video-volume-slider T_M_G-video-vb-slider" type="range" min="0" max="100" step="1" data-focusable-control="false" tabindex="-1">
         </div>
       `
-          : null,
-        brightness: this.settings.status.ui.brightness
-          ? `
+        : null,
+      brightness: this.settings.status.ui.brightness
+        ? `
         <div class="T_M_G-video-brightness-container T_M_G-video-vb-container" data-control-id="brightness">
-          <button type="button" class="T_M_G-video-dark-btn T_M_G-video-vb-btn" title="Toggle Dark${keyShortcuts["dark"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1">
-            <svg class="T_M_G-video-brightness-high-icon" data-tooltip-text="Dark${keyShortcuts["dark"]}" data-tooltip-position="top">
+          <button type="button" class="T_M_G-video-dark-btn T_M_G-video-vb-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1">
+            <svg class="T_M_G-video-brightness-high-icon" data-control-title="Darken${keyShortcuts["dark"]}">
               <path transform="scale(1.05) translate(1.5, 1.5)"  d="M10 14.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h3a1 1 0 0 1 0 2h-3a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm0-15a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm-9 9h3a1 1 0 1 1 0 2H1a1 1 0 0 1 0-2zm13.95 4.535l2.121 2.122a1 1 0 0 1-1.414 1.414l-2.121-2.121a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-2.12 2.12a1 1 0 1 1-1.415-1.413l2.121-2.122a1 1 0 0 1 1.414 0zM17.071 3.787a1 1 0 0 1 0 1.414L14.95 7.322a1 1 0 0 1-1.414-1.414l2.12-2.121a1 1 0 0 1 1.415 0zm-12.728 0l2.121 2.121A1 1 0 1 1 5.05 7.322L2.93 5.201a1 1 0 0 1 1.414-1.414z">
               </path>
             </svg>
-            <svg class="T_M_G-video-brightness-low-icon" data-tooltip-text="Bright${keyShortcuts["dark"]}" data-tooltip-position="top">
+            <svg class="T_M_G-video-brightness-low-icon" data-control-title="Brighten${keyShortcuts["dark"]}">
               <path transform="scale(1.05) translate(3.25, 3.25)" d="M8 12.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h1a1 1 0 0 1 0 2h-1a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1zm0-13a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zm-7 7h1a1 1 0 1 1 0 2H1a1 1 0 1 1 0-2zm11.95 4.535l.707.708a1 1 0 1 1-1.414 1.414l-.707-.707a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-.707.707A1 1 0 0 1 2.343 13.1l.707-.708a1 1 0 0 1 1.414 0zm9.193-9.192a1 1 0 0 1 0 1.414l-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0zm-9.9 0l.707.707A1 1 0 1 1 3.05 5.322l-.707-.707a1 1 0 0 1 1.414-1.414z">
               </path>
             </svg>
-            <svg class="T_M_G-video-brightness-dark-icon" data-tooltip-text="Bright${keyShortcuts["dark"]}" data-tooltip-position="top">
+            <svg class="T_M_G-video-brightness-dark-icon" data-control-title="Brighten${keyShortcuts["dark"]}">
               <path transform="scale(1.2) translate(2, 2.5)" d="M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM8.5 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm0 11a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm5-5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm-11 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9.743-4.036a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm-7.779 7.779a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm7.072 0a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707zM3.757 4.464a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707z">
               </path>
             </svg>                  
@@ -767,46 +779,46 @@ class T_M_G_Video_Player {
           <input class="T_M_G-video-brightness-slider T_M_G-video-vb-slider" type="range" min="0" max="100" step="1" data-focusable-control="false" tabindex="-1">
         </div>         
       `
-          : null,
-        duration: this.settings.status.ui.duration
-          ? `
-        <button class="T_M_G-video-duration-container" title="Change Time Format${keyShortcuts["timeFormat"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="duration">
+        : null,
+      duration: this.settings.status.ui.duration
+        ? `
+        <button class="T_M_G-video-duration-container" title="Time format${keyShortcuts["timeFormat"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="duration">
           <div class="T_M_G-video-current-time">0:00</div>
           /
           <div class="T_M_G-video-total-time">-:--</div>
         </button>   
       `
-          : null,
-        playbackrate: this.settings.status.ui.playbackRate
-          ? `
-        <button type="button" class="T_M_G-video-playback-rate-btn" title="Playback Rate${keyShortcuts["playbackRate"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="playbackrate">${this.playbackRate}x</button>
+        : null,
+      playbackrate: this.settings.status.ui.playbackRate
+        ? `
+        <button type="button" class="T_M_G-video-playback-rate-btn" title="Playback rate${keyShortcuts["playbackRate"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="playbackrate">${this.playbackRate}x</button>
       `
-          : null,
-        captions: this.settings.status.ui.captions
-          ? `
-        <button type="button" class="T_M_G-video-captions-btn" title="Toggle Captions/Subtitles${keyShortcuts["captions"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="captions">
-          <svg data-tooltip-text="Toggle Subtitles${keyShortcuts["captions"]}" data-tooltip-position="top" class="T_M_G-video-subtitles-icon">
+        : null,
+      captions: this.settings.status.ui.captions
+        ? `
+        <button type="button" class="T_M_G-video-captions-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="captions">
+          <svg data-control-title="Subtitles${keyShortcuts["captions"]}" class="T_M_G-video-subtitles-icon">
             <path fill="currentColor" transform="scale(0.5)" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" />
           </svg>
-          <svg data-tooltip-text="Toggle Captions${keyShortcuts["captions"]}" data-tooltip-position="top" class="T_M_G-video-captions-icon" transform="scale(1.15)">
+          <svg data-control-title="Closed captions${keyShortcuts["captions"]}" class="T_M_G-video-captions-icon" transform="scale(1.15)">
             <path fill="currentColor" d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z"></path>
           <svg>
         </button>
       `
-          : null,
-        settings: this.settings.status.ui.settings
-          ? `
-        <button type="button" class="T_M_G-video-settings-btn" title="Toggle Settings${keyShortcuts["settings"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="settings">
-          <svg class="T_M_G-video-settings-icon" viewBox="0 -960 960 960" data-tooltip-text="Toggle Settings${keyShortcuts["settings"]}" data-tooltip-position="top" data-no-resize="true">
+        : null,
+      settings: this.settings.status.ui.settings
+        ? `
+        <button type="button" class="T_M_G-video-settings-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="settings">
+          <svg class="T_M_G-video-settings-icon" viewBox="0 -960 960 960" data-control-title="Settings${keyShortcuts["settings"]}" data-no-resize="true">
             <path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/>
           </svg>
         </button>      
       `
-          : null,
-        objectfit: this.settings.status.ui.objectFit
-          ? `
-        <button type="button" class="T_M_G-video-object-fit-btn " title="Change Object Fit${keyShortcuts["objectFit"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="objectfit" data-focusable-control="false" tabindex="-1">
-          <svg class="T_M_G-video-object-fit-contain-icon" data-tooltip-text="Fit to Screen${keyShortcuts["objectFit"]}" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16" data-no-resize="true" transform="scale(0.78)">
+        : null,
+      objectfit: this.settings.status.ui.objectFit
+        ? `
+        <button type="button" class="T_M_G-video-object-fit-btn " data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="objectfit" data-focusable-control="false" tabindex="-1">
+          <svg class="T_M_G-video-object-fit-contain-icon" data-control-title="Fit to screen${keyShortcuts["objectFit"]}" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16" data-no-resize="true" transform="scale(0.78)">
             <rect width="16" height="16" rx="4" ry="4" fill="none" stroke-width="2.25" stroke="currentColor" class="T_M_G-video-no-fill" />
             <g stroke-width="1" stroke="currentColor" fill="currentColor" transform="translate(3,3) scale(0.6)">
               <path d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520 -198)"/>
@@ -815,14 +827,14 @@ class T_M_G_Video_Player {
               <path d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520 -198)"/>
             </g>
           </svg>
-          <svg class="T_M_G-video-object-fit-cover-icon" data-tooltip-text="Crop to Fit${keyShortcuts["objectFit"]}" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16" data-no-resize="true" transform="scale(0.78)">
+          <svg class="T_M_G-video-object-fit-cover-icon" data-control-title="Stretch${keyShortcuts["objectFit"]}" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16" data-no-resize="true" transform="scale(0.78)">
             <rect width="16" height="16" rx="4" ry="4" fill="none" stroke-width="2.25" stroke="currentColor" class="T_M_G-video-no-fill" />
             <g stroke-width="1" stroke="currentColor" fill="currentColor" transform="translate(3,3) scale(0.6)">
               <path d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520 -198)"/>
               <path d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520 -198)"/>
             </g>
           </svg>
-          <svg class="T_M_G-video-object-fit-fill-icon" data-tooltip-text="Stretch${keyShortcuts["objectFit"]}" data-tooltip-position="top" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16" data-no-resize="true" transform="scale(0.78)">
+          <svg class="T_M_G-video-object-fit-fill-icon" data-control-title="Crop to fit${keyShortcuts["objectFit"]}" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16" data-no-resize="true" transform="scale(0.78)">
             <rect x="4" y="4" width="8" height="8" rx="1" ry="1" fill="none" stroke-width="1.5" stroke="currentColor" class="T_M_G-video-no-fill" />
             <g stroke-width="1" stroke="currentColor" fill="currentColor" transform="translate(3, 3) scale(0.65)">  
               <path d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520, -198) translate(-3.25, 2.75)" />  
@@ -831,44 +843,44 @@ class T_M_G_Video_Player {
           </svg>               
         </button>            
       `
-          : null,
-        pictureinpicture: this.settings.status.ui.pictureInPicture
-          ? `
-        <button type="button" class="T_M_G-video-picture-in-picture-btn" title="Toggle Picture-in-Picture${keyShortcuts["pictureInPicture"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="pictureinpicture">
-          <svg class="T_M_G-video-enter-picture-in-picture-icon" data-tooltip-text="Enter Picture-in-Picture${keyShortcuts["pictureInPicture"]}" data-tooltip-position="top">
+        : null,
+      pictureinpicture: this.settings.status.ui.pictureInPicture
+        ? `
+        <button type="button" class="T_M_G-video-picture-in-picture-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="pictureinpicture">
+          <svg class="T_M_G-video-enter-picture-in-picture-icon" data-control-title="Picture-in-picture${keyShortcuts["pictureInPicture"]}">
             <path class="T_M_G-video-no-fill" fill="none" d="M0 0h24v24H0z" />
             <path fill="currentColor" fill-rule="nonzero" d="M21 3a1 1 0 0 1 1 1v7h-2V5H4v14h6v2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zm0 10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h8zM6.707 6.293l2.25 2.25L11 6.5V12H5.5l2.043-2.043-2.25-2.25 1.414-1.414z" />
           </svg>
-          <svg class="T_M_G-video-leave-picture-in-picture-icon" data-tooltip-text="Leave Picture-in-Picture${keyShortcuts["pictureInPicture"]}" data-tooltip-position="top">
+          <svg class="T_M_G-video-leave-picture-in-picture-icon" data-control-title="Exit picture-in-picture${keyShortcuts["pictureInPicture"]}">
             <path class="T_M_G-video-no-fill" fill="none" d="M0 0h24v24H0z"></path>
             <path fill-rule="nonzero" d="M21 3a1 1 0 0 1 1 1v7h-2V5H4v14h6v2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zm0 10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h8zm-9.5-6L9.457 9.043l2.25 2.25-1.414 1.414-2.25-2.25L6 12.5V7h5.5z">
             </path>
           </svg>
         </button>   
       `
-          : null,
-        theater: this.settings.status.ui.theater
-          ? `
-        <button type="button" class="T_M_G-video-theater-btn" title="Toggle Theater${keyShortcuts["theater"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="theater">
-          <svg class="T_M_G-video-enter-theater-icon" data-tooltip-text="Enter Theater${keyShortcuts["theater"]}" data-tooltip-position="top">
+        : null,
+      theater: this.settings.status.ui.theater
+        ? `
+        <button type="button" class="T_M_G-video-theater-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="theater">
+          <svg class="T_M_G-video-enter-theater-icon" data-control-title="Cinema mode${keyShortcuts["theater"]}">
             <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M23 7C23 5.34315 21.6569 4 20 4H4C2.34315 4 1 5.34315 1 7V17C1 18.6569 2.34315 20 4 20H20C21.6569 20 23 18.6569 23 17V7ZM21 7C21 6.44772 20.5523 6 20 6H4C3.44772 6 3 6.44771 3 7V17C3 17.5523 3.44772 18 4 18H20C20.5523 18 21 17.5523 21 17V7Z"/>
           </svg>
-          <svg class="T_M_G-video-leave-theater-icon" data-tooltip-text="Leave Theater${keyShortcuts["theater"]}" data-tooltip-position="top">
+          <svg class="T_M_G-video-leave-theater-icon" data-control-title="Default view${keyShortcuts["theater"]}">
             <path fill="currentColor" d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"></path>
           </svg>
         </button>
       `
-          : null,
-        fullscreen: this.settings.status.ui.fullScreen
-          ? `
-        <button type="button" class="T_M_G-video-full-screen-btn" title="Toggle Full Screen${keyShortcuts["fullScreen"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="fullscreen">
-          <svg class="T_M_G-video-enter-full-screen-icon" data-tooltip-text="Enter Full Screen${keyShortcuts["fullScreen"]}" data-tooltip-position="top" transform="scale(.8)">
+        : null,
+      fullscreen: this.settings.status.ui.fullScreen
+        ? `
+        <button type="button" class="T_M_G-video-full-screen-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-focusable-control="false" tabindex="-1" data-control-id="fullscreen">
+          <svg class="T_M_G-video-enter-full-screen-icon" data-control-title="Full screen${keyShortcuts["fullScreen"]}" transform="scale(.8)">
             <path d="M4 1.5C2.61929 1.5 1.5 2.61929 1.5 4V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H3.5C4.05228 9.5 4.5 9.05228 4.5 8.5V4.5H8.5C9.05228 4.5 9.5 4.05228 9.5 3.5V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H4Z" fill="currentColor" />
             <path d="M20 1.5C21.3807 1.5 22.5 2.61929 22.5 4V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H20.5C19.9477 9.5 19.5 9.05228 19.5 8.5V4.5H15.5C14.9477 4.5 14.5 4.05228 14.5 3.5V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H20Z" fill="currentColor" />
             <path d="M20 22.5C21.3807 22.5 22.5 21.3807 22.5 20V15.5C22.5 14.9477 22.0523 14.5 21.5 14.5H20.5C19.9477 14.5 19.5 14.9477 19.5 15.5V19.5H15.5C14.9477 19.5 14.5 19.9477 14.5 20.5V21.5C14.5 22.0523 14.9477 22.5 15.5 22.5H20Z" fill="currentColor" />
             <path d="M1.5 20C1.5 21.3807 2.61929 22.5 4 22.5H8.5C9.05228 22.5 9.5 22.0523 9.5 21.5V20.5C9.5 19.9477 9.05228 19.5 8.5 19.5H4.5V15.5C4.5 14.9477 4.05228 14.5 3.5 14.5H2.5C1.94772 14.5 1.5 14.9477 1.5 15.5V20Z" fill="currentColor" />
           </svg>
-          <svg class="T_M_G-video-leave-full-screen-icon" data-tooltip-text="Leave Full Screen${keyShortcuts["fullScreen"]}" data-tooltip-position="top" transform="scale(.8)">
+          <svg class="T_M_G-video-leave-full-screen-icon" data-control-title="Exit full screen${keyShortcuts["fullScreen"]}" transform="scale(.8)">
             <path d="M7 9.5C8.38071 9.5 9.5 8.38071 9.5 7V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H7.5C6.94772 1.5 6.5 1.94772 6.5 2.5V6.5H2.5C1.94772 6.5 1.5 6.94772 1.5 7.5V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H7Z" fill="currentColor" />
             <path d="M17 9.5C15.6193 9.5 14.5 8.38071 14.5 7V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H16.5C17.0523 1.5 17.5 1.94772 17.5 2.5V6.5H21.5C22.0523 6.5 22.5 6.94772 22.5 7.5V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H17Z" fill="currentColor" />
             <path d="M17 14.5C15.6193 14.5 14.5 15.6193 14.5 17V21.5C14.5 22.0523 14.9477 22.5 15.5 22.5H16.5C17.0523 22.5 17.5 22.0523 17.5 21.5V17.5H21.5C22.0523 17.5 22.5 17.0523 22.5 16.5V15.5C22.5 14.9477 22.0523 14.5 21.5 14.5H17Z" fill="currentColor" />
@@ -876,25 +888,39 @@ class T_M_G_Video_Player {
           </svg>
         </button>   
       `
-          : null,
-      };
-    })();
+        : null,
+    };
+  }
+
+  buildControllerStructure() {
+    const spacerIndex = this.settings.controllerStructure.indexOf("spacer"),
+      leftSideControls = spacerIndex > -1 ? this.settings.controllerStructure.slice(0, spacerIndex) : null,
+      rightSideControls = spacerIndex > -1 ? this.settings.controllerStructure.slice(spacerIndex + 1) : null,
+      //breaking HTML into smaller units to use as building blocks
+      overlayControlsContainerBuild = this.queryDOM(".T_M_G-video-overlay-controls-container"),
+      controlsContainerBuild = this.queryDOM(".T_M_G-video-controls-container"),
+      notifiersContainerBuild = this.settings.status.ui.notifiers ? document.createElement("div") : null,
+      overlayMainControlsWrapperBuild = document.createElement("div"),
+      controlsWrapperBuild = document.createElement("div"),
+      leftSideControlsWrapperBuild = this.settings.status.ui.leftSideControls ? document.createElement("div") : null,
+      rightSideControlsWrapperBuild = this.settings.status.ui.rightSideControls ? document.createElement("div") : null;
+    const HTML = this.getPlayerHTML();
     //building and deploying video controls
     overlayControlsContainerBuild.innerHTML = ``;
     controlsContainerBuild.innerHTML = ``;
     //builiding overlay controls so order of insertioni matters because they are eall positioned absolutely
-    overlayControlsContainerBuild.innerHTML += this.HTML.pictureinpicturewrapper;
+    overlayControlsContainerBuild.innerHTML += HTML.pictureinpicturewrapper;
     //builidng and deploying Notifiers HTML
     if (this.settings.status.ui.notifiers) {
       notifiersContainerBuild.classList = "T_M_G-video-notifiers-container";
       notifiersContainerBuild.setAttribute("data-current-notifier", "");
-      notifiersContainerBuild.innerHTML += ``.concat(this.HTML.playpausenotifier ?? "", this.HTML.captionsnotifier ?? "", this.HTML.objectfitnotifier ?? "", this.HTML.playbackratenotifier ?? "", this.HTML.volumenotifier ?? "", this.HTML.brightnessnotifier ?? "", this.HTML.fwdnotifier ?? "", this.HTML.bwdnotifier ?? "", this.HTML.scrubnotifier ?? "", this.HTML.touchtimelinenotifier ?? "", this.HTML.touchvolumenotifier ?? "", this.HTML.touchbrightnessnotifier ?? "");
+      notifiersContainerBuild.innerHTML += ``.concat(HTML.playpausenotifier ?? "", HTML.captionsnotifier ?? "", HTML.objectfitnotifier ?? "", HTML.playbackratenotifier ?? "", HTML.volumenotifier ?? "", HTML.brightnessnotifier ?? "", HTML.fwdnotifier ?? "", HTML.bwdnotifier ?? "", HTML.scrubnotifier ?? "", HTML.touchtimelinenotifier ?? "", HTML.touchvolumenotifier ?? "", HTML.touchbrightnessnotifier ?? "");
       overlayControlsContainerBuild.append(notifiersContainerBuild);
     }
     //building and deploying overlay general controls
-    overlayControlsContainerBuild.innerHTML += ``.concat(this.HTML.thumbnail ?? "", this.HTML.videobuffer ?? "", this.HTML.cueContainer ?? "", this.HTML.playlisttitle ?? "", this.HTML.expandminiplayer ?? "", this.HTML.removeminiplayer ?? "", this.HTML.fullscreenorientation ?? "");
+    overlayControlsContainerBuild.innerHTML += ``.concat(HTML.thumbnail ?? "", HTML.videobuffer ?? "", HTML.cueContainer ?? "", HTML.playlisttitle ?? "", HTML.expandminiplayer ?? "", HTML.removeminiplayer ?? "", HTML.fullscreenorientation ?? "");
     //building and deploying overlay main controls wrapper
-    overlayMainControlsWrapperBuild.innerHTML += ``.concat(this.HTML.mainprev ?? "", this.HTML.mainplaypause ?? "", this.HTML.mainnext ?? "");
+    overlayMainControlsWrapperBuild.innerHTML += ``.concat(HTML.mainprev ?? "", HTML.mainplaypause ?? "", HTML.mainnext ?? "");
     overlayMainControlsWrapperBuild.classList = "T_M_G-video-overlay-main-controls-wrapper";
     overlayControlsContainerBuild.append(overlayMainControlsWrapperBuild);
     //building and deploying controls wrapper
@@ -903,7 +929,7 @@ class T_M_G_Video_Player {
       const leftSideControlsWrapper = document.createElement("div");
       leftSideControlsWrapper.classList = "T_M_G-video-left-side-controls-wrapper T_M_G-video-side-controls-wrapper";
       leftSideControlsWrapper.setAttribute("data-dropzone", this.settings.status.ui.draggableControls);
-      leftSideControlsWrapper.innerHTML += ``.concat(...Array.from(leftSideControls, (el) => this.HTML[el] || ""));
+      leftSideControlsWrapper.innerHTML += ``.concat(...Array.from(leftSideControls, (el) => HTML[el] || ""));
       leftSideControlsWrapperBuild.append(leftSideControlsWrapper);
       controlsWrapperBuild.append(leftSideControlsWrapperBuild);
     }
@@ -912,12 +938,12 @@ class T_M_G_Video_Player {
       const rightSideControlsWrapper = document.createElement("div");
       rightSideControlsWrapper.classList = "T_M_G-video-right-side-controls-wrapper T_M_G-video-side-controls-wrapper";
       rightSideControlsWrapper.setAttribute("data-dropzone", this.settings.status.ui.draggableControls);
-      rightSideControlsWrapper.innerHTML += ``.concat(...Array.from(rightSideControls, (el) => this.HTML[el] || ""));
+      rightSideControlsWrapper.innerHTML += ``.concat(...Array.from(rightSideControls, (el) => HTML[el] || ""));
       rightSideControlsWrapperBuild.append(rightSideControlsWrapper);
       controlsWrapperBuild.append(rightSideControlsWrapperBuild);
     }
     // packing compiled build into controls container
-    controlsContainerBuild.innerHTML += this.HTML.timeline ?? "";
+    controlsContainerBuild.innerHTML += HTML.timeline ?? "";
     controlsWrapperBuild.classList = "T_M_G-video-controls-wrapper";
     controlsContainerBuild.append(controlsWrapperBuild);
   }
@@ -945,6 +971,10 @@ class T_M_G_Video_Player {
       captionsNotifier: ui.notifiers ? this.queryDOM(".T_M_G-video-captions-notifier") : null,
       objectFitNotifier: ui.notifiers ? this.queryDOM(".T_M_G-video-object-fit-notifier") : null,
       playbackRateNotifier: ui.notifiers ? this.queryDOM(".T_M_G-video-playback-rate-notifier") : null,
+      playbackRateNotifierText: ui.notifiers ? this.queryDOM(".T_M_G-video-playback-rate-notifier-text") : null,
+      playbackRateNotifierContent: ui.notifiers ? this.queryDOM(".T_M_G-video-playback-rate-notifier-content") : null,
+      playbackRateUpNotifier: ui.notifiers ? this.queryDOM(".T_M_G-video-playback-rate-up-notifier") : null,
+      playbackRateDownNotifier: ui.notifiers ? this.queryDOM(".T_M_G-video-playback-rate-down-notifier") : null,
       volumeNotifierContent: ui.notifiers ? this.queryDOM(".T_M_G-video-volume-notifier-content") : null,
       volumeUpNotifier: ui.notifiers ? this.queryDOM(".T_M_G-video-volume-up-notifier") : null,
       volumeDownNotifier: ui.notifiers ? this.queryDOM(".T_M_G-video-volume-down-notifier") : null,
@@ -955,6 +985,7 @@ class T_M_G_Video_Player {
       brightnessDarkNotifier: ui.notifiers ? this.queryDOM(".T_M_G-video-brightness-dark-notifier") : null,
       fwdNotifier: ui.notifiers ? this.queryDOM(".T_M_G-video-fwd-notifier") : null,
       bwdNotifier: ui.notifiers ? this.queryDOM(".T_M_G-video-bwd-notifier") : null,
+      scrubNotifierText: ui.notifiers ? this.queryDOM(".T_M_G-video-scrub-notifier-text") : null,
       scrubNotifier: ui.notifiers ? this.queryDOM(".T_M_G-video-scrub-notifier") : null,
       touchTimelineNotifier: ui.notifiers ? this.queryDOM(".T_M_G-video-touch-timeline-notifier") : null,
       touchVolumeContent: ui.notifiers ? this.queryDOM(".T_M_G-video-touch-volume-content") : null,
@@ -1001,7 +1032,7 @@ class T_M_G_Video_Player {
       pictureInPictureBtn: ui.pictureInPicture ? this.queryDOM(".T_M_G-video-picture-in-picture-btn") : null,
       theaterBtn: ui.theater ? this.queryDOM(".T_M_G-video-theater-btn") : null,
       fullScreenBtn: ui.fullScreen ? this.queryDOM(".T_M_G-video-full-screen-btn") : null,
-      svgs: this.videoContainer.querySelectorAll("svg"),
+      svgs: this.videoContainer.getElementsByTagName("svg"),
       focusableControls: this.videoContainer.querySelectorAll("[data-focusable-control]"),
       draggableControls: ui.draggableControls ? this.videoContainer.querySelectorAll("[data-draggable-control]") : null,
       draggableControlContainers: ui.draggableControls ? this.videoContainer.querySelectorAll(".T_M_G-video-side-controls-wrapper") : null,
@@ -1009,19 +1040,17 @@ class T_M_G_Video_Player {
     };
   }
 
-  initializeVideoPlayer() {
+  initPlayer() {
     this.retrieveDOM();
     this.syncAspectRatio();
     this.observeResize();
-    this.controlsResize();
+    this.svgSetup();
     if (!(this.video.currentSrc || this.video.src)) return this._handleLoadedError();
-    else {
-      this.setTitleState();
-      this.setBtnsState();
-      this.setVideoEventListeners();
-    }
+    this.setTitleState();
+    this.setBtnsState();
+    this.setVideoEventListeners();
     if (this.initialState && this.video.paused) this.addInitialState();
-    else this.initializeControls();
+    else this.initControls();
     if (this.disabled) this.disable();
     this.initialized = true;
   }
@@ -1041,7 +1070,7 @@ class T_M_G_Video_Player {
     this.videoContainer.classList.remove("T_M_G-video-initial");
     this.initialState = false;
     this.togglePlay(true);
-    this.initializeControls();
+    this.initControls();
     this.DOM.mainPlayPauseBtn?.removeEventListener("click", this.removeInitialState);
     this.DOM.videoContainerContent.removeEventListener("click", this.removeInitialState);
   }
@@ -1052,7 +1081,7 @@ class T_M_G_Video_Player {
     this.DOM.mainPlayPauseBtn?.addEventListener("animationend", () => this.DOM.mainPlayPauseBtn?.classList.remove("T_M_G-video-control-spin"), { once: true });
   }
 
-  initializeControls() {
+  initControls() {
     this._handleLoadedMetadata();
     this.updateAudioSettings();
     this.updateBrightnessSettings();
@@ -1240,12 +1269,12 @@ class T_M_G_Video_Player {
     this.DOM.nextBtn?.addEventListener("click", this.nextVideo);
     this.DOM.playPauseBtn?.addEventListener("click", this.togglePlay);
     this.DOM.mainPlayPauseBtn?.addEventListener("click", this.togglePlay);
-    this.DOM.durationContainer?.addEventListener("click", this.changeTimeFormat);
-    this.DOM.playbackRateBtn?.addEventListener("click", this.togglePlaybackRate);
+    this.DOM.durationContainer?.addEventListener("click", this.rotateTimeFormat);
+    this.DOM.playbackRateBtn?.addEventListener("click", this.rotatePlaybackRate);
     this.DOM.captionsBtn?.addEventListener("click", this.toggleCaptions);
     this.DOM.muteBtn?.addEventListener("click", this.toggleMute);
     this.DOM.darkBtn?.addEventListener("click", this.toggleDark);
-    this.DOM.objectFitBtn?.addEventListener("click", this.toggleObjectFit);
+    this.DOM.objectFitBtn?.addEventListener("click", this.rotateObjectFit);
     this.DOM.theaterBtn?.addEventListener("click", this.toggleTheaterMode);
     this.DOM.fullScreenBtn?.addEventListener("click", this.toggleFullScreenMode);
     this.DOM.pictureInPictureBtn?.addEventListener("click", this.togglePictureInPictureMode);
@@ -1353,7 +1382,7 @@ class T_M_G_Video_Player {
   observeResize() {
     this._handleMediaParentResize();
     tmg.initScrollAssist(this.DOM.videoTitle, { pxPerSecond: 60 });
-    tmg.initScrollAssist(this.DOM.scrubNotifier?.children?.[1]?.children?.[0], {
+    tmg.initScrollAssist(this.DOM.scrubNotifierText, {
       pxPerSecond: 60,
     });
     [this.DOM.leftSideControlsWrapper, this.DOM.rightSideControlsWrapper].forEach((el) => {
@@ -1366,7 +1395,7 @@ class T_M_G_Video_Player {
 
   unobserveResize() {
     tmg.removeScrollAssist(this.DOM.videoTitle);
-    tmg.removeScrollAssist(this.DOM.scrubNotifier?.children?.[1]?.children?.[0], {
+    tmg.removeScrollAssist(this.DOM.scrubNotifierText, {
       pxPerSecond: 60,
     });
     [this.DOM.leftSideControlsWrapper, this.DOM.rightSideControlsWrapper].forEach((el) => {
@@ -1452,11 +1481,14 @@ class T_M_G_Video_Player {
     if (wrapper === this.DOM.rightSideControlsWrapper) spacer?.setAttribute("data-spacer", true);
   }
 
-  controlsResize() {
+  svgSetup() {
     let controlsSize = 25;
-    this.DOM.svgs?.forEach((svg) => {
+    [...this.DOM.svgs].forEach((svg) => {
       svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-      if (!(svg.dataset.noResize === "true")) svg.setAttribute("viewBox", `0 0 ${controlsSize} ${controlsSize}`);
+      if (svg.dataset.noResize !== "true") svg.setAttribute("viewBox", `0 0 ${controlsSize} ${controlsSize}`);
+      const title = svg.getAttribute("data-control-title");
+      if (!title) return;
+      svg.addEventListener("mouseover", () => (svg.parentElement.title = title));
     });
   }
 
@@ -1509,9 +1541,8 @@ class T_M_G_Video_Player {
   }
 
   reactivate() {
-    if (this.videoContainer.classList.contains("T_M_G-video-inactive") && this.loaded) {
-      this.videoContainer.classList.remove("T_M_G-video-inactive");
-    }
+    if (!this.videoContainer.classList.contains("T_M_G-video-inactive") || !this.loaded) return;
+    this.videoContainer.classList.remove("T_M_G-video-inactive");
   }
 
   disable() {
@@ -1637,7 +1668,8 @@ class T_M_G_Video_Player {
   }
 
   previousVideo() {
-    if (this.playlist && this.currentPlaylistIndex > 0) this.currentTime < 3 ? this.movePlaylistTo(this.currentPlaylistIndex - 1) : this.moveVideoTime({ to: "start" });
+    if (this.currentTime >= 3) return this.replay();
+    if (this.playlist && this.currentPlaylistIndex > 0 && this.currentTime < 3) this.movePlaylistTo(this.currentPlaylistIndex - 1);
   }
 
   nextVideo() {
@@ -1677,8 +1709,8 @@ class T_M_G_Video_Player {
     const playlistToastContainer = document.createElement("div");
     playlistToastContainer.classList = "T_M_G-video-playlist-toast-container";
     playlistToastContainer.innerHTML = `
-        <span title="Play next Video" class="T_M_G-video-playlist-next-video-preview-wrapper">
-          <button type="button" title="Play next video">
+        <span title="Play next video" class="T_M_G-video-playlist-next-video-preview-wrapper">
+          <button type="button">
             <svg preserveAspectRatio="xMidYMid meet" viewBox="0 0 25 25">
               <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z" />
             </svg>
@@ -1808,7 +1840,7 @@ class T_M_G_Video_Player {
     if (this.currentPlaylistIndex < this.playlist?.length - 1) set("nexttrack", this.nextVideo);
   }
 
-  toggleObjectFit() {
+  rotateObjectFit() {
     const fitNames = ["Crop to Fit", "Fit To Screen", "Stretch"],
       fits = ["contain", "cover", "fill"];
     let fitIndex = fits.indexOf(this.videoObjectFit) + 1;
@@ -1997,13 +2029,13 @@ class T_M_G_Video_Player {
     this.video.volume = 1; // just in case
     this.videoCurrentProgressPosition = tmg.isValidNumber(this.video.duration) ? tmg.parseNumber(this.video.currentTime / this.video.duration) : this.video.currentTime / 60; // progress fallback, shouldn't take more than a min for duration to be available
     if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.time.format !== "timespent" ? tmg.formatTime(this.video.currentTime) : `-${tmg.formatTime(this.video.duration - this.video.currentTime)}`;
-    if (this.speedCheck && this.speedToken) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", tmg.formatTime(this.video.currentTime));
+    if (this.speedCheck && !this.video.paused) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", tmg.formatTime(this.video.currentTime));
     if (this.playlist && this.currentTime > 3) this.playlistCurrentTime = this.currentTime;
     if (Math.floor((this.settings.time.end || this.duration) - this.currentTime) <= this.settings.auto.next) this.autonextVideo();
-    if (this.videoContainer.classList.contains("T_M_G-video-replay")) this.videoContainer.classList.remove("T_M_G-video-replay");
+    this.videoContainer.classList.remove("T_M_G-video-replay");
   }
 
-  changeTimeFormat() {
+  rotateTimeFormat() {
     if (!this.settings.status.allowOverride.time) return;
     this.showOverlay();
     this.settings.time.format = this.settings.time.format !== "timespent" ? "timespent" : "timeleft";
@@ -2077,12 +2109,11 @@ class T_M_G_Video_Player {
     this.playbackRate = this.video.playbackRate;
   }
 
-  togglePlaybackRate(dir = "forwards") {
-    const delta = dir === "backwards" ? -0.25 : 0.25;
-    this.DOM.playbackRateNotifier?.classList.toggle("T_M_G-video-rewind", dir === "backwards");
+  rotatePlaybackRate(dir = "forwards") {
+    const delta = dir === "backwards" ? -this.settings.playbackRate.skip : this.settings.playbackRate.skip;
     let rate = this.playbackRate + delta;
-    if (rate < 0.25) rate = 2;
-    else if (rate > 2) rate = 0.25;
+    if (rate < this.settings.playbackRate.min) rate = this.settings.playbackRate.max;
+    else if (rate > this.settings.playbackRate.max) rate = this.settings.playbackRate.min;
     this.playbackRate = rate;
   }
 
@@ -2093,41 +2124,37 @@ class T_M_G_Video_Player {
     switch (sign) {
       case "-":
         if (rate > this.settings.playbackRate.min) this.playbackRate -= rate % value ? rate % value : value;
-        this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-rewind");
-        this.fire("playbackratechange");
+        this.fire("playbackratedown");
         break;
       default:
         if (rate < this.settings.playbackRate.max) this.playbackRate += rate % value ? rate % value : value;
-        this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-rewind");
-        this.fire("playbackratechange");
+        this.fire("playbackrateup");
         break;
     }
   }
 
   _handlePlaybackRateChange() {
+    if (this.DOM.playbackRateNotifierContent) this.DOM.playbackRateNotifierContent.textContent = `${this.playbackRate}x`;
+    if (this.DOM.playbackRateNotifierText) this.DOM.playbackRateNotifierText.textContent = `${this.playbackRate}x`;
     this.setBtnsState("playbackRate");
-    if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.textContent = `${this.playbackRate}x`;
   }
 
   fastPlay(pos) {
     if (this.speedCheck) return;
     this.speedCheck = true;
     this.lastPlaybackRate = this.playbackRate;
-    this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-rewind");
     this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-control-active");
     pos === "backwards" && this.settings.status.beta?.rewind ? setTimeout(this.rewind) : setTimeout(this.fastForward);
   }
 
   fastForward() {
-    this.speedToken = 1;
     this.playbackRate = this.settings.playbackRate.fast;
     this.togglePlay(true);
   }
 
   rewind() {
-    this.speedToken = 0;
     this.playbackRate = 1;
-    if (this.DOM.playbackRateNotifier) this.DOM.playbackRateNotifier.textContent = `${this.settings.playbackRate.fast}x`;
+    if (this.DOM.playbackRateNotifierText) this.DOM.playbackRateNotifierText.textContent = `${this.settings.playbackRate.fast}x`;
     this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-rewind");
     this.video.addEventListener("play", this.rewindReset);
     this.speedIntervalId = setInterval(this.rewindVideo, this.frameThrottleDelay);
@@ -2152,12 +2179,9 @@ class T_M_G_Video_Player {
     if (!this.speedCheck) return;
     this.speedCheck = false;
     this.playbackRate = this.lastPlaybackRate;
-    if (this.speedToken === 0) {
-      clearInterval(this.speedIntervalId);
-      this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-rewind");
-      this.video.removeEventListener("play", this.rewindReset);
-    }
-    this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-control-active");
+    clearInterval(this.speedIntervalId);
+    this.video.removeEventListener("play", this.rewindReset);
+    this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-control-active", "T_M_G-video-rewind");
     this.togglePlay(true);
   }
 
@@ -2202,12 +2226,12 @@ class T_M_G_Video_Player {
     this.previewCaptionsTimeoutId = setTimeout(() => this.videoContainer.classList.remove("T_M_G-video-captions-preview"), 1500);
   }
 
-  toggleCaptionsOpacity() {
+  rotateCaptionsOpacity() {
     this.videoCaptionsOpacity = Number(this.videoCaptionsOpacity) === 1 ? 0.5 : 1;
     this.previewCaptions();
   }
 
-  toggleCaptionsWindowOpacity() {
+  rotateCaptionsWindowOpacity() {
     this.videoCaptionsWindowOpacity = Number(this.videoCaptionsWindowOpacity) === 1 ? 0 : 1;
     this.previewCaptions();
   }
@@ -2240,7 +2264,7 @@ class T_M_G_Video_Player {
       cueLine.className = "T_M_G-video-cue-line";
       const cueEl = document.createElement("span");
       cueEl.className = "T_M_G-video-cue";
-      cueEl.innerText = part.join(" ");
+      cueEl.textContent = part.join(" ");
       cueLine.appendChild(cueEl);
       cueWrapper.appendChild(cueLine);
     });
@@ -2313,7 +2337,7 @@ class T_M_G_Video_Player {
   }
 
   updateAudioSettings() {
-    tmg.initializeAudioManager(!this.video.autoplay);
+    tmg.initAudioManager(!this.video.autoplay);
     this.videoContainer.classList.toggle("T_M_G-video-volume-boost", this.settings.volume.max > 100);
     if (this.DOM.volumeSlider) this.DOM.volumeSlider.max = this.settings.volume.max;
     this.videoVolumeSliderPercent = Math.round((100 / this.settings.volume.max) * 100);
@@ -3122,6 +3146,7 @@ class T_M_G_Video_Player {
     if ((e.key === " " || e.key === "Enter") && e.currentTarget.document.activeElement?.tagName === "BUTTON") return false;
     if (e.currentTarget.document.activeElement?.matches("input,textarea,[contenteditable='true']")) return false;
     const combo = tmg.stringifyKeyCombo(e);
+    console.log(combo)
     const { override, block, action, allowed } = this.getTermsForCombo(combo);
     if (block) return false;
     if (override) e.preventDefault();
@@ -3190,10 +3215,10 @@ class T_M_G_Video_Player {
             this.changeCaptionsSize(-this.settings.captionsSize.skip);
             break;
           case "captionsOpacity":
-            this.toggleCaptionsOpacity();
+            this.rotateCaptionsOpacity();
             break;
           case "captionsWindowOpacity":
-            this.toggleCaptionsWindowOpacity();
+            this.rotateCaptionsWindowOpacity();
             break;
           case "expandMiniPlayer":
             this.toggleMiniPlayerMode(false, "instant");
@@ -3232,10 +3257,10 @@ class T_M_G_Video_Player {
     if (action === false) return;
     switch (action) {
       case "objectFit":
-        if (!this.isModeActive("pictureInPicture")) this.toggleObjectFit();
+        if (!this.isModeActive("pictureInPicture")) this.rotateObjectFit();
         break;
       case "timeFormat":
-        this.changeTimeFormat();
+        this.rotateTimeFormat();
         break;
       case "mute":
         this.toggleMute("auto");
@@ -3292,7 +3317,7 @@ class T_M_G_Video_Player {
       case "playPause":
         e.stopImmediatePropagation();
         if (this.playTriggerCounter === 1) {
-          e.shiftKey ? this.replay() : this.togglePlay();
+          this.togglePlay();
           this.video.paused ? this.fire("videopause") : this.fire("videoplay");
         }
       default:
@@ -3346,10 +3371,9 @@ class T_M_G_Video_Player {
   }
 
   _handleDrop(e) {
-    if (e.target.dataset.dropzone) {
-      e.preventDefault();
-      e.target.classList.remove("T_M_G-video-dragover");
-    }
+    if (!e.target.dataset.dropzone) return;
+    e.preventDefault();
+    e.target.classList.remove("T_M_G-video-dragover");
   }
 
   _handleDragLeave({ target }) {
@@ -3684,7 +3708,7 @@ class T_M_G {
   static ALLOWED_MODES = ["fullScreen", "theater", "pictureInPicture", "miniPlayer"];
   static ALLOWED_CONTROLS = ["prev", "playPause", "next", "brightness", "volume", "duration", "spacer", "playbackRate", "captions", "settings", "objectFit", "pictureInPicture", "theater", "fullScreen"];
   static ALLOWED_SETTINGS = ["allowOverride", "errorMessages", "beta", "modes", "controllerStructure", "notifiers", "persist", "auto", "autocaptions", "playsInline", "overlayDelay", "volume", "brightness", "playbackRate", "captionsSize", "time", "keys"];
-  static NOTIFIER_EVENTS = ["videoplay", "videopause", "volumeup", "volumedown", "volumemuted", "brightnessup", "brightnessdown", "brightnessdark", "playbackratechange", "captions", "objectfitchange", "theater", "fullScreen", "fwd", "bwd"];
+  static NOTIFIER_EVENTS = ["videoplay", "videopause", "playbackrateup", "playbackratedown", "volumeup", "volumedown", "volumemuted", "brightnessup", "brightnessdown", "brightnessdark", "captions", "objectfitchange", "theater", "fullScreen", "fwd", "bwd"];
   static KEY_SHORTCUT_ACTIONS = ["prev", "next", "playPause", "timeFormat", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "objectFit", "fullScreen", "theater", "expandMiniPlayer", "removeMiniPlayer", "pictureInPicture", "captions", "captionsOpacity", "captionsWindowOpacity", "captionsSizeUp", "captionsSizeDown", "settings"];
   static BETA_FEATURES = ["rewind", "draggableControls", "gestureControls", "floatingPlayer"];
   static WHITE_LISTED_KEYS = [" ", "Enter", "Escape", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => k.toLowerCase());
@@ -3832,7 +3856,7 @@ class T_M_G {
   static _handleFullScreenChange() {
     tmg._CURRENT_FULL_SCREEN_PLAYER?._handleFullScreenChange();
   }
-  static initializeAudioManager(bool = true) {
+  static initAudioManager(bool = true) {
     if (!tmg._AUDIO_CONTEXT && bool) {
       tmg._AUDIO_CONTEXT = new (AudioContext || webkitAudioContext)();
       tmg.Players?.forEach((Player) => Player.setUpAudio());
@@ -3855,7 +3879,7 @@ class T_M_G {
     gainNode.connect(tmg._AUDIO_CONTEXT.destination);
   }
   static resumeAudioManager() {
-    if (!tmg._AUDIO_CONTEXT) tmg.initializeAudioManager();
+    if (!tmg._AUDIO_CONTEXT) tmg.initAudioManager();
     else if (tmg._AUDIO_CONTEXT?.state === "suspended") tmg._AUDIO_CONTEXT.resume();
   }
   static suspendAudioManager() {
@@ -4257,16 +4281,18 @@ class T_M_G {
   static removeScrollAssist(el) {
     tmg._SCROLLERS.get(el)?.destroy();
   }
-  static rippleHandler(e, target) {
+  static rippleHandler(e, target, forceCenter = false) {
     const currentTarget = target || e.currentTarget;
     if ((e.target !== e.currentTarget && e.target?.matches("button,[href],input,label,select,textarea,[tabindex]:not([tabindex='-1'])")) || currentTarget?.hasAttribute("disabled")) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
     e.stopPropagation?.();
     const el = currentTarget;
+    const rW = el.offsetWidth;
+    const rH = el.offsetHeight;
     const rect = el.getBoundingClientRect();
-    const size = Math.max(rect.width, rect.height);
-    const x = e.clientX - rect.left - size / 2;
-    const y = e.clientY - rect.top - size / 2;
+    const size = Math.max(rW, rH);
+    const x = forceCenter ? rW / 2 - size / 2 : (e.clientX - rect.left) * (rW / rect.width) - size / 2;
+    const y = forceCenter ? rH / 2 - size / 2 : (e.clientY - rect.top) * (rH / rect.height) - size / 2;
     const wrapper = document.createElement("span");
     const ripple = document.createElement("span");
     wrapper.className = "T_M_G-video-ripple-container";
