@@ -1,5 +1,5 @@
 const modes = ["fullscreen", "theater", "pictureinpicture", "miniplayer"] as const;
-const beta = ["rewind", "draggablecontrols", "gesturecontrols", "floatingplayer"] as const;
+const betaFeatures = ["rewind", "gestureControls", "floatingPlayer"] as const;
 const controllerStructure = ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
 const keyShortcutActions = ["prev", "next", "playPause", "timeFormat", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "objectFit", "fullScreen", "theater", "expandMiniPlayer", "removeMiniPlayer", "pictureInPicture", "captions", "captionsOpacity", "captionsWindowOpacity", "captionsSizeUp", "captionsSizeDown", "settings"] as const;
 const errorCodes = [
@@ -12,7 +12,7 @@ const errorCodes = [
 
 type Mode = (typeof modes)[number];
 type Control = (typeof controllerStructure)[number];
-type BetaFeature = (typeof beta)[number];
+type BetaFeature = (typeof betaFeatures)[number];
 type KeyShortcut = (typeof keyShortcutActions)[number];
 type ErrorCode = (typeof errorCodes)[number];
 
@@ -24,16 +24,16 @@ interface PreviewImage {
 interface Range {
   min: number;
   max: number;
-  value: number;
+  value: number | null;
   skip: number;
 }
 
 interface Settings {
   allowOverride: Exclude<keyof Settings, "allowOverride">[] | boolean;
-  errorMessages: Partial<Record<ErrorCode, string>>;
-  beta: BetaFeature[] | boolean;
+  errorMessages: Record<ErrorCode, string>;
+  beta: Record<BetaFeature, boolean>;
   modes: Mode[] | boolean;
-  controllerStructure: Control[] | boolean;
+  controllerStructure: Record<"top" | "bottom", Control[] | boolean>;
   notifiers: boolean;
   persist: boolean;
   playsInline: boolean;
@@ -41,16 +41,35 @@ interface Settings {
   volume: Range & { muted: boolean };
   brightness: Range;
   playbackRate: Range;
-  captionsSize: Range;
+  captions: {
+    size: Range;
+    font: {
+      family: string | null;
+      size: number | null;
+      color: string;
+      opacity: number;
+      weight: string | number;
+      variant: string;
+    };
+    window: {
+      color: string;
+      opacity: number;
+    };
+    background: {
+      color: string;
+      opacity: number;
+    };
+    characterEdgeStyle: "none" | "raised" | "depressed" | "outline" | "drop shadow";
+  };
   auto: {
+    play: boolean | null;
     next: boolean;
     captions: boolean;
-    play: boolean;
   };
   time: Pick<Range, "skip"> & {
     linePosition: "top" | "bottom";
     previewImages: PreviewImage | boolean;
-    progressBar: boolean;
+    progressBar: boolean | null;
     format: "timeLeft" | "timeSpent";
     loop: boolean;
     start: number | null;
@@ -61,17 +80,17 @@ interface Settings {
     strictMatches: boolean;
     overrides: string[];
     blocks: string[];
-    shortcuts: Partial<Record<KeyShortcut, string>>;
+    shortcuts: Record<KeyShortcut, string>;
   };
 }
 
 type PlaylistItem = Pick<VideoBuild, "media" | "src" | "sources" | "tracks"> & {
-  settings?: {
-    time?: Pick<Settings["time"], "previewImages" | "start" | "end">;
+  settings: {
+    time: Pick<Settings["time"], "previewImages" | "start" | "end">;
   };
 };
 
-type VideoBuild = Partial<{
+type VideoBuild = {
   mediaPlayer: "TMG";
   mediaType: "video";
   media: MediaMetadata;
@@ -83,5 +102,5 @@ type VideoBuild = Partial<{
   sources: string[];
   tracks: string[];
   playlist: PlaylistItem[];
-  settings: Partial<Settings>;
-}>;
+  settings: Settings;
+};
