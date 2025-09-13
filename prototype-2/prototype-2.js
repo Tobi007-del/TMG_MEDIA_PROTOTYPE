@@ -1060,7 +1060,7 @@ class T_M_G_Video_Player {
     this.setControlsState();
     this.setVideoEventListeners();
     this.setControlsEventListeners();
-    this[this.initialMode]?.();
+    this[`toggle${tmg.capitalize(this.initialMode)}Mode`]?.();
     if (!this.video.currentSrc) this._handleLoadedError();
     this.initialState && this.video.paused ? this.addInitialState() : this.initControls();
     if (this.disabled) this.disable();
