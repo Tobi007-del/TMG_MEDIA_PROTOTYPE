@@ -1858,11 +1858,8 @@ class T_M_G_Video_Player {
   }
 
   _handleLoadedError(error) {
-    const mediaError = this.video.error;
-    // Get the error message from prioritized sources
-    const fallbackMessage = (typeof error === "string" && error) || error?.message || mediaError?.message || "An unknown error occurred with the video";
-    const errorCode = mediaError?.code ?? 5;
-    const message = this.settings.errorMessages?.[errorCode] || fallbackMessage;
+    const fallbackMessage = (typeof error === "string" && error) || error?.message || this.video.error?.message || "An unknown error occurred with the video";
+    const message = this.settings.errorMessages?.[this.video.error?.code ?? 5] || fallbackMessage;
     this.loaded = false;
     this.deactivate(message);
   }
