@@ -151,20 +151,18 @@
 
 /* captions varaibles */
 :where(:root, .T_M_G-media-container) {
-  --T_M_G-video-captions-size: 100;
-  --T_M_G-video-captions-min-size: 100;
-  --T_M_G-video-captions-max-size: 400;
   --T_M_G-video-captions-font-family: var(--T_M_G-video-font-family);
-  --T_M_G-video-captions-font-size: calc(var(--T_M_G-video-current-unit) / 1.6);
+  --T_M_G-video-captions-font-size: 100;
   --T_M_G-video-captions-font-color: white;
-  color: rgb(from var(--T_M_G-video-captions-font-color) r g b/var(--T_M_G-video-captions-font-opacity));
-  --T_M_G-video-captions-font-weight: light;
   --T_M_G-video-captions-font-opacity: 1;
+  --T_M_G-video-captions-font-weight: light;
   --T_M_G-video-captions-font-variant: normal;
   --T_M_G-video-captions-background-color: black;
   --T_M_G-video-captions-background-opacity: 0.75;
   --T_M_G-video-captions-window-color: black;
   --T_M_G-video-captions-window-opacity: 0;
+  --T_M_G-video-captions-font-size-base: calc(var(--T_M_G-video-current-unit) / 1.6);
+  --T_M_G-video-captions-double-factor: 4;
 }
 
 /* settings variables */
@@ -568,7 +566,6 @@
   border-radius: var(--T_M_G-video-border-radius);
   margin: auto;
   isolation: isolate;
-  overflow: hidden;
 }
 
 .T_M_G-video-container {
@@ -699,6 +696,7 @@ body:where(:has(.T_M_G-video-floating-player)) {
 
 .T_M_G-video-container:is(.T_M_G-video-disabled, .T_M_G-video-locked, #o#o#o#o#o#o#o#o#o#o) {
   cursor: not-allowed;
+  overflow: hidden;
 }
 
 .T_M_G-video-container.T_M_G-video-disabled * {
@@ -782,6 +780,7 @@ body:where(:has(.T_M_G-video-floating-player)) {
   border-radius: inherit;
   transition: transform var(--T_M_G-video-settings-view-transition-time) var(--T_M_G-video-bounce-timing);
   transform-style: preserve-3d;
+  overflow: hidden;
 }
 
 .T_M_G-video-container-content {
@@ -870,7 +869,7 @@ body:where(:has(.T_M_G-video-floating-player)) {
     opacity var(--T_M_G-video-switch-transition-time) ease;
 }
 
-.T_M_G-video-container.T_M_G-video-locked.T_M_G-video-locked-overlay .T_M_G-video-screen-locked-wrapper {
+.T_M_G-video-container.T_M_G-video-locked-overlay .T_M_G-video-screen-locked-wrapper {
   transform: translateY(0);
   opacity: 1;
 }
@@ -1149,7 +1148,7 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 }
 
 .T_M_G-video-mini-player-expand-btn-wrapper,
-.T_M_G-video-mini-player-cancel-btn-wrapper {
+.T_M_G-video-mini-player-remove-btn-wrapper {
   display: none;
   justify-content: center;
   align-items: center;
@@ -1164,7 +1163,7 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 }
 
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-mini-player-expand-btn-wrapper,
-.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-mini-player-cancel-btn-wrapper {
+.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-mini-player-remove-btn-wrapper {
   display: flex;
 }
 
@@ -1173,12 +1172,12 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   border-radius: 0 0 calc(var(--T_M_G-video-current-unit) / 1.5) 0;
 }
 
-.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-mini-player-cancel-btn-wrapper {
+.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-mini-player-remove-btn-wrapper {
   right: 0;
   border-radius: 0 0 0 calc(var(--T_M_G-video-current-unit) / 1.5);
 }
 
-.T_M_G-video-container.T_M_G-video-mini-player:is(.T_M_G-video-previewing, .T_M_G-video-scrubbing) :is(.T_M_G-video-mini-player-expand-btn-wrapper, .T_M_G-video-mini-player-cancel-btn-wrapper) {
+.T_M_G-video-container.T_M_G-video-mini-player:is(.T_M_G-video-previewing, .T_M_G-video-scrubbing) :is(.T_M_G-video-mini-player-expand-btn-wrapper, .T_M_G-video-mini-player-remove-btn-wrapper) {
   display: none;
 }
 
@@ -1317,7 +1316,7 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   display: none;
 }
 
-.T_M_G-video-container:is(:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-vb-notifier).T_M_G-video-control-active, .T_M_G-video-touch-timeline-notifier.T_M_G-video-control-active, [data-notify="objectfitchange"])) .T_M_G-video-buffer {
+.T_M_G-video-container:has(.T_M_G-video-notifiers.T_M_G-video-control-persist, :is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-vb-notifier, .T_M_G-video-touch-timeline-notifier).T_M_G-video-control-active, [data-notify="objectfitchange"]) .T_M_G-video-buffer {
   display: none;
 }
 
@@ -1768,32 +1767,33 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 .T_M_G-video-cue {
   display: inline-block;
   white-space: nowrap;
+  color: rgb(from var(--T_M_G-video-captions-font-color) r g b/var(--T_M_G-video-captions-font-opacity));
   font-family: var(--T_M_G-video-captions-font-family);
-  font-size: calc(var(--T_M_G-video-captions-font-size) * (1 + (var(--T_M_G-video-captions-size) - var(--T_M_G-video-captions-min-size)) / (var(--T_M_G-video-captions-max-size) - var(--T_M_G-video-captions-min-size))));
+  font-size: calc(var(--T_M_G-video-captions-font-size-base) * (1 + (var(--T_M_G-video-captions-font-size) - 100) / ((100 * var(--T_M_G-video-captions-double-factor)) - 100)));
   font-weight: var(--T_M_G-video-captions-font-weight);
   font-variant: var(--T_M_G-video-captions-font-variant);
   background: rgb(from var(--T_M_G-video-captions-background-color) r g b/var(--T_M_G-video-captions-background-opacity));
   padding: 2.5px;
 }
 
-.T_M_G-video-cue-container.T_M_G-video-cue-drop-shadow {
+.T_M_G-video-cue-character-edge-style-drop-shadow {
   text-shadow:
     rgb(34, 34, 34) 1px 1px 1.5px,
     rgb(34, 34, 34) 1px 1px 2px,
     rgb(34, 34, 34) 1px 1px 2.5px;
 }
 
-.T_M_G-video-cue-container.T_M_G-video-cue-raised {
+.T_M_G-video-cue-character-edge-style-raised {
   text-shadow: rgb(34, 34, 34) 1px 1px;
 }
 
-.T_M_G-video-cue-container.T_M_G-video-cue-depressed {
+.T_M_G-video-cue-character-edge-style-depressed {
   text-shadow:
     rgb(204, 204, 204) 1px 1px,
     rgb(34, 34, 34) -1px -1px;
 }
 
-.T_M_G-video-cue-container.T_M_G-video-cue-outline {
+.T_M_G-video-cue-character-edge-style-outline {
   text-shadow:
     rgb(34, 34, 34) 0px 0px 1px,
     rgb(34, 34, 34) 0px 0px 1px,
@@ -1806,7 +1806,7 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   bottom: clamp(calc(var(--T_M_G-video-current-unit) * 2.5), var(--T_M_G-video-current-cue-y), calc(100% - (var(--T_M_G-video-current-unit) * 2) - var(--T_M_G-video-current-cue-container-height)));
 }
 
-.T_M_G-video-container.T_M_G-video-locked.T_M_G-video-locked-overlay .T_M_G-video-cue-container {
+.T_M_G-video-container.T_M_G-video-locked-overlay .T_M_G-video-cue-container {
   bottom: clamp(calc(var(--T_M_G-video-current-unit) * 5), var(--T_M_G-video-current-cue-y), calc(100% - (var(--T_M_G-video-current-unit) * 2) - var(--T_M_G-video-current-cue-container-height)));
 }
 
@@ -2444,7 +2444,7 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 .T_M_G-video-top-controls-wrapper,
 .T_M_G-video-overlay-main-controls-wrapper,
 .T_M_G-video-mini-player-expand-btn-wrapper,
-.T_M_G-video-mini-player-cancel-btn-wrapper {
+.T_M_G-video-mini-player-remove-btn-wrapper {
   opacity: 0;
   pointer-events: none;
 }
@@ -2453,17 +2453,17 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 .T_M_G-video-top-controls-wrapper,
 .T_M_G-video-overlay-main-controls-wrapper,
 .T_M_G-video-mini-player-expand-btn-wrapper,
-.T_M_G-video-mini-player-cancel-btn-wrapper {
+.T_M_G-video-mini-player-remove-btn-wrapper {
   transition: opacity var(--T_M_G-video-fade-transition-time) ease;
 }
 
 .T_M_G-video-container:is(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-controls-container > *,
-.T_M_G-video-container:is(.T_M_G-video-overlay, :has(:focus-visible)) :is(.T_M_G-video-top-controls-wrapper, .T_M_G-video-overlay-main-controls-wrapper, .T_M_G-video-mini-player-expand-btn-wrapper, .T_M_G-video-mini-player-cancel-btn-wrapper) {
+.T_M_G-video-container:is(.T_M_G-video-overlay, :has(:focus-visible)) :is(.T_M_G-video-top-controls-wrapper, .T_M_G-video-overlay-main-controls-wrapper, .T_M_G-video-mini-player-expand-btn-wrapper, .T_M_G-video-mini-player-remove-btn-wrapper) {
   opacity: 1;
   pointer-events: all;
 }
 
-.T_M_G-video-container:is(.T_M_G-video-mobile:has(.T_M_G-video-notifiers.T_M_G-video-control-persist), :has(:is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-vb-notifier).T_M_G-video-control-active)) :is(.T_M_G-video-controls-container > *:not(.T_M_G-video-timeline-container), .T_M_G-video-top-controls-wrapper, .T_M_G-video-overlay-main-controls-wrapper, .T_M_G-video-mini-player-expand-btn-wrapper, .T_M_G-video-mini-player-cancel-btn-wrapper, .T_M_G-video-cue-container),
+.T_M_G-video-container:is(.T_M_G-video-mobile:has(.T_M_G-video-notifiers.T_M_G-video-control-persist), :has(:is(.T_M_G-video-playback-rate-notifier, .T_M_G-video-touch-vb-notifier).T_M_G-video-control-active)) :is(.T_M_G-video-controls-container > *:not(.T_M_G-video-timeline-container), .T_M_G-video-top-controls-wrapper, .T_M_G-video-overlay-main-controls-wrapper, .T_M_G-video-mini-player-expand-btn-wrapper, .T_M_G-video-mini-player-remove-btn-wrapper, .T_M_G-video-cue-container),
 .T_M_G-video-container:has(.T_M_G-video-touch-vb-notifier.T_M_G-video-control-active) .T_M_G-video-timeline-container {
   opacity: 0;
   pointer-events: none;
@@ -2489,7 +2489,7 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   opacity: 1;
 }
 
-.T_M_G-video-container.T_M_G-video-initial :is(.T_M_G-video-top-controls-wrapper, .T_M_G-video-overlay-main-controls-wrapper) > *:not(.T_M_G-video-title-wrapper, .T_M_G-video-control-initial-show),
+.T_M_G-video-container.T_M_G-video-initial :is(.T_M_G-video-right-side-controls-wrapper, .T_M_G-video-overlay-main-controls-wrapper) > *:not(.T_M_G-video-control-initial-show),
 .T_M_G-video-container:is(.T_M_G-video-initial, .T_M_G-video-stall) :is(.T_M_G-video-main-play-pause-btn svg:not(.T_M_G-video-play-icon), .T_M_G-video-play-notifier, .T_M_G-video-pause-notifier, .T_M_G-video-buffer) {
   display: none;
 }
