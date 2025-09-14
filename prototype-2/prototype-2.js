@@ -23,7 +23,7 @@ class T_M_G_Video_Player {
     this.log(videoOptions);
     //some general variables
     this.isMediaMobile = tmg.queryMediaMobile();
-    this.audioSetup = this.loaded = this.locked = this.inFullScreen = this.isScrubbing = this.buffering = this.floatingPlayerActive = this.gestureTouchXCheck = this.gestureTouchYCheck = this.gestureWheelXCheck = this.gestureWheelYCheck = this.shouldSetLastVolume = this.shouldSetLastBrightness = this.speedPointerCheck = this.speedCheck = this.skipPersist = false;
+    this.audioSetup = this.loaded = this.locked = this.inFullScreen = this.isScrubbing = this.buffering = this.inFloatingPlayer = this.overTimeline = this.overVolume = this.overBrightness = this.gestureTouchXCheck = this.gestureTouchYCheck = this.gestureWheelXCheck = this.gestureWheelYCheck = this.shouldSetLastVolume = this.shouldSetLastBrightness = this.speedPointerCheck = this.speedCheck = this.skipPersist = false;
     this.parentIntersecting = this.isIntersecting = this.gestureTouchCanCancel = this.canAutoMovePlaylist = true;
     this.skipDuration = this.textTrackIndex = this.playTriggerCounter = 0;
     this.pfps = 30; // pseudo fps: just for frame stepping, not accurate :(
@@ -49,7 +49,6 @@ class T_M_G_Video_Player {
     this.exportCanvas = tmg.createEl("canvas");
     this.exportContext = this.exportCanvas.getContext("2d");
     this.initCSSVariablesManager();
-    this.syncAspectRatio();
     this.mutatingDOMNodes = true;
     this.buildContainers();
     this.buildPlayerInterface();
@@ -292,6 +291,7 @@ class T_M_G_Video_Player {
     this.pseudoVideo = tmg.createEl("video", { className: "T_M_G-pseudo-video T_M_G-media", tmgPlayer: this.video.tmgPlayer });
     this.pseudoVideoContainer = tmg.createEl("div", { className: "T_M_G-pseudo-video-container T_M_G-media-container" });
     this.pseudoVideoContainer.append(this.pseudoVideo);
+    this.syncAspectRatio();
   }
 
   buildPlayerInterface() {
@@ -1211,6 +1211,7 @@ class T_M_G_Video_Player {
 
   setVideoContainerEventListeners() {
     this.videoContainer.addEventListener("click", this._handleLockScreenClick);
+    this.videoContainer.addEventListener("wheel", this._handleGestureWheel, { passive: false });
     [this.DOM.videoOverlayControlsContainer, this.DOM.videoControlsContainer].forEach((el) => {
       el.addEventListener("contextmenu", this._handleRightClick);
       el.addEventListener("click", this._handleHoverPointerDown, true);
@@ -1283,10 +1284,10 @@ class T_M_G_Video_Player {
     this.DOM.pictureInPictureActiveIconWrapper?.addEventListener("click", this.togglePictureInPictureMode);
     this.DOM.settingsBtn?.addEventListener("click", this.toggleSettingsView);
     //timeline contanier event listeners
-    this.DOM.timelineContainer?.addEventListener("pointerdown", this.startTimelineScrubbing);
-    this.DOM.timelineContainer?.addEventListener("mouseover", this.showPreviewImages);
-    this.DOM.timelineContainer?.addEventListener("mouseleave", this.hidePreviewImages);
-    this.DOM.timelineContainer?.addEventListener("touchend", this.hidePreviewImages);
+    this.DOM.timelineContainer?.addEventListener("pointerdown", this._handleTimelinePointerDown);
+    this.DOM.timelineContainer?.addEventListener("mouseover", this._handleTimelineMouseOver);
+    this.DOM.timelineContainer?.addEventListener("mouseleave", this._handleTimelineMouseLeave);
+    this.DOM.timelineContainer?.addEventListener("touchend", this._handleTimelineMouseLeave);
     this.DOM.timelineContainer?.addEventListener("mousemove", this._handleTimelineInput);
     this.DOM.timelineContainer?.addEventListener("keydown", this._handleTimelineKeyDown);
     //cue container listeners
@@ -1294,9 +1295,11 @@ class T_M_G_Video_Player {
     //volume event listeners
     this.DOM.volumeSlider?.addEventListener("input", this._handleVolumeSliderInput);
     this.DOM.volumeContainer?.addEventListener("mousemove", this._handleVolumeContainerMouseMove);
+    this.DOM.volumeContainer?.addEventListener("mouseleave", this._handleVolumeContainerMouseLeave);
     //brightness event listeners
     this.DOM.brightnessSlider?.addEventListener("input", this._handleBrightnessSliderInput);
     this.DOM.brightnessContainer?.addEventListener("mousemove", this._handleBrightnessContainerMouseMove);
+    this.DOM.brightnessContainer?.addEventListener("mouseleave", this._handleBrightnessContainerMouseLeave);
     //drag event listeners
     this.setDragEventListeners();
     //image event listeners
@@ -1554,7 +1557,7 @@ class T_M_G_Video_Player {
 
   disable() {
     this.videoContainer.classList.add("T_M_G-video-disabled");
-    this.video.pause();
+    this.togglePlay(false);
     this.showOverlay();
     this.cancelAllThrottles();
     this.leaveSettingsView();
@@ -1566,10 +1569,10 @@ class T_M_G_Video_Player {
 
   enable() {
     if (!this.disabled) return;
+    this.disabled = false;
     this.videoContainer.classList.remove("T_M_G-video-disabled");
     this.enableFocusableControls("all");
     this.setKeyEventListeners();
-    this.disabled = false;
   }
 
   lock() {
@@ -1785,9 +1788,7 @@ class T_M_G_Video_Player {
 
     document.addEventListener("visibilitychange", handleAutoPlaylistVisibilityChange);
     playlistToastContainer.addEventListener("mouseover", () => (isPaused = true));
-    playlistToastContainer.addEventListener("mouseleave", () => {
-      if (!playlistToastContainer.matches(":hover")) setTimeout(() => (isPaused = false));
-    });
+    playlistToastContainer.addEventListener("mouseleave", () => !playlistToastContainer.matches(":hover") && setTimeout(() => (isPaused = false)));
     playlistToastContainer.addEventListener("pointerdown", handleToastPointerStart.bind(this), { passive: false });
     playlistToastContainer.addEventListener("pointerup", handleToastPointerEnd.bind(this));
     playlistToastContainer.addEventListener("pointercancel", handleToastPointerEnd.bind(this));
@@ -1951,7 +1952,7 @@ class T_M_G_Video_Player {
     return tmg.parseNumber(this.video.currentTime);
   }
 
-  startTimelineScrubbing(e) {
+  _handleTimelinePointerDown(e) {
     if (this.isScrubbing) return;
     this.DOM.timelineContainer?.setPointerCapture(e.pointerId);
     this.isScrubbing = true;
@@ -1989,11 +1990,13 @@ class T_M_G_Video_Player {
     this._handleTimelineInput(e);
   }
 
-  showPreviewImages() {
+  _handleTimelineMouseOver() {
+    this.overTimeline = true;
     if (!this.isMediaMobile) this.videoContainer.classList.add("T_M_G-video-previewing");
   }
 
-  hidePreviewImages() {
+  _handleTimelineMouseLeave() {
+    this.overTimeline = false;
     setTimeout(() => this.videoContainer.classList.remove("T_M_G-video-previewing"));
   }
 
@@ -2391,7 +2394,7 @@ class T_M_G_Video_Player {
     if (this.DOM.volumeSlider) this.DOM.volumeSlider.max = max;
     this.videoVolumeSliderPercent = Math.round((100 / max) * 100);
     this.videoMaxVolumeRatio = max / 100;
-    this.lastVolume = tmg.clamp(min, value ?? this.video.volume, max);
+    this.lastVolume = tmg.clamp(min, value ?? (this.video.volume * 100), max);
     this.shouldMute = this.shouldSetLastVolume = this.video.muted;
     this.volume = this.shouldMute ? 0 : this.lastVolume;
   }
@@ -2416,7 +2419,7 @@ class T_M_G_Video_Player {
     this.volume = volume;
     if (volume > 5) this.volumeSliderVolume = volume;
     this.shouldSetLastVolume = false;
-    this.volumeActiveRestraint();
+    this.delayVolumeActive();
     this.delayOverlay();
   }
 
@@ -2478,14 +2481,29 @@ class T_M_G_Video_Player {
   }
 
   _handleVolumeContainerMouseMove() {
-    if (!this.DOM.volumeSlider?.parentElement?.matches(":hover")) return;
-    this.DOM.volumeSlider?.parentElement?.classList.add("T_M_G-video-control-active");
-    this.volumeActiveRestraint();
+    this.overVolume = this.DOM.volumeSlider?.matches(":hover");
+    this.startVolumeActive();
   }
 
-  volumeActiveRestraint() {
-    clearTimeout(this.volumeActiveRestraintId);
-    this.volumeActiveRestraintId = setTimeout(() => this.DOM.volumeSlider?.parentElement?.classList.remove("T_M_G-video-control-active"), this.settings.overlayDelay);
+  _handleVolumeContainerMouseLeave() {
+    this.overVolume = false;
+    this.stopVolumeActive();
+  }
+
+  startVolumeActive() {
+    this.DOM.volumeSlider?.classList.add("T_M_G-video-control-active");
+    this.delayVolumeActive();
+  }
+
+  delayVolumeActive() {
+    clearTimeout(this.delayVolumeActiveId);
+    this.delayVolumeActiveId = setTimeout(this.stopVolumeActive, this.settings.overlayDelay);
+  }
+
+  stopVolumeActive() {
+    if (this.DOM.volumeSlider?.matches(":active")) return this.delayVolumeActive();
+    clearTimeout(this.delayVolumeActiveId);
+    this.DOM.volumeSlider?.classList.remove("T_M_G-video-control-active");
   }
 
   updateBrightnessSettings() {
@@ -2527,7 +2545,7 @@ class T_M_G_Video_Player {
     this.brightness = brightness;
     if (brightness > 5) this.brightnessSliderBrightness = brightness;
     this.shouldSetLastBrightness = false;
-    this.brightnessActiveRestraint();
+    this.delayBrightnessActive();
     this.delayOverlay();
   }
 
@@ -2590,14 +2608,29 @@ class T_M_G_Video_Player {
   }
 
   _handleBrightnessContainerMouseMove() {
-    if (!this.DOM.brightnessSlider?.parentElement?.matches(":hover")) return;
-    this.DOM.brightnessSlider?.parentElement?.classList.add("T_M_G-video-control-active");
-    this.brightnessActiveRestraint();
+    this.overBrightness = this.DOM.brightnessSlider?.matches(":hover");
+    this.startBrightnessActive();
   }
 
-  brightnessActiveRestraint() {
-    clearTimeout(this.brightnessActiveRestraintId);
-    this.brightnessActiveRestraintId = setTimeout(() => this.DOM.brightnessSlider?.parentElement?.classList.remove("T_M_G-video-control-active"), this.settings.overlayDelay);
+  _handleBrightnessContainerMouseLeave() {
+    this.overBrightness = false;
+    this.stopBrightnessActive();
+  }
+
+  startBrightnessActive() {
+    this.DOM.brightnessSlider?.classList.add("T_M_G-video-control-active");
+    this.delayBrightnessActive();
+  }
+
+  delayBrightnessActive() {
+    clearTimeout(this.brightnessActiveDelayId);
+    this.brightnessActiveDelayId = setTimeout(this.stopBrightnessActive, this.settings.overlayDelay);
+  }
+
+  stopBrightnessActive() {
+    if (this.DOM.brightnessSlider?.matches(":active")) return this.delayBrightnessActive();
+    clearTimeout(this.brightnessActiveDelayId);
+    this.DOM.brightnessSlider?.classList.remove("T_M_G-video-control-active");
   }
 
   toggleTheaterMode() {
@@ -2645,7 +2678,6 @@ class T_M_G_Video_Player {
     if (this.inFullScreen) {
       this.videoContainer.classList.add("T_M_G-video-full-screen");
       if (this.isMediaMobile) this.setControlState(this.DOM.fullScreenLockBtn, { hidden: false });
-      this.videoContainer.addEventListener("wheel", this._handleGestureWheel, { passive: false });
     }
     if (!this.inFullScreen || !tmg.queryFullScreen()) {
       this.videoContainer.classList.remove("T_M_G-video-full-screen");
@@ -2653,7 +2685,6 @@ class T_M_G_Video_Player {
       this.unlock();
       tmg._CURRENT_FULL_SCREEN_PLAYER = null;
       this.inFullScreen = false;
-      this.videoContainer.removeEventListener("wheel", this._handleGestureWheel, { passive: false });
     }
     await this.autoLockFullScreenOrientation();
   }
@@ -2700,13 +2731,13 @@ class T_M_G_Video_Player {
 
   toggleFloatingPlayer() {
     if (!this.settings.modes.pictureInPicture || !("documentPictureInPicture" in window)) return;
-    if (!this.floatingPlayerActive) this.initFloatingPlayer();
+    if (!this.inFloatingPlayer) this.initFloatingPlayer();
     else this.floatingPlayer?.close();
   }
 
   async initFloatingPlayer() {
-    if (this.floatingPlayerActive) return;
-    this.floatingPlayerActive = true;
+    if (this.inFloatingPlayer) return;
+    this.inFloatingPlayer = true;
     documentPictureInPicture.window?.close?.();
     this.toggleMiniPlayerMode(false);
     this.floatingPlayer = await documentPictureInPicture.requestWindow(this.floatingPlayerOptions);
@@ -2732,13 +2763,12 @@ class T_M_G_Video_Player {
     tmg.DOMMutationObserver.observe(this.floatingPlayer.document.documentElement, { childList: true, subtree: true });
     this.floatingPlayer?.addEventListener("pagehide", this._handleFloatingPlayerClose);
     this.floatingPlayer?.addEventListener("resize", this._handleMediaParentResize);
-    this.floatingPlayer?.addEventListener("wheel", this._handleGestureWheel, { passive: false });
     this.setKeyEventListeners("floating");
   }
 
   _handleFloatingPlayerClose() {
-    if (!this.floatingPlayerActive) return;
-    this.floatingPlayerActive = false;
+    if (!this.inFloatingPlayer) return;
+    this.inFloatingPlayer = false;
     this.videoContainer.classList.toggle("T_M_G-video-progress-bar", this.settings.time.progressBar ?? this.isMediaMobile);
     this.videoContainer.classList.remove("T_M_G-video-floating-player");
     this.deactivatePseudoMode();
@@ -2927,11 +2957,12 @@ class T_M_G_Video_Player {
   }
 
   _handleGestureWheel(e) {
-    if (!this.settings.beta.gestureControls || this.gestureTouchXCheck || this.gestureTouchYCheck || this.speedCheck || this.isModeActive("settings")) return;
-    e.preventDefault();
-    this.gestureWheelTimeoutId ? clearTimeout(this.gestureWheelTimeoutId) : this._handleGestureWheelInit(e);
-    this.gestureWheelTimeoutId = setTimeout(this._handleGestureWheelStop, this.gestureWheelTimeout);
-    this._handleGestureWheelMove(e);
+    if (this.overVolume || this.overBrightness || this.overTimeline || (this.settings.beta.gestureControls && !this.gestureTouchXCheck && !this.gestureTouchYCheck && !this.speedCheck && !this.isModeActive("settings") && !this.locked && !this.disabled && (this.inFullScreen || this.inFloatingPlayer))) {
+      e.preventDefault();
+      this.gestureWheelTimeoutId ? clearTimeout(this.gestureWheelTimeoutId) : this._handleGestureWheelInit(e);
+      this.gestureWheelTimeoutId = setTimeout(this._handleGestureWheelStop, this.gestureWheelTimeout);
+      this._handleGestureWheelMove(e);
+    }
   }
 
   _handleGestureWheelInit({ clientX: x, clientY: y }) {
@@ -2946,29 +2977,30 @@ class T_M_G_Video_Player {
   }
 
   _handleGestureWheelMove({ clientX: x, deltaX, deltaY, shiftKey }) {
-    deltaX = shiftKey ? deltaY : deltaX;
+    deltaX = shiftKey || this.overTimeline ? deltaY : deltaX;
     const rect = this.videoContainer.getBoundingClientRect();
-    const width = shiftKey ? rect.height : rect.width,
-      height = shiftKey ? rect.width : rect.height;
-    let xPercent = -deltaX / (width * 6);
-    xPercent = this.gestureWheelTimePercent += xPercent;
+    const width = shiftKey || this.overTimeline ? rect.height : rect.width,
+      height = shiftKey || this.overTimeline ? rect.width : rect.height;
+    let xPercent = -deltaX / (width * 12);
+    xPercent = this.overTimeline ? xPercent : (this.gestureWheelTimePercent += xPercent);
     const xSign = Math.sign(xPercent) === 1 ? "+" : "-";
     xPercent = Math.abs(xPercent);
-    if (deltaX || shiftKey) {
+    if (deltaX || shiftKey || this.overTimeline) {
       if (this.gestureWheelYCheck) return this._handleGestureWheelStop();
       this.gestureWheelXCheck = true;
-      this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active");
+      if (!this.overTimeline) this.DOM.touchTimelineNotifier.classList.add("T_M_G-video-control-active");
       this._handleGestureTimelineInput({
         percent: xPercent,
         sign: xSign,
         multiplier: this.gestureWheelTimeMultiplier,
       });
-      if (shiftKey) return;
+      if (this.overTimeline) this.currentTime = this.gestureNextTime;
+      if (shiftKey || this.overTimeline) return;
     }
     if (deltaY) {
-      if (this.gestureWheelXCheck) {
-        const mY = tmg.clamp(0, Math.abs((this.gestureTimeMultiplierY += deltaY)), height * 3);
-        this.gestureWheelTimeMultiplier = 1 - mY / (height * 3);
+      if (this.gestureWheelXCheck || this.overTimeline) {
+        const mY = tmg.clamp(0, Math.abs((this.gestureTimeMultiplierY += deltaY)), height * 6);
+        this.gestureWheelTimeMultiplier = 1 - mY / (height * 6);
         this._handleGestureTimelineInput({
           percent: xPercent,
           sign: xSign,
@@ -2979,10 +3011,12 @@ class T_M_G_Video_Player {
       const currentXZone = x - rect.left > width / 2 ? "right" : "left";
       if (currentXZone !== this.gestureWheelZone.x) return this._handleGestureWheelStop();
       this.gestureWheelYCheck = true;
-      (this.gestureWheelZone?.x === "right" ? this.DOM.touchVolumeNotifier : this.DOM.touchBrightnessNotifier)?.classList.add("T_M_G-video-control-active");
-      const ySign = deltaY >= 0 ? "+" : "-";
-      const yPercent = tmg.clamp(0, Math.abs(deltaY), height * 3) / (height * 3);
-      this.gestureWheelZone?.x === "right"
+      if (!this.overVolume && !this.overBrightness) (this.gestureWheelZone?.x === "right" ? this.DOM.touchVolumeNotifier : this.DOM.touchBrightnessNotifier)?.classList.add("T_M_G-video-control-active");
+      if (this.overVolume) this.delayVolumeActive();
+      if (this.overBrightness) this.delayBrightnessActive();
+      const ySign = -deltaY >= 0 ? "+" : "-";
+      const yPercent = tmg.clamp(0, Math.abs(deltaY), height * 6) / (height * 6);
+      this.gestureWheelZone?.x === "right" || this.overVolume
         ? this._handleGestureVolumeSliderInput({
             percent: yPercent,
             sign: ySign,
