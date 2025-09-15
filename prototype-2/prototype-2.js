@@ -1826,9 +1826,8 @@ class T_M_G_Video_Player {
       { name: "Fit To Screen", value: "cover" },
       { name: "Stretch", value: "fill" },
     ];
-    const currentIndex = fits.findIndex((f) => f.value === this.videoObjectFit);
-    const nextIndex = (currentIndex + 1) % fits.length;
-    const nextFit = fits[nextIndex];
+    const i = fits.findIndex((f) => f.value === this.videoObjectFit);
+    const nextFit = fits[(i + 1) % fits.length];
     this.videoObjectFit = nextFit.value;
     this.videoContainer.setAttribute("data-object-fit", nextFit.value);
     if (this.DOM.objectFitNotifier) this.DOM.objectFitNotifier.textContent = nextFit.name;
@@ -2862,6 +2861,7 @@ class T_M_G_Video_Player {
   _handleLockScreenClick() {
     if (!this.locked) return;
     this.videoContainer.classList.toggle("T_M_G-video-locked-overlay");
+    this.DOM.screenLockedBtn.classList.remove("T_M_G-video-control-unlock");  
     this.delayLockedOverlay();
   }
 
