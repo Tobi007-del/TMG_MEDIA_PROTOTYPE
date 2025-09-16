@@ -999,12 +999,12 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 .T_M_G-video-title-wrapper {
   flex-shrink: 2;
   padding-block: calc(var(--T_M_G-video-current-unit) / 2.35);
-  padding-inline-start: var(--T_M_G-video-current-controls-gap);
+  margin-inline-start: var(--T_M_G-video-current-controls-gap);
   text-align: left;
 }
 
 .T_M_G-video-top-controls-wrapper:has([data-displayed="true"]) .T_M_G-video-title-wrapper {
-  padding-inline-end: calc(var(--T_M_G-video-current-controls-gap) / 2);
+  margin-inline-end: calc(var(--T_M_G-video-current-controls-gap) / 2);
 }
 
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-title-wrapper {
