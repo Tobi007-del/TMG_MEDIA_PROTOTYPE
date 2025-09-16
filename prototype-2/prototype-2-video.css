@@ -997,11 +997,14 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 }
 
 .T_M_G-video-title-wrapper {
-  flex-shrink: 1.5;
+  flex-shrink: 2;
   padding-block: calc(var(--T_M_G-video-current-unit) / 2.35);
   padding-inline-start: var(--T_M_G-video-current-controls-gap);
-  padding-inline-end: calc(var(--T_M_G-video-current-controls-gap) / 2);
   text-align: left;
+}
+
+.T_M_G-video-top-controls-wrapper:has([data-displayed="true"]) .T_M_G-video-title-wrapper {
+  padding-inline-end: calc(var(--T_M_G-video-current-controls-gap) / 2);
 }
 
 .T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-title-wrapper {
@@ -1030,11 +1033,11 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   transform: translate(1px, 1px);
 }
 
-.T_M_G-video-container:not(.T_M_G-video-mini-player) .T_M_G-video-top-controls-wrapper > *:last-child {
+.T_M_G-video-top-controls-wrapper .T_M_G-video-side-controls-wrapper-cover:has([data-displayed="true"]) {
   margin-inline-end: calc(var(--T_M_G-video-current-controls-gap) / 2.5);
 }
 
-.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-top-controls-wrapper > *:last-child {
+.T_M_G-video-container.T_M_G-video-mini-player .T_M_G-video-top-controls-wrapper .T_M_G-video-side-controls-wrapper-cover:has([data-displayed="true"]) {
   flex-grow: 0;
   margin-inline-end: 0;
 }
@@ -2396,9 +2399,6 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 }
 .T_M_G-media-container:is([data-size-tier^="xxxx"], .T_M_G-video-mobile, .T_M_G-video-no-previews) .T_M_G-video-preview {
   display: none;
-}
-.T_M_G-video-container[data-size-tier^="xxxxx"] :is(.T_M_G-video-controls-container, .T_M_G-video-side-controls-wrapper) {
-  padding-block: 0;
 }
 .T_M_G-media-container[data-size-tier^="xxxxx"] .T_M_G-video-overlay-controls-container :is(.T_M_G-video-title-wrapper),
 .T_M_G-media-container[data-size-tier^="xxxxx"] .T_M_G-video-side-controls-wrapper > *:not(.T_M_G-video-play-pause-btn, .T_M_G-video-next-btn, .T_M_G-video-prev-btn, .T_M_G-video-captions-btn:not(.T_M_G-video-control-disabled), .T_M_G-video-full-screen-btn, .T_M_G-video-volume-container, .T_M_G-video-duration-container),
