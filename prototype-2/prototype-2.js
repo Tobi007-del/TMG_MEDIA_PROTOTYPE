@@ -905,9 +905,9 @@ class T_M_G_Video_Player {
 
   buildControllerStructure() {
     const HTML = this.getPlayerHTML(),
-      spacerIndex = this.settings.controllerStructure.bottom.indexOf?.("spacer"),
-      bLeftSideControls = spacerIndex > -1 ? this.settings.controllerStructure.bottom.slice?.(0, spacerIndex) : null,
-      bRightSideControls = spacerIndex > -1 ? this.settings.controllerStructure.bottom.slice?.(spacerIndex + 1) : null,
+      spacerIndex = this.settings.controllerStructure.bottom?.indexOf?.("spacer"),
+      bLeftSideControls = spacerIndex > -1 ? this.settings.controllerStructure.bottom?.slice?.(0, spacerIndex) : null,
+      bRightSideControls = spacerIndex > -1 ? this.settings.controllerStructure.bottom?.slice?.(spacerIndex + 1) : null,
       //breaking HTML into smaller units to use as building blocks
       overlayControlsContainerBuild = this.queryDOM(".T_M_G-video-overlay-controls-container"),
       controlsContainerBuild = this.queryDOM(".T_M_G-video-controls-container"),
@@ -932,7 +932,7 @@ class T_M_G_Video_Player {
     overlayControlsContainerBuild.innerHTML += ``.concat(HTML.thumbnail ?? "", HTML.videobuffer ?? "", HTML.cueContainer ?? "", HTML.expandminiplayer ?? "", HTML.removeminiplayer ?? "");
     topControlsWrapperBuild.innerHTML += ``.concat(HTML.playlisttitle ?? "");
     if (this.settings.status.ui.tRightSideControls) {
-      const tRightSideControlsWrapper = tmg.createEl("div", { className: "T_M_G-video-right-side-controls-wrapper T_M_G-video-side-controls-wrapper", innerHTML: ``.concat(...Array.from(this.settings.controllerStructure.top, (el) => HTML[el] || "")) }, { dropZone: this.settings.status.ui.draggableControls });
+      const tRightSideControlsWrapper = tmg.createEl("div", { className: "T_M_G-video-right-side-controls-wrapper T_M_G-video-side-controls-wrapper", innerHTML: ``.concat(...Array.from(this.settings.controllerStructure.top || [], (el) => HTML[el] || "")) }, { dropZone: this.settings.status.ui.draggableControls });
       tRightSideControlsWrapperBuild.append(tRightSideControlsWrapper);
       topControlsWrapperBuild.append(tRightSideControlsWrapperBuild);
     }
@@ -940,12 +940,12 @@ class T_M_G_Video_Player {
     overlayControlsContainerBuild.append(topControlsWrapperBuild, overlayMainControlsWrapperBuild);
     //building and deploying controls wrapper
     if (this.settings.status.ui.bLeftSideControls) {
-      const bLeftSideControlsWrapper = tmg.createEl("div", { className: "T_M_G-video-left-side-controls-wrapper T_M_G-video-side-controls-wrapper", innerHTML: ``.concat(...Array.from(bLeftSideControls, (el) => HTML[el] || "")) }, { dropZone: this.settings.status.ui.draggableControls });
+      const bLeftSideControlsWrapper = tmg.createEl("div", { className: "T_M_G-video-left-side-controls-wrapper T_M_G-video-side-controls-wrapper", innerHTML: ``.concat(...Array.from(bLeftSideControls || [], (el) => HTML[el] || "")) }, { dropZone: this.settings.status.ui.draggableControls });
       bLeftSideControlsWrapperBuild.append(bLeftSideControlsWrapper);
       controlsWrapperBuild.append(bLeftSideControlsWrapperBuild);
     }
     if (this.settings.status.ui.bRightSideControls) {
-      const bRightSideControlsWrapper = tmg.createEl("div", { className: "T_M_G-video-right-side-controls-wrapper T_M_G-video-side-controls-wrapper", innerHTML: ``.concat(...Array.from(bRightSideControls, (el) => HTML[el] || "")) }, { dropZone: this.settings.status.ui.draggableControls });
+      const bRightSideControlsWrapper = tmg.createEl("div", { className: "T_M_G-video-right-side-controls-wrapper T_M_G-video-side-controls-wrapper", innerHTML: ``.concat(...Array.from(bRightSideControls || [], (el) => HTML[el] || "")) }, { dropZone: this.settings.status.ui.draggableControls });
       bRightSideControlsWrapperBuild.append(bRightSideControlsWrapper);
       controlsWrapperBuild.append(bRightSideControlsWrapperBuild);
     }
@@ -1552,6 +1552,7 @@ class T_M_G_Video_Player {
 
   reactivate() {
     if (!this.videoContainer.classList.contains("T_M_G-video-inactive") || !this.loaded) return;
+    this.removeMessage();
     this.videoContainer.classList.remove("T_M_G-video-inactive");
   }
 
@@ -1857,9 +1858,13 @@ class T_M_G_Video_Player {
     if (message) this.DOM.videoContainerContent?.setAttribute("data-message", message);
   }
 
+  removeMessage() {
+    this.DOM.videoContainerContent?.removeAttribute("data-message");
+  }
+
   _handleLoadedError(error) {
-    const fallbackMessage = (typeof error === "string" && error) || error?.message || this.video.error?.message || "An unknown error occurred with the video";
-    const message = this.settings.errorMessages?.[this.video.error?.code ?? 5] || fallbackMessage;
+    const fallbackMessage = (typeof error === "string" && error) || error?.message || this.video.error?.message || (error && "An unknown error occurred with the video");
+    const message = this.settings.errorMessages?.[this.video.error?.code ?? (error && 5)] || fallbackMessage;
     this.loaded = false;
     this.deactivate(message);
   }
@@ -1892,9 +1897,9 @@ class T_M_G_Video_Player {
 
   async togglePlay(bool) {
     try {
-      this.video.ended ? this.replay() : typeof bool === "boolean" ? await this.video[bool ? "play" : "pause"]() : await this.video[this.video.paused ? "play" : "pause"]();
+      typeof bool === "boolean" ? await this.video[bool ? "play" : "pause"]() : await this.video[this.video.paused ? "play" : "pause"]();
     } catch (e) {
-      this.video.error ? this._handleLoadedError() : this.log(e, "error", "swallow");
+      this.video.error ? this._handleLoadedError(e) : this.log(e, "error", "swallow");
     }
   }
 
@@ -2041,7 +2046,8 @@ class T_M_G_Video_Player {
     multiplier = multiplier.toFixed(1);
     percent = percent * multiplier;
     const time = sign === "+" ? this.currentTime + percent * this.duration : this.currentTime - percent * this.duration;
-    this.gestureNextTime = tmg.clamp(0, Math.floor(time), this.duration);
+    this.gestureNextTime = tmg.clamp(0, time, this.duration);
+    if (this.overTimeline) this.currentTime = this.gestureNextTime;
     if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${tmg.formatTime(Math.abs(this.gestureNextTime - this.currentTime))} (${tmg.formatTime(this.gestureNextTime)}) ${multiplier < 1 ? `x${multiplier}` : ""}`;
   }
 
@@ -2387,13 +2393,13 @@ class T_M_G_Video_Player {
   }
 
   updateAudioSettings() {
-    tmg.initAudioManager(!this.video.autoplay);
+    this.setUpAudio();
     const { min, max, value } = this.settings.volume;
     this.videoContainer.classList.toggle("T_M_G-video-volume-boost", max > 100);
     if (this.DOM.volumeSlider) this.DOM.volumeSlider.max = max;
     this.videoVolumeSliderPercent = Math.round((100 / max) * 100);
     this.videoMaxVolumeRatio = max / 100;
-    this.lastVolume = tmg.clamp(min, value ?? (this.video.volume * 100), max);
+    this.lastVolume = tmg.clamp(min, value ?? this.video.volume * 100, max);
     this.shouldMute = this.shouldSetLastVolume = this.video.muted;
     this.volume = this.shouldMute ? 0 : this.lastVolume;
   }
@@ -2861,7 +2867,7 @@ class T_M_G_Video_Player {
   _handleLockScreenClick() {
     if (!this.locked) return;
     this.videoContainer.classList.toggle("T_M_G-video-locked-overlay");
-    this.DOM.screenLockedBtn.classList.remove("T_M_G-video-control-unlock");  
+    this.DOM.screenLockedBtn.classList.remove("T_M_G-video-control-unlock");
     this.delayLockedOverlay();
   }
 
@@ -2994,7 +3000,6 @@ class T_M_G_Video_Player {
         sign: xSign,
         multiplier: this.gestureWheelTimeMultiplier,
       });
-      if (this.overTimeline) this.currentTime = this.gestureNextTime;
       if (shiftKey || this.overTimeline) return;
     }
     if (deltaY) {
@@ -3442,9 +3447,9 @@ class T_M_G_Video_Player {
     this.showOverlay();
     target.classList.remove("T_M_G-video-control-dragging");
     this.dragging = null;
-    const topStructure = this.DOM.tRightSideControlsWrapper?.children ? Array.from(this.DOM.tRightSideControlsWrapper.children, (el) => el.dataset.controlId) : [],
-      leftSideStructure = this.DOM.bLeftSideControlsWrapper?.children ? Array.from(this.DOM.bLeftSideControlsWrapper.children, (el) => el.dataset.controlId) : [],
-      rightSideStructure = this.DOM.bRightSideControlsWrapper?.children ? Array.from(this.DOM.bRightSideControlsWrapper.children, (el) => el.dataset.controlId) : [];
+    const topStructure = this.DOM.tRightSideControlsWrapper?.children ? Array.from(this.DOM.tRightSideControlsWrapper?.children || [], (el) => el.dataset.controlId) : [],
+      leftSideStructure = this.DOM.bLeftSideControlsWrapper?.children ? Array.from(this.DOM.bLeftSideControlsWrapper?.children || [], (el) => el.dataset.controlId) : [],
+      rightSideStructure = this.DOM.bRightSideControlsWrapper?.children ? Array.from(this.DOM.bRightSideControlsWrapper?.children || [], (el) => el.dataset.controlId) : [];
     this.settings.controllerStructure = { top: topStructure, bottom: [...leftSideStructure, "spacer", ...rightSideStructure] };
     tmg.userSettings = {
       controllerStructure: this.settings.controllerStructure,
@@ -3589,20 +3594,9 @@ class T_M_G_Media_Player {
       const attributes = this.#medium.getAttributeNames().filter((attr) => attr.startsWith("tmg--"));
       const specialProps = ["tmg--media--artwork", "tmg--playlist"];
       attributes?.forEach((attr) => !specialProps.some((sp) => attr.includes(sp)) && tmg.putHTMLOptions(attr, customOptions, this.#medium));
-      if (this.#medium.poster || attributes.includes("tmg--media-artwork")) {
-        customOptions.media
-          ? (customOptions.media.artwork = [
-              {
-                src: this.#medium.getAttribute("tmg--media-artwork") ?? this.#medium.poster,
-              },
-            ])
-          : (customOptions.media = {
-              artwork: [
-                {
-                  src: this.#medium.getAttribute("tmg--media-artwork") ?? this.#medium.poster,
-                },
-              ],
-            });
+      if (this.#medium.poster || attributes.includes("tmg--media--artwork")) {
+        const src = this.#medium.getAttribute("tmg--media--artwork") ?? this.#medium.poster;
+        customOptions.media = { ...(customOptions.media || {}), artwork: [{ src }] };
       }
     }
     if (this.#active) {
@@ -3656,14 +3650,15 @@ class T_M_G_Media_Player {
     s.status = { allowOverride: {}, modes: {} };
     tmg.ALLOWED_SETTINGS.slice(1).forEach((k) => (s.status.allowOverride[k] = s.allowOverride.includes?.(k.toLowerCase()) ?? s.allowOverride));
     const struct = s.controllerStructure,
-      { controllerStructure: structO, notifers: notifiersO } = s.status.allowOverride;
+      { controllerStructure: structO, notifers: notifiersO } = s.status.allowOverride,
+      sIndex = struct.bottom?.indexOf?.("spacer");
     s.status.ui = {
       notifiers: s.notifiers || notifiersO,
       timeline: /top|bottom/.test(s.time.linePosition),
       previewImages: !!(s.time.previewImages?.address && s.time.previewImages?.spf),
-      tRightSideControls: struct.top.length || structO,
-      bLeftSideControls: (struct.bottom.indexOf("spacer") > -1 ? struct.bottom.slice?.(0, struct.bottom.indexOf?.("spacer"))?.length : false) || structO,
-      bRightSideControls: (struct.bottom.indexOf("spacer") > -1 ? struct.bottom.slice?.(struct.bottom.indexOf?.("spacer") + 1)?.length : false) || structO,
+      tRightSideControls: struct.top?.length || structO,
+      bLeftSideControls: (sIndex > -1 ? struct.bottom?.slice?.(0, sIndex)?.length : false) || structO,
+      bRightSideControls: (sIndex > -1 ? struct.bottom?.slice?.(sIndex + 1)?.length : false) || structO,
       draggableControls: structO,
     };
     tmg.ALLOWED_CONTROLS.forEach((c) => (s.status.ui[c] = Object.entries(struct).some(([k, v]) => v.includes?.(c.toLowerCase()) ?? struct[k])));
@@ -3719,6 +3714,7 @@ class T_M_G {
               { value: 25, display: "25%" },
               { value: 50, display: "50%" },
               { value: 100, display: "100%" },
+              { value: 150, display: "150%" },
               { value: 200, display: "200%" },
               { value: 300, display: "300%" },
               { value: 400, display: "400%" },
@@ -3959,6 +3955,7 @@ class T_M_G {
   static KEY_SHORTCUT_ACTIONS = ["prev", "next", "playPause", "timeFormat", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "objectFit", "fullScreen", "theater", "expandMiniPlayer", "removeMiniPlayer", "pictureInPicture", "captions", "captionsFontOpacity", "captionsWindowOpacity", "captionsFontSizeUp", "captionsFontSizeDown", "settings"];
   static WHITE_LISTED_KEYS = [" ", "Enter", "Escape", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => k.toLowerCase());
   static _RESOURCE_CACHE = {};
+  static _IS_DOC_TRANSIENT = false;
   static _AUDIO_CONTEXT = null;
   static _INTERNAL_MUTATION_SET = new WeakSet();
   static _INTERNAL_MUTATION_ID = null;
@@ -4016,6 +4013,12 @@ class T_M_G {
   }
   static init() {
     tmg.mountMedia();
+    ["pointerdown", "keydown"].forEach((e) =>
+      document.addEventListener(e, () => {
+        tmg._IS_DOC_TRANSIENT = true;
+        tmg.startAudioManager();
+      })
+    );
     for (const medium of document.querySelectorAll("video")) {
       tmg.mutationObserver.observe(medium, { attributes: true });
       tmg.initMedia(medium);
@@ -4102,17 +4105,17 @@ class T_M_G {
   static _handleFullScreenChange() {
     tmg._CURRENT_FULL_SCREEN_PLAYER?._handleFullScreenChange();
   }
-  static initAudioManager(bool = true) {
-    if (!tmg._AUDIO_CONTEXT && bool) {
+  static startAudioManager() {
+    if (!tmg._AUDIO_CONTEXT && tmg._IS_DOC_TRANSIENT) {
       tmg._AUDIO_CONTEXT = new (AudioContext || webkitAudioContext)();
       tmg.Players?.forEach((Player) => Player.setUpAudio());
-      document.addEventListener("visibilitychange", () => (document.visibilityState === "visible" ? tmg.resumeAudioManager() : tmg.suspendAudioManager()));
-    }
-    document.removeEventListener("click", tmg.resumeAudioManager);
-    document.addEventListener("click", tmg.resumeAudioManager);
-    return !!tmg._AUDIO_CONTEXT;
+    } else if (tmg._AUDIO_CONTEXT?.state === "suspended") tmg._AUDIO_CONTEXT.resume();
+  }
+  static stopAudioManager() {
+    if (tmg._AUDIO_CONTEXT?.state === "running") tmg._AUDIO_CONTEXT.suspend();
   }
   static connectMediaToAudioManager(medium) {
+    if (!tmg._AUDIO_CONTEXT) return;
     medium.tmgSourceNode = medium.tmgSourceNode || tmg._AUDIO_CONTEXT.createMediaElementSource(medium);
     medium.tmgGainNode = medium.tmgGainNode || tmg._AUDIO_CONTEXT.createGain();
     medium.tmgSourceNode.connect(medium.tmgGainNode);
@@ -4123,13 +4126,6 @@ class T_M_G {
     tmg._CURRENT_AUDIO_GAIN_NODE?.disconnect();
     tmg._CURRENT_AUDIO_GAIN_NODE = gainNode;
     gainNode.connect(tmg._AUDIO_CONTEXT.destination);
-  }
-  static resumeAudioManager() {
-    if (!tmg._AUDIO_CONTEXT) tmg.initAudioManager();
-    else if (tmg._AUDIO_CONTEXT?.state === "suspended") tmg._AUDIO_CONTEXT.resume();
-  }
-  static suspendAudioManager() {
-    if (tmg._AUDIO_CONTEXT?.state === "running") tmg._AUDIO_CONTEXT.suspend();
   }
   static loadResource(src, type = "style", options = {}) {
     const { module = false, media, crossorigin, integrity } = options;

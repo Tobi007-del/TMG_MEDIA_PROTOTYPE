@@ -502,7 +502,7 @@
   visibility: hidden;
 }
 
-.T_M_G-media,
+.T_M_G-video,
 .T_M_G-video-thumbnail {
   --T_M_G-video-computed-brightness-value: calc(max(calc(var(--T_M_G-video-current-brightness-slider-boost-position) * var(--T_M_G-video-max-brightness-ratio) * 20%), 20%) + ((var(--T_M_G-video-brightness) / 100) * 80%));
   filter: brightness(var(--T_M_G-video-computed-brightness-value));
@@ -708,7 +708,7 @@ body:where(:has(.T_M_G-video-floating-player)) {
 }
 
 .T_M_G-video-container:is(.T_M_G-video-disabled, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video {
-  filter: var(--T_M_G-video-computed-brightness) grayscale(100%);
+  filter: brightness(var(--T_M_G-video-computed-brightness-value)) grayscale(100%);
 }
 
 .T_M_G-video-container:is(.T_M_G-video-inactive, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content::after {
@@ -748,7 +748,7 @@ body:where(:has(.T_M_G-video-floating-player)) {
 }
 
 .T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-container-content video {
-  filter: var(--T_M_G-video-computed-brightness) blur(10px);
+  filter: brightness(var(--T_M_G-video-computed-brightness-value)) blur(10px);
 }
 
 .T_M_G-video-container.T_M_G-video-settings-view .T_M_G-video-settings-btn svg {
@@ -1481,7 +1481,7 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 
 .T_M_G-video-container.T_M_G-video-full-screen .T_M_G-video-theater-btn,
 .T_M_G-video-container:is(.T_M_G-video-mini-player, .T_M_G-video-floating-player, .T_M_G-video-mobile) :is(.T_M_G-video-play-pause-btn, .T_M_G-video-prev-btn, .T_M_G-video-next-btn, .T_M_G-video-theater-btn),
-.T_M_G-video-container.T_M_G-video-picture-in-picture :is(button:has(.T_M_G-video-play-icon, .T_M_G-video-pause-icon, .T_M_G-video-prev-icon, .T_M_G-video-next-icon), .T_M_G-video-brightness-container, .T_M_G-video-buffer, .T_M_G-video-object-fit-btn, .T_M_G-video-captions-btn) {
+.T_M_G-video-container.T_M_G-video-picture-in-picture :is(button:has(.T_M_G-video-play-icon, .T_M_G-video-pause-icon, .T_M_G-video-prev-icon, .T_M_G-video-next-icon), .T_M_G-video-cue-container, .T_M_G-video-brightness-container, .T_M_G-video-buffer, .T_M_G-video-object-fit-btn, .T_M_G-video-captions-btn) {
   display: none;
 }
 

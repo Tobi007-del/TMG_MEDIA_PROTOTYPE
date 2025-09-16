@@ -9,14 +9,15 @@
     ]
   },
   "settings": {
-    "muted": true,
-    "progressBar": true,
-    "beta": true,
     "time": {
+      "progressBar": true,
       "previewImages": {
         "address": "../assets/previewImgs/preview$.jpg",
         "": 10
       }
+    },
+    "volume": {
+      "muted": true
     }
   }
 }
