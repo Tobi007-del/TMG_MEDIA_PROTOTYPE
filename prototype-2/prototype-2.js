@@ -1373,12 +1373,12 @@ class T_M_G_Video_Player {
   leaveSettingsView() {
     if (!this.isModeActive("settings")) return;
     this.DOM.settingsCloseBtn.blur();
+    setTimeout(() => this.togglePlay(!this.wasPaused), tmg.formatCSSTime(this.videoSettingsViewTransitionTime));
     this.videoContainer.classList.remove("T_M_G-video-settings-view");
     window.removeEventListener("keyup", this._handleSettingsKeyUp);
     this.floatingPlayer?.removeEventListener("keyup", this._handleSettingsKeyUp);
     this.DOM.videoContainerContent.removeAttribute("inert");
     this.setKeyEventListeners();
-    this.togglePlay(!this.wasPaused);
   }
 
   _handleSettingsKeyUp(e) {
@@ -2174,7 +2174,7 @@ class T_M_G_Video_Player {
     this.wasPaused = this.video.paused;
     this.lastPlaybackRate = this.playbackRate;
     this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-control-active");
-    pos === "backwards" && this.settings.beta?.rewind ? setTimeout(this.rewind) : setTimeout(this.fastForward);
+    setTimeout(pos === "backwards" && this.settings.beta?.rewind ? this.rewind : this.fastForward);
   }
 
   fastForward() {
@@ -2212,7 +2212,7 @@ class T_M_G_Video_Player {
     this.video.removeEventListener("play", this.rewindReset);
     this.DOM.playbackRateNotifier?.classList.remove("T_M_G-video-control-active", "T_M_G-video-rewind");
     this.playbackRate = this.lastPlaybackRate;
-    this.togglePlay(this.wasPaused);
+    this.togglePlay(!this.wasPaused);
   }
 
   set videoCaptionsCharacterEdgeStyle(value) {
@@ -3432,9 +3432,7 @@ class T_M_G_Video_Player {
       leftSideStructure = this.DOM.bLeftSideControlsWrapper?.children ? Array.from(this.DOM.bLeftSideControlsWrapper?.children || [], (el) => el.dataset.controlId) : [],
       rightSideStructure = this.DOM.bRightSideControlsWrapper?.children ? Array.from(this.DOM.bRightSideControlsWrapper?.children || [], (el) => el.dataset.controlId) : [];
     this.settings.controllerStructure = { top: topStructure, bottom: [...leftSideStructure, "spacer", ...rightSideStructure] };
-    tmg.userSettings = {
-      controllerStructure: this.settings.controllerStructure,
-    };
+    tmg.userSettings = { controllerStructure: this.settings.controllerStructure };
   }
 
   _handleDragEnter({ target }) {
@@ -3662,7 +3660,7 @@ class T_M_G {
     debug: true,
     settings: {
       allowOverride: true,
-      auto: { play: null, captions: false, next: 0 },
+      auto: { play: null, captions: false, next: 10 },
       beta: { rewind: true, gestureControls: true, floatingPlayer: true },
       brightness: { min: 0, max: 150, value: 100, skip: 5 },
       captions: {
@@ -4217,13 +4215,13 @@ class T_M_G {
       [...(this.self.DOM.notifiersContainer?.children ?? [])].forEach((n) => n.addEventListener("animationend", this.resetNotifiers));
       tmg.NOTIFIER_EVENTS.forEach((e) => this.self.DOM.notifiersContainer?.addEventListener(e, this));
     }
-    handleEvent(e) {
+    handleEvent({ type: n }) {
       if (!this.self.settings.notifiers) return;
       this.resetNotifiers();
-      setTimeout(() => this.self.DOM.notifiersContainer?.setAttribute("data-notify", e.type), 10);
+      ["objectfitchange"].includes(n) ? this.resetNotifiers(n) : setTimeout(this.resetNotifiers, 10, n);
     }
-    resetNotifiers() {
-      this.self.DOM.notifiersContainer?.setAttribute("data-notify", "");
+    resetNotifiers(n = "") {
+      this.self.DOM.notifiersContainer?.setAttribute("data-notify", typeof n === "string" ? n : "");
     }
   };
   static queryMediaMobile(strict = true) {
