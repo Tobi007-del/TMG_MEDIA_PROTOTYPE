@@ -338,7 +338,7 @@ class T_M_G_Video_Player {
       <p>Tap to Unlock</p>
     </div>
     <!-- Code injected by TMG ends -->
-    `
+    `,
     );
     this.queryDOM(".T_M_G-video-container-content").appendChild(this.video);
   }
@@ -1182,11 +1182,11 @@ class T_M_G_Video_Player {
       playlist: () => {
         if (!this.DOM) return;
         this.setControlState(this.DOM.mainPrevBtn, {
-          hidden: !this.playlist,
+          hidden: !(this.playlist?.length > 1),
           disabled: !!this.playlist && atFirst,
         });
         this.setControlState(this.DOM.mainNextBtn, {
-          hidden: !this.playlist,
+          hidden: !(this.playlist?.length > 1),
           disabled: !!this.playlist && atLast,
         });
         this.setControlState(this.DOM.prevBtn, { hidden: atFirst });
@@ -1644,7 +1644,7 @@ class T_M_G_Video_Player {
     this.loaded = false;
     this.currentPlaylistIndex = index;
     const v = this.playlist[index];
-    this.media = v.media ? { ...this.media, ...v.media } : v.media ?? null;
+    this.media = v.media ? { ...this.media, ...v.media } : (v.media ?? null);
     this.setPosterState();
     this.settings.time.start = v.settings.time.start;
     this.settings.time.end = v.settings.time.end;
@@ -2022,7 +2022,7 @@ class T_M_G_Video_Player {
         else arrowPosition = "50%";
         this.videoCurrentPreviewImgArrowPosition = arrowPosition;
       },
-      this.timelineInputThrottleDelay
+      this.timelineInputThrottleDelay,
     );
   }
 
@@ -2122,7 +2122,7 @@ class T_M_G_Video_Player {
         const maxFrame = Math.floor(this.video.duration * this.pfps);
         this.currentTime = Math.min(maxFrame, Math.max(0, frame + delta)) / this.pfps;
       },
-      this.frameThrottleDelay
+      this.frameThrottleDelay,
     );
   }
 
@@ -2339,7 +2339,7 @@ class T_M_G_Video_Player {
         this.videoCurrentCueX = `${Math.round((posX / rect.width) * 100)}%`;
         this.videoCurrentCueY = `${Math.round((posY / rect.height) * 100)}%`;
       },
-      0
+      0,
     );
   }
 
@@ -2651,7 +2651,7 @@ class T_M_G_Video_Player {
             this.inFullScreen = false;
             this._handleFullScreenChange();
           },
-          { once: true }
+          { once: true },
         );
       }
       this.inFullScreen = true;
@@ -2820,7 +2820,7 @@ class T_M_G_Video_Player {
         this.videoCurrentMiniPlayerX = `${Math.round((posX / ww) * 100)}%`;
         this.videoCurrentMiniPlayerY = `${Math.round((posY / wh) * 100)}%`;
       },
-      0
+      0,
     );
   }
 
@@ -3092,7 +3092,7 @@ class T_M_G_Video_Player {
           multiplier = 1 - mY / (height * 0.5);
         this._handleGestureTimelineInput({ percent, sign, multiplier });
       },
-      this.gestureTouchMoveThrottleDelay
+      this.gestureTouchMoveThrottleDelay,
     );
   }
 
@@ -3111,7 +3111,7 @@ class T_M_G_Video_Player {
         this.lastGestureTouchY = y;
         this.gestureTouchZone?.x === "right" ? this._handleGestureVolumeSliderInput({ percent, sign }) : this._handleGestureBrightnessSliderInput({ percent, sign });
       },
-      this.gestureTouchMoveThrottleDelay
+      this.gestureTouchMoveThrottleDelay,
     );
   }
 
@@ -3189,7 +3189,7 @@ class T_M_G_Video_Player {
           this.fastPlay(this.speedDirection);
         }
       },
-      this.speedPointerMoveThrottleDelay
+      this.speedPointerMoveThrottleDelay,
     );
   }
 
@@ -3335,7 +3335,7 @@ class T_M_G_Video_Player {
             break;
         }
       },
-      this.keyDownThrottleDelay
+      this.keyDownThrottleDelay,
     );
   }
 
@@ -3432,7 +3432,6 @@ class T_M_G_Video_Player {
       leftSideStructure = this.DOM.bLeftSideControlsWrapper?.children ? Array.from(this.DOM.bLeftSideControlsWrapper?.children || [], (el) => el.dataset.controlId) : [],
       rightSideStructure = this.DOM.bRightSideControlsWrapper?.children ? Array.from(this.DOM.bRightSideControlsWrapper?.children || [], (el) => el.dataset.controlId) : [];
     this.settings.controllerStructure = { top: topStructure, bottom: [...leftSideStructure, "spacer", ...rightSideStructure] };
-    // tmg.userSettings = { controllerStructure: this.settings.controllerStructure };
   }
 
   _handleDragEnter({ target }) {
@@ -3451,7 +3450,7 @@ class T_M_G_Video_Player {
           else e.target.appendChild(this.dragging);
           this.updateSideControls(e);
         },
-        this.dragOverThrottleDelay
+        this.dragOverThrottleDelay,
       );
     }
   }
@@ -3475,7 +3474,7 @@ class T_M_G_Video_Player {
         if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
         else return closest;
       },
-      { offset: -Infinity }
+      { offset: -Infinity },
     ).element;
   }
 }
@@ -3996,7 +3995,7 @@ class T_M_G {
       document.addEventListener(e, () => {
         tmg._IS_DOC_TRANSIENT = true;
         tmg.startAudioManager();
-      })
+      }),
     );
     for (const medium of document.querySelectorAll("video")) {
       tmg.mutationObserver.observe(medium, { attributes: true });
@@ -4018,7 +4017,7 @@ class T_M_G {
           target.classList.contains("T_M_G-media") ? target.tmgPlayer?.Player?._handleMediaIntersectionChange(isIntersecting) : target.querySelector(".T_M_G-media")?.tmgPlayer?.Player?._handleMediaParentIntersectionChange(isIntersecting);
         }
       },
-      { root: null, rootMargin: "0px", threshold: 0.3 }
+      { root: null, rootMargin: "0px", threshold: 0.3 },
     );
   static resizeObserver =
     typeof window !== "undefined" &&
