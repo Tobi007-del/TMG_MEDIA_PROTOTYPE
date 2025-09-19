@@ -3432,7 +3432,7 @@ class T_M_G_Video_Player {
       leftSideStructure = this.DOM.bLeftSideControlsWrapper?.children ? Array.from(this.DOM.bLeftSideControlsWrapper?.children || [], (el) => el.dataset.controlId) : [],
       rightSideStructure = this.DOM.bRightSideControlsWrapper?.children ? Array.from(this.DOM.bRightSideControlsWrapper?.children || [], (el) => el.dataset.controlId) : [];
     this.settings.controllerStructure = { top: topStructure, bottom: [...leftSideStructure, "spacer", ...rightSideStructure] };
-    tmg.userSettings = { controllerStructure: this.settings.controllerStructure };
+    // tmg.userSettings = { controllerStructure: this.settings.controllerStructure };
   }
 
   _handleDragEnter({ target }) {

@@ -1003,7 +1003,7 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 .T_M_G-video-title-wrapper {
   flex-shrink: 100;
   min-width: 25%;
-  padding-block: calc(var(--T_M_G-video-current-unit) / 2.35);
+  margin-block: calc(var(--T_M_G-video-current-unit) / 2.35);
   margin-inline-start: var(--T_M_G-video-current-controls-gap);
   text-align: left;
 }
