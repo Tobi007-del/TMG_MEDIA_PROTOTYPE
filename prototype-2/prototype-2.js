@@ -331,7 +331,7 @@ class T_M_G_Video_Player {
       <p>Tap to Unlock</p>
     </div>
     <!-- Code injected by TMG ends -->
-    `,
+    `
     );
     this.queryDOM(".T_M_G-video-container-content").appendChild(this.video);
   }
@@ -1105,7 +1105,7 @@ class T_M_G_Video_Player {
     this.setTitleState();
     this.setControlsState();
     this.setCaptionsState();
-    this.setPreviewImagesState();
+    this.setPreviewsState();
     this.pseudoVideo.src = this.video.currentSrc || this.video.src;
   }
 
@@ -1119,21 +1119,24 @@ class T_M_G_Video_Player {
   }
 
   setCaptionsState() {
-    if (this.video.textTracks.length <= 0) return;
-    [...this.video.textTracks].forEach((track, index) => {
-      track.oncuechange = () => {
-        if (!this.videoContainer.classList.contains("T_M_G-video-captions") && this.videoContainer.classList.contains("T_M_G-video-captions-preview")) return;
-        this._handleCueChange(track.activeCues?.[0]);
-      };
-      if (track.mode === "showing") this.textTrackIndex = index;
-      track.mode = "hidden";
-    });
-    this.video.textTracks[this.textTrackIndex].mode = this.settings.auto.captions ? "showing" : "hidden";
-    this.videoContainer.classList.toggle("T_M_G-video-captions", this.settings.auto.captions);
-    this.videoContainer.setAttribute("data-track-kind", this.video.textTracks[this.textTrackIndex].kind);
+    const able = this.video.textTracks.length;
+    if (able) {
+      [...this.video.textTracks].forEach((track, index) => {
+        track.oncuechange = () => {
+          if (!this.videoContainer.classList.contains("T_M_G-video-captions") && this.videoContainer.classList.contains("T_M_G-video-captions-preview")) return;
+          this._handleCueChange(track.activeCues?.[0]);
+        };
+        if (track.mode === "showing") this.textTrackIndex = index;
+        track.mode = "hidden";
+      });
+      this.video.textTracks[this.textTrackIndex].mode = this.settings.auto.captions ? "showing" : "hidden";
+    } else this.textTrackIndex = 0;
+    this.videoContainer.classList.toggle("T_M_G-video-captions", able && this.settings.auto.captions);
+    this.videoContainer.setAttribute("data-track-kind", this.video.textTracks[this.textTrackIndex]?.kind);
+    this.setControlsState("captions");
   }
 
-  setPreviewImagesState() {
+  setPreviewsState() {
     this.videoAltImgSrc = `url(${tmg.ALT_IMG_SRC})`;
     this.videoContainer.classList.toggle("T_M_G-video-no-previews", !this.settings.time.previews);
     this.videoContainer.setAttribute("data-preview-type", this.settings.status.ui.previews ? "image" : "canvas");
@@ -1159,11 +1162,12 @@ class T_M_G_Video_Player {
     const atFirst = this.currentPlaylistIndex <= 0,
       atLast = !this.playlist || this.currentPlaylistIndex >= this.playlist.length - 1;
     const groups = {
-      pictureInPicture: () => this.setControlState(this.DOM.pictureInPictureBtn, { hidden: !this.settings.modes.pictureInPicture }),
-      fullScreen: () => this.setControlState(this.DOM.fullScreenBtn, { hidden: !this.settings.modes.fullScreen }),
+      pictureinpicture: () => this.setControlState(this.DOM.pictureInPictureBtn, { hidden: !this.settings.modes.pictureInPicture }),
+      fullscreen: () => this.setControlState(this.DOM.fullScreenBtn, { hidden: !this.settings.modes.fullScreen }),
+      fullscreenlock: () => this.setControlState(this.DOM.fullScreenLockBtn, { hidden: !(this.isMediaMobile && this.isModeActive("fullScreen")) }),
       theater: () => this.setControlState(this.DOM.theaterBtn, { hidden: !this.settings.modes.theater }),
       captions: () => this.setControlState(this.DOM.captionsBtn, { disabled: !this.video.textTracks[this.textTrackIndex] }),
-      playbackRate: () => {
+      playbackrate: () => {
         if (this.DOM.playbackRateBtn) this.DOM.playbackRateBtn.textContent = `${this.playbackRate}x`;
       },
       playlist: () => {
@@ -1625,7 +1629,7 @@ class T_M_G_Video_Player {
     this.loaded = false;
     this.currentPlaylistIndex = index;
     const v = this.playlist[index];
-    this.media = v.media ? { ...this.media, ...v.media } : (v.media ?? null);
+    this.media = v.media ? { ...this.media, ...v.media } : v.media ?? null;
     this.setPosterState();
     this.settings.time.start = v.settings.time.start;
     this.settings.time.end = v.settings.time.end;
@@ -2000,7 +2004,7 @@ class T_M_G_Video_Player {
         else arrowPosition = "50%";
         this.videoCurrentPreviewImgArrowPosition = arrowPosition;
       },
-      50,
+      50
     );
   }
 
@@ -2108,7 +2112,7 @@ class T_M_G_Video_Player {
         const delta = dir === "backwards" ? -1 : 1;
         this.currentTime = tmg.clamp(0, frame + delta, Math.floor(this.duration * this.pfps)) / this.pfps;
       },
-      this.pframeDelay,
+      this.pframeDelay
     );
   }
 
@@ -2326,7 +2330,7 @@ class T_M_G_Video_Player {
         this.videoCurrentCueX = `${Math.round((posX / rect.width) * 100)}%`;
         this.videoCurrentCueY = `${Math.round((posY / rect.height) * 100)}%`;
       },
-      0,
+      0
     );
   }
 
@@ -2637,7 +2641,7 @@ class T_M_G_Video_Player {
             this.inFullScreen = false;
             this._handleFullScreenChange();
           },
-          { once: true },
+          { once: true }
         );
       }
       this.inFullScreen = true;
@@ -2653,17 +2657,16 @@ class T_M_G_Video_Player {
   async _handleFullScreenChange() {
     if (this.inFullScreen) {
       this.videoContainer.classList.add("T_M_G-video-full-screen");
-      if (this.isMediaMobile) this.setControlState(this.DOM.fullScreenLockBtn, { hidden: false });
     }
     if (!this.inFullScreen || !tmg.queryFullScreen()) {
       this.videoContainer.classList.remove("T_M_G-video-full-screen");
-      this.setControlState(this.DOM.fullScreenLockBtn, { hidden: true });
       this.unlock();
       tmg._CURRENT_FULL_SCREEN_PLAYER = null;
       this.inFullScreen = false;
       this.toggleMiniPlayerMode();
     }
     await this.autoLockFullScreenOrientation();
+    this.setControlsState("fullscreenlock");
   }
 
   async autoLockFullScreenOrientation() {
@@ -2683,7 +2686,7 @@ class T_M_G_Video_Player {
 
   async togglePictureInPictureMode() {
     if (!this.settings.modes.pictureInPicture) return;
-    if (this.isModeActive("fullScreen")) await this.toggleFullScreenMode();
+    if (this.inFullScreen) await this.toggleFullScreenMode();
     if (this.settings.beta.floatingPlayer && window.documentPictureInPicture) return this.toggleFloatingPlayer();
     !this.isModeActive("pictureInPicture") ? this.video.requestPictureInPicture() : document.exitPictureInPicture();
   }
@@ -2807,7 +2810,7 @@ class T_M_G_Video_Player {
         this.videoCurrentMiniPlayerX = `${Math.round((posX / ww) * 100)}%`;
         this.videoCurrentMiniPlayerY = `${Math.round((posY / wh) * 100)}%`;
       },
-      0,
+      0
     );
   }
 
@@ -2931,7 +2934,7 @@ class T_M_G_Video_Player {
   }
 
   _handleGestureWheel(e) {
-    if (this.overVolume || this.overBrightness || this.overTimeline || (this.settings.beta.gestureControls && !this.gestureTouchXCheck && !this.gestureTouchYCheck && !this.speedCheck && !this.isModeActive("settings") && !this.locked && !this.disabled && (this.inFullScreen || this.inFloatingPlayer))) {
+    if (this.overVolume || this.overBrightness || this.overTimeline || (this.settings.beta.gestureControls && !this.gestureTouchXCheck && !this.gestureTouchYCheck && !this.speedCheck && !this.isModeActive("settings") && !this.locked && !this.disabled && (this.isModeActive("fullScreen") || this.inFloatingPlayer))) {
       e.preventDefault();
       this.gestureWheelTimeoutId ? clearTimeout(this.gestureWheelTimeoutId) : this._handleGestureWheelInit(e);
       this.gestureWheelTimeoutId = setTimeout(this._handleGestureWheelStop, this.gestureWheelTimeout);
@@ -3079,7 +3082,7 @@ class T_M_G_Video_Player {
           multiplier = 1 - mY / (height * 0.5);
         this._handleGestureTimelineInput({ percent, sign, multiplier });
       },
-      20,
+      20
     );
   }
 
@@ -3098,7 +3101,7 @@ class T_M_G_Video_Player {
         this.lastGestureTouchY = y;
         this.gestureTouchZone?.x === "right" ? this._handleGestureVolumeSliderInput({ percent, sign }) : this._handleGestureBrightnessSliderInput({ percent, sign });
       },
-      20,
+      20
     );
   }
 
@@ -3172,7 +3175,7 @@ class T_M_G_Video_Player {
           this.fastPlay(this.speedDirection);
         }
       },
-      100,
+      100
     );
   }
 
@@ -3316,7 +3319,7 @@ class T_M_G_Video_Player {
             break;
         }
       },
-      10,
+      10
     );
   }
 
@@ -3342,7 +3345,7 @@ class T_M_G_Video_Player {
         this.toggleFullScreenMode();
         break;
       case "theater":
-        if (!this.isMediaMobile && !this.isModeActive("fullScreen") && !this.isModeActive("miniPlayer") && !this.isModeActive("floatingPlayer")) this.toggleTheaterMode();
+        if (!this.isMediaMobile && !this.inFullScreen && !this.isModeActive("miniPlayer") && !this.isModeActive("floatingPlayer")) this.toggleTheaterMode();
         break;
       case "pictureInPicture":
         this.togglePictureInPictureMode();
@@ -3431,7 +3434,7 @@ class T_M_G_Video_Player {
           else e.target.appendChild(this.dragging);
           this.updateSideControls(e);
         },
-        20,
+        20
       );
     }
   }
@@ -3455,7 +3458,7 @@ class T_M_G_Video_Player {
         if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
         else return closest;
       },
-      { offset: -Infinity },
+      { offset: -Infinity }
     ).element;
   }
 }
@@ -3971,7 +3974,7 @@ class T_M_G {
       document.addEventListener(e, () => {
         tmg._IS_DOC_TRANSIENT = true;
         tmg.startAudioManager();
-      }),
+      })
     );
     for (const medium of document.querySelectorAll("video")) {
       tmg.mutationObserver.observe(medium, { attributes: true });
@@ -3993,7 +3996,7 @@ class T_M_G {
           target.classList.contains("T_M_G-media") ? target.tmgPlayer?.Player?._handleMediaIntersectionChange(isIntersecting) : target.querySelector(".T_M_G-media")?.tmgPlayer?.Player?._handleMediaParentIntersectionChange(isIntersecting);
         }
       },
-      { root: null, rootMargin: "0px", threshold: 0.3 },
+      { root: null, rootMargin: "0px", threshold: 0.3 }
     );
   static resizeObserver =
     typeof window !== "undefined" &&

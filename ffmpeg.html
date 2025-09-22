@@ -26,12 +26,12 @@
   </head>
   <body>
     <h2>FFmpeg.wasm Caption Extractor Demo</h2>
-    <input title="Choose a video file that has captions built in" type="file" id="videoInput" accept="video/*" style="margin-bottom: 10px;"/>
-    <video id="videoPlayer" tmgcontrols tmg--initial-state="false" tmg--initial-mode="theater" tmg--settings--time--previews="true"></video>
+    <input title="Choose a video file that has captions built in" type="file" id="videoInput" accept="*" style="margin-bottom: 10px" />
+    <video id="video" tmgcontrols tmg--initial-state="false" tmg--initial-mode="theater" tmg--settings--time--previews="true"></video>
     <pre id="log"></pre>
     <!-- <script src="/T007_TOOLS/T007_input_library/T007_input.js"></script>
     <script>
-      document.body.insertBefore(createField({ type: "file", id: "videoInput", accept: "video/*" }), document.getElementById("videoPlayer"));
+      document.body.insertBefore(createField({ type: "file", id: "videoInput", accept: "*" }), document.getElementById("video"));
     </script> -->
     <script>
       window.TMG_VIDEO_CSS_SRC = "prototype-2/prototype-2-video.css";
@@ -44,7 +44,7 @@
 
       const ffmpeg = createFFmpeg({ log: true });
       const videoInput = document.getElementById("videoInput");
-      const videoPlayer = document.getElementById("videoPlayer");
+      const video = document.getElementById("video");
       const log = document.getElementById("log");
 
       const logger = (msg) => {
@@ -57,7 +57,7 @@
         if (!file) return;
 
         logger(`🎥 Selected file: ${file.name}`);
-        videoPlayer.src = URL.createObjectURL(file);
+        video.src = URL.createObjectURL(file);
 
         if (!ffmpeg.isLoaded()) {
           logger("⚙ Loading ffmpeg.wasm...");
@@ -84,8 +84,9 @@
           track.srclang = "en";
           track.src = vttURL;
           track.default = true;
-          videoPlayer.appendChild(track);
+          video.appendChild(track);
 
+          video.tmgPlayer?.setCaptionsState();
           logger("✅ Subtitles added to video.");
         } catch (err) {
           logger("❌ Failed to extract subtitles.");
