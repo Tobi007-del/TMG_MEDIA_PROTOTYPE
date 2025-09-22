@@ -86,7 +86,7 @@
           track.default = true;
           video.appendChild(track);
 
-          video.tmgPlayer?.setCaptionsState();
+          video.tmgPlayer?.Player?.setCaptionsState();
           logger("✅ Subtitles added to video.");
         } catch (err) {
           logger("❌ Failed to extract subtitles.");
