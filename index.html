@@ -135,7 +135,7 @@
   <body>
     <div class="first-section">
       <h2>
-        These are the current protoypes for
+        These are all the protoypes for
         <span class="magic">
           <span class="magic-star">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512">
@@ -168,29 +168,25 @@
       <div>
         <a title="View Prototype 1" href="prototype-1/prototype-1.html" class="prototype-link">View 1st Prototype</a>
         <a title="View Prototype 2" href="prototype-2/prototype-2.html" class="prototype-link">View 2nd Prototype</a>
+        <a href="video-libs-test/index.html" class="prototype-link">View Other Players</a>
       </div>
     </div>
     <script>
       let index = 0,
         interval = 1000;
-
       const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
       const animate = (star) => {
         star.style.setProperty("--star-left", `${rand(-10, 100)}%`);
         star.style.setProperty("--star-top", `${rand(-40, 100)}%`);
-
         star.style.animation = "none";
         star.offsetHeight;
         star.style.animation = "";
       };
-
       for (const star of document.getElementsByClassName("magic-star")) {
         setTimeout(
           () => {
             animate(star);
-            setInterval(() => {
-              animate(star);
-            }, 1000);
+            setInterval(animate, 1000, star);
           },
           index++ * (interval / 3),
         );

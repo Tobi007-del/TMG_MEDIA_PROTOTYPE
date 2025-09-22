@@ -1,6 +1,6 @@
 const modes = ["fullScreen", "theater", "pictureInPicture", "miniPlayer"] as const;
 const betaFeatures = ["rewind", "gestureControls", "floatingPlayer"] as const;
-const controllerStructure = ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
+const controllerStructure = ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "playbackrate", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
 const keyShortcutActions = ["prev", "next", "playPause", "timeFormat", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "objectFit", "fullScreen", "theater", "expandMiniPlayer", "removeMiniPlayer", "pictureInPicture", "captions", "captionsFontOpacity", "captionsWindowOpacity", "captionsSizeUp", "captionsSizeDown", "settings"] as const;
 const errorCodes = [
   1, // MEDIA_ERR_ABORTED
@@ -85,9 +85,9 @@ interface Settings {
   playsInline: boolean;
   time: Pick<Range, "skip"> & {
     linePosition: "top" | "bottom";
-    previewImages: PreviewImage | boolean;
     progressBar: boolean | null;
-    format: "timeLeft" | "timeSpent";
+    previewImages: PreviewImage | boolean;
+    format: "left" | "spent";
     loop: boolean;
     start: number | null;
     end: number | null;
@@ -102,16 +102,16 @@ type PlaylistItem = Pick<VideoBuild, "media" | "src" | "sources" | "tracks"> & {
 };
 
 type VideoBuild = {
-  mediaPlayer: "TMG";
-  mediaType: "video";
-  media: MediaMetadata;
+  debug: boolean;
   disabled: boolean;
   initialMode: Mode;
   initialState: boolean;
-  debug: boolean;
-  src: string;
-  sources: string[];
-  tracks: string[];
+  media: MediaMetadata;
+  mediaPlayer: "TMG";
+  mediaType: "video";
   playlist: PlaylistItem[];
   settings: Settings;
+  sources: string[];
+  src: string;
+  tracks: string[];
 };

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="https://releases.flowplayer.org/7.2.7/skin/skin.css" />
+  </head>
+  <body>
+    <div data-flowplayer class="fp-slim" data-ratio="0.5">
+      <video>
+        <source src="https://vjs.zencdn.net/v/oceans.mp4" type="video/mp4" />
+      </video>
+    </div>
+    <script src="https://releases.flowplayer.org/7.2.7/flowplayer.min.js"></script>
+    <script>
+      flowplayer(".fp-slim", {
+        clip: {
+          sources: [{ type: "video/mp4", src: "https://vjs.zencdn.net/v/oceans.mp4" }],
+        },
+        ui: true,
+        autoplay: true,
+      });
+    </script>
+  </body>
+</html>

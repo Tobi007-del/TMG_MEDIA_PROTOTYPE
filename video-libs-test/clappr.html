@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="player"></div>
+    <script src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
+    <script>
+      const player = new Clappr.Player({
+        source: "https://vjs.zencdn.net/v/oceans.mp4",
+        parentId: "#player",
+        width: 720,
+        height: 400,
+        autoPlay: true,
+      });
+    </script>
+  </body>
+</html>

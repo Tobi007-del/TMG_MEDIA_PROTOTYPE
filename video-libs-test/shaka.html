@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shaka Player Explicit UI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.9.2/controls.css" />
+    <style>
+      body {
+        background: #000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      #video-container {
+        width: 720px;
+        max-width: 100%;
+        aspect-ratio: 16 / 9;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="video-container">
+      <video id="video" autoplay muted poster="https://shaka-player-demo.appspot.com/assets/poster.jpg"></video>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.9.2/shaka-player.ui.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        const video = document.getElementById("video");
+        const container = document.getElementById("video-container");
+
+        const player = new shaka.Player();
+        await player.attach(video);
+        const ui = new shaka.ui.Overlay(player, container, video);
+        ui.configure({
+          controlPanelElements: [
+            "play_pause", // Play/Pause button
+            "rewind", // Rewind button
+            "fast_forward", // Fast forward button
+            "mute", // Mute/Unmute button
+            "volume", // Volume slider
+            "time_and_duration", // Time and duration display
+            "spacer", // Spacer element
+            "picture_in_picture", // Picture-in-picture toggle
+            "loop", // Loop toggle
+            "airplay", // AirPlay button
+            "cast", // Cast button
+            "remote", // Remote playback button
+            "quality", // Quality selection button
+            "language", // Audio language selection
+            "playback_rate", // Playback rate selection
+            "captions", // Captions selection
+            "recenter_vr", // Recenter VR view
+            "toggle_stereoscopic", // Toggle stereoscopic view
+            "chapter", // Chapter selection
+            "fullscreen", // Fullscreen toggle
+            "overflow_menu", // Overflow menu button
+          ],
+          overflowMenuButtons: [
+            "captions", // Captions selection
+            "cast", // Cast button
+            "quality", // Quality selection
+            "language", // Audio language selection
+            "picture_in_picture", // Picture-in-picture toggle
+            "loop", // Loop toggle
+            "playback_rate", // Playback rate selection
+            "recenter_vr", // Recenter VR view
+            "toggle_stereoscopic", // Toggle stereoscopic view
+            "chapter", // Chapter selection
+          ],
+          customContextMenu: true,
+          enableTooltips: true,
+        });
+        const controls = ui.getControls();
+
+        try {
+          await player.load("https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd");
+          console.log("✅ Loaded stream with Shaka");
+        } catch (err) {
+          console.error("❌ Shaka error", err);
+        }
+
+        // Test player + controls
+        console.log("Player API:", player);
+        console.log("Controls API:", controls);
+      });
+    </script>
+  </body>
+</html>

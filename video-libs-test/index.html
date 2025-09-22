@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Other Video Players</title>
+    <link rel="icon" type="image/jpeg" sizes="32x32" href="/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape-two.jpeg" />
+  </head>
+  <style>
+    :root {
+      --tmg-orange: rgb(223, 110, 2);
+      --white: white;
+      --pink: rgb(244, 143, 177);
+    }
+    *,
+    *::after,
+    *::before {
+      box-sizing: border-box;
+    }
+    html {
+      background-color: black;
+    }
+    body {
+      width: 100dvw;
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: white;
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Oxygen,
+        Ubuntu,
+        Cantarell,
+        "Open Sans",
+        "Helvetica Neue",
+        sans-serif;
+      text-align: center;
+    }
+    .last-section {
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .last-section > div {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      padding-inline: 2rem;
+      row-gap: 1rem;
+      column-gap: 2rem;
+      width: 100%;
+    }
+    a.prototype-link {
+      font-weight: bold;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      background-color: aquamarine;
+      text-decoration: none;
+      font-size: 1.25rem;
+      color: var(--tmg-orange);
+      transition: all 800ms ease;
+    }
+    a.prototype-link:hover {
+      color: var(--pink);
+      transform: scale(1.025);
+      text-decoration: underline;
+      background-color: rgb(29, 255, 180);
+    }
+  </style>
+  <body>
+    <div class="first-section">
+      <h2>These are the players of other video player libraries</h2>
+    </div>
+    <div class="last-section">
+      <div>
+        <a title="View Prototype 1" href="clappr.html" class="prototype-link">View Clappr</a>
+        <a title="View Prototype 1" href="flowplayer.html" class="prototype-link">View Flowplayer</a>
+        <a title="View Prototype 1" href="mediaelement.html" class="prototype-link">View MediaElement</a>
+        <a title="View Prototype 1" href="plyr.html" class="prototype-link">View Plyr</a>
+        <a title="View Prototype 1" href="shaka.html" class="prototype-link">View Shaka Player</a>
+        <a title="View Prototype 1" href="video-js.html" class="prototype-link">View Video.js</a>
+        <a title="View Prototype 1" href="vimeo.html" class="prototype-link">View Vimeo</a>
+        <a title="View Prototype 1" href="youtube.html" class="prototype-link">View Youtube</a>
+      </div>
+    </div>
+  </body>
+</html>

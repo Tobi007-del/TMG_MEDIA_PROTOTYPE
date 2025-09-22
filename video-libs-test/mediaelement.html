@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mediaelement@5.0.5/build/mediaelementplayer.min.css" />
+  </head>
+  <body>
+    <video width="720" height="400" controls preload="none" id="player">
+      <source src="https://vjs.zencdn.net/v/oceans.mp4" type="video/mp4" />
+      <track kind="subtitles" src="https://vjs.zencdn.net/vtt/captions.vtt" srclang="en" label="English" />
+    </video>
+    <script src="https://cdn.jsdelivr.net/npm/mediaelement@5.0.5/build/mediaelement-and-player.min.js"></script>
+    <script>
+      const player = new MediaElementPlayer("player", {
+        autoplay: true,
+      });
+    </script>
+  </body>
+</html>

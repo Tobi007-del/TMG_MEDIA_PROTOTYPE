@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video.js Test</title>
+    <link href="https://vjs.zencdn.net/8.9.0/video-js.css" rel="stylesheet" />
+    <style>
+      .video-js .vjs-control-bar {
+        background-color: rgba(0, 0, 0, 0.6);
+      }
+      .video-js .vjs-big-play-button {
+        background-color: rgba(226, 110, 2, 0.75);
+      }
+    </style>
+  </head>
+  <body>
+    <video id="my-video" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" width="720" height="400" poster="https://vjs.zencdn.net/v/oceans.png" data-setup="{}">
+      <source src="https://vjs.zencdn.net/v/oceans.mp4" type="video/mp4" />
+      <source src="https://vjs.zencdn.net/v/oceans.webm" type="video/webm" />
+      <track kind="captions" src="https://vjs.zencdn.net/vtt/captions.vtt" srclang="en" label="English" default />
+      Your browser does not support the video tag.
+    </video>
+
+    <script src="https://vjs.zencdn.net/8.9.0/video.min.js"></script>
+    <script>
+      const player = videojs("my-video", {
+        playbackRates: [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10],
+        breakpoints: "responsive",
+        enableDocumentPictureInPicture: true,
+        enableSmoothSeeking: true,
+        fluid: true,
+        autoplay: "muted",
+        responsive: true,
+        userActions: {
+          hotkeys: true,
+        },
+        controlBar: {
+          volumePanel: {
+            inline: false,
+          },
+          skipButtons: {
+            forward: 10,
+            backward: 10,
+          },
+        },
+      });
+      player.titleBar.update({
+        title: "Oceans",
+        description: "Journey in to the depths ... and race with dolphins at play.",
+      });
+      player.ready(() => {
+        console.log("🎬 Video.js Player Ready");
+      });
+      player.on("play", () => console.log("▶️ Playing"));
+      player.on("pause", () => console.log("⏸️ Paused"));
+      player.on("ended", () => console.log("🏁 Ended"));
+    </script>
+  </body>
+</html>

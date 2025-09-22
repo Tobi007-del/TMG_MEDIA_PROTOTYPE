@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="https://player.vimeo.com/api/player.js"></script>
+    <div id="vimeo-player"></div>
+    <script>
+      var options = {
+        id: 76979871,
+        width: 640,
+        loop: true,
+        autoplay: true,
+        controls: true,
+        title: true,
+        byline: true,
+        portrait: true,
+        speed: true,
+        quality: true,
+        pip: true,
+        fullscreen: true,
+      };
+      var player = new Vimeo.Player("vimeo-player", options);
+    </script>
+  </body>
+</html>
