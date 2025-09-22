@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -26,13 +26,18 @@
   </head>
   <body>
     <h2>FFmpeg.wasm Caption Extractor Demo</h2>
-    <video id="videoPlayer" tmgcontrols tmg--initial-state="false" tmg--initial-mode="theater"></video>
+    <input title="Choose a video file that has captions built in" type="file" id="videoInput" accept="video/*" />
+    <video id="videoPlayer" tmgcontrols tmg--initial-state="false" tmg--initial-mode="theater" tmg--settings--time--previews="true"></video>
     <pre id="log"></pre>
-    <script src="/T007_TOOLS/T007_input_library/T007_input.js"></script>
+    <!-- <script src="/T007_TOOLS/T007_input_library/T007_input.js"></script>
     <script>
       document.body.insertBefore(createField({ type: "file", id: "videoInput", accept: "video/*" }), document.getElementById("videoPlayer"));
+    </script> -->
+    <script>
+      window.TMG_VIDEO_CSS_SRC = "prototype-2/prototype-2-video.css";
+      window.TMG_VIDEO_ALT_IMG_SRC = "assets/icons/movie-tape.png";
     </script>
-    <script src="/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2.js"></script>
+    <script src="prototype-2/prototype-2.js"></script>
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.10.1/dist/ffmpeg.min.js"></script>
     <script>
       const { createFFmpeg, fetchFile } = FFmpeg;
