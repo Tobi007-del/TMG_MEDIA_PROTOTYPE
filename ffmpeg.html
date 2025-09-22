@@ -26,7 +26,7 @@
   </head>
   <body>
     <h2>FFmpeg.wasm Caption Extractor Demo</h2>
-    <input title="Choose a video file that has captions built in" type="file" id="videoInput" accept="video/*" />
+    <input title="Choose a video file that has captions built in" type="file" id="videoInput" accept="video/*" style="margin-bottom: 10px;"/>
     <video id="videoPlayer" tmgcontrols tmg--initial-state="false" tmg--initial-mode="theater" tmg--settings--time--previews="true"></video>
     <pre id="log"></pre>
     <!-- <script src="/T007_TOOLS/T007_input_library/T007_input.js"></script>
@@ -72,7 +72,7 @@
 
         logger("🛠 Extracting first subtitle stream to .vtt...");
         try {
-          await ffmpeg.run("-i", inputName, "-map", "0:s:0", "-f", "webvtt", outputName);
+          await ffmpeg.run("-i", inputName, "-map", "0:s:0?", "-f", "webvtt", outputName);
 
           const vttData = ffmpeg.FS("readFile", outputName);
           const vttBlob = new Blob([vttData], { type: "text/vtt" });
