@@ -4,6 +4,36 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
+    <style>
+      html {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial,
+          sans-serif;
+      }
+      body {
+        margin: 0;
+        background-color: rgb(10, 10, 10);
+      }
+      #vimeo-player {
+        width: fit-content;
+        padding-top: 50px;
+        margin: auto;
+      }
+      iframe {
+        width: 100dvw;
+        height: auto;
+        max-width: 700px;
+        max-height: 80lvh;
+        min-height: 210px;
+        aspect-ratio: 16 / 9;
+      }
+    </style>
   </head>
   <body>
     <script src="https://player.vimeo.com/api/player.js"></script>
@@ -11,7 +41,6 @@
     <script>
       var options = {
         id: 76979871,
-        width: 640,
         loop: true,
         autoplay: true,
         controls: true,

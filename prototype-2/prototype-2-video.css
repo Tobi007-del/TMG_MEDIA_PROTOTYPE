@@ -487,6 +487,11 @@
   max-height: 80lvh;
 }
 
+:where(.T_M_G-media-container.T_M_G-video-mobile .T_M_G-media) {
+  width: 100%;
+  max-width: unset;
+}
+
 .T_M_G-media {
   aspect-ratio: var(--T_M_G-video-aspect-ratio);
   object-fit: var(--T_M_G-video-object-fit);
@@ -537,11 +542,6 @@
   max-height: unset;
   min-height: unset;
   min-width: unset;
-}
-
-:where(.T_M_G-media-container.T_M_G-video-mobile .T_M_G-media) {
-  width: 100%;
-  max-width: unset;
 }
 
 :is(*:not(body):has(.T_M_G-media-container:is(.T_M_G-video-full-screen, .T_M_G-video-theater)), #o#o#o#o#o#o#o#o#o#o) {
@@ -874,7 +874,7 @@ body:where(:has(.T_M_G-video-floating-player)) {
   gap: calc(var(--T_M_G-video-current-unit) / 5);
   padding-inline: calc(var(--T_M_G-video-current-unit) / 2.5);
   color: var(--T_M_G-video-theme-inverse-color);
-  font-size: calc(var(--T_M_G-video-current-unit) / 1.75);
+  font-size: calc(var(--T_M_G-video-current-unit) / 1.8);
   font-weight: 500;
   background-color: var(--T_M_G-video-theme-color);
   border-radius: var(--T_M_G-video-current-unit);
@@ -896,13 +896,13 @@ body:where(:has(.T_M_G-video-floating-player)) {
 }
 
 .T_M_G-video-screen-locked-wrapper > p:nth-child(2) {
-  font-weight: 500;
   font-size: calc(var(--T_M_G-video-current-unit) / 1.5);
+  font-weight: 500;
 }
 
 .T_M_G-video-screen-locked-wrapper > p:nth-child(3) {
   font-size: calc(var(--T_M_G-video-current-unit) / 2.25);
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
 .T_M_G-video-picture-in-picture-wrapper {
@@ -1934,7 +1934,7 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   pointer-events: none;
 }
 
-.T_M_G-video-container:is(.T_M_G-video-theater, .T_M_G-video-full-screen, .T_M_G-video-floating-player) .T_M_G-video-container-content .T_M_G-video-preview-container {
+.T_M_G-video-container:is(.T_M_G-video-theater, .T_M_G-video-full-screen, .T_M_G-video-floating-player) .T_M_G-video-preview-container {
   border-radius: 0;
 }
 
@@ -2339,7 +2339,6 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   --T_M_G-video-current-touch-slider-width: calc(var(--T_M_G-video-current-unit) / 2);
 }
 .T_M_G-media-container[data-size-tier^="xx"] .T_M_G-video-preview-container {
-  border-radius: calc(var(--T_M_G-video-current-unit) / 1.85);
   height: calc(var(--T_M_G-video-current-unit) * 3.75);
 }
 .T_M_G-media-container:is([data-size-tier^="xx"], .T_M_G-video-mobile) .T_M_G-video-overlay-main-controls-wrapper {

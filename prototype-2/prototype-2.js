@@ -1557,7 +1557,7 @@ class T_M_G_Video_Player {
     this.locked = false;
     this.videoContainer.classList.remove("T_M_G-video-locked");
     this.removeLockedOverlay();
-    this.showOverlay();
+    setTimeout(this.showOverlay, tmg.formatCSSTime(this.videoSwitchTransitionTime));
     this.setKeyEventListeners();
   }
 
