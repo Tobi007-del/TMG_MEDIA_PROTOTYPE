@@ -16,7 +16,7 @@ type BetaFeature = (typeof betaFeatures)[number];
 type KeyShortcut = (typeof keyShortcutActions)[number];
 type ErrorCode = (typeof errorCodes)[number];
 
-interface PreviewImage {
+interface PreviewsInfo {
   address: string; // folder/image$.jpg
   spf: number; // 10
 }
@@ -86,7 +86,7 @@ interface Settings {
   time: Pick<Range, "skip"> & {
     linePosition: "top" | "bottom";
     progressBar: boolean | null;
-    previewImages: PreviewImage | boolean;
+    previews: PreviewsInfo | boolean;
     format: "left" | "spent";
     loop: boolean;
     start: number | null;
@@ -97,7 +97,7 @@ interface Settings {
 
 type PlaylistItem = Pick<VideoBuild, "media" | "src" | "sources" | "tracks"> & {
   settings: {
-    time: Pick<Settings["time"], "previewImages" | "start" | "end">;
+    time: Pick<Settings["time"], "previews" | "start" | "end">;
   };
 };
 

@@ -169,15 +169,15 @@ var DragDropTouch;
       var _this = this;
       if (this._shouldHandle(e)) {
         // raise double-click and prevent zooming
-        // if (Date.now() - this._lastClick < DragDropTouch._DBLCLICK) {
-        //     if (this._dispatchEvent(e, 'dblclick', e.target)) {
-        //         if (e.cancelable) {
-        //             e.preventDefault();
-        //         }
-        //         this._reset();
-        //         return;
-        //     }
-        // }
+        if (Date.now() - this._lastClick < DragDropTouch._DBLCLICK) {
+          if (this._dispatchEvent(e, "dblclick", e.target)) {
+            if (e.cancelable) {
+              e.preventDefault();
+            }
+            this._reset();
+            return;
+          }
+        }
         // clear all variables
         this._reset();
         // get nearest draggable element
@@ -278,28 +278,23 @@ var DragDropTouch;
     DragDropTouch.prototype._shouldHandle = function (e) {
       return e && !e.defaultPrevented && e.touches && e.touches.length < 2;
     };
-
     // use regular condition outside of press & hold mode
     DragDropTouch.prototype._shouldHandleMove = function (e) {
       return !DragDropTouch._ISPRESSHOLDMODE && this._shouldHandle(e);
     };
-
     // allow to handle moves that involve many touches for press & hold
     DragDropTouch.prototype._shouldHandlePressHoldMove = function (e) {
       return DragDropTouch._ISPRESSHOLDMODE && this._isDragEnabled && e && e.touches && e.touches.length;
     };
-
     // reset data if user drags without pressing & holding
     DragDropTouch.prototype._shouldCancelPressHoldMove = function (e) {
       return DragDropTouch._ISPRESSHOLDMODE && !this._isDragEnabled && this._getDelta(e) > DragDropTouch._PRESSHOLDMARGIN;
     };
-
     // start dragging when specified delta is detected
     DragDropTouch.prototype._shouldStartDragging = function (e) {
       var delta = this._getDelta(e);
       return delta > DragDropTouch._THRESHOLD || (DragDropTouch._ISPRESSHOLDMODE && delta >= DragDropTouch._PRESSHOLDTHRESHOLD);
     };
-
     // clear all members
     DragDropTouch.prototype._reset = function () {
       this._destroyImage();

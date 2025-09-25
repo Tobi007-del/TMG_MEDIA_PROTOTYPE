@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -86,7 +86,6 @@
           track.default = true;
           video.appendChild(track);
 
-          video.tmgPlayer?.Player?.setCaptionsState();
           logger("✅ Subtitles added to video.");
         } catch (err) {
           logger("❌ Failed to extract subtitles.");
