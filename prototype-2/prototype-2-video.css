@@ -727,7 +727,7 @@ body:where(:has(.T_M_G-video-floating-player)) {
   filter: brightness(var(--T_M_G-video-computed-brightness-value)) grayscale(100%);
 }
 
-.T_M_G-video-container:is(.T_M_G-video-inactive, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content::after {
+.T_M_G-video-container:is(.T_M_G-video-inactive, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content::before {
   content: attr(data-message);
   position: absolute;
   width: 100%;
@@ -740,6 +740,7 @@ body:where(:has(.T_M_G-video-floating-player)) {
   font-weight: 500;
   text-align: center;
   padding: calc(var(--T_M_G-video-current-unit) / 2);
+  pointer-events: none;
 }
 
 .T_M_G-video-container:is(.T_M_G-video-inactive, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content {
@@ -1344,10 +1345,10 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 
 .T_M_G-video-buffer {
   display: none;
-  pointer-events: none;
   width: calc((var(--T_M_G-video-current-unit) * 2) + (var(--T_M_G-video-current-loader-thickness) * 2));
   height: calc((var(--T_M_G-video-current-unit) * 2) + (var(--T_M_G-video-current-loader-thickness) * 2));
   transform: scale(var(--T_M_G-video-large-scale));
+  pointer-events: none;
 }
 
 .T_M_G-video-buffer-plain {
@@ -2154,12 +2155,12 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 }
 
 .T_M_G-video-notifiers-container {
+  position: absolute;
   width: 100%;
   height: 100%;
   display: flex;
-  position: absolute;
-  pointer-events: none;
   overflow: hidden;
+  pointer-events: none;
 }
 
 .T_M_G-video-notifiers-container,
@@ -2459,8 +2460,8 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   position: absolute;
   inset: 0;
   overflow: hidden;
-  pointer-events: none;
   border-radius: inherit;
+  pointer-events: none;
 }
 
 .T_M_G-video-ripple {

@@ -2423,7 +2423,7 @@ class T_M_G_Video_Player {
         this.videoCurrentVolumeSliderBoostPosition = 0;
         this.videoCurrentVolumeSliderPosition = (v - 0) / (100 - 0);
       } else if (v > 100) {
-        this.videoVolumeSliderBoostPercent = Number(this.videoVolumeSliderPercent) + 5;
+        this.videoVolumeSliderBoostPercent = this.videoVolumeSliderPercent;
         this.videoCurrentVolumeSliderBoostPosition = (v - 100) / (this.settings.volume.max - 100);
       }
     } else this.videoCurrentVolumeSliderPosition = vPercent;
@@ -2549,7 +2549,7 @@ class T_M_G_Video_Player {
         this.videoCurrentBrightnessSliderBoostPosition = 0;
         this.videoCurrentBrightnessSliderPosition = (b - 0) / (100 - 0);
       } else if (b > 100) {
-        this.videoBrightnessSliderBoostPercent = Number(this.videoBrightnessSliderPercent) + 5;
+        this.videoBrightnessSliderBoostPercent = this.videoBrightnessSliderPercent;
         this.videoCurrentBrightnessSliderBoostPosition = (b - 100) / (this.settings.brightness.max - 100);
       }
     } else this.videoCurrentBrightnessSliderPosition = bPercent;
