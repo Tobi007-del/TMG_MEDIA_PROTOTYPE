@@ -727,7 +727,7 @@ body:where(:has(.T_M_G-video-floating-player)) {
   filter: brightness(var(--T_M_G-video-computed-brightness-value)) grayscale(100%);
 }
 
-.T_M_G-video-container:is(.T_M_G-video-inactive, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content::before {
+.T_M_G-video-container:is(.T_M_G-video-inactive, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content::after {
   content: attr(data-message);
   position: absolute;
   width: 100%;
@@ -740,15 +740,8 @@ body:where(:has(.T_M_G-video-floating-player)) {
   font-weight: 500;
   text-align: center;
   padding: calc(var(--T_M_G-video-current-unit) / 2);
-  pointer-events: none;
-}
-
-.T_M_G-video-container:is(.T_M_G-video-inactive, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video-container-content {
   background: var(--T_M_G-video-disabled-background);
-}
-
-.T_M_G-video-container:is(.T_M_G-video-inactive, #o#o#o#o#o#o#o#o#o#o) .T_M_G-video {
-  opacity: 0;
+  pointer-events: none;
 }
 /* setting deactivated state ends */
 
@@ -1264,22 +1257,20 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   width: var(--T_M_G-video-current-unit);
   height: calc(var(--T_M_G-video-current-unit) * 2);
   margin-inline: var(--T_M_G-video-current-controls-gap);
-  color: var(--T_M_G-video-current-controls-color);
-  background-color: transparent;
 }
 
 .T_M_G-video-mini-player-expand-btn-wrapper {
   left: 0;
-  border-radius: 0 0 calc(var(--T_M_G-video-current-unit) / 1.5) 0;
+  border-top-left-radius: inherit;
 }
 
-.T_M_G-media-container[data-size-tier^="xxxx"] .T_M_G-video-mini-player-expand-btn-wrapper {
+.T_M_G-media-container[data-size-tier^="xxxx"] :is(.T_M_G-video-title-wrapper, .T_M_G-video-mini-player-expand-btn-wrapper) {
   margin-inline-start: calc(var(--T_M_G-video-current-unit) / 5.5);
 }
 
 .T_M_G-video-mini-player-remove-btn-wrapper {
   right: 0;
-  border-radius: 0 0 0 calc(var(--T_M_G-video-current-unit) / 1.5);
+  border-top-right-radius: inherit;
 }
 
 .T_M_G-media-container[data-size-tier^="xxxx"] .T_M_G-video-mini-player-remove-btn-wrapper {
@@ -1588,24 +1579,20 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   --T_M_G-video-current-controls-color: var(--T_M_G-video-controls-active-color);
 }
 
-.T_M_G-video-side-controls-wrapper button {
+:is(.T_M_G-video-side-controls-wrapper, .T_M_G-video-mini-player-btn-wrapper) button {
   background: var(--T_M_G-video-controls-background);
   border-radius: var(--T_M_G-video-controls-border-radius);
   padding: var(--T_M_G-video-controls-padding);
   transition: background-color var(--T_M_G-video-fade-transition-time) ease;
 }
 
-.T_M_G-video-side-controls-wrapper button:is(:hover, :focus-visible) {
+:is(.T_M_G-video-side-controls-wrapper, .T_M_G-video-mini-player-btn-wrapper) button:is(:hover, :focus-visible) {
   background: var(--T_M_G-video-controls-active-background);
 }
 
 .T_M_G-video-prev-btn,
 .T_M_G-video-next-btn {
   position: relative;
-}
-
-.T_M_G-video-play-pause-btn {
-  transform: scale(1.2);
 }
 
 .T_M_G-video-big-play-pause-btn {

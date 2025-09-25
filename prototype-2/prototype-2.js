@@ -649,10 +649,10 @@ class T_M_G_Video_Player {
       playpause: this.settings.status.ui.playPause
         ? `
         <button type="button" class="T_M_G-video-play-pause-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="playpause">
-          <svg class="T_M_G-video-play-icon" data-control-title="Play${keyShortcuts["playPause"]}">
+          <svg class="T_M_G-video-play-icon" data-control-title="Play${keyShortcuts["playPause"]}" style="transform: scale(1.25);">
             <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
           </svg>
-          <svg class="T_M_G-video-pause-icon" data-control-title="Pause${keyShortcuts["playPause"]}">
+          <svg class="T_M_G-video-pause-icon" data-control-title="Pause${keyShortcuts["playPause"]}" style="transform: scale(1.25);">
             <path d="M14,19H18V5H14M6,19H10V5H6V19Z" />
           </svg>
           <svg class="T_M_G-video-replay-icon" viewBox="0 -960 960 960" data-control-title="Replay${keyShortcuts["playPause"]}" data-no-resize="true">
