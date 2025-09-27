@@ -1,6 +1,6 @@
 const modes = ["fullScreen", "theater", "pictureInPicture", "miniPlayer"] as const;
 const betaFeatures = ["rewind", "gestureControls", "floatingPlayer"] as const;
-const controllerStructure = ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "playbackrate", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
+const controlPanel = ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "playbackrate", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
 const keyShortcutActions = ["prev", "next", "playPause", "timeFormat", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "objectFit", "fullScreen", "theater", "expandMiniPlayer", "removeMiniPlayer", "pictureInPicture", "captions", "captionsFontOpacity", "captionsWindowOpacity", "captionsSizeUp", "captionsSizeDown", "settings"] as const;
 const errorCodes = [
   1, // MEDIA_ERR_ABORTED
@@ -11,7 +11,7 @@ const errorCodes = [
 ] as const;
 
 type Mode = (typeof modes)[number];
-type Control = (typeof controllerStructure)[number];
+type Control = (typeof controlPanel)[number];
 type BetaFeature = (typeof betaFeatures)[number];
 type KeyShortcut = (typeof keyShortcutActions)[number];
 type ErrorCode = (typeof errorCodes)[number];
@@ -68,7 +68,7 @@ interface Settings {
   beta: Record<BetaFeature, boolean>;
   brightness: Range;
   captions: Captions;
-  controllerStructure: Record<"top" | "bottom", Control[] | boolean>;
+  controlPanel: Record<"top" | "bottom", Control[] | boolean>;
   errorMessages: Record<ErrorCode, string>;
   keys: {
     disabled: boolean;

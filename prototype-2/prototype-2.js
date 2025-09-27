@@ -7,12 +7,32 @@ TODO:
 
 typeof window !== "undefined" ? console.log("%cTMG Media Player Available", "color: green") : console.log("\x1b[38;2;139;69;19mTMG Media Player Unavailable\x1b[0m");
 
-class T_M_G_Video_Player {
+class T_M_G_Media_Notifier {
+  constructor(self) {
+    this.self = self;
+    this.init();
+  }
+  init() {
+    this.resetNotifiers = this.resetNotifiers.bind(this);
+    [...(this.self.DOM.notifiersContainer?.children ?? [])].forEach((n) => n.addEventListener("animationend", this.resetNotifiers));
+    tmg.NOTIFIER_EVENTS.forEach((e) => this.self.DOM.notifiersContainer?.addEventListener(e, this));
+  }
+  handleEvent({ type: n }) {
+    if (!this.self.settings.notifiers) return;
+    this.resetNotifiers();
+    ["objectfitchange"].includes(n) ? this.resetNotifiers(n) : setTimeout(this.resetNotifiers, 10, n);
+  }
+  resetNotifiers(n = "") {
+    this.self.DOM.notifiersContainer?.setAttribute("data-notify", typeof n === "string" ? n : "");
+  }
+}
+
+class T_M_G_Video_Controller {
   constructor(videoOptions) {
     this.initialized = false;
     this.bindMethods();
-    this.video = videoOptions.video;
     // merging the video build into the Video Player Instance
+    this.video = videoOptions.video;
     Object.entries(videoOptions).forEach(([k, v]) => (this[k] = v));
     // adding some info before logging incase user had them burnt into the html
     const src = this.src,
@@ -29,7 +49,6 @@ class T_M_G_Video_Player {
     this.skipDuration = this.textTrackIndex = this.playTriggerCounter = 0;
     this.pfps = 30; // pseudo fps: just for frame stepping, not accurate :(
     this.pframeDelay = Math.floor(1000 / this.pfps);
-    this.CSSCustomPropertiesCache = {};
     this.currentPlaylistIndex = this.playlist ? 0 : null;
     this.wasPaused = !this.video.autoplay;
     this.throttleMap = new Map();
@@ -45,44 +64,36 @@ class T_M_G_Video_Player {
     this.exportCanvas = tmg.createEl("canvas");
     this.exportContext = this.exportCanvas.getContext("2d");
     this.initCSSVariablesManager();
-    this.mutatingDOMNodes = true;
+    this.mutatingDOM = true;
     this.buildContainers();
     this.buildPlayerInterface();
     this.buildControllerStructure();
-    setTimeout(() => (this.mutatingDOMNodes = false));
+    setTimeout(() => (this.mutatingDOM = false));
     this.initSettingsManager();
     this.initPlayer();
   }
-
   get src() {
     return this.video.src;
   }
-
   set src(value) {
     tmg.removeSources(this.video);
     this.video.src = value;
-    this.video.load();
   }
-
   get sources() {
     return tmg.getSources(this.video);
   }
-
   set sources(value) {
     this.video.src = "";
     tmg.removeSources(this.video);
     tmg.addSources(value, this.video);
   }
-
   get tracks() {
     return tmg.getTracks(this.video);
   }
-
   set tracks(value) {
     tmg.removeTracks(this.video);
     tmg.addTracks(value, this.video);
   }
-
   log(message, type, action) {
     if (!this.debug) return;
     switch (type) {
@@ -97,7 +108,6 @@ class T_M_G_Video_Player {
         console.log(message);
     }
   }
-
   bindMethods() {
     let proto = Object.getPrototypeOf(this);
     while (proto && proto !== Object.prototype) {
@@ -119,26 +129,22 @@ class T_M_G_Video_Player {
       proto = Object.getPrototypeOf(proto);
     }
   }
-
   fire(eventName, el = this.DOM.notifiersContainer, detail = null, bubbles = true, cancellable = true) {
     let evt = new CustomEvent(eventName, { detail, bubbles, cancellable });
     el?.dispatchEvent(evt);
   }
-
   throttle(key, fn, delay = 10) {
     if (this.throttleMap.has(key)) return;
     const id = setTimeout(() => this.throttleMap.delete(key), delay);
     fn();
     this.throttleMap.set(key, id);
   }
-
   cancelThrottle(key) {
     const id = this.throttleMap.get(key);
     if (!id) return;
     clearTimeout(id);
     this.throttleMap.delete(key);
   }
-
   RAFLoop(key, fn) {
     this.rafLoopFnMap.set(key, fn);
     if (this.rafLoopMap.has(key)) return;
@@ -151,7 +157,6 @@ class T_M_G_Video_Player {
     id = requestAnimationFrame(loop);
     this.rafLoopMap.set(key, id);
   }
-
   cancelRAFLoop(key) {
     const id = this.rafLoopMap.get(key);
     if (!id) return;
@@ -159,77 +164,43 @@ class T_M_G_Video_Player {
     this.rafLoopFnMap.delete(key);
     this.rafLoopMap.delete(key);
   }
-
   cancelAllThrottles() {
     for (const key of this.throttleMap.keys()) this.cancelThrottle(key);
     for (const key of this.rafLoopMap.keys()) this.cancelRAFLoop(key);
   }
-
   cleanUpDOM() {
-    this.mutatingDOMNodes = true;
+    this.mutatingDOM = true;
     this.video.classList.remove("T_M_G-video", "T_M_G-media");
     if (this.isModeActive("floatingPlayer")) {
       this.floatingPlayer?.addEventListener("pagehide", () => {
         // at this point, the video is left to fend off alone and handle it's own destruction cuz destroy can't be made asynchronous cuz of one event
         this.videoContainer.classList.remove("T_M_G-video-floating-player");
-        if (tmg.isInDOM(this.video)) this.pseudoVideoContainer.parentElement?.insertBefore(this.video, this.pseudoVideoContainer);
-        this.pseudoVideoContainer.remove();
+        if (tmg.isInDOM(this.video)) this.pseudoVideoContainer.parentElement?.replaceChild(this.video, this.pseudoVideoContainer);
         this.videoContainer.remove();
-        this.replaceVideo();
+        this.video = tmg.cloneVideo(this.video);
         this.video.tmgcontrols = false;
-        tmg.initMedia(this.video, true);
+        this.video.tmgPlayer = null;
       });
       this.floatingPlayer?.removeEventListener("pagehide", this._handleFloatingPlayerClose);
       return this.floatingPlayer?.close();
     } else if (tmg.isInDOM(this.pseudoVideo)) {
-      if (tmg.isInDOM(this.video)) this.pseudoVideoContainer.parentElement?.insertBefore(this.video, this.pseudoVideoContainer);
-      this.pseudoVideoContainer.remove();
-    } else if (tmg.isInDOM(this.video)) this.videoContainer.parentElement?.insertBefore(this.video, this.videoContainer);
-    this.videoContainer.remove();
-    // setTimeout(() => this.mutatingDOMNodes = false)
+      if (tmg.isInDOM(this.video)) this.pseudoVideoContainer.parentElement?.replaceChild(this.video, this.pseudoVideoContainer);
+      this.videoContainer.remove();
+    } else if (tmg.isInDOM(this.video)) this.videoContainer.parentElement?.replaceChild(this.video, this.videoContainer);
+    setTimeout(() => (this.mutatingDOM = false));
   }
-
-  replaceVideo() {
-    this.mutatingDOMNodes = true;
-    if (this.isModeActive("floatingPlayer")) return;
-    const clonedVideo = this.video.cloneNode(true);
-    clonedVideo.tmgPlayer = this.video.tmgPlayer;
-    this.video.parentElement?.replaceChild(clonedVideo, this.video);
-    // Playback control
-    if (this.video.currentTime) clonedVideo.currentTime = this.video.currentTime;
-    if (this.video.playbackRate !== 1) clonedVideo.playbackRate = this.video.playbackRate;
-    if (this.video.defaultPlaybackRate !== 1) clonedVideo.defaultPlaybackRate = this.video.defaultPlaybackRate;
-    if (this.video.volume !== 1) clonedVideo.volume = this.video.volume;
-    if (this.video.muted) clonedVideo.muted = true;
-    if (this.video.defaultMuted) clonedVideo.defaultMuted = true;
-    if (this.video.srcObject) clonedVideo.srcObject = this.video.srcObject;
-    // Behavior flags
-    if (this.video.autoplay) clonedVideo.autoplay = true;
-    if (this.video.loop) clonedVideo.loop = true;
-    if (this.video.controls) clonedVideo.controls = true;
-    if (this.video.crossOrigin) clonedVideo.crossOrigin = this.video.crossOrigin;
-    if (this.video.playsInline) clonedVideo.playsInline = true;
-    if (this.video.controlsList && this.video.controlsList.length) clonedVideo.controlsList = this.video.controlsList;
-    if (this.video.disablePictureInPicture) clonedVideo.disablePictureInPicture = true;
-    if (!this.video.paused && tmg.isInDOM(clonedVideo)) clonedVideo.play();
-    this.video = clonedVideo;
-    // setTimeout(() => this.mutatingDOMNodes = false)
-  }
-
   _destroy() {
+    this.cancelAudio();
     this.cancelAllThrottles();
-    this.removeAudio();
     this.leaveSettingsView();
     this.unobserveResize();
     this.unobserveIntersection();
     this.removeKeyEventListeners();
     this.removeVideoEventListeners();
     this.cleanUpDOM();
-    // had to do this to get rid of stateful issues and freezing
-    this.replaceVideo();
+    if (!this.isModeActive("floatingPlayer")) this.video = tmg.cloneVideo(this.video); // had to do this to get rid of stateful issues and freezing
     return this.video;
   }
-
   initCSSVariablesManager() {
     // fetching all css varibles from the stylesheet for easy accessibility
     for (const sheet of document.styleSheets) {
@@ -240,8 +211,6 @@ class T_M_G_Video_Player {
             if (!property.startsWith("--T_M_G-video-")) continue;
             const value = cssRule.style.getPropertyValue(property);
             const field = tmg.camelize(property.replace("--T_M_G-", ""));
-            this.CSSCustomPropertiesCache[field] = value;
-
             Object.defineProperty(this, field, {
               get() {
                 return getComputedStyle(this.videoContainer).getPropertyValue(property);
@@ -260,11 +229,9 @@ class T_M_G_Video_Player {
       }
     }
   }
-
   initSettingsManager() {
     // this.log("TMG Video Settings Manager started")
   }
-
   getPlayerHTML() {
     const keyShortcuts = this.fetchKeyShortcutsForDisplay();
     return {
@@ -319,7 +286,7 @@ class T_M_G_Video_Player {
         </div>
       `,
       thumbnail: `
-        <img class="T_M_G-video-thumbnail" alt="Video Image" src="${tmg.ALT_IMG_SRC}">
+        <img class="T_M_G-video-thumbnail" alt="Video Image" src="${tmg.VIDEO_ALT_IMG_SRC}">
         <canvas class="T_M_G-video-thumbnail"></canvas>
       `,
       cueContainer: `
@@ -554,7 +521,7 @@ class T_M_G_Video_Player {
         : null,
       fullscreenorientation: this.settings.status.ui.fullScreenOrientation
         ? `
-          <button type="button" class="T_M_G-video-full-screen-orientation-btn T_M_G-video-control-initial-show T_M_G-video-control-hidden" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="fullscreenorientation"> 
+          <button type="button" class="T_M_G-video-full-screen-orientation-btn T_M_G-video-control-initial-show T_M_G-video-control-hidden" data-draggable-control="${this.settings.status.ui.draggable}" data-control-id="fullscreenorientation"> 
             <svg viewBox="0 0 512 512" class="T_M_G-video-full-screen-orientation-icon" data-control-title="Change orientation" data-no-resize="true">
               <path d="M446.81,275.82H236.18V65.19c0-20.78-16.91-37.69-37.69-37.69H65.19c-20.78,0-37.69,16.91-37.69,37.69v255.32   c0,20.78,16.91,37.68,37.69,37.68h88.62v88.62c0,20.78,16.9,37.69,37.68,37.69h255.32c20.78,0,37.69-16.91,37.69-37.69v-133.3   C484.5,292.73,467.59,275.82,446.81,275.82z M65.19,326.19c-3.14,0-5.69-2.55-5.69-5.68V65.19c0-3.14,2.55-5.69,5.69-5.69h133.3   c3.14,0,5.69,2.55,5.69,5.69v210.63h-12.69c-20.78,0-37.68,16.91-37.68,37.69v12.68H65.19z M452.5,446.81   c0,3.14-2.55,5.69-5.69,5.69H191.49c-3.13,0-5.68-2.55-5.68-5.69V342.19v-28.68c0-2.94,2.24-5.37,5.1-5.66   c0.19-0.02,0.38-0.03,0.58-0.03h28.69h226.63c3.14,0,5.69,2.55,5.69,5.69V446.81z"/>
               <path d="M369.92,181.53c-6.25-6.25-16.38-6.25-22.63,0c-6.25,6.25-6.25,16.38,0,22.63l44.39,44.39   c3.12,3.13,7.22,4.69,11.31,4.69c0.21,0,0.42-0.02,0.63-0.03c0.2,0.01,0.4,0.03,0.6,0.03c6.31,0,11.74-3.66,14.35-8.96   l37.86-37.86c6.25-6.25,6.25-16.38,0-22.63c-6.25-6.25-16.38-6.25-22.63,0l-13.59,13.59v-86.58c0-8.84-7.16-16-16-16h-86.29   l15.95-15.95c6.25-6.25,6.25-16.38,0-22.63c-6.25-6.25-16.38-6.25-22.63,0l-40.33,40.33c-5.19,2.65-8.75,8.03-8.75,14.25   c0,0.19,0.02,0.37,0.03,0.56c-0.01,0.19-0.03,0.38-0.03,0.57c0,4.24,1.69,8.31,4.69,11.31l42.14,42.14   c3.12,3.12,7.22,4.69,11.31,4.69s8.19-1.56,11.31-4.69c6.25-6.25,6.25-16.38,0-22.63l-15.95-15.95h72.54v73.05L369.92,181.53z"/>
@@ -564,7 +531,7 @@ class T_M_G_Video_Player {
         : null,
       fullscreenlock: this.settings.status.ui.fullScreenLock
         ? `
-          <button type="button" class="T_M_G-video-full-screen-locked-btn T_M_G-video-control-hidden" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="fullscreenlock"> 
+          <button type="button" class="T_M_G-video-full-screen-locked-btn T_M_G-video-control-hidden" data-draggable-control="${this.settings.status.ui.draggable}" data-control-id="fullscreenlock"> 
             <svg class="T_M_G-video-full-screen-locked-icon" viewBox="0 0 512 512" data-control-title="Lock Screen" data-no-resize="true" style="transform: scale(0.825);">
               <path d="M390.234 171.594v-37.375c.016-36.969-15.078-70.719-39.328-94.906A133.88 133.88 0 0 0 256 0a133.88 133.88 0 0 0-94.906 39.313c-24.25 24.188-39.344 57.938-39.313 94.906v37.375H24.906V512h462.188V171.594zm-210.343-37.375c.016-21.094 8.469-39.938 22.297-53.813C216.047 66.594 234.891 58.125 256 58.125s39.953 8.469 53.813 22.281c13.828 13.875 22.281 32.719 22.297 53.813v37.375H179.891zm-96.86 95.5h345.938v224.156H83.031z"/>
               <path d="M297.859 321.844c0-23.125-18.75-41.875-41.859-41.875-23.125 0-41.859 18.75-41.859 41.875 0 17.031 10.219 31.625 24.828 38.156l-9.25 60.094h52.562L273.016 360c14.609-6.531 24.843-21.125 24.843-38.156"/>
@@ -629,7 +596,7 @@ class T_M_G_Video_Player {
             <div class="T_M_G-video-seek-bar T_M_G-video-played-seek-bar"></div>
             <div class="T_M_G-video-thumb-indicator T_M_G-video-rippler"></div>
             <div class="T_M_G-video-preview-container">
-              <img class="T_M_G-video-preview" alt="Preview image" src="${tmg.ALT_IMG_SRC}">
+              <img class="T_M_G-video-preview" alt="Preview image" src="${tmg.VIDEO_ALT_IMG_SRC}">
               <canvas class="T_M_G-video-preview"></canvas>
           </div>
           </div>
@@ -638,7 +605,7 @@ class T_M_G_Video_Player {
         : null,
       prev: this.settings.status.ui.prev
         ? `
-        <button type="button" class="T_M_G-video-prev-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="prev">
+        <button type="button" class="T_M_G-video-prev-btn" data-draggable-control="${this.settings.status.ui.draggable}" data-control-id="prev">
           <svg class="T_M_G-video-prev-icon" data-control-title="Previous video${keyShortcuts["prev"]}">
             <rect x="4" y="5.14" width="2.5" height="14" transform="translate(2.1,0)"/>
             <path d="M17,5.14V19.14L6,12.14L17,5.14Z" transform="translate(2.5,0)" />
@@ -648,8 +615,8 @@ class T_M_G_Video_Player {
         : null,
       playpause: this.settings.status.ui.playPause
         ? `
-        <button type="button" class="T_M_G-video-play-pause-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="playpause">
-          <svg class="T_M_G-video-play-icon" data-control-title="Play${keyShortcuts["playPause"]}" style="transform: scale(1.25);">
+        <button type="button" class="T_M_G-video-play-pause-btn" data-draggable-control="${this.settings.status.ui.draggable}" data-control-id="playpause">
+          <svg class="T_M_G-video-play-icon" data-control-title="Play${keyShortcuts["playPause"]}" style="transform: scale(1.35);">
             <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
           </svg>
           <svg class="T_M_G-video-pause-icon" data-control-title="Pause${keyShortcuts["playPause"]}" style="transform: scale(1.25);">
@@ -663,7 +630,7 @@ class T_M_G_Video_Player {
         : null,
       next: this.settings.status.ui.next
         ? `
-        <button type="button" class="T_M_G-video-next-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="next">
+        <button type="button" class="T_M_G-video-next-btn" data-draggable-control="${this.settings.status.ui.draggable}" data-control-id="next">
           <svg class="T_M_G-video-next-icon" data-control-title="Next video${keyShortcuts["next"]}">
             <path d="M8,5.14V19.14L19,12.14L8,5.14Z" transform="translate(-2.5,0)" />
             <rect x="19" y="5.14" width="2.5" height="14" transform="translate(-2.5,0)"/>
@@ -674,7 +641,7 @@ class T_M_G_Video_Player {
       volume: this.settings.status.ui.volume
         ? `
         <div class="T_M_G-video-volume-container T_M_G-video-vb-container" data-control-id="volume">
-          <button type="button" class="T_M_G-video-mute-btn T_M_G-video-vb-btn" data-draggable-control="${this.settings.status.ui.draggableControls}">
+          <button type="button" class="T_M_G-video-mute-btn T_M_G-video-vb-btn" data-draggable-control="${this.settings.status.ui.draggable}">
             <svg class="T_M_G-video-volume-high-icon" data-control-title="Mute${keyShortcuts["mute"]}">
               <path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
             </svg>
@@ -692,7 +659,7 @@ class T_M_G_Video_Player {
       brightness: this.settings.status.ui.brightness
         ? `
         <div class="T_M_G-video-brightness-container T_M_G-video-vb-container" data-control-id="brightness">
-          <button type="button" class="T_M_G-video-dark-btn T_M_G-video-vb-btn" data-draggable-control="${this.settings.status.ui.draggableControls}">
+          <button type="button" class="T_M_G-video-dark-btn T_M_G-video-vb-btn" data-draggable-control="${this.settings.status.ui.draggable}">
             <svg class="T_M_G-video-brightness-high-icon" data-control-title="Darken${keyShortcuts["dark"]}">
               <path transform="scale(1.05) translate(1.5, 1.5)"  d="M10 14.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h3a1 1 0 0 1 0 2h-3a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm0-15a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm-9 9h3a1 1 0 1 1 0 2H1a1 1 0 0 1 0-2zm13.95 4.535l2.121 2.122a1 1 0 0 1-1.414 1.414l-2.121-2.121a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-2.12 2.12a1 1 0 1 1-1.415-1.413l2.121-2.122a1 1 0 0 1 1.414 0zM17.071 3.787a1 1 0 0 1 0 1.414L14.95 7.322a1 1 0 0 1-1.414-1.414l2.12-2.121a1 1 0 0 1 1.415 0zm-12.728 0l2.121 2.121A1 1 0 1 1 5.05 7.322L2.93 5.201a1 1 0 0 1 1.414-1.414z">
               </path>
@@ -712,7 +679,7 @@ class T_M_G_Video_Player {
         : null,
       timeandduration: this.settings.status.ui.timeAndDuration
         ? `
-        <button class="T_M_G-video-duration-container" title="Time format${keyShortcuts["timeFormat"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="timeandduration">
+        <button class="T_M_G-video-duration-container" title="Time format${keyShortcuts["timeFormat"]}" data-draggable-control="${this.settings.status.ui.draggable}" data-control-id="timeandduration">
           <div class="T_M_G-video-current-time">0:00</div>
           <span>/</span>
           <div class="T_M_G-video-total-time">-:--</div>
@@ -721,12 +688,12 @@ class T_M_G_Video_Player {
         : null,
       playbackrate: this.settings.status.ui.playbackRate
         ? `
-        <button type="button" class="T_M_G-video-playback-rate-btn" title="Playback rate${keyShortcuts["playbackRate"]}" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="playbackrate">${this.playbackRate}x</button>
+        <button type="button" class="T_M_G-video-playback-rate-btn" title="Playback rate${keyShortcuts["playbackRate"]}" data-draggable-control="${this.settings.status.ui.draggable}" data-control-id="playbackrate">${this.playbackRate}x</button>
       `
         : null,
       captions: this.settings.status.ui.captions
         ? `
-        <button type="button" class="T_M_G-video-captions-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="captions">
+        <button type="button" class="T_M_G-video-captions-btn" data-draggable-control="${this.settings.status.ui.draggable}" data-control-id="captions">
           <svg data-control-title="Subtitles${keyShortcuts["captions"]}" class="T_M_G-video-subtitles-icon">
             <path transform="scale(0.5)" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" />
           </svg>
@@ -738,7 +705,7 @@ class T_M_G_Video_Player {
         : null,
       settings: this.settings.status.ui.settings
         ? `
-        <button type="button" class="T_M_G-video-settings-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="settings">
+        <button type="button" class="T_M_G-video-settings-btn" data-draggable-control="${this.settings.status.ui.draggable}" data-control-id="settings">
           <svg class="T_M_G-video-settings-icon" viewBox="0 -960 960 960" data-control-title="Settings${keyShortcuts["settings"]}" data-no-resize="true">
             <path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/>
           </svg>
@@ -747,7 +714,7 @@ class T_M_G_Video_Player {
         : null,
       objectfit: this.settings.status.ui.objectFit
         ? `
-        <button type="button" class="T_M_G-video-object-fit-btn " data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="objectfit">
+        <button type="button" class="T_M_G-video-object-fit-btn " data-draggable-control="${this.settings.status.ui.draggable}" data-control-id="objectfit">
           <svg class="T_M_G-video-object-fit-contain-icon" data-control-title="Fit to screen${keyShortcuts["objectFit"]}" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16" data-no-resize="true" transform="scale(0.78)">
             <rect width="16" height="16" rx="4" ry="4" fill="none" stroke-width="2.25" stroke="currentColor" class="T_M_G-video-no-fill" />
             <g stroke-width="1" stroke="currentColor" transform="translate(3,3) scale(0.6)">
@@ -776,7 +743,7 @@ class T_M_G_Video_Player {
         : null,
       pictureinpicture: this.settings.status.ui.pictureInPicture
         ? `
-        <button type="button" class="T_M_G-video-picture-in-picture-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="pictureinpicture">
+        <button type="button" class="T_M_G-video-picture-in-picture-btn" data-draggable-control="${this.settings.status.ui.draggable}" data-control-id="pictureinpicture">
           <svg class="T_M_G-video-enter-picture-in-picture-icon" data-control-title="Picture-in-picture${keyShortcuts["pictureInPicture"]}">
             <path class="T_M_G-video-no-fill" fill="none" d="M0 0h24v24H0z" />
             <path fill-rule="nonzero" d="M21 3a1 1 0 0 1 1 1v7h-2V5H4v14h6v2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zm0 10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h8zM6.707 6.293l2.25 2.25L11 6.5V12H5.5l2.043-2.043-2.25-2.25 1.414-1.414z" />
@@ -791,7 +758,7 @@ class T_M_G_Video_Player {
         : null,
       theater: this.settings.status.ui.theater
         ? `
-        <button type="button" class="T_M_G-video-theater-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="theater">
+        <button type="button" class="T_M_G-video-theater-btn" data-draggable-control="${this.settings.status.ui.draggable}" data-control-id="theater">
           <svg class="T_M_G-video-enter-theater-icon" data-control-title="Cinema mode${keyShortcuts["theater"]}">
             <path fill-rule="evenodd" clip-rule="evenodd" d="M23 7C23 5.34315 21.6569 4 20 4H4C2.34315 4 1 5.34315 1 7V17C1 18.6569 2.34315 20 4 20H20C21.6569 20 23 18.6569 23 17V7ZM21 7C21 6.44772 20.5523 6 20 6H4C3.44772 6 3 6.44771 3 7V17C3 17.5523 3.44772 18 4 18H20C20.5523 18 21 17.5523 21 17V7Z"/>
           </svg>
@@ -803,7 +770,7 @@ class T_M_G_Video_Player {
         : null,
       fullscreen: this.settings.status.ui.fullScreen
         ? `
-        <button type="button" class="T_M_G-video-full-screen-btn" data-draggable-control="${this.settings.status.ui.draggableControls}" data-control-id="fullscreen">
+        <button type="button" class="T_M_G-video-full-screen-btn" data-draggable-control="${this.settings.status.ui.draggable}" data-control-id="fullscreen">
           <svg class="T_M_G-video-enter-full-screen-icon" data-control-title="Full screen${keyShortcuts["fullScreen"]}" transform="scale(.8)">
             <path d="M4 1.5C2.61929 1.5 1.5 2.61929 1.5 4V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H3.5C4.05228 9.5 4.5 9.05228 4.5 8.5V4.5H8.5C9.05228 4.5 9.5 4.05228 9.5 3.5V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H4Z" />
             <path d="M20 1.5C21.3807 1.5 22.5 2.61929 22.5 4V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H20.5C19.9477 9.5 19.5 9.05228 19.5 8.5V4.5H15.5C14.9477 4.5 14.5 4.05228 14.5 3.5V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H20Z" />
@@ -821,7 +788,6 @@ class T_M_G_Video_Player {
         : null,
     };
   }
-
   buildContainers() {
     this.setPosterState();
     this.videoContainer = tmg.createEl("div");
@@ -830,7 +796,7 @@ class T_M_G_Video_Player {
     this.videoContainer.classList.toggle("T_M_G-video-mobile", this.isMediaMobile);
     this.videoContainer.classList.toggle("T_M_G-video-paused", this.video.paused);
     this.videoContainer.classList.toggle("T_M_G-video-progress-bar", this.settings.time.progressBar ?? this.isMediaMobile);
-    this.videoContainer.setAttribute("data-object-fit", this.videoObjectFit ?? "contain");
+    this.videoContainer.setAttribute("data-object-fit", this.videoObjectFit || "contain");
     this.videoContainer.setAttribute("data-volume-level", "muted");
     this.videoContainer.setAttribute("data-brightness-level", "dark");
     // pseudo els
@@ -839,7 +805,6 @@ class T_M_G_Video_Player {
     this.pseudoVideoContainer.append(this.pseudoVideo);
     this.syncAspectRatio();
   }
-
   buildPlayerInterface() {
     this.videoContainer.insertAdjacentHTML(
       "beforeend",
@@ -887,16 +852,15 @@ class T_M_G_Video_Player {
       <p>Tap to Unlock</p>
     </div>
     <!-- Code injected by TMG ends -->
-    `,
+    `
     );
     this.queryDOM(".T_M_G-video-container-content").prepend(this.video);
   }
-
   buildControllerStructure() {
     const HTML = this.getPlayerHTML(),
-      spacerIndex = this.settings.controllerStructure.bottom?.indexOf?.("spacer"),
-      bLeftSideControls = spacerIndex > -1 ? this.settings.controllerStructure.bottom?.slice?.(0, spacerIndex) : null,
-      bRightSideControls = spacerIndex > -1 ? this.settings.controllerStructure.bottom?.slice?.(spacerIndex + 1) : null,
+      spacerIndex = this.settings.controlPanel.bottom?.indexOf?.("spacer"),
+      bLeftSideControls = spacerIndex > -1 ? this.settings.controlPanel.bottom?.slice?.(0, spacerIndex) : null,
+      bRightSideControls = spacerIndex > -1 ? this.settings.controlPanel.bottom?.slice?.(spacerIndex + 1) : null,
       // breaking HTML into smaller units to use as building blocks
       controlsContainerBuild = this.queryDOM(".T_M_G-video-controls-container"),
       notifiersContainerBuild = this.settings.status.ui.notifiers ? tmg.createEl("div", { className: "T_M_G-video-notifiers-container" }) : null,
@@ -910,17 +874,17 @@ class T_M_G_Video_Player {
     controlsContainerBuild.prepend(topControlsWrapperBuild, bigControlsWrapperBuild, bottomControlsWrapperBuild);
     topControlsWrapperBuild.innerHTML += ``.concat(HTML.videotitle ?? "");
     if (this.settings.status.ui.tRightSideControls) {
-      const tRightSideControlsWrapper = tmg.createEl("div", { className: "T_M_G-video-side-controls-wrapper T_M_G-video-right-side-controls-wrapper", innerHTML: ``.concat(...Array.from(this.settings.controllerStructure.top || [], (el) => HTML[el] || "")) }, { dropZone: this.settings.status.ui.draggableControls });
+      const tRightSideControlsWrapper = tmg.createEl("div", { className: "T_M_G-video-side-controls-wrapper T_M_G-video-right-side-controls-wrapper", innerHTML: ``.concat(...Array.from(this.settings.controlPanel.top || [], (el) => HTML[el] || "")) }, { dropZone: this.settings.status.ui.draggable });
       tRightSideControlsWrapperBuild.append(tRightSideControlsWrapper);
       topControlsWrapperBuild.append(tRightSideControlsWrapperBuild);
     }
     if (this.settings.status.ui.bLeftSideControls) {
-      const bLeftSideControlsWrapper = tmg.createEl("div", { className: "T_M_G-video-side-controls-wrapper T_M_G-video-left-side-controls-wrapper", innerHTML: ``.concat(...Array.from(bLeftSideControls || [], (el) => HTML[el] || "")) }, { dropZone: this.settings.status.ui.draggableControls });
+      const bLeftSideControlsWrapper = tmg.createEl("div", { className: "T_M_G-video-side-controls-wrapper T_M_G-video-left-side-controls-wrapper", innerHTML: ``.concat(...Array.from(bLeftSideControls || [], (el) => HTML[el] || "")) }, { dropZone: this.settings.status.ui.draggable });
       bLeftSideControlsWrapperBuild.append(bLeftSideControlsWrapper);
       bSubControlsWrapperBuild.append(bLeftSideControlsWrapperBuild);
     }
     if (this.settings.status.ui.bRightSideControls) {
-      const bRightSideControlsWrapper = tmg.createEl("div", { className: "T_M_G-video-side-controls-wrapper T_M_G-video-right-side-controls-wrapper", innerHTML: ``.concat(...Array.from(bRightSideControls || [], (el) => HTML[el] || "")) }, { dropZone: this.settings.status.ui.draggableControls });
+      const bRightSideControlsWrapper = tmg.createEl("div", { className: "T_M_G-video-side-controls-wrapper T_M_G-video-right-side-controls-wrapper", innerHTML: ``.concat(...Array.from(bRightSideControls || [], (el) => HTML[el] || "")) }, { dropZone: this.settings.status.ui.draggable });
       bRightSideControlsWrapperBuild.append(bRightSideControlsWrapper);
       bSubControlsWrapperBuild.append(bRightSideControlsWrapperBuild);
     }
@@ -936,11 +900,9 @@ class T_M_G_Video_Player {
     // running some pseudo build
     this.pseudoVideoContainer.insertAdjacentHTML("beforeend", ``.concat(HTML.pictureinpicturewrapper ?? ""));
   }
-
   queryDOM(query, isPseudo = false, all = false) {
     return (isPseudo ? this.pseudoVideoContainer : this.videoContainer)[all ? "querySelectorAll" : "querySelector"](query);
   }
-
   retrieveDOM() {
     const { ui } = this.settings.status;
     this.DOM = {
@@ -1027,12 +989,11 @@ class T_M_G_Video_Player {
       theaterBtn: ui.theater ? this.queryDOM(".T_M_G-video-theater-btn") : null,
       fullScreenBtn: ui.fullScreen ? this.queryDOM(".T_M_G-video-full-screen-btn") : null,
       svgs: this.videoContainer.getElementsByTagName("svg"),
-      draggableControls: ui.draggableControls ? this.queryDOM("[data-draggable-control]", false, true) : null,
-      draggableControlContainers: ui.draggableControls ? this.queryDOM(".T_M_G-video-side-controls-wrapper", false, true) : null,
+      draggableControls: ui.draggable ? this.queryDOM("[data-draggable-control]", false, true) : null,
+      draggableControlContainers: ui.draggable ? this.queryDOM(".T_M_G-video-side-controls-wrapper", false, true) : null,
       settingsCloseBtn: this.settings ? this.queryDOM(".T_M_G-video-settings-close-btn") : null,
     };
   }
-
   initPlayer() {
     this.retrieveDOM();
     this.observeResize();
@@ -1047,7 +1008,6 @@ class T_M_G_Video_Player {
     if (this.disabled) this.disable();
     this.initialized = true;
   }
-
   addInitialState() {
     if (!this.initialState) return;
     if (this.settings.time.start && !this.video.poster) this.currentTime = this.settings.time.start;
@@ -1055,7 +1015,6 @@ class T_M_G_Video_Player {
     this.video.addEventListener("play", this.removeInitialState, { once: true });
     this.DOM.controlsContainer.addEventListener("click", this._handleInitialStateClick);
   }
-
   removeInitialState() {
     if (!this.initialState) return;
     this.togglePlay(true);
@@ -1065,18 +1024,15 @@ class T_M_G_Video_Player {
     this.initControls();
     this.DOM.controlsContainer.removeEventListener("click", this._handleInitialStateClick);
   }
-
   _handleInitialStateClick({ target }) {
     target === this.DOM.controlsContainer && this.removeInitialState();
   }
-
   stall() {
     this.showOverlay();
     if (!this.DOM.bigPlayPauseBtn) return;
     this.videoContainer.classList.add("T_M_G-video-stall");
     this.DOM.bigPlayPauseBtn?.addEventListener("animationend", () => this.videoContainer.classList.remove("T_M_G-video-stall"), { once: true });
   }
-
   initControls() {
     if (this.video.currentSrc) this._handleLoadedMetadata();
     this.updateAudioSettings();
@@ -1085,11 +1041,9 @@ class T_M_G_Video_Player {
     this.updateCaptionsSettings();
     this.setInitialStates();
     this.setContainersEventListeners();
-    this.setSettingsEventListeners();
+    this.setSettingsViewEventListeners();
     this.observeIntersection();
-    this.cache();
   }
-
   setInitialStates() {
     this.showOverlay();
     this.setTitleState();
@@ -1098,16 +1052,13 @@ class T_M_G_Video_Player {
     this.setPreviewsState();
     this.pseudoVideo.src = this.video.currentSrc || this.video.src;
   }
-
   setTitleState(title) {
     const t = (title ?? this.media?.title) || "";
     if (this.DOM.videoTitle) this.DOM.videoTitle.textContent = this.DOM.videoTitle.dataset.videoTitle = t;
   }
-
   setPosterState() {
     if (this.media?.artwork && this.media.artwork[0]?.src !== this.video.poster) this.video.poster = this.media.artwork[0].src;
   }
-
   setCaptionsState() {
     const able = this.video.textTracks.length;
     if (able) {
@@ -1122,19 +1073,18 @@ class T_M_G_Video_Player {
       this.video.textTracks[this.textTrackIndex].mode = this.settings.auto.captions ? "showing" : "hidden";
     } else this.textTrackIndex = 0;
     this.videoContainer.classList.toggle("T_M_G-video-captions", able && this.settings.auto.captions);
-    this.videoContainer.setAttribute("data-track-kind", this.video.textTracks[this.textTrackIndex]?.kind);
+    this.videoContainer.setAttribute("data-track-kind", this.video.textTracks[this.textTrackIndex]?.kind || "captions");
     this.setControlsState("captions");
   }
-
   setPreviewsState() {
-    this.videoAltImgSrc = `url(${tmg.ALT_IMG_SRC})`;
+    this.videoAltImgSrc = `url(${tmg.VIDEO_ALT_IMG_SRC})`;
     this.videoContainer.classList.toggle("T_M_G-video-no-previews", !this.settings.time.previews);
     this.videoContainer.setAttribute("data-preview-type", this.settings.status.ui.previews ? "image" : "canvas");
     if (this.settings.status.ui.previews || !this.settings.time.previews) return;
     this.previewContext = this.DOM.previewCanvas.getContext("2d");
     this.thumbnailContext = this.DOM.thumbnailCanvas.getContext("2d");
     let dummyImg = tmg.createEl("img", {
-      src: tmg.ALT_IMG_SRC,
+      src: tmg.VIDEO_ALT_IMG_SRC,
       onload: () => {
         this.previewContext?.drawImage(dummyImg, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height);
         this.thumbnailContext?.drawImage(dummyImg, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height);
@@ -1142,12 +1092,10 @@ class T_M_G_Video_Player {
       },
     });
   }
-
   setControlState(btn, { hidden = false, disabled = false }) {
     btn?.classList?.toggle("T_M_G-video-control-hidden", hidden);
     btn?.classList?.toggle("T_M_G-video-control-disabled", disabled);
   }
-
   setControlsState(target) {
     const atFirst = this.currentPlaylistIndex <= 0,
       atLast = !this.playlist || this.currentPlaylistIndex >= this.playlist.length - 1;
@@ -1172,7 +1120,6 @@ class T_M_G_Video_Player {
     else if (target) groups[target]?.();
     else Object.values(groups).forEach((fn) => fn());
   }
-
   setKeyEventListeners(target) {
     if (this.disabled || this.locked) return;
     this.floatingPlayer?.addEventListener("keydown", this._handleKeyDown);
@@ -1181,7 +1128,6 @@ class T_M_G_Video_Player {
     window.addEventListener("keydown", this._handleKeyDown);
     window.addEventListener("keyup", this._handleKeyUp);
   }
-
   removeKeyEventListeners(target) {
     this.floatingPlayer?.removeEventListener("keydown", this._handleKeyDown);
     this.floatingPlayer?.removeEventListener("keyup", this._handleKeyUp);
@@ -1189,7 +1135,6 @@ class T_M_G_Video_Player {
     window.removeEventListener("keydown", this._handleKeyDown);
     window.removeEventListener("keyup", this._handleKeyUp);
   }
-
   setContainersEventListeners() {
     this.videoContainer.addEventListener("click", this._handleLockScreenClick);
     this.videoContainer.addEventListener("wheel", this._handleGestureWheel, { passive: false });
@@ -1204,7 +1149,6 @@ class T_M_G_Video_Player {
     this.DOM.controlsContainer.addEventListener("pointerdown", this._handleSpeedPointerDown, true);
     this.DOM.controlsContainer.addEventListener("touchstart", this._handleGestureTouchStart, { passive: false, useCapture: true });
   }
-
   setVideoEventListeners() {
     this.video.addEventListener("error", this._handleLoadedError);
     this.video.addEventListener("play", this._handlePlay);
@@ -1221,7 +1165,6 @@ class T_M_G_Video_Player {
     this.video.addEventListener("enterpictureinpicture", this._handleEnterPictureInPicture);
     this.video.addEventListener("leavepictureinpicture", this._handleLeavePictureInPicture);
   }
-
   removeVideoEventListeners() {
     if (this.initialState) this.video.removeEventListener("play", this.removeInitialState, { once: true });
     this.video.removeEventListener("error", this._handleLoadedError);
@@ -1239,7 +1182,6 @@ class T_M_G_Video_Player {
     this.video.removeEventListener("enterpictureinpicture", this._handleEnterPictureInPicture);
     this.video.removeEventListener("leavepictureinpicture", this._handleLeavePictureInPicture);
   }
-
   setControlsEventListeners() {
     this.DOM.screenLockedBtn?.addEventListener("click", this._handleLockBtnClick);
     this.DOM.fullScreenOrientationBtn?.addEventListener("click", this.changeFullScreenOrientation);
@@ -1288,31 +1230,28 @@ class T_M_G_Video_Player {
       this.DOM.thumbnailImg?.addEventListener("error", this._handleImgBreak);
     }
     // notifiers event listeners
-    if (this.settings.status.ui.notifiers) new tmg.notify(this);
+    if (this.settings.status.ui.notifiers) new tmg.Notifier(this);
     // pseudo event listeners
     this.queryDOM(".T_M_G-video-picture-in-picture-icon-wrapper", true).addEventListener("click", this.togglePictureInPictureMode);
   }
-
   setDragEventListeners() {
-    if (this.settings.status.ui.draggableControls) {
-      this.DOM.draggableControls?.forEach((c) => (c.draggable = true));
-      this.DOM.draggableControls?.forEach((c) => {
-        c.addEventListener("dragstart", this._handleDragStart);
-        c.addEventListener("drag", this._handleDrag);
-        c.addEventListener("dragend", this._handleDragEnd);
-      });
-      this.DOM.draggableControlContainers?.forEach((c) => {
-        c.addEventListener("dragenter", this._handleDragEnter);
-        c.addEventListener("dragover", this._handleDragOver);
-        c.addEventListener("drop", this._handleDrop);
-        c.addEventListener("dragleave", this._handleDragLeave);
-      });
-    }
-  }
-
-  removeDragEventListeners() {
-    this.DOM.draggableControls?.forEach((c) => (c.draggable = false));
+    if (!this.settings.status.ui.draggable) return;
     this.DOM.draggableControls?.forEach((c) => {
+      c.draggable = true;
+      c.addEventListener("dragstart", this._handleDragStart);
+      c.addEventListener("drag", this._handleDrag);
+      c.addEventListener("dragend", this._handleDragEnd);
+    });
+    this.DOM.draggableControlContainers?.forEach((c) => {
+      c.addEventListener("dragenter", this._handleDragEnter);
+      c.addEventListener("dragover", this._handleDragOver);
+      c.addEventListener("drop", this._handleDrop);
+      c.addEventListener("dragleave", this._handleDragLeave);
+    });
+  }
+  removeDragEventListeners() {
+    this.DOM.draggableControls?.forEach((c) => {
+      c.draggable = false;
       c.removeEventListener("dragstart", this._handleDragStart);
       c.removeEventListener("drag", this._handleDrag);
       c.removeEventListener("dragend", this._handleDragEnd);
@@ -1324,15 +1263,12 @@ class T_M_G_Video_Player {
       c.removeEventListener("dragleave", this._handleDragLeave);
     });
   }
-
-  setSettingsEventListeners() {
+  setSettingsViewEventListeners() {
     this.DOM.settingsCloseBtn?.addEventListener("click", this.leaveSettingsView);
   }
-
   toggleSettingsView() {
     !this.isModeActive("settings") ? this.enterSettingsView() : this.leaveSettingsView();
   }
-
   enterSettingsView() {
     if (this.isModeActive("settings")) return;
     this.DOM.settingsCloseBtn.focus();
@@ -1344,18 +1280,16 @@ class T_M_G_Video_Player {
     this.DOM.videoContainerContent.setAttribute("inert", "");
     this.removeKeyEventListeners();
   }
-
   leaveSettingsView() {
     if (!this.isModeActive("settings")) return;
     this.DOM.settingsCloseBtn.blur();
-    setTimeout(() => this.togglePlay(!this.wasPaused), tmg.formatCSSTime(this.videoSettingsViewTransitionTime));
+    setTimeout(() => this.togglePlay(!this.wasPaused), tmg.parseCSSTime(this.videoSettingsViewTransitionTime));
     this.videoContainer.classList.remove("T_M_G-video-settings-view");
     window.removeEventListener("keyup", this._handleSettingsKeyUp);
     this.floatingPlayer?.removeEventListener("keyup", this._handleSettingsKeyUp);
     this.DOM.videoContainerContent.removeAttribute("inert");
     this.setKeyEventListeners();
   }
-
   _handleSettingsKeyUp(e) {
     const action = this.keyEventAllowed(e);
     if (action === false) return;
@@ -1365,7 +1299,6 @@ class T_M_G_Video_Player {
         break;
     }
   }
-
   observeResize() {
     this._handleMediaParentResize();
     tmg.initScrollAssist(this.DOM.videoTitle, { pxPerSecond: 60 });
@@ -1379,7 +1312,6 @@ class T_M_G_Video_Player {
     });
     [this.videoContainer, this.pseudoVideoContainer].forEach((el) => tmg.resizeObserver.observe(el));
   }
-
   unobserveResize() {
     tmg.removeScrollAssist(this.DOM.videoTitle);
     tmg.removeScrollAssist(this.DOM.scrubNotifierText, {
@@ -1391,24 +1323,20 @@ class T_M_G_Video_Player {
     });
     [this.videoContainer, this.pseudoVideoContainer].forEach((el) => tmg.resizeObserver.unobserve(el));
   }
-
   observeIntersection() {
     tmg.intersectionObserver.observe(this.videoContainer.parentElement);
     tmg.intersectionObserver.observe(this.video);
   }
-
   unobserveIntersection() {
     const p = this.pseudoVideoContainer.parentElement ?? this.videoContainer.parentElement;
     p && tmg.intersectionObserver.unobserve(p);
     tmg.intersectionObserver.unobserve(this.video);
   }
-
   _handleResize(target) {
     const isPseudo = target.className.includes("T_M_G-pseudo");
     if (target.classList.contains("T_M_G-media-container")) this._handleMediaParentResize(isPseudo);
     else if (target.classList.contains("T_M_G-video-side-controls-wrapper")) this._handleSideControlsWrapperResize(target);
   }
-
   _handleMediaParentResize(isPseudo = false) {
     const getTier = (container) => {
       const { offsetWidth: w, offsetHeight: h } = container;
@@ -1426,36 +1354,29 @@ class T_M_G_Video_Player {
       this.pseudoVideoContainer.dataset.sizeTier = tier;
     }
   }
-
   _handleSideControlsWrapperResize(wrapper) {
     this.updateSideControls({ target: wrapper });
   }
-
   _handleMediaIntersectionChange(isIntersecting) {
     this.isIntersecting = isIntersecting;
     this.isIntersecting && !this.isModeActive("settings") ? this.setKeyEventListeners() : this.removeKeyEventListeners();
   }
-
   _handleMediaParentIntersectionChange(isIntersecting) {
     this.parentIntersecting = isIntersecting;
     this.toggleMiniPlayerMode();
   }
-
   _handleWindowResize() {
     this.toggleMiniPlayerMode();
   }
-
   _handleVisibilityChange() {
     // tending to some observed glitches when visibility changes
     if (document.visibilityState === "visible") {
       this.stopTimelineScrubbing();
     }
   }
-
   _handleImgBreak(e) {
-    e.target.src = tmg.ALT_IMG_SRC;
+    e.target.src = tmg.VIDEO_ALT_IMG_SRC;
   }
-
   updateSideControls({ target: wrapper }) {
     let c = wrapper?.children?.[0],
       spacer;
@@ -1468,7 +1389,6 @@ class T_M_G_Video_Player {
     if (wrapper === this.DOM.bLeftSideControlsWrapper) return;
     spacer?.setAttribute("data-spacer", true);
   }
-
   svgSetup() {
     let controlsSize = 25;
     [...this.DOM.svgs].forEach((svg) => {
@@ -1479,7 +1399,6 @@ class T_M_G_Video_Player {
       svg.addEventListener("mouseover", () => (svg.parentElement.title = title));
     });
   }
-
   exportVideoFrame(type, time) {
     this.pseudoVideo.currentTime = time;
     this.exportCanvas.width = this.video.videoWidth;
@@ -1488,7 +1407,6 @@ class T_M_G_Video_Player {
     if (type === "monochrome") this.convertToMonoChrome(this.exportCanvas);
     return this.exportCanvas.toDataURL("image/png");
   }
-
   convertToMonoChrome(canvas) {
     const frame = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
     const l = frame.data.length / 4;
@@ -1500,23 +1418,16 @@ class T_M_G_Video_Player {
     }
     canvas.getContext("2d").putImageData(frame, 0, 0);
   }
-
-  cache() {
-    this.settingsCache = JSON.parse(JSON.stringify(this.settings));
-  }
-
   deactivate(message) {
     this.showOverlay();
     this.showMessage(message);
     this.videoContainer.classList.add("T_M_G-video-inactive");
   }
-
   reactivate() {
     if (!this.videoContainer.classList.contains("T_M_G-video-inactive") || !this.loaded) return;
     this.removeMessage();
     this.videoContainer.classList.remove("T_M_G-video-inactive");
   }
-
   disable() {
     this.videoContainer.classList.add("T_M_G-video-disabled");
     this.togglePlay(false);
@@ -1526,9 +1437,8 @@ class T_M_G_Video_Player {
     this.videoContainer.setAttribute("inert", "");
     this.removeKeyEventListeners();
     this.disabled = true;
-    this.log("You have to enable the TMG Player to access the custom controls", "warn");
+    this.log("You have to enable the TMG Controller to access the custom controls", "warn");
   }
-
   enable() {
     if (!this.disabled) return;
     this.disabled = false;
@@ -1536,7 +1446,6 @@ class T_M_G_Video_Player {
     this.videoContainer.removeAttribute("inert");
     this.setKeyEventListeners();
   }
-
   lock() {
     this.videoContainer.classList.add("T_M_G-video-locked");
     setTimeout(this.showLockedOverlay);
@@ -1545,48 +1454,41 @@ class T_M_G_Video_Player {
     this.removeKeyEventListeners();
     this.locked = true;
   }
-
   unlock() {
     if (!this.locked) return;
     this.locked = false;
     this.videoContainer.classList.remove("T_M_G-video-locked");
     this.removeLockedOverlay();
-    setTimeout(this.showOverlay, tmg.formatCSSTime(this.videoSwitchTransitionTime));
+    setTimeout(this.showOverlay, tmg.parseCSSTime(this.videoSwitchTransitionTime));
     this.setKeyEventListeners();
   }
-
   _handleLockBtnClick(e) {
     e.stopPropagation();
     this.delayLockedOverlay();
     this.DOM.screenLockedBtn?.classList.contains("T_M_G-video-control-unlock") ? this.unlock() : this.DOM.screenLockedBtn.classList.add("T_M_G-video-control-unlock");
   }
-
   activatePseudoMode() {
-    this.mutatingDOMNodes = true;
+    this.mutatingDOM = true;
     this.pseudoVideo.id = this.video.id;
     this.video.id = "";
     this.pseudoVideo.className += " " + this.video.className.replace(/T_M_G-media|T_M_G-video/g, "");
     this.pseudoVideoContainer.className += " " + this.videoContainer.className.replace(/T_M_G-media-container|T_M_G-pseudo-video-container/g, "");
     this.videoContainer.parentElement?.insertBefore(this.pseudoVideoContainer, this.videoContainer);
     document.body.append(this.videoContainer);
-    setTimeout(() => (this.mutatingDOMNodes = false));
+    setTimeout(() => (this.mutatingDOM = false));
   }
-
   deactivatePseudoMode() {
-    this.mutatingDOMNodes = true;
+    this.mutatingDOM = true;
     this.video.id = this.pseudoVideo.id;
     this.pseudoVideo.id = "";
     this.pseudoVideo.className = "T_M_G-pseudo-video T_M_G-media";
     this.pseudoVideoContainer.className = "T_M_G-pseudo-video-container T_M_G-media-container";
-    this.pseudoVideoContainer.parentElement?.insertBefore(this.videoContainer, this.pseudoVideoContainer);
-    this.pseudoVideoContainer.remove();
-    setTimeout(() => (this.mutatingDOMNodes = false));
+    this.pseudoVideoContainer.parentElement?.replaceChild(this.videoContainer, this.pseudoVideoContainer);
+    setTimeout(() => (this.mutatingDOM = false));
   }
-
   get playlist() {
     return this._playlistItems;
   }
-
   set playlist(value) {
     if (!tmg.isArr(value)) return;
     value.forEach((val) => {
@@ -1598,20 +1500,20 @@ class T_M_G_Video_Player {
     else if (this.initialized) {
       const nextIndex = this.playlist?.findIndex((vid) => vid.src === this.src);
       this.currentPlaylistIndex = nextIndex !== -1 ? nextIndex : 0;
-      if (nextIndex === -1) this.movePlaylistTo(this.currentPlaylistIndex, !this.video.paused);
+      if (nextIndex === -1) {
+        this.playlistCurrentTime = this.playlist?.[this.currentPlaylistIndex].settings.time.start;
+        this.movePlaylistTo(this.currentPlaylistIndex, !this.video.paused);
+      }
     }
     this.setControlsState("playlist");
   }
-
   previousVideo() {
     if (this.currentTime >= 3) return this.replay();
     if (this.playlist && this.currentPlaylistIndex > 0 && this.currentTime < 3) this.movePlaylistTo(this.currentPlaylistIndex - 1);
   }
-
   nextVideo() {
     if (this.playlist && this.currentPlaylistIndex < this.playlist.length - 1) this.movePlaylistTo(this.currentPlaylistIndex + 1);
   }
-
   movePlaylistTo(index, shouldPlay = true) {
     if (!this.playlist) return;
     if (this.settings.status.allowOverride.time) this.playlist[this.currentPlaylistIndex].settings.time.start = this.currentTime < this.duration - (this.settings.time.end || this.settings.auto.next || 0) ? this.playlistCurrentTime : null;
@@ -1619,7 +1521,7 @@ class T_M_G_Video_Player {
     this.loaded = false;
     this.currentPlaylistIndex = index;
     const v = this.playlist[index];
-    this.media = v.media ? { ...this.media, ...v.media } : (v.media ?? null);
+    this.media = v.media ? { ...this.media, ...v.media } : v.media ?? null;
     this.setPosterState();
     this.settings.time.start = v.settings.time.start;
     this.settings.time.end = v.settings.time.end;
@@ -1632,7 +1534,6 @@ class T_M_G_Video_Player {
     this.togglePlay(shouldPlay);
     this.canAutoMovePlaylist = true;
   }
-
   autonextVideo() {
     if (!this.loaded || !this.playlist || this.settings.auto.next < 0 || !this.canAutoMovePlaylist || this.currentPlaylistIndex >= this.playlist.length - 1 || this.video.paused) return;
     this.canAutoMovePlaylist = false;
@@ -1660,7 +1561,6 @@ class T_M_G_Video_Player {
       `,
     });
     this.DOM.controlsContainer.append(playlistToastContainer);
-
     const updatePlaylistToast = (timestamp) => {
         if (shouldUnPause) {
           lastTime = null;
@@ -1668,8 +1568,7 @@ class T_M_G_Video_Player {
         }
         if (lastTime == null) {
           lastTime = timestamp;
-          nextVideoFrameId = requestAnimationFrame(updatePlaylistToast);
-          return;
+          return (nextVideoFrameId = requestAnimationFrame(updatePlaylistToast));
         }
         if (!isPaused) {
           timeVisible += timestamp - lastTime;
@@ -1758,9 +1657,8 @@ class T_M_G_Video_Player {
     playlistNextVideoPreviewWrapper.addEventListener("click", autoNextVideo);
     playlistNextVideoCancelBtn.addEventListener("click", () => cleanUpPlaylistToast(true));
   }
-
   setMediaSession() {
-    if (!navigator.mediaSession || (tmg._PICTURE_IN_PICTURE_ACTIVE && !this.isModeActive("pictureInPicture"))) return;
+    if (!navigator.mediaSession || (tmg._pictureInPictureActive && !this.isModeActive("pictureInPicture"))) return;
     if (this.media) navigator.mediaSession.metadata = new MediaMetadata(this.media);
     const set = (...args) => navigator.mediaSession.setActionHandler(...args);
     set("play", () => this.togglePlay(true));
@@ -1773,13 +1671,11 @@ class T_M_G_Video_Player {
     if (this.currentPlaylistIndex > 0) set("previoustrack", this.previousVideo);
     if (this.currentPlaylistIndex < this.playlist?.length - 1) set("nexttrack", this.nextVideo);
   }
-
   syncAspectRatio() {
     if (!this.video.videoWidth || !this.video.videoHeight) return;
     this.aspectRatio = this.video.videoWidth / this.video.videoHeight;
     this.videoAspectRatio = `${this.video.videoWidth} / ${this.video.videoHeight}`;
   }
-
   rotateObjectFit() {
     const fits = [
       { name: "Crop to Fit", value: "contain" },
@@ -1793,7 +1689,6 @@ class T_M_G_Video_Player {
     if (this.DOM.objectFitNotifier) this.DOM.objectFitNotifier.textContent = nextFit.name;
     this.fire("objectfitchange");
   }
-
   isModeActive(mode) {
     switch (mode) {
       case "miniPlayer":
@@ -1812,22 +1707,18 @@ class T_M_G_Video_Player {
         return false;
     }
   }
-
   showMessage(message) {
     if (message) this.DOM.videoContainerContent.setAttribute("data-message", message);
   }
-
   removeMessage() {
     this.DOM.videoContainerContent.removeAttribute("data-message");
   }
-
   _handleLoadedError(error) {
     const fallbackMessage = (typeof error === "string" && error) || error?.message || this.video.error?.message || (error && "An unknown error occurred with the video :(");
     const message = this.settings.errorMessages?.[this.video.error?.code ?? (error && 5)] || fallbackMessage;
     this.loaded = false;
     this.deactivate(message);
   }
-
   _handleLoadedMetadata() {
     this.stats = { fps: 30 };
     if (this.settings.time.start && !this.initialState) this.currentTime = this.settings.time.start;
@@ -1837,15 +1728,12 @@ class T_M_G_Video_Player {
     this.loaded = true;
     this.reactivate();
   }
-
   _handleLoadedData() {
     if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = tmg.formatTime(this.video.duration);
   }
-
   _handleDurationChange() {
     if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = tmg.formatTime(this.video.duration);
   }
-
   _handleLoadedProgress() {
     for (let i = 0; i < this.video.buffered.length; i++) {
       if (this.video.buffered.start(this.video.buffered.length - 1 - i) < this.currentTime) {
@@ -1854,7 +1742,6 @@ class T_M_G_Video_Player {
       }
     }
   }
-
   async togglePlay(bool) {
     try {
       typeof bool === "boolean" ? await this.video[bool ? "play" : "pause"]() : await this.video[this.video.paused ? "play" : "pause"]();
@@ -1862,25 +1749,21 @@ class T_M_G_Video_Player {
       this.video.error ? this._handleLoadedError(e) : this.log(e, "error", "swallow");
     }
   }
-
   replay() {
     this.moveVideoTime({ to: "start" });
     this.video.play();
   }
-
   _handleBufferStart() {
     this.buffering = true;
     this.showOverlay();
     this.videoContainer.classList.add("T_M_G-video-buffering");
   }
-
   _handleBufferStop() {
     if (!this.buffering) return;
     this.buffering = false;
     this.delayOverlay();
     this.videoContainer.classList.remove("T_M_G-video-buffering");
   }
-
   _handlePlay() {
     tmg.connectAudio(this.audioGainNode);
     for (const media of document.querySelectorAll("video, audio")) {
@@ -1894,29 +1777,23 @@ class T_M_G_Video_Player {
     this.loaded = true;
     this.reactivate();
   }
-
   _handlePause() {
     this.videoContainer.classList.add("T_M_G-video-paused");
     this.showOverlay();
     if (this.buffering) this._handleBufferStop();
   }
-
   _handleEnded() {
     this.videoContainer.classList.add("T_M_G-video-replay");
   }
-
   get duration() {
     return tmg.parseNumber(this.video.duration);
   }
-
   set currentTime(value) {
     this.video.currentTime = Math.max(0, value);
   }
-
   get currentTime() {
     return tmg.parseNumber(this.video.currentTime);
   }
-
   _handleTimelinePointerDown(e) {
     if (this.isScrubbing) return;
     this.DOM.timelineContainer?.setPointerCapture(e.pointerId);
@@ -1926,7 +1803,6 @@ class T_M_G_Video_Player {
     this.DOM.timelineContainer?.addEventListener("pointerup", this.stopTimelineScrubbing);
     this.DOM.timelineContainer?.addEventListener("pointercancel", this.stopTimelineScrubbing);
   }
-
   stopTimelineScrubbing(e) {
     if (!this.isScrubbing) return;
     this.isScrubbing = false;
@@ -1936,7 +1812,6 @@ class T_M_G_Video_Player {
     this.DOM.timelineContainer?.removeEventListener("pointerup", this.stopTimelineScrubbing);
     this.DOM.timelineContainer?.removeEventListener("pointercancel", this.stopTimelineScrubbing);
   }
-
   toggleScrubbing(e) {
     const rect = this.DOM.timelineContainer?.getBoundingClientRect();
     const percent = Math.min(Math.max(0, e.clientX - rect.x), rect.width) / rect.width;
@@ -1950,17 +1825,14 @@ class T_M_G_Video_Player {
     }
     this._handleTimelineInput(e);
   }
-
   _handleTimelineMouseOver() {
     this.overTimeline = true;
     if (!this.isMediaMobile) this.videoContainer.classList.add("T_M_G-video-previewing");
   }
-
   _handleTimelineMouseLeave() {
     this.overTimeline = false;
     setTimeout(() => this.videoContainer.classList.remove("T_M_G-video-previewing"));
   }
-
   _handleTimelineInput({ clientX: x }) {
     this.throttle(
       "timelineInput",
@@ -1994,10 +1866,9 @@ class T_M_G_Video_Player {
         else arrowPosition = "50%";
         this.videoCurrentPreviewImgArrowPosition = arrowPosition;
       },
-      50,
+      50
     );
   }
-
   _handleGestureTimelineInput({ percent, sign, multiplier }) {
     multiplier = multiplier.toFixed(1);
     percent = percent * multiplier;
@@ -2006,7 +1877,6 @@ class T_M_G_Video_Player {
     if (this.overTimeline) this.currentTime = this.gestureNextTime;
     if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${tmg.formatTime(Math.abs(this.gestureNextTime - this.currentTime))} (${tmg.formatTime(this.gestureNextTime)}) ${multiplier < 1 ? `x${multiplier}` : ""}`;
   }
-
   _handleTimelineKeyDown(e) {
     switch (e.key?.toLowerCase()) {
       case "arrowleft":
@@ -2023,7 +1893,6 @@ class T_M_G_Video_Player {
         break;
     }
   }
-
   _handleTimeUpdate() {
     if (this.isScrubbing) return;
     this.video.controls = false; // youtube did this too :)
@@ -2035,25 +1904,22 @@ class T_M_G_Video_Player {
     if (Math.floor((this.settings.time.end || this.duration) - this.currentTime) <= this.settings.auto.next) this.autonextVideo();
     this.videoContainer.classList.remove("T_M_G-video-replay");
   }
-
   rotateTimeFormat() {
-    if (!this.settings.status.allowOverride.time) return;
     this.showOverlay();
     this.settings.time.format = this.settings.time.format !== "spent" ? "spent" : "left";
     if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.settings.time.format !== "spent" ? tmg.formatTime(this.video.currentTime) : `-${tmg.formatTime(this.video.duration - this.video.currentTime)}`;
   }
-
   skip(duration) {
     const notifier = duration > 0 ? this.DOM.fwdNotifier : this.DOM.bwdNotifier;
     duration = Math.sign(duration) === 1 ? (this.duration - this.currentTime > duration ? duration : this.duration - this.currentTime) : Math.sign(duration) === -1 ? (this.currentTime > Math.abs(duration) ? duration : -this.currentTime) : 0;
     duration = Math.trunc(duration);
     this.videoCurrentPlayedPosition = tmg.parseNumber((this.video.currentTime += duration) / this.video.duration);
     if (this.skipPersist) {
-      if (this.currentNotifier && notifier !== this.currentNotifier) {
+      if (this.currentSkipNotifier && notifier !== this.currentSkipNotifier) {
         this.skipDuration = 0;
-        this.currentNotifier.classList.remove("T_M_G-video-control-persist");
+        this.currentSkipNotifier.classList.remove("T_M_G-video-control-persist");
       }
-      this.currentNotifier = notifier;
+      this.currentSkipNotifier = notifier;
       notifier.classList.add("T_M_G-video-control-persist");
       this.skipDuration += duration;
       clearTimeout(this.skipDurationId);
@@ -2061,15 +1927,14 @@ class T_M_G_Video_Player {
         this.deactivateSkipPersist();
         this.skipDuration = 0;
         notifier.classList.remove("T_M_G-video-control-persist");
-        this.currentNotifier = null;
+        this.currentSkipNotifier = null;
         this.removeOverlay();
-      }, tmg.formatCSSTime(this.videoNotifiersAnimationTime));
+      }, tmg.parseCSSTime(this.videoNotifiersAnimationTime));
       notifier.setAttribute("data-skip", this.skipDuration);
       return;
-    } else this.currentNotifier?.classList.remove("T_M_G-video-control-persist");
+    } else this.currentSkipNotifier?.classList.remove("T_M_G-video-control-persist");
     notifier.setAttribute("data-skip", Math.abs(duration));
   }
-
   moveVideoTime(details) {
     switch (details.to) {
       case "start":
@@ -2082,7 +1947,6 @@ class T_M_G_Video_Player {
         this.currentTime = (Number(details.to) / Number(details.max)) * this.duration;
     }
   }
-
   _handleFrameUpdate(now, m) {
     const diff = m.presentedFrames - (this.stats?.presentedFrames ?? 0),
       fps = diff > 0 ? (diff / (now - (this.stats?.now ?? now))) * 1000 : 30,
@@ -2091,7 +1955,6 @@ class T_M_G_Video_Player {
     // this.throttle("statsLogging", () => this.log(` STATS FOR NERDS: \n Now: ${now} ms\n Media Time: ${m.mediaTime} s\n Expected Display Time: ${m.expectedDisplayTime} ms\n Presented Frames: ${m.presentedFrames}\n Dropped Frames (detected): ${droppedFrames}\n FPS (real-time): ${fps}\n Processing Duration: ${m.processingDuration} ms\n Capture Time: ${m.captureTime}\n Width: ${m.width}\n Height: ${m.height}\n Painted Frames: ${m.paintedFrames}\n`), 1000);
     this.video.requestVideoFrameCallback(this._handleFrameUpdate);
   }
-
   moveVideoFrame(dir = "forwards") {
     if (!this.video.paused) return;
     this.throttle(
@@ -2102,22 +1965,18 @@ class T_M_G_Video_Player {
         const delta = dir === "backwards" ? -1 : 1;
         this.currentTime = tmg.clamp(0, frame + delta, Math.floor(this.duration * this.pfps)) / this.pfps;
       },
-      this.pframeDelay,
+      this.pframeDelay
     );
   }
-
   set playbackRate(value) {
     this.video.playbackRate = this.video.defaultPlaybackRate = this.settings.playbackRate.value = tmg.clamp(this.settings.playbackRate.min, value, this.settings.playbackRate.max);
   }
-
   get playbackRate() {
     return this.video.playbackRate ?? 1;
   }
-
   updatePlaybackRateSettings() {
     this.playbackRate = this.settings.playbackRate.value ?? this.video.playbackRate;
   }
-
   rotatePlaybackRate(dir = "forwards") {
     const rate = this.playbackRate;
     const { min, max, skip } = this.settings.playbackRate;
@@ -2125,7 +1984,6 @@ class T_M_G_Video_Player {
     const i = steps.reduce((cIdx, s, idx) => (Math.abs(s - rate) < Math.abs(steps[cIdx] - rate) ? idx : cIdx), 0);
     this.playbackRate = steps[dir === "backwards" ? (i - 1 + steps.length) % steps.length : (i + 1) % steps.length];
   }
-
   changePlaybackRate(value) {
     const sign = Math.sign(value) === 1 ? "+" : "-";
     value = Math.abs(value);
@@ -2141,13 +1999,11 @@ class T_M_G_Video_Player {
         break;
     }
   }
-
   _handlePlaybackRateChange() {
     if (this.DOM.playbackRateNotifierContent) this.DOM.playbackRateNotifierContent.textContent = `${this.playbackRate}x`;
     if (this.DOM.playbackRateNotifierText) this.DOM.playbackRateNotifierText.textContent = `${this.playbackRate}x`;
     this.setControlsState("playbackRate");
   }
-
   fastPlay(pos) {
     if (this.speedCheck) return;
     this.speedCheck = true;
@@ -2156,12 +2012,10 @@ class T_M_G_Video_Player {
     this.DOM.playbackRateNotifier?.classList.add("T_M_G-video-control-active");
     setTimeout(pos === "backwards" && this.settings.beta?.rewind ? this.rewind : this.fastForward);
   }
-
   fastForward() {
     this.playbackRate = this.settings.playbackRate.fast;
     this.togglePlay(true);
   }
-
   rewind() {
     this.playbackRate = 1;
     if (this.DOM.playbackRateNotifierText) this.DOM.playbackRateNotifierText.textContent = `${this.settings.playbackRate.fast}x`;
@@ -2169,14 +2023,12 @@ class T_M_G_Video_Player {
     this.video.addEventListener("play", this.rewindReset);
     this.speedIntervalId = setInterval(this.rewindVideo, this.pframeDelay);
   }
-
   rewindVideo() {
     this.togglePlay(false);
     this.currentTime -= this.settings.playbackRate.fast / this.pfps;
     this.videoCurrentPlayedPosition = tmg.parseNumber(this.video.currentTime / this.video.duration);
     this.DOM.playbackRateNotifier?.setAttribute("data-current-time", tmg.formatTime(this.video.currentTime));
   }
-
   rewindReset() {
     if (this.speedIntervalId) {
       this.fire("videopause");
@@ -2185,7 +2037,6 @@ class T_M_G_Video_Player {
       this.speedIntervalId = null;
     } else this.speedIntervalId = setInterval(this.rewindVideo, this.pframeDelay);
   }
-
   slowDown() {
     if (!this.speedCheck) return;
     this.speedCheck = false;
@@ -2195,33 +2046,15 @@ class T_M_G_Video_Player {
     this.playbackRate = this.lastPlaybackRate;
     this.togglePlay(!this.wasPaused);
   }
-
   set videoCaptionsCharacterEdgeStyle(value) {
     this.DOM.cueContainer.classList.forEach((cls) => cls.startsWith("T_M_G-video-cue-character-edge-style") && this.DOM.cueContainer.classList.remove(cls));
     this.DOM.cueContainer.classList.add(`T_M_G-video-cue-character-edge-style-${value}`);
   }
-
   get videoCaptionsCharacterEdgeStyle() {
-    const edgeStyles = this.getCaptionsDetails().characterEdgeStyle.values;
+    const edgeStyles = tmg.configDetails(this.settings.captions).characterEdgeStyle.values;
     const edgeStyle = [...(this.DOM.cueContainer?.classList ?? [])].find((cls) => cls.startsWith("T_M_G-video-cue-character-edge-style"))?.replace("T_M_G-video-cue-character-edge-style-", "");
     return edgeStyles.includes(edgeStyle) ? edgeStyle : "none";
   }
-
-  getCaptionsDetails(node = this.settings.captions) {
-    const result = {};
-    for (const key of Object.keys(node)) {
-      const entry = node[key];
-      if (!tmg.isObj(entry)) continue;
-      result[key] = entry.options
-        ? {
-            values: entry.options.map((opt) => opt.value ?? opt),
-            displays: entry.options.map((opt) => opt.display ?? String(opt)),
-          }
-        : this.getCaptionsDetails(entry); // recurse on sub-branch
-    }
-    return result;
-  }
-
   updateCaptionsSettings() {
     const { font, window, background, characterEdgeStyle } = this.settings.captions;
     Object.entries(font).forEach(([k, { value }]) => (this[`videoCaptionsFont${tmg.capitalize(k)}`] = value ?? this[`videoCaptionsFont${tmg.capitalize(k)}`]));
@@ -2229,22 +2062,19 @@ class T_M_G_Video_Player {
     Object.entries(window).forEach(([k, { value }]) => (this[`videoCaptionsWindow${tmg.capitalize(k)}`] = value));
     this.videoCaptionsCharacterEdgeStyle = characterEdgeStyle.value;
   }
-
   toggleCaptions() {
     if (this.video.textTracks[this.textTrackIndex]) this.videoContainer.classList.toggle("T_M_G-video-captions");
     else this.previewCaptions("No captions available for this video");
   }
-
   previewCaptions(show = "") {
     this.videoContainer.classList.add("T_M_G-video-captions-preview");
-    if (!this.DOM.videoContainer.classList.contains("T_M_G-video-captions") || !this.DOM.cueContainer.innerHTML) this._handleCueChange({ text: show || `${tmg.capitalize(this.videoContainer.dataset.trackKind) || "Captions"} look like this` });
+    if (!this.DOM.videoContainer.classList.contains("T_M_G-video-captions") || !this.DOM.cueContainer.innerHTML) this._handleCueChange({ text: show || `${tmg.capitalize(this.videoContainer.dataset.trackKind || "captions")} look like this` });
     clearTimeout(this.previewCaptionsTimeoutId);
     this.previewCaptionsTimeoutId = setTimeout(() => {
       this.videoContainer.classList.remove("T_M_G-video-captions-preview");
       if (this.DOM.cueContainer) this.DOM.cueContainer.innerHTML = "";
     }, 1500);
   }
-
   changeCaptionsFontSize(value) {
     const sign = Math.sign(value) === 1 ? "+" : "-";
     value = Math.abs(value);
@@ -2258,23 +2088,20 @@ class T_M_G_Video_Player {
     }
     this.previewCaptions();
   }
-
   rotateCaptionsFontOpacity() {
-    const steps = this.getCaptionsDetails().font.opacity.values;
+    const steps = tmg.configDetails(this.settings.captions).font.opacity.values;
     const opacity = Number(this.videoCaptionsFontOpacity) || 1;
     const i = steps.reduce((cIdx, s, idx) => (Math.abs(s - opacity) < Math.abs(steps[cIdx] - opacity) ? idx : cIdx), 0);
     this.videoCaptionsFontOpacity = steps[(i + 1) % steps.length];
     this.previewCaptions();
   }
-
   rotateCaptionsWindowOpacity() {
-    const steps = this.getCaptionsDetails().window.opacity.values;
+    const steps = tmg.configDetails(this.settings.captions).window.opacity.values;
     const opacity = Number(this.videoCaptionsWindowOpacity) || 0;
     const i = steps.reduce((cIdx, s, idx) => (Math.abs(s - opacity) < Math.abs(steps[cIdx] - opacity) ? idx : cIdx), 0);
     this.videoCaptionsWindowOpacity = steps[(i + 1) % steps.length];
     this.previewCaptions();
   }
-
   _handleCueChange(cue) {
     this.DOM.cueContainer.innerHTML = "";
     if (!cue) return;
@@ -2294,21 +2121,18 @@ class T_M_G_Video_Player {
     this.videoCurrentCueContainerWidth = this.DOM.cueContainer.offsetWidth + "px";
     this._handleCuePosition();
   }
-
   _handleCueDragStart(e) {
     this.DOM.cueContainer?.setPointerCapture(e.pointerId);
     this.DOM.cueContainer?.addEventListener("pointermove", this._handleCueDragging);
     this.DOM.cueContainer?.addEventListener("pointerup", this._handleCueDragEnd);
     this.DOM.cueContainer?.addEventListener("pointercancel", this._handleCueDragEnd);
   }
-
   _handleCueDragging({ clientX, clientY }) {
     this.DOM.videoContainer.classList.add("T_M_G-video-cue-dragging");
     this.cuePositionX = clientX;
     this.cuePositionY = clientY;
     this._handleCuePosition();
   }
-
   _handleCuePosition() {
     if (!this.cuePositionX || !this.cuePositionY) return;
     this.throttle(
@@ -2323,43 +2147,37 @@ class T_M_G_Video_Player {
         this.videoCurrentCueX = `${Math.round((posX / rect.width) * 100)}%`;
         this.videoCurrentCueY = `${Math.round((posY / rect.height) * 100)}%`;
       },
-      0,
+      0
     );
   }
-
   _handleCueDragEnd() {
     this.DOM.videoContainer.classList.remove("T_M_G-video-cue-dragging");
     this.DOM.cueContainer.removeEventListener("pointermove", this._handleCueDragging);
     this.DOM.cueContainer?.removeEventListener("pointerup", this._handleCueDragEnd);
     this.DOM.cueContainer?.removeEventListener("pointercancel", this._handleCueDragEnd);
   }
-
   set volume(value) {
     const v = tmg.clamp(this.shouldMute ? 0 : this.settings.volume.min, value, this.settings.volume.max) / 100;
     if (this.audioGainNode) this.audioGainNode.gain.value = this.settings.volume.value = v;
     this.video.muted = this.video.defaultMuted = this.settings.volume.muted = v === 0;
     this._handleVolumeChange();
   }
-
   get volume() {
     return Math.round((this.audioGainNode?.gain?.value ?? 1) * 100);
   }
-
   setUpAudio() {
     if (this.audioSetup) return;
     if (tmg.connectMediaToAudioManager(this.video) === "unavailable") return;
-    this.audioSourceNode = this.video.tmgSourceNode;
-    this.audioGainNode = this.video.tmgGainNode;
+    this.audioSourceNode = this.video.audioSourceNode;
+    this.audioGainNode = this.video.audioGainNode;
     this.audioSetup = true;
   }
-
-  removeAudio() {
+  cancelAudio() {
     this.audioSourceNode?.disconnect();
     this.audioGainNode?.disconnect();
-    this.audioSourceNode = this.audioGainNode = null;
+    this.video.volume = tmg.clamp(0, this.audioGainNode?.gain?.value ?? 1, 1);
     this.audioSetup = false;
   }
-
   updateAudioSettings() {
     this.setUpAudio();
     const { min, max, value } = this.settings.volume;
@@ -2367,11 +2185,10 @@ class T_M_G_Video_Player {
     if (this.DOM.volumeSlider) this.DOM.volumeSlider.max = max;
     this.videoVolumeSliderPercent = Math.round((100 / max) * 100);
     this.videoMaxVolumeRatio = max / 100;
-    this.lastVolume = tmg.clamp(min, value ?? this.video.volume * 100, max);
+    this.lastVolume = tmg.clamp(min, (value ?? this.video.volume) * 100, max);
     this.shouldMute = this.shouldSetLastVolume = this.video.muted;
     this.volume = this.shouldMute ? 0 : this.lastVolume;
   }
-
   toggleMute(auto) {
     let volume;
     if (this.volume) {
@@ -2386,7 +2203,6 @@ class T_M_G_Video_Player {
     this.shouldMute = volume === 0;
     this.volume = volume;
   }
-
   _handleVolumeSliderInput({ target: { value: volume } }) {
     this.shouldMute = false;
     this.volume = volume;
@@ -2395,14 +2211,12 @@ class T_M_G_Video_Player {
     this.delayVolumeActive();
     this.delayOverlay();
   }
-
   _handleGestureVolumeSliderInput({ percent, sign }) {
     let volume = sign === "+" ? this.volume + percent * this.settings.volume.max : this.volume - percent * this.settings.volume.max;
     volume = tmg.clamp(0, Math.floor(volume), this.settings.volume.max);
     this.volume = volume;
     this.shouldSetLastVolume = false;
   }
-
   _handleVolumeChange() {
     let v = this.volume;
     if (this.DOM.volumeNotifierContent) this.DOM.volumeNotifierContent.textContent = v + "%";
@@ -2419,16 +2233,16 @@ class T_M_G_Video_Player {
     this.videoCurrentVolumeTooltipPosition = `${12 + vPercent * 77}%`;
     if (this.settings.volume.max > 100) {
       if (v <= 100) {
-        this.videoVolumeSliderBoostPercent = 0;
-        this.videoCurrentVolumeSliderBoostPosition = 0;
         this.videoCurrentVolumeSliderPosition = (v - 0) / (100 - 0);
+        this.videoCurrentVolumeSliderBoostPosition = 0;
+        this.videoVolumeSliderBoostPercent = 0;
       } else if (v > 100) {
-        this.videoVolumeSliderBoostPercent = this.videoVolumeSliderPercent;
+        this.videoCurrentVolumeSliderPosition = 1;
         this.videoCurrentVolumeSliderBoostPosition = (v - 100) / (this.settings.volume.max - 100);
+        this.videoVolumeSliderBoostPercent = this.videoVolumeSliderPercent;
       }
     } else this.videoCurrentVolumeSliderPosition = vPercent;
   }
-
   changeVolume(value) {
     const sign = Math.sign(value) === 1 ? "+" : "-";
     value = Math.abs(value);
@@ -2452,33 +2266,27 @@ class T_M_G_Video_Player {
       this.lastVolume = volume;
     } else this.volume = volume;
   }
-
   _handleVolumeContainerMouseMove() {
     this.overVolume = this.DOM.volumeSlider?.matches(":hover");
     this.startVolumeActive();
   }
-
   _handleVolumeContainerMouseLeave() {
     this.overVolume = false;
     this.stopVolumeActive();
   }
-
   startVolumeActive() {
     this.DOM.volumeSlider?.classList.add("T_M_G-video-control-active");
     this.delayVolumeActive();
   }
-
   delayVolumeActive() {
     clearTimeout(this.delayVolumeActiveId);
     this.delayVolumeActiveId = setTimeout(this.stopVolumeActive, this.settings.overlayDelay);
   }
-
   stopVolumeActive() {
     if (this.DOM.volumeSlider?.matches(":active")) return this.delayVolumeActive();
     clearTimeout(this.delayVolumeActiveId);
     this.DOM.volumeSlider?.classList.remove("T_M_G-video-control-active");
   }
-
   updateBrightnessSettings() {
     const { min, max, value } = this.settings.brightness;
     this.videoContainer.classList.toggle("T_M_G-video-brightness-boost", max > 100);
@@ -2488,16 +2296,13 @@ class T_M_G_Video_Player {
     this.lastBrightness = tmg.clamp(min, value, max);
     this.brightness = this.lastBrightness;
   }
-
   set brightness(value) {
     this.videoBrightness = this.settings.brightness.value = tmg.clamp(this.shouldDark ? 0 : this.settings.brightness.min, value, this.settings.brightness.max);
     this._handleBrightnessChange();
   }
-
   get brightness() {
     return Number(this.videoBrightness ?? 100);
   }
-
   toggleDark(auto) {
     let brightness;
     if (this.brightness) {
@@ -2512,7 +2317,6 @@ class T_M_G_Video_Player {
     this.shouldDark = brightness === 0;
     this.brightness = brightness;
   }
-
   _handleBrightnessSliderInput({ target: { value: brightness } }) {
     this.shouldDark = false;
     this.brightness = brightness;
@@ -2521,14 +2325,12 @@ class T_M_G_Video_Player {
     this.delayBrightnessActive();
     this.delayOverlay();
   }
-
   _handleGestureBrightnessSliderInput({ percent, sign }) {
     let brightness = sign === "+" ? this.brightness + percent * this.settings.brightness.max : this.brightness - percent * this.settings.brightness.max;
     brightness = tmg.clamp(0, Math.floor(brightness), this.settings.brightness.max);
     this.brightness = brightness;
     this.shouldSetLastBrightness = false;
   }
-
   _handleBrightnessChange() {
     let b = this.brightness;
     if (this.DOM.brightnessNotifierContent) this.DOM.brightnessNotifierContent.textContent = b + "%";
@@ -2545,16 +2347,16 @@ class T_M_G_Video_Player {
     this.videoCurrentBrightnessTooltipPosition = `${12 + bPercent * 77}%`;
     if (this.settings.brightness.max > 100) {
       if (b <= 100) {
-        this.videoBrightnessSliderBoostPercent = 0;
-        this.videoCurrentBrightnessSliderBoostPosition = 0;
         this.videoCurrentBrightnessSliderPosition = (b - 0) / (100 - 0);
+        this.videoCurrentBrightnessSliderBoostPosition = 0;
+        this.videoBrightnessSliderBoostPercent = 0;
       } else if (b > 100) {
-        this.videoBrightnessSliderBoostPercent = this.videoBrightnessSliderPercent;
+        this.videoCurrentBrightnessSliderPosition = 1;
         this.videoCurrentBrightnessSliderBoostPosition = (b - 100) / (this.settings.brightness.max - 100);
+        this.videoBrightnessSliderBoostPercent = this.videoBrightnessSliderPercent;
       }
     } else this.videoCurrentBrightnessSliderPosition = bPercent;
   }
-
   changeBrightness(value) {
     const sign = Math.sign(value) === 1 ? "+" : "-";
     value = Math.abs(value);
@@ -2579,62 +2381,54 @@ class T_M_G_Video_Player {
       this.lastBrightness = brightness;
     } else this.brightness = brightness;
   }
-
   _handleBrightnessContainerMouseMove() {
     this.overBrightness = this.DOM.brightnessSlider?.matches(":hover");
     this.startBrightnessActive();
   }
-
   _handleBrightnessContainerMouseLeave() {
     this.overBrightness = false;
     this.stopBrightnessActive();
   }
-
   startBrightnessActive() {
     this.DOM.brightnessSlider?.classList.add("T_M_G-video-control-active");
     this.delayBrightnessActive();
   }
-
   delayBrightnessActive() {
     clearTimeout(this.brightnessActiveDelayId);
     this.brightnessActiveDelayId = setTimeout(this.stopBrightnessActive, this.settings.overlayDelay);
   }
-
   stopBrightnessActive() {
     if (this.DOM.brightnessSlider?.matches(":active")) return this.delayBrightnessActive();
     clearTimeout(this.brightnessActiveDelayId);
     this.DOM.brightnessSlider?.classList.remove("T_M_G-video-control-active");
   }
-
   toggleTheaterMode() {
     if (this.settings.modes.theater) this.videoContainer.classList.toggle("T_M_G-video-theater");
   }
-
   async toggleFullScreenMode() {
     if (!this.settings.modes.fullScreen) return;
     if (!this.isModeActive("fullScreen")) {
-      if (tmg._CURRENT_FULL_SCREEN_PLAYER) return;
+      if (tmg._currentFullScreenController) return;
       if (this.isModeActive("floatingPlayer")) {
         this.floatingPlayer?.addEventListener("pagehide", this.toggleFullScreenMode);
         return this.floatingPlayer?.close();
       }
       if (this.isModeActive("pictureInPicture")) document.exitPictureInPicture();
       this.toggleMiniPlayerMode(false);
-      tmg._CURRENT_FULL_SCREEN_PLAYER = this;
+      tmg._currentFullScreenController = this;
       if (this.videoContainer.requestFullscreen) await this.videoContainer.requestFullscreen();
       else if (this.videoContainer.mozRequestFullScreen) await this.videoContainer.mozRequestFullScreen();
       else if (this.videoContainer.msRequestFullscreen) await this.videoContainer.msRequestFullscreen();
       else if (this.videoContainer.webkitRequestFullScreen) await this.videoContainer.webkitRequestFullScreen();
       else if (this.video.webkitEnterFullScreen) {
-        // this is for native ios fullscreen support
-        await this.video.webkitEnterFullScreen();
+        await this.video.webkitEnterFullScreen(); // this is for native ios fullscreen support
         this.video.addEventListener(
           "webkitendfullscreen",
           () => {
             this.inFullScreen = false;
             this._handleFullScreenChange();
           },
-          { once: true },
+          { once: true }
         );
       }
       this.inFullScreen = true;
@@ -2646,7 +2440,6 @@ class T_M_G_Video_Player {
       this.inFullScreen = false;
     }
   }
-
   async _handleFullScreenChange() {
     if (this.inFullScreen) {
       this.videoContainer.classList.add("T_M_G-video-full-screen");
@@ -2654,14 +2447,13 @@ class T_M_G_Video_Player {
     if (!this.inFullScreen || !tmg.queryFullScreen()) {
       this.videoContainer.classList.remove("T_M_G-video-full-screen");
       this.unlock();
-      tmg._CURRENT_FULL_SCREEN_PLAYER = null;
+      tmg._currentFullScreenController = null;
       this.inFullScreen = false;
       this.toggleMiniPlayerMode();
     }
     await this.autoLockFullScreenOrientation();
     this.setControlsState("fullscreenlock");
   }
-
   async autoLockFullScreenOrientation() {
     if (this.isModeActive("fullScreen")) {
       const lockOrientation = this.video.videoHeight > this.video.videoWidth ? "portrait" : "landscape";
@@ -2672,28 +2464,24 @@ class T_M_G_Video_Player {
       this.setControlState(this.DOM.fullScreenOrientationBtn, { hidden: true });
     }
   }
-
   async changeFullScreenOrientation() {
     await screen.orientation?.lock?.(screen.orientation.angle === 0 ? "landscape" : "portrait");
   }
-
   async togglePictureInPictureMode() {
     if (!this.settings.modes.pictureInPicture) return;
     if (this.inFullScreen) await this.toggleFullScreenMode();
     if (this.settings.beta.floatingPlayer && window.documentPictureInPicture) return this.toggleFloatingPlayer();
     !this.isModeActive("pictureInPicture") ? this.video.requestPictureInPicture() : document.exitPictureInPicture();
   }
-
   _handleEnterPictureInPicture() {
     this.videoContainer.classList.add("T_M_G-video-picture-in-picture");
     this.showOverlay();
     this.toggleMiniPlayerMode(false);
     this.setMediaSession();
-    tmg._PICTURE_IN_PICTURE_ACTIVE = true;
+    tmg._pictureInPictureActive = true;
   }
-
   _handleLeavePictureInPicture() {
-    tmg._PICTURE_IN_PICTURE_ACTIVE = false;
+    tmg._pictureInPictureActive = false;
     // the video takes a while before it enters back into the player so a timeout is used to prevent the user from seeing the default ui
     setTimeout(() => {
       this.videoContainer.classList.remove("T_M_G-video-picture-in-picture");
@@ -2701,13 +2489,11 @@ class T_M_G_Video_Player {
     }, 180);
     this.delayOverlay();
   }
-
   toggleFloatingPlayer() {
     if (!this.settings.modes.pictureInPicture || !("documentPictureInPicture" in window)) return;
     if (!this.inFloatingPlayer) this.initFloatingPlayer();
     else this.floatingPlayer?.close();
   }
-
   async initFloatingPlayer() {
     if (this.inFloatingPlayer) return;
     this.inFloatingPlayer = true;
@@ -2738,7 +2524,6 @@ class T_M_G_Video_Player {
     this.floatingPlayer?.addEventListener("resize", this._handleMediaParentResize);
     this.setKeyEventListeners("floating");
   }
-
   _handleFloatingPlayerClose() {
     if (!this.inFloatingPlayer) return;
     this.inFloatingPlayer = false;
@@ -2747,16 +2532,13 @@ class T_M_G_Video_Player {
     this.deactivatePseudoMode();
     this.toggleMiniPlayerMode();
   }
-
   expandMiniPlayer() {
     this.toggleMiniPlayerMode(false, "auto");
   }
-
   removeMiniPlayer() {
     this.togglePlay(false);
     this.toggleMiniPlayerMode(false);
   }
-
   toggleMiniPlayerMode(bool, behavior) {
     if (!this.settings.modes.miniPlayer) return;
     // mini player has an actual behavior :)
@@ -2775,7 +2557,6 @@ class T_M_G_Video_Player {
       this.videoContainer.removeEventListener("touchstart", this.moveMiniPlayer, { passive: false });
     }
   }
-
   moveMiniPlayer({ target }) {
     if (!this.isModeActive("miniPlayer") || this.DOM.topControlsWrapper.contains(target) || this.DOM.bottomControlsWrapper.contains(target) || this.DOM.cueContainer?.contains(target)) return;
     document.addEventListener("mousemove", this._handleMiniPlayerPosition);
@@ -2784,7 +2565,6 @@ class T_M_G_Video_Player {
     document.addEventListener("touchmove", this._handleMiniPlayerPosition, { passive: false });
     document.addEventListener("touchend", this.emptyMiniPlayerListeners, { passive: false });
   }
-
   _handleMiniPlayerPosition(e) {
     if (e.touches?.length > 1) return;
     e.preventDefault();
@@ -2804,10 +2584,9 @@ class T_M_G_Video_Player {
         this.videoCurrentMiniPlayerX = `${Math.round((posX / ww) * 100)}%`;
         this.videoCurrentMiniPlayerY = `${Math.round((posY / wh) * 100)}%`;
       },
-      0,
+      0
     );
   }
-
   emptyMiniPlayerListeners() {
     this.cancelRAFLoop("miniPlayerDragging");
     this.videoContainer.classList.remove("T_M_G-video-player-dragging");
@@ -2818,7 +2597,6 @@ class T_M_G_Video_Player {
     document.removeEventListener("touchmove", this._handleMiniPlayerPosition, { passive: false });
     document.removeEventListener("touchend", this.emptyMiniPlayerListeners, { passive: false });
   }
-
   // Keyboard and General Accessibility Functions
   _handleClick({ target }) {
     if (target !== this.DOM.controlsContainer) return;
@@ -2832,18 +2610,15 @@ class T_M_G_Video_Player {
       this.showOverlay();
     }, 300);
   }
-
   _handleLockScreenClick() {
     if (!this.locked) return;
     this.videoContainer.classList.toggle("T_M_G-video-locked-overlay");
     this.DOM.screenLockedBtn.classList.remove("T_M_G-video-control-unlock");
     this.delayLockedOverlay();
   }
-
   _handleRightClick(e) {
     e.preventDefault();
   }
-
   _handleDoubleClick(e) {
     const { clientX: x, target, detail } = e;
     // this function triggers the forward and backward skip, they then assign the function to the click event, when the trigger is pulled, skipPersist is set to true and the skip is handled by only the click event, if the position of the click changes within the skip interval and when the 'skipPosition' prop is still available, the click event assignment is revoked
@@ -2862,71 +2637,58 @@ class T_M_G_Video_Player {
       if (this.skipPersist && detail == 2) return;
       this.activateSkipPersist(pos);
       pos === "right" ? this.skip(this.settings.time.skip) : this.skip(-this.settings.time.skip);
-      tmg.rippleHandler(e, this.currentNotifier);
+      tmg.rippleHandler(e, this.currentSkipNotifier);
     }
   }
-
   activateSkipPersist(pos) {
     if (this.skipPersist) return;
     this.videoContainer.addEventListener("click", this._handleDoubleClick);
     this.skipPersist = true;
     this.skipPersistPosition = pos;
   }
-
   deactivateSkipPersist() {
     if (!this.skipPersist) return;
     this.videoContainer.removeEventListener("click", this._handleDoubleClick);
     this.skipPersist = false;
     this.skipPersistPosition = null;
   }
-
   _handleHoverPointerActive({ target }) {
     if (!(this.isMediaMobile && !this.isModeActive("miniPlayer"))) this.showOverlay();
     if (this.DOM.tRightSideControlsWrapper.contains(target) || this.DOM.bottomControlsWrapper.contains(target)) clearTimeout(this.overlayDelayId);
   }
-
   _handleHoverPointerOut() {
     setTimeout(() => !this.isMediaMobile && !this.videoContainer.matches(":hover") && this.removeOverlay());
   }
-
   showOverlay() {
     if (!this.shouldShowOverlay()) return;
     this.videoContainer.classList.add("T_M_G-video-overlay");
     this.delayOverlay();
   }
-
   shouldShowOverlay() {
     return !this.locked && !this.videoContainer.classList.contains("T_M_G-video-player-dragging");
   }
-
   delayOverlay() {
     clearTimeout(this.overlayDelayId);
     if (this.shouldRemoveOverlay()) this.overlayDelayId = setTimeout(this.removeOverlay, this.settings.overlayDelay);
   }
-
   removeOverlay(manner) {
     if (manner === "force" || this.shouldRemoveOverlay()) this.videoContainer.classList.remove("T_M_G-video-overlay");
   }
-
   shouldRemoveOverlay() {
     return !this.video.paused && !this.buffering && !this.isModeActive("pictureInPicture");
   }
-
   showLockedOverlay() {
     this.videoContainer.classList.add("T_M_G-video-locked-overlay");
     this.delayLockedOverlay();
   }
-
   removeLockedOverlay() {
     this.videoContainer.classList.remove("T_M_G-video-locked-overlay");
     this.DOM.screenLockedBtn.classList.remove("T_M_G-video-control-unlock");
   }
-
   delayLockedOverlay() {
     clearTimeout(this.lockOverlayDelayId);
     this.lockOverlayDelayId = setTimeout(this.removeLockedOverlay, this.settings.overlayDelay);
   }
-
   _handleGestureWheel(e) {
     if (this.overVolume || this.overBrightness || this.overTimeline || (this.settings.beta.gestureControls && !this.gestureTouchXCheck && !this.gestureTouchYCheck && !this.speedCheck && !this.isModeActive("settings") && !this.locked && !this.disabled && (this.isModeActive("fullScreen") || this.inFloatingPlayer))) {
       e.preventDefault();
@@ -2935,7 +2697,6 @@ class T_M_G_Video_Player {
       this._handleGestureWheelMove(e);
     }
   }
-
   _handleGestureWheelInit({ clientX: x, clientY: y }) {
     const rect = this.videoContainer.getBoundingClientRect();
     this.gestureWheelZone = {
@@ -2946,7 +2707,6 @@ class T_M_G_Video_Player {
     this.gestureWheelTimeMultiplier = 1;
     this.gestureTimeMultiplierY = 0;
   }
-
   _handleGestureWheelMove({ clientX: x, deltaX, deltaY, shiftKey }) {
     deltaX = shiftKey || this.overTimeline ? deltaY : deltaX;
     const rect = this.videoContainer.getBoundingClientRect();
@@ -2997,7 +2757,6 @@ class T_M_G_Video_Player {
           });
     }
   }
-
   _handleGestureWheelStop() {
     this.gestureWheelTimeoutId = null;
     if (this.gestureWheelYCheck) {
@@ -3012,11 +2771,9 @@ class T_M_G_Video_Player {
       this.currentTime = this.gestureNextTime;
     }
   }
-
   setGestureTouchCancel() {
     this.gestureTouchCanCancel = true;
   }
-
   _handleGestureTouchStart(e) {
     if (e.touches?.length > 1) return;
     if (e.target !== this.DOM.controlsContainer) return;
@@ -3034,7 +2791,6 @@ class T_M_G_Video_Player {
     }, this.gestureTouchThreshold);
     this.videoContainer.addEventListener("touchend", this._handleGestureTouchEnd);
   }
-
   _handleGestureTouchInit(e) {
     if (e.touches?.length > 1) return;
     if (!this.settings.beta.gestureControls || this.isModeActive("miniPlayer") || this.speedCheck) return;
@@ -3056,7 +2812,6 @@ class T_M_G_Video_Player {
       this.videoContainer.addEventListener("touchmove", this._handleGestureTouchYMove, { passive: false });
     }
   }
-
   _handleGestureTouchXMove(e) {
     e.preventDefault();
     if (this.gestureTouchCanCancel) return this._handleGestureTouchEnd();
@@ -3076,10 +2831,9 @@ class T_M_G_Video_Player {
           multiplier = 1 - mY / (height * 0.5);
         this._handleGestureTimelineInput({ percent, sign, multiplier });
       },
-      20,
+      20
     );
   }
-
   _handleGestureTouchYMove(e) {
     e.preventDefault();
     if (!this.isModeActive("fullScreen") && this.gestureTouchCanCancel) return this._handleGestureTouchEnd();
@@ -3095,10 +2849,9 @@ class T_M_G_Video_Player {
         this.lastGestureTouchY = y;
         this.gestureTouchZone?.x === "right" ? this._handleGestureVolumeSliderInput({ percent, sign }) : this._handleGestureBrightnessSliderInput({ percent, sign });
       },
-      20,
+      20
     );
   }
-
   _handleGestureTouchEnd() {
     if (this.gestureTouchXCheck) {
       this.gestureTouchXCheck = false;
@@ -3123,7 +2876,6 @@ class T_M_G_Video_Player {
     this.videoContainer.removeEventListener("touchmove", this._handleGestureTouchInit, { once: true, passive: false });
     this.videoContainer.removeEventListener("touchend", this._handleGestureTouchEnd);
   }
-
   _handleSpeedPointerDown(e) {
     if (e.target !== this.DOM.controlsContainer) return;
     if (this.isModeActive("miniPlayer")) return;
@@ -3150,11 +2902,9 @@ class T_M_G_Video_Player {
       this.fastPlay(this.speedDirection);
     }, this.fastPlayThreshold);
   }
-
   _handleSpeedPointerOut(e) {
     if (!this.videoContainer.matches(":hover")) this._handleSpeedPointerUp(e);
   }
-
   _handleSpeedPointerMove(e) {
     if (e.touches?.length > 1) return;
     this.throttle(
@@ -3169,10 +2919,9 @@ class T_M_G_Video_Player {
           this.fastPlay(this.speedDirection);
         }
       },
-      100,
+      100
     );
   }
-
   _handleSpeedPointerUp() {
     this.videoContainer.removeEventListener("mouseup", this._handleSpeedPointerUp);
     this.videoContainer.removeEventListener("mouseleave", this._handleSpeedPointerOut);
@@ -3187,13 +2936,11 @@ class T_M_G_Video_Player {
     this.videoContainer.removeEventListener("touchmove", this._handleSpeedPointerUp, { passive: true });
     if (this.speedCheck && this.playTriggerCounter < 1) setTimeout(this.slowDown);
   }
-
   fetchKeyShortcutsForDisplay() {
     const shortcuts = {};
     Object.keys(this.settings.keys.shortcuts).forEach((action) => (shortcuts[action] = tmg.formatKeyForDisplay(this.settings.keys.shortcuts[action])));
     return shortcuts;
   }
-
   getTermsForCombo(combo) {
     const terms = { override: false, block: false, allowed: false, action: null };
     const { overrides, shortcuts, blocks, strictMatches: s } = this.settings.keys;
@@ -3203,7 +2950,6 @@ class T_M_G_Video_Player {
     terms.action = Object.entries(shortcuts).find(([, shortcut]) => tmg.matchKeys(shortcut, combo, s))?.[0] || null; // Find action name for shortcuts
     return terms;
   }
-
   keyEventAllowed(e) {
     if (this.settings.keys.disabled) return;
     // UI safety checks
@@ -3217,7 +2963,6 @@ class T_M_G_Video_Player {
     if (allowed) return e.key.toLowerCase(); // inner system defaults
     return false; // Not allowed
   }
-
   _handleKeyDown(e) {
     const action = this.keyEventAllowed(e);
     if (action === false) return;
@@ -3313,10 +3058,9 @@ class T_M_G_Video_Player {
             break;
         }
       },
-      10,
+      10
     );
   }
-
   _handleKeyUp(e) {
     const action = this.keyEventAllowed(e);
     if (action === false) return;
@@ -3345,11 +3089,8 @@ class T_M_G_Video_Player {
         this.togglePictureInPictureMode();
         break;
       case "captions":
-        if (!this.isModeActive("pictureInPicture"))
-          if (this.video.textTracks[this.textTrackIndex]) {
-            this.toggleCaptions();
-            this.fire("captions");
-          } else this.previewCaptions("No captions available for this video");
+        this.toggleCaptions();
+        if (this.video.textTracks[this.textTrackIndex]) this.fire("captions");
         break;
       case "settings":
         this.toggleSettingsView();
@@ -3374,7 +3115,6 @@ class T_M_G_Video_Player {
         break;
     }
   }
-
   _handlePlayTriggerUp(e) {
     const action = this.keyEventAllowed(e);
     switch (action) {
@@ -3391,31 +3131,23 @@ class T_M_G_Video_Player {
     }
     e.currentTarget.removeEventListener("keyup", this._handlePlayTriggerUp);
   }
-
   _handleDragStart({ target, dataTransfer }) {
     dataTransfer.effectAllowed = "move";
     target.classList.add("T_M_G-video-control-dragging");
     this.dragging = target.classList.contains("T_M_G-video-vb-btn") ? target.parentElement : target;
   }
-
   _handleDrag() {
     this.delayOverlay();
   }
-
   _handleDragEnd({ target }) {
     this.showOverlay();
     target.classList.remove("T_M_G-video-control-dragging");
     this.dragging = null;
-    const topStructure = this.DOM.tRightSideControlsWrapper?.children ? Array.from(this.DOM.tRightSideControlsWrapper?.children || [], (el) => el.dataset.controlId) : [],
-      leftSideStructure = this.DOM.bLeftSideControlsWrapper?.children ? Array.from(this.DOM.bLeftSideControlsWrapper?.children || [], (el) => el.dataset.controlId) : [],
-      rightSideStructure = this.DOM.bRightSideControlsWrapper?.children ? Array.from(this.DOM.bRightSideControlsWrapper?.children || [], (el) => el.dataset.controlId) : [];
-    this.settings.controllerStructure = { top: topStructure, bottom: [...leftSideStructure, "spacer", ...rightSideStructure] };
+    this.settings.controlPanel = { top: Array.from(this.DOM.tRightSideControlsWrapper?.children ?? [], (el) => el.dataset.controlId), bottom: [...Array.from(this.DOM.bLeftSideControlsWrapper?.children ?? [], (el) => el.dataset.controlId), "spacer", ...Array.from(this.DOM.bRightSideControlsWrapper?.children ?? [], (el) => el.dataset.controlId)] };
   }
-
   _handleDragEnter({ target }) {
     if (target.dataset.dropZone && this.dragging) target.classList.add("T_M_G-video-dragover");
   }
-
   _handleDragOver(e) {
     if (e.target.dataset.dropZone && this.dragging) {
       e.preventDefault();
@@ -3428,82 +3160,61 @@ class T_M_G_Video_Player {
           else e.target.appendChild(this.dragging);
           this.updateSideControls(e);
         },
-        20,
+        20
       );
     }
   }
-
   _handleDrop(e) {
     if (!e.target?.dataset.dropZone) return;
     e.preventDefault();
     e.target.classList.remove("T_M_G-video-dragover");
   }
-
   _handleDragLeave({ target }) {
     if (target?.dataset.dropZone) target.classList.remove("T_M_G-video-dragover");
   }
-
   getControlAfterDragging(container, x) {
-    const draggableControls = [...container.querySelectorAll("[draggable=true]:not(.T_M_G-video-control-dragging, .T_M_G-video-vb-btn), .T_M_G-video-vb-container:has([draggable=true])")];
-    return draggableControls.reduce(
+    const draggables = [...container.querySelectorAll("[draggable=true]:not(.T_M_G-video-control-dragging, .T_M_G-video-vb-btn), .T_M_G-video-vb-container:has([draggable=true])")];
+    return draggables.reduce(
       (closest, child) => {
         const box = child.getBoundingClientRect();
         const offset = x - box.left - box.width / 2;
         if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
         else return closest;
       },
-      { offset: -Infinity },
+      { offset: -Infinity }
     ).element;
   }
 }
 
 class T_M_G_Media_Player {
-  #active;
+  #active = false;
   #medium;
-  #build;
+  #build = structuredClone(tmg.DEFAULT_VIDEO_BUILD);
 
-  constructor(customOptions) {
-    this.Player = null;
-    this.#build = { ...tmg.DEFAULT_VIDEO_BUILD };
-    this.builder(customOptions);
+  constructor(customOptions = {}) {
+    this.Controller = this.#medium = null;
+    this.configure(customOptions);
   }
-
   get build() {
     return this.#build;
   }
-
   set build(customOptions) {
-    this.builder(customOptions);
+    this.configure(customOptions);
   }
-
-  _initMedium(medium) {
-    if (medium.tmgPlayer) medium.tmgPlayer?.detach();
-    medium.tmgPlayer = this;
-    this.#medium = medium;
-  }
-
   queryBuild() {
     if (!this.#active) return true;
     console.error("TMG has already deployed the custom controls of your build configuration options");
     console.warn("Consider setting your build configuration before attaching your media element");
     return false;
   }
-
-  builder(customOptions) {
-    if (!this.queryBuild() || !(typeof customOptions === "object")) return;
-    this.#build = { ...this.#build, ...customOptions };
-    const dfs = tmg.DEFAULT_VIDEO_BUILD.settings;
-    const s = { ...dfs, ...this.#build.settings };
-    Object.entries(s).forEach(([k, v]) => {
-      if (tmg.isObj(v)) s[k] = { ...dfs[k], ...s[k] };
-    });
-    s.keys.shortcuts = { ...dfs.keys.shortcuts, ...s.keys.shortcuts };
+  configure(customOptions) {
+    if (!this.queryBuild() || !tmg.isObj(customOptions)) return;
+    this.#build = tmg.mergeObjs(this.#build, customOptions);
+    const s = this.#build.settings;
     Object.entries(s.keys.shortcuts).forEach(([k, v]) => (s.keys.shortcuts[k] = tmg.cleanKeyCombo(v)));
     s.keys.blocks = tmg.cleanKeyCombo(s.keys.blocks);
     s.keys.overrides = tmg.cleanKeyCombo(s.keys.overrides);
-    this.build.settings = s;
   }
-
   async attach(medium) {
     if (tmg.isIter(medium)) {
       console.error("An iterable argument cannot be attached to the TMG media player");
@@ -3513,20 +3224,16 @@ class T_M_G_Media_Player {
       medium.tmgPlayer = this;
       this.#medium = medium;
       await this.fetchCustomOptions();
-      await this.#deploy();
+      await this.#deployController();
     }
   }
-
   detach() {
     if (!this.#active) return;
-    this.#medium = this.Player?._destroy();
-    if (tmg.Players.indexOf(this.Player) !== -1) tmg.Players?.splice(tmg.Players.indexOf(this.Player), 1);
-    this.Player = null;
-    this.#active = false;
-    this.#medium.tmgcontrols = false;
-    tmg.initMedia(this.#medium, true);
+    this.#medium = this.Controller?._destroy();
+    if (tmg.Controllers.indexOf(this.Controller) !== -1) tmg.Controllers?.splice(tmg.Controllers.indexOf(this.Controller), 1);
+    this.#medium.tmgcontrols = this.#active = false;
+    this.Controller = this.#medium = this.#medium.tmgPlayer = null;
   }
-
   async fetchCustomOptions() {
     let fetchedControls;
     if (this.#medium.getAttribute("tmg")?.includes(".json")) {
@@ -3538,36 +3245,28 @@ class T_M_G_Media_Player {
         .catch(({ message }) => {
           console.error(`${message}`);
           console.warn("TMG requires a valid JSON file for parsing your video options");
-          fetchedControls = undefined;
         });
     }
     const customOptions = (await fetchedControls) ?? {};
-    if (customOptions && Object.keys(customOptions).length === 0) {
-      const attributes = this.#medium.getAttributeNames().filter((attr) => attr.startsWith("tmg--"));
-      const specialProps = ["tmg--media--artwork", "tmg--playlist"];
-      attributes?.forEach((attr) => !specialProps.some((sp) => attr.includes(sp)) && tmg.putHTMLOptions(attr, customOptions, this.#medium));
-      if (this.#medium.poster || attributes.includes("tmg--media--artwork")) {
-        const src = this.#medium.getAttribute("tmg--media--artwork") ?? this.#medium.poster;
-        customOptions.media = { ...(customOptions.media || {}), artwork: [{ src }] };
-      }
-    }
+    const attributes = this.#medium.getAttributeNames().filter((attr) => attr.startsWith("tmg--"));
+    const specialProps = ["tmg--media--artwork", "tmg--playlist"];
+    attributes?.forEach((attr) => !specialProps.some((sp) => attr.includes(sp)) && tmg.putHTMLOptions(attr, customOptions, this.#medium));
+    if (this.#medium.poster || attributes.includes("tmg--media--artwork")) customOptions.media = { ...(customOptions.media || {}), artwork: [{ src: this.#medium.getAttribute("tmg--media--artwork") ?? this.#medium.poster }] };
     if (this.#active) {
-      if (customOptions?.settings) Object.entries(customOptions.settings).forEach(([setting, value]) => (this.Player.settings[setting] = value));
-    } else this.builder(customOptions);
+      if (customOptions?.settings) Object.entries(customOptions.settings).forEach(([setting, value]) => (this.Controller.settings[setting] = value));
+    } else this.configure(customOptions);
   }
-
-  async #deploy() {
+  async #deployController() {
     if (this.#active) return;
     if (!(this.#medium instanceof HTMLVideoElement)) {
       console.error(`TMG could not deploy custom controls on the '${this.#medium.tagName}' element as it is not supported`);
       return console.warn("TMG only supports the 'VIDEO' element currently");
     }
-    this.#active = true;
     this.#medium.controls = false;
-    this.#medium.tmgcontrols = true;
+    this.#medium.tmgcontrols = this.#active = true;
     this.#medium.classList.add("T_M_G-video", "T_M_G-media");
     // doing some cleanup to the settings
-    const s = this.#build.settings.allowOverride ? { ...this.#build.settings, ...tmg.userSettings } : { ...this.#build.settings };
+    const s = this.#build.settings;
     this.#build.video = this.#medium;
     this.#build.mediaPlayer = "TMG";
     this.#build.mediaType = "video";
@@ -3578,51 +3277,36 @@ class T_M_G_Media_Player {
     this.#medium.loop = s.time.loop ??= this.#medium.loop;
     if (this.#build.playlist?.[0]) {
       const v = this.#build.playlist[0];
-      tmg.assignIfDefined(this.#build, v, "src");
-      tmg.assignIfDefined(this.#build, v, "sources");
-      tmg.assignIfDefined(this.#build, v, "tracks");
+      tmg.assignDef(this.#build, v, "src");
+      tmg.assignDef(this.#build, v, "sources");
+      tmg.assignDef(this.#build, v, "tracks");
       if (v.media) this.#build.media = { ...this.#build.media, ...v.media };
-      tmg.assignIfDefined(s.time, v.settings?.time, "start");
-      tmg.assignIfDefined(s.time, v.settings?.time, "end");
+      tmg.assignDef(s.time, v.settings?.time, "start");
+      tmg.assignDef(s.time, v.settings?.time, "end");
       if (v.settings?.time?.previews !== undefined) s.time.previews = tmg.isObj(v.settings.time.previews) && tmg.isObj(s.time.previews) ? { ...s.time.previews, ...v.settings.time.previews } : v.settings.time.previews;
-    }
-    if (this.#build.src) {
-      tmg.removeSources(this.#medium);
-      this.#medium.src = this.#build.src;
-    } else if (this.#build.sources) {
-      this.#medium.src = "";
-      tmg.removeSources(this.#medium);
-      tmg.addSources(this.#build.sources, this.#medium);
-    }
-    if (this.#build.tracks) {
-      tmg.removeTracks(this.#medium);
-      tmg.addTracks(this.#build.tracks, this.#medium);
     }
     Object.entries(s.modes).forEach(([k, v]) => (s.modes[k] = v && (tmg[`supports${tmg.capitalize(k)}`]?.() ?? true)));
     s.status = { allowOverride: {} };
     Object.keys(s).forEach((k) => {
       if (k !== "allowOverride") s.status.allowOverride[k] = s.allowOverride.includes?.(k.toLowerCase()) ?? s.allowOverride;
     });
-    const struct = s.controllerStructure,
-      { controllerStructure: structO, notifers: notifiersO } = s.status.allowOverride,
-      sIndex = struct.bottom?.indexOf?.("spacer");
+    const { controlPanel: panelO, notifers: notifiersO } = s.status.allowOverride,
+      sIndex = s.controlPanel.bottom?.indexOf?.("spacer");
     s.status.ui = {
       notifiers: s.notifiers || notifiersO,
       timeline: /top|bottom/.test(s.time.linePosition),
       previews: !!(s.time.previews?.address && s.time.previews?.spf),
-      tRightSideControls: struct.top?.length || structO,
-      bLeftSideControls: (sIndex > -1 ? struct.bottom?.slice?.(0, sIndex)?.length : false) || structO,
-      bRightSideControls: (sIndex > -1 ? struct.bottom?.slice?.(sIndex + 1)?.length : false) || structO,
-      draggableControls: structO,
+      tRightSideControls: s.controlPanel.top?.length || structO,
+      bLeftSideControls: (sIndex > -1 ? s.controlPanel.bottom?.slice?.(0, sIndex)?.length : false) || panelO,
+      bRightSideControls: (sIndex > -1 ? s.controlPanel.bottom?.slice?.(sIndex + 1)?.length : false) || panelO,
+      draggable: panelO,
     };
-    tmg.ALLOWED_CONTROLS.forEach((c) => (s.status.ui[c] = Object.entries(struct).some(([k, v]) => v.includes?.(c.toLowerCase()) ?? struct[k])));
-    this.#build.settings = { ...tmg.DEFAULT_VIDEO_BUILD.settings, ...s };
+    tmg.ALLOWED_CONTROLS.forEach((c) => (s.status.ui[c] = Object.entries(s.controlPanel).some(([k, v]) => v.includes?.(c.toLowerCase()) ?? s.controlPanel[k])));
     this.#build.video = this.#medium;
-    // tmg.loadResource("/TMG_MEDIA_PROTOTYPE/prototype-2/drag-drop-touch-polyfill.js", "script");
     await tmg.loadResource(tmg.VIDEO_CSS_SRC);
-    this.Player = new T_M_G_Video_Player(this.#build);
-    tmg.Players.push(this.Player);
-    this.Player.fire("tmgready", this.#medium, { loaded: true });
+    this.Controller = new T_M_G_Video_Controller(this.#build);
+    tmg.Controllers.push(this.Controller);
+    this.Controller.fire("tmgready", this.#medium, { loaded: true });
   }
 }
 
@@ -3780,7 +3464,7 @@ class T_M_G {
           ],
         },
       },
-      controllerStructure: {
+      controlPanel: {
         top: ["fullscreenlock", "fullscreenorientation"],
         bottom: ["prev", "playpause", "next", "brightness", "volume", "timeandduration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"],
       },
@@ -3905,35 +3589,35 @@ class T_M_G {
   static ALLOWED_CONTROLS = ["prev", "playPause", "next", "brightness", "volume", "timeAndDuration", "spacer", "playbackRate", "captions", "settings", "objectFit", "pictureInPicture", "theater", "fullScreen", "fullScreenOrientation", "fullScreenLock"];
   static NOTIFIER_EVENTS = ["videoplay", "videopause", "videoprev", "videonext", "playbackrateup", "playbackratedown", "volumeup", "volumedown", "volumemuted", "brightnessup", "brightnessdown", "brightnessdark", "captions", "objectfitchange", "theater", "fullScreen", "fwd", "bwd"];
   static WHITE_LISTED_KEYS = [" ", "Enter", "Escape", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => k.toLowerCase());
-  static _RESOURCE_CACHE = {};
-  static _IS_DOC_TRANSIENT = false;
-  static _AUDIO_CONTEXT = null;
-  static _INTERNAL_MUTATION_SET = new WeakSet();
-  static _INTERNAL_MUTATION_ID = null;
-  static _CURRENT_AUDIO_GAIN_NODE = null;
-  static _CURRENT_FULL_SCREEN_PLAYER = null;
-  static _PICTURE_IN_PICTURE_ACTIVE = false;
+  static _resourceCache = {};
+  static _isDocTransient = false;
+  static _audioContext = null;
+  static _internalMutationSet = new WeakSet();
+  static _internalMutationId = null;
+  static _currentAudioGainNode = null;
+  static _currentFullScreenController = null;
+  static _pictureInPictureActive = false;
   static get VIDEO_CSS_SRC() {
     return window.TMG_VIDEO_CSS_SRC || "/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css";
   }
-  static get ALT_IMG_SRC() {
+  static get VIDEO_ALT_IMG_SRC() {
     return window.TMG_VIDEO_ALT_IMG_SRC || "/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png";
   }
   static get userSettings() {
-    if (localStorage._tmgUserVideoSettings) return JSON.parse(localStorage._tmgUserVideoSettings);
+    if (localStorage.tmgUserVideoSettings) return JSON.parse(localStorage.tmgUserVideoSettings);
     else return {};
   }
   static set userSettings(customSettings) {
-    localStorage._tmgUserVideoSettings = JSON.stringify(customSettings);
+    localStorage.tmgUserVideoSettings = JSON.stringify(customSettings);
   }
   static activateInternalMutation(m, check = true) {
-    if (!tmg._INTERNAL_MUTATION_SET.has(m) && check) tmg._INTERNAL_MUTATION_SET.add(m);
+    if (!tmg._internalMutationSet.has(m) && check) tmg._internalMutationSet.add(m);
   }
   static deactivateInternalMutation(m) {
-    clearTimeout(tmg._INTERNAL_MUTATION_ID);
-    tmg._INTERNAL_MUTATION_ID = setTimeout(() => {
-      tmg._INTERNAL_MUTATION_SET.delete(m);
-      tmg._INTERNAL_MUTATION_ID = null;
+    clearTimeout(tmg._internalMutationId);
+    tmg._internalMutationId = setTimeout(() => {
+      tmg._internalMutationSet.delete(m);
+      tmg._internalMutationId = null;
     });
   }
   static mountMedia() {
@@ -3945,7 +3629,7 @@ class T_M_G {
         const bool = Boolean(value);
         if (bool) {
           tmg.activateInternalMutation(this);
-          await this.tmgPlayer?.attach(this);
+          await (this.tmgPlayer || new tmg.Player()).attach(this);
           this.setAttribute("tmgcontrols", "");
           tmg.deactivateInternalMutation(this);
         } else {
@@ -3966,13 +3650,13 @@ class T_M_G {
     tmg.mountMedia();
     ["pointerdown", "keydown"].forEach((e) =>
       document.addEventListener(e, () => {
-        tmg._IS_DOC_TRANSIENT = true;
+        tmg._isDocTransient = true;
         tmg.startAudioManager();
-      }),
+      })
     );
     for (const medium of document.querySelectorAll("video")) {
       tmg.VIDMutationObserver.observe(medium, { attributes: true, childList: true, subtree: true });
-      tmg.initMedia(medium);
+      medium.tmgcontrols = medium.hasAttribute("tmgcontrols");
     }
     tmg.DOMMutationObserver.observe(document.documentElement, { childList: true, subtree: true });
     window.addEventListener("resize", tmg._handleWindowResize);
@@ -3987,17 +3671,17 @@ class T_M_G {
     new IntersectionObserver(
       (entries) => {
         for (const { target, isIntersecting } of entries) {
-          target.classList.contains("T_M_G-media") ? target.tmgPlayer?.Player?._handleMediaIntersectionChange(isIntersecting) : target.querySelector(".T_M_G-media")?.tmgPlayer?.Player?._handleMediaParentIntersectionChange(isIntersecting);
+          target.classList.contains("T_M_G-media") ? target.tmgPlayer?.Controller?._handleMediaIntersectionChange(isIntersecting) : target.querySelector(".T_M_G-media")?.tmgPlayer?.Controller?._handleMediaParentIntersectionChange(isIntersecting);
         }
       },
-      { root: null, rootMargin: "0px", threshold: 0.3 },
+      { root: null, rootMargin: "0px", threshold: 0.3 }
     );
   static resizeObserver =
     typeof window !== "undefined" &&
     new ResizeObserver((entries) => {
       for (const { target } of entries) {
-        const player = target.classList.contains("T_M_G-media") ? target.tmgPlayer?.Player : (target.querySelector(".T_M_G-media") || target.closest(".T_M_G-media-container")?.querySelector(".T_M_G-media"))?.tmgPlayer?.Player;
-        player?._handleResize(target);
+        const controller = target.classList.contains("T_M_G-media") ? target.tmgPlayer?.Controller : (target.querySelector(".T_M_G-media") || target.closest(".T_M_G-media-container")?.querySelector(".T_M_G-media"))?.tmgPlayer?.Controller;
+        controller?._handleResize(target);
       }
     });
   static VIDMutationObserver =
@@ -4005,20 +3689,19 @@ class T_M_G {
     new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (mutation.type === "attributes") {
-          const t = mutation.target;
-          if (t.tagName === "VIDEO") {
+          if (mutation.target.tagName === "VIDEO") {
             if (mutation.attributeName === "tmgcontrols") {
-              if (!tmg._INTERNAL_MUTATION_SET.has(t)) t.tmgcontrols = t.hasAttribute("tmgcontrols");
+              if (!tmg._internalMutationSet.has(mutation.target)) mutation.target.tmgcontrols = mutation.target.hasAttribute("tmgcontrols");
             } else if (mutation.attributeName?.startsWith("tmg")) {
-              if (t.hasAttribute(mutation.attributeName)) t.tmgPlayer?.fetchCustomOptions();
+              if (mutation.target.hasAttribute(mutation.attributeName)) mutation.target.tmgPlayer?.fetchCustomOptions();
             }
           }
         } else if (mutation.type === "childList") {
           for (const node of mutation.addedNodes) {
-            if (node.nodeName === "TRACK") mutation.target.tmgPlayer?.Player?.setCaptionsState?.();
+            if (node.nodeName === "TRACK") mutation.target.tmgPlayer?.Controller?.setCaptionsState?.();
           }
           for (const node of mutation.removedNodes) {
-            if (node.nodeName === "TRACK") mutation.target.tmgPlayer?.Player?.setCaptionsState?.();
+            if (node.nodeName === "TRACK") mutation.target.tmgPlayer?.Controller?.setCaptionsState?.();
           }
         }
       }
@@ -4032,65 +3715,62 @@ class T_M_G {
           const nodes = [...(node.querySelector("video:not(.T_M_G-media)") ? node.querySelectorAll("video:not(.T_M_G-media)") : [node])];
           for (const node of nodes) {
             tmg.VIDMutationObserver.observe(node, { attributes: true });
-            tmg.initMedia(node);
           }
         }
         for (const node of mutation.removedNodes) {
           if (!node.tagName || !(node.matches("video.T_M_G-media") || node.querySelector("video.T_M_G-media")) || tmg.isInDOM(node)) return;
           const nodes = [...(node.querySelector("video.T_M_G-media") ? node.querySelectorAll("video.T_M_G-media") : [node])];
           for (const node of nodes) {
-            if (node.tmgPlayer?.Player?.mutatingDOMNodes) return;
-            node.tmgcontrols = false;
+            if (!node.tmgPlayer?.Controller?.mutatingDOM) node.tmgcontrols = false;
           }
         }
       }
     });
-  static initMedia(media, reset = false) {
-    if (tmg.isIter(media)) {
-      for (const medium of media) {
-        _initMedium(medium);
-      }
-    } else _initMedium(media);
-    function _initMedium(medium) {
-      if (medium.tmgPlayer && !reset) return;
-      new tmg.Player()._initMedium(medium);
-      medium.tmgcontrols = medium.hasAttribute("tmgcontrols");
-    }
-  }
   static _handleWindowResize() {
-    tmg.Players?.forEach((Player) => Player._handleWindowResize());
+    tmg.Controllers?.forEach((c) => c._handleWindowResize());
   }
   static _handleVisibilityChange() {
-    tmg.Players?.forEach((Player) => Player._handleVisibilityChange());
+    tmg.Controllers?.forEach((c) => c._handleVisibilityChange());
   }
   static _handleFullScreenChange() {
-    tmg._CURRENT_FULL_SCREEN_PLAYER?._handleFullScreenChange();
+    tmg._currentFullScreenController?._handleFullScreenChange();
   }
   static startAudioManager() {
-    if (!tmg._AUDIO_CONTEXT && tmg._IS_DOC_TRANSIENT) {
-      tmg._AUDIO_CONTEXT = new (AudioContext || webkitAudioContext)();
-      tmg.Players?.forEach((Player) => Player.setUpAudio());
-    } else if (tmg._AUDIO_CONTEXT?.state === "suspended") tmg._AUDIO_CONTEXT.resume();
-  }
-  static stopAudioManager() {
-    if (tmg._AUDIO_CONTEXT?.state === "running") tmg._AUDIO_CONTEXT.suspend();
+    if (!tmg._audioContext && tmg._isDocTransient) {
+      tmg._audioContext = new (AudioContext || webkitAudioContext)();
+      tmg.Controllers?.forEach((c) => c.setUpAudio());
+    } else if (tmg._audioContext?.state === "suspended") tmg._audioContext.resume();
   }
   static connectMediaToAudioManager(medium) {
-    if (!tmg._AUDIO_CONTEXT) return "unavailable";
-    medium.tmgSourceNode = medium.tmgSourceNode || tmg._AUDIO_CONTEXT.createMediaElementSource(medium);
-    medium.tmgGainNode = medium.tmgGainNode || tmg._AUDIO_CONTEXT.createGain();
-    medium.tmgSourceNode.connect(medium.tmgGainNode);
-    if (!medium.paused) tmg.connectAudio(medium.tmgGainNode);
+    if (!tmg._audioContext) return "unavailable";
+    medium.audioSourceNode ||= tmg._audioContext.createMediaElementSource(medium);
+    medium.audioGainNode ||= tmg._audioContext.createGain();
+    medium.audioSourceNode.connect(medium.audioGainNode);
+    if (!medium.paused) tmg.connectAudio(medium.audioGainNode);
   }
   static connectAudio(gainNode) {
-    if (!gainNode || tmg._CURRENT_AUDIO_GAIN_NODE === gainNode) return;
-    tmg._CURRENT_AUDIO_GAIN_NODE?.disconnect();
-    tmg._CURRENT_AUDIO_GAIN_NODE = gainNode;
-    gainNode.connect(tmg._AUDIO_CONTEXT.destination);
+    if (!gainNode || tmg._currentAudioGainNode === gainNode) return;
+    tmg._currentAudioGainNode?.disconnect();
+    tmg._currentAudioGainNode = gainNode;
+    gainNode.connect(tmg._audioContext.destination);
+  }
+  static queryMediaMobile(strict = true) {
+    const isMobileDimensions = matchMedia("(max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape)").matches,
+      isMobileDevice = /Mobi|Android|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent);
+    return strict ? isMobileDevice : isMobileDimensions;
+  }
+  static queryFullScreen() {
+    return !!(document.fullscreenElement || document.fullScreen || document.webkitIsFullScreen || document.mozFullScreen || document.msFullscreenElement);
+  }
+  static supportsFullScreen() {
+    return !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled || HTMLVideoElement.prototype.webkitEnterFullScreen);
+  }
+  static supportsPictureInPicture() {
+    return !!(document.pictureInPictureEnabled || HTMLVideoElement.prototype.requestPictureInPicture || window.documentPictureInPicture);
   }
   static loadResource(src, type = "style", options = {}) {
     const { module = false, media, crossorigin, integrity } = options;
-    if (tmg._RESOURCE_CACHE[src]) return tmg._RESOURCE_CACHE[src];
+    if (tmg._resourceCache[src]) return tmg._resourceCache[src];
     const isLoaded = (() => {
       if (type === "script") {
         return [...document.scripts].some((s) => s.src?.includes(src));
@@ -4100,7 +3780,7 @@ class T_M_G {
       return false;
     })();
     if (isLoaded) return Promise.resolve(null);
-    tmg._RESOURCE_CACHE[src] = new Promise((resolve, reject) => {
+    tmg._resourceCache[src] = new Promise((resolve, reject) => {
       if (type === "script") {
         const script = tmg.createEl("script", { src, crossOrigin: crossorigin, integrity, onload: () => resolve(script), onerror: () => reject(new Error(`Script load error: ${src}`)) });
         if (module) script.type = "module";
@@ -4112,7 +3792,7 @@ class T_M_G {
         reject(new Error(`Unsupported type: ${type}`));
       }
     });
-    return tmg._RESOURCE_CACHE[src];
+    return tmg._resourceCache[src];
   }
   static addSources(sources, medium) {
     const addSource = (source, medium) => {
@@ -4189,38 +3869,26 @@ class T_M_G {
       currObj = currObj[part];
     });
   }
-  static notify = class {
-    constructor(self) {
-      this.self = self;
-      this.init();
+  static configDetails(node) {
+    const result = {};
+    for (const key of Object.keys(node)) {
+      const entry = node[key];
+      if (!tmg.isObj(entry)) continue;
+      result[key] = entry.options
+        ? {
+            values: entry.options.map((opt) => opt.value ?? opt),
+            displays: entry.options.map((opt) => opt.display ?? String(opt)),
+          }
+        : tmg.configDetails(entry); // recurse on sub-branch
     }
-    init() {
-      this.resetNotifiers = this.resetNotifiers.bind(this);
-      [...(this.self.DOM.notifiersContainer?.children ?? [])].forEach((n) => n.addEventListener("animationend", this.resetNotifiers));
-      tmg.NOTIFIER_EVENTS.forEach((e) => this.self.DOM.notifiersContainer?.addEventListener(e, this));
-    }
-    handleEvent({ type: n }) {
-      if (!this.self.settings.notifiers) return;
-      this.resetNotifiers();
-      ["objectfitchange"].includes(n) ? this.resetNotifiers(n) : setTimeout(this.resetNotifiers, 10, n);
-    }
-    resetNotifiers(n = "") {
-      this.self.DOM.notifiersContainer?.setAttribute("data-notify", typeof n === "string" ? n : "");
-    }
-  };
-  static queryMediaMobile(strict = true) {
-    const isMobileDimensions = matchMedia("(max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape)").matches,
-      isMobileDevice = /Mobi|Android|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent);
-    return strict ? isMobileDevice : isMobileDimensions;
+    return result;
   }
-  static queryFullScreen() {
-    return !!(document.fullscreenElement || document.fullScreen || document.webkitIsFullScreen || document.mozFullScreen || document.msFullscreenElement);
-  }
-  static supportsFullScreen() {
-    return !!(document.fullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled || document.webkitSupportsFullscreen || document.webkitFullscreenEnabled || HTMLVideoElement.prototype.webkitEnterFullScreen);
-  }
-  static supportsPictureInPicture() {
-    return !!(document.pictureInPictureEnabled || HTMLVideoElement.prototype.requestPictureInPicture || window.documentPictureInPicture);
+  static mergeObjs(o1 = {}, o2 = {}) {
+    const merged = { ...o1, ...o2 };
+    Object.entries(merged).forEach(([k, v]) => {
+      if (tmg.isObj(v)) merged[k] = tmg.mergeObjs(o1[k], o2[k]);
+    });
+    return merged;
   }
   static isIter(obj) {
     return obj != null && typeof obj[Symbol.iterator] === "function";
@@ -4246,8 +3914,14 @@ class T_M_G {
   static clamp(min = 0, amount, max = Infinity) {
     return Math.min(Math.max(amount, min), max);
   }
-  static assignIfDefined(target, source = {}, key) {
+  static assignDef(target, source = {}, key) {
     if (source[key] !== undefined) target[key] = source[key];
+  }
+  static parseNumber(number, fallback = 0) {
+    return tmg.isValidNumber(number) ? number : fallback;
+  }
+  static parseCSSTime(time) {
+    return time.endsWith("ms") ? Number(time.replace("ms", "")) : Number(time.replace("s", "")) * 1000;
   }
   static formatTime(time) {
     if (!this.isValidNumber(time)) return "-:--";
@@ -4256,12 +3930,6 @@ class T_M_G {
     const minutes = Math.floor(time / 60) % 60;
     const hours = Math.floor(time / 3600);
     return hours == 0 ? `${minutes}:${seconds}` : `${hours}:${pad(minutes)}:${seconds}`;
-  }
-  static parseNumber(number) {
-    return tmg.isValidNumber(number) ? number : 0;
-  }
-  static formatCSSTime(time) {
-    return time.endsWith("ms") ? Number(time.replace("ms", "")) : Number(time.replace("s", "")) * 1000;
   }
   static capitalize(word = "") {
     return word.charAt(0).toUpperCase() + word.slice(1);
@@ -4331,6 +3999,29 @@ class T_M_G {
       if (v !== u) el.style[k] = v;
     });
     return el;
+  }
+  static cloneVideo(v) {
+    const newV = v.cloneNode(true);
+    newV.tmgPlayer = v.tmgPlayer;
+    v.parentElement?.replaceChild(newV, v);
+    // Playback control
+    if (v.currentTime) newV.currentTime = v.currentTime;
+    if (v.playbackRate !== 1) newV.playbackRate = v.playbackRate;
+    if (v.defaultPlaybackRate !== 1) newV.defaultPlaybackRate = v.defaultPlaybackRate;
+    if (v.volume !== 1) newV.volume = v.volume;
+    if (v.muted) newV.muted = true;
+    if (v.defaultMuted) newV.defaultMuted = true;
+    if (v.srcObject) newV.srcObject = v.srcObject;
+    // Behavior flags
+    if (v.autoplay) newV.autoplay = true;
+    if (v.loop) newV.loop = true;
+    if (v.controls) newV.controls = true;
+    if (v.crossOrigin) newV.crossOrigin = v.crossOrigin;
+    if (v.playsInline) newV.playsInline = true;
+    if (v.controlsList?.length) newV.controlsList = v.controlsList;
+    if (v.disablePictureInPicture) newV.disablePictureInPicture = true;
+    if (!v.paused && tmg.isInDOM(newV)) newV.play();
+    return newV;
   }
   static getRenderedBox(elem) {
     const getResourceDimensions = (source) => (source.videoWidth ? { width: source.videoWidth, height: source.videoHeight } : null);
@@ -4497,27 +4188,10 @@ class T_M_G {
     el.ownerDocument.defaultView.addEventListener("pointerup", release);
     el.ownerDocument.defaultView.addEventListener("pointercancel", release);
   }
-  // a wild card for deploying TMG controls to available media, returns a promise that resolves with an array referencing the media
-  static async launch(medium) {
-    if (arguments.length === 0) {
-      const media = document.querySelectorAll("[tmgcontrols]");
-      let promises = [];
-      if (media) {
-        for (const medium of media) {
-          promises.push(tmg.launch(medium));
-        }
-        return Promise.all(promises);
-      }
-    } else {
-      return (async function buildPlayers() {
-        const player = medium.tmgPlayer;
-        await player.attach(medium);
-        return player.Player;
-      })();
-    }
-  }
-  // REFERENCES TO ALL THE DEPLOYED TMG MEDIA PLAYERS
-  static Players = [];
+  // REFERENCES TO ALL THE DEPLOYED TMG MEDIA CONTROLLERS
+  static Controllers = [];
+  // THE TMG MEDIA PLAYER NOTIFIER CLASS
+  static Notifier = T_M_G_Media_Notifier;
   // THE TMG MEDIA PLAYER BUILDER CLASS
   static Player = T_M_G_Media_Player;
 }
