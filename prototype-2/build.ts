@@ -38,6 +38,15 @@ interface CaptionSetting<T> {
   options: CaptionOption<T>[];
 }
 
+interface Track {
+  kind: string;
+  label: string;
+  srclang: string;
+  src: string;
+  default: boolean;
+  id: string;
+}
+
 interface Captions {
   font: {
     family: CaptionSetting<string>;
@@ -114,5 +123,5 @@ type VideoBuild = {
   settings: Settings;
   sources: string[];
   src: string;
-  tracks: string[];
+  tracks: Track[];
 };
