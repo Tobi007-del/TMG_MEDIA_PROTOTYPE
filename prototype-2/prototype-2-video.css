@@ -934,16 +934,13 @@ body:where(:has(.T_M_G-video-floating-player)) {
 }
 .T_M_G-video-top-controls-wrapper,
 .T_M_G-video-bottom-controls-wrapper {
-  z-index: 8;
-}
-.T_M_G-video-mini-player-btn-wrapper {
   z-index: 9;
 }
-.T_M_G-video-toast-container {
+.T_M_G-video-mini-player-btn-wrapper {
   z-index: 10;
 }
 .T_M_G-video-container.T_M_G-video-mobile .T_M_G-video-notifiers-container {
-  z-index: 11;
+  z-index: 8;
 }
 /* setting controls stack ends */
 
@@ -1153,6 +1150,7 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   overflow: hidden;
+  z-index: 1000;
   transition: transform var(--T_M_G-video-motion-transition-time) ease, opacity var(--T_M_G-video-motion-transition-time) ease;
   animation: T_M_G-slide-in var(--T_M_G-video-slow-transition-time) forwards var(--T_M_G-video-bounce-timing);
 }
