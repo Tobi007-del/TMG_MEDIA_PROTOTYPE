@@ -1,7 +1,7 @@
 const modes = ["fullScreen", "theater", "pictureInPicture", "miniPlayer"] as const;
 const betaFeatures = ["rewind", "gestureControls", "floatingPlayer"] as const;
 const controlPanel = ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "playbackrate", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
-const keyShortcutActions = ["prev", "next", "playPause", "timeFormat", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "screenshot", "objectFit", "fullScreen", "theater", "expandMiniPlayer", "removeMiniPlayer", "pictureInPicture", "captions", "captionsFontOpacity", "captionsWindowOpacity", "captionsSizeUp", "captionsSizeDown", "settings"] as const;
+const keyShortcutActions = ["prev", "next", "playPause", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "timeMode", "timeFormat", "screenshot", "objectFit", "pictureInPicture", "theater", "fullScreen", "captions", "captionsFontSizeUp", "captionsFontSizeDown", "captionsFontOpacity", "captionsBackgroundOpacity", "captionsWindowOpacity", "captionsCharacterEdgeStyle", "settings"] as const;
 const errorCodes = [
   1, // MEDIA_ERR_ABORTED
   2, // MEDIA_ERR_NETWORK
