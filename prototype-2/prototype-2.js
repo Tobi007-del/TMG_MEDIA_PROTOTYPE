@@ -1441,14 +1441,13 @@ class T_M_G_Video_Controller {
     return URL.createObjectURL(await new Promise((res) => this.exportCanvas.toBlob(res)));
   }
   async exportVideoFrame(monochrome) {
-    const url = await this.getVideoFrameURL(this.currentTime, monochrome === true);
+    this.fire("screenshot");
     const link = tmg.createEl("a", {
-      href: url,
+      href: await this.getVideoFrameURL(this.currentTime, monochrome === true),
       download: `${this.media?.title ?? "Video"}${monochrome === true ? `_black&white` : ""}_at_'${tmg.formatTime(this.video.currentTime, "human", true)}'.png`.replace(/\s/g, "_"),
     });
     link.click();
     URL.revokeObjectURL(link.href);
-    this.fire("screenshot");
   }
   convertToMonoChrome(canvas, context) {
     const frame = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -2111,8 +2110,8 @@ class T_M_G_Video_Controller {
   }
   previewCaptions(show = "") {
     this.videoContainer.classList.add("T_M_G-video-captions-preview");
-    const text = show || `${tmg.capitalize(this.videoContainer.dataset.trackKind || "captions")} look like this`;
-    if (!this.isModeActive("captions") || !this.DOM.cueContainer.innerHTML) this._handleCueChange({ text });
+    const text = !this.isModeActive("captions") || !this.DOM.cueContainer.innerHTML ? show || `${tmg.capitalize(this.videoContainer.dataset.trackKind || "captions")} look like this` : this.lastCueText;
+    this._handleCueChange({ text });
     clearTimeout(this.previewCaptionsTimeoutId);
     this.previewCaptionsTimeoutId = setTimeout(() => {
       this.videoContainer.classList.remove("T_M_G-video-captions-preview");
@@ -2123,7 +2122,24 @@ class T_M_G_Video_Controller {
     this.DOM.cueContainer.innerHTML = "";
     if (!cue) return;
     const cueWrapper = tmg.createEl("div", { className: "T_M_G-video-cue-wrapper" });
-    const parts = tmg.chunkArr(cue.text.split(" "), 8);
+    const measurer = tmg.createEl("span", { className: "T_M_G-video-cue", innerHTML: "abcdefghijklmnopqrstuvwxyz".repeat(2) }, {}, { visibility: "hidden" });
+    this.DOM.cueContainer.appendChild(measurer);
+    const charW = measurer.offsetWidth / (26 * 2);
+    measurer.remove();
+    const maxChars = Math.floor(this.videoContainer.offsetWidth / charW);
+    let line = [],
+      lineLen = 0,
+      parts = [];
+    cue.text.split(" ").forEach((word) => {
+      if (lineLen + word.length + 1 > maxChars) {
+        parts.push(line);
+        line = [];
+        lineLen = 0;
+      }
+      line.push(word);
+      lineLen += word.length + 1;
+    });
+    if (line.length) parts.push(line);
     parts.forEach((part) => {
       const cueLine = tmg.createEl("div", { className: "T_M_G-video-cue-line" });
       const cueEl = tmg.createEl("span", { className: "T_M_G-video-cue", innerHTML: part.join(" ") });
@@ -2133,6 +2149,7 @@ class T_M_G_Video_Controller {
     this.DOM.cueContainer.appendChild(cueWrapper);
     this.videoCurrentCueContainerHeight = `${this.DOM.cueContainer.offsetHeight}px`;
     this.videoCurrentCueContainerWidth = `${this.DOM.cueContainer.offsetWidth}px`;
+    this.lastCueText = cue.text;
     this._handleCuePosition();
   }
   changeCaptionsFontSize(value) {
