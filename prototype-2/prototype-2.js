@@ -900,7 +900,7 @@ class T_M_G_Video_Controller {
       <p>Tap to Unlock</p>
     </div>
     <!-- Code injected by TMG ends -->
-    `,
+    `
     );
     this.queryDOM(".T_M_G-video-container-content").prepend(this.video);
   }
@@ -1245,6 +1245,7 @@ class T_M_G_Video_Controller {
     this.DOM.timelineContainer?.addEventListener("keydown", this._handleTimelineKeyDown);
     this.DOM.timeline?.addEventListener("mousemove", this._handleTimelineInput);
     this.DOM.timeline?.addEventListener("mouseleave", this.stopTimePreviewing);
+    this.DOM.timeline?.addEventListener("touchend", this.stopTimePreviewing);
     // cue container listeners
     this.DOM.cueContainer?.addEventListener("pointerdown", this._handleCueDragStart);
     // volume event listeners
@@ -1571,7 +1572,7 @@ class T_M_G_Video_Controller {
     this.loaded = false;
     this.currentPlaylistIndex = index;
     const v = this.playlist[index];
-    this.media = v.media ? { ...this.media, ...v.media } : (v.media ?? null);
+    this.media = v.media ? { ...this.media, ...v.media } : v.media ?? null;
     this.setPosterState();
     this.settings.time.start = v.settings.time.start;
     this.settings.time.end = v.settings.time.end;
@@ -1849,26 +1850,37 @@ class T_M_G_Video_Controller {
     if (this.isScrubbing) return;
     this.isScrubbing = true;
     this.DOM.timelineContainer?.setPointerCapture(e.pointerId);
-    this.videoContainer.classList.add("T_M_G-video-scrubbing");
     this.wasPaused = this.video.paused;
-    this.togglePlay(false);
-    this.generateCanvasPreviews();
+    this.scrubbingId = setTimeout(() => {
+      this.togglePlay(false);
+      this.videoContainer.classList.add("T_M_G-video-scrubbing");
+      this.isMediaMobile && this.DOM.scrubNotifier?.classList.add("T_M_G-video-control-active");
+    }, 150);
     this._handleTimelineInput(e);
-    this.scrubNotifierId = setTimeout(() => this.isMediaMobile && this.DOM.scrubNotifier?.classList.add("T_M_G-video-control-active"), 150);
+    this.generateCanvasPreviews();
     this.DOM.timelineContainer?.addEventListener("pointermove", this._handleTimelineInput);
     this.DOM.timelineContainer?.addEventListener("pointerup", this.stopTimeScrubbing);
   }
-  stopTimeScrubbing() {
+  stopTimeScrubbing(e) {
     if (!this.isScrubbing) return;
     this.isScrubbing = false;
+    this.DOM.timelineContainer?.releasePointerCapture(e.pointerId);
     this.currentTime = this.lastScrubPercent * this.duration;
+    clearTimeout(this.scrubbingId);
     this.togglePlay(!this.wasPaused);
-    clearTimeout(this.scrubNotifierId);
+    this.videoContainer.classList.remove("T_M_G-video-scrubbing");
     this.DOM.scrubNotifier?.classList.remove("T_M_G-video-control-active");
     this.stopTimePreviewing();
-    this.videoContainer.classList.remove("T_M_G-video-scrubbing");
     this.DOM.timelineContainer?.removeEventListener("pointermove", this._handleTimelineInput);
     this.DOM.timelineContainer?.removeEventListener("pointerup", this.stopTimeScrubbing);
+  }
+  stopTimePreviewing() {
+    this.overTimeline = false;
+    setTimeout(() => this.videoContainer.classList.remove("T_M_G-video-previewing"));
+  }
+  generateCanvasPreviews() {
+    if (!this.isMediaMobile) this.previewContext?.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height);
+    if (this.isScrubbing) this.thumbnailContext?.drawImage(this.pseudoVideo, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height);
   }
   _handleTimelineInput({ clientX: x }) {
     this.overTimeline = true;
@@ -1898,16 +1910,8 @@ class T_M_G_Video_Controller {
         else arrowPosition = "50%";
         this.videoCurrentPreviewImgArrowPosition = arrowPosition;
       },
-      20,
+      20
     );
-  }
-  stopTimePreviewing() {
-    this.overTimeline = false;
-    this.videoContainer.classList.remove("T_M_G-video-previewing");
-  }
-  generateCanvasPreviews() {
-    if (!this.isMediaMobile) this.previewContext?.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height);
-    if (this.isScrubbing) this.thumbnailContext?.drawImage(this.pseudoVideo, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height);
   }
   _handleGestureTimelineInput({ percent, sign, multiplier }) {
     multiplier = multiplier.toFixed(1);
@@ -2193,7 +2197,6 @@ class T_M_G_Video_Controller {
     this.rotateCaptionsProp(tmg.parseConfig(this.settings.captions).characterEdgeStyle.values, "videoCaptionsCharacterEdgeStyle", false);
   }
   _handleCueDragStart(e) {
-    this.DOM.cueContainer?.setPointerCapture(e.pointerId);
     this.DOM.cueContainer?.addEventListener("pointermove", this._handleCueDragging);
     this.DOM.cueContainer?.addEventListener("pointerup", this._handleCueDragEnd);
   }
@@ -2494,7 +2497,7 @@ class T_M_G_Video_Controller {
             this.inFullScreen = false;
             this._handleFullScreenChange();
           },
-          { once: true },
+          { once: true }
         );
       }
       this.inFullScreen = true;
@@ -2890,7 +2893,7 @@ class T_M_G_Video_Controller {
           multiplier = 1 - mY / (height * 0.5);
         this._handleGestureTimelineInput({ percent, sign, multiplier });
       },
-      20,
+      20
     );
   }
   _handleGestureTouchYMove(e) {
@@ -2908,7 +2911,7 @@ class T_M_G_Video_Controller {
         this.lastGestureTouchY = y;
         this.gestureTouchZone?.x === "right" ? this._handleGestureVolumeSliderInput({ percent, sign }) : this._handleGestureBrightnessSliderInput({ percent, sign });
       },
-      20,
+      20
     );
   }
   _handleGestureTouchEnd() {
@@ -2972,7 +2975,7 @@ class T_M_G_Video_Controller {
           this.fastPlay(this.speedDirection);
         }
       },
-      100,
+      100
     );
   }
   _handleSpeedPointerUp() {
@@ -3110,7 +3113,7 @@ class T_M_G_Video_Controller {
             break;
         }
       },
-      10,
+      10
     );
   }
   _handleKeyUp(e) {
@@ -3215,7 +3218,7 @@ class T_M_G_Video_Controller {
           else e.target.appendChild(this.dragging);
           this.updateSideControls(e);
         },
-        20,
+        20
       );
     }
   }
@@ -3236,7 +3239,7 @@ class T_M_G_Video_Controller {
         if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
         else return closest;
       },
-      { offset: -Infinity },
+      { offset: -Infinity }
     ).element;
   }
 }
@@ -3711,7 +3714,7 @@ class T_M_G {
       document.addEventListener(e, () => {
         tmg._isDocTransient = true;
         tmg.startAudioManager();
-      }),
+      })
     );
     for (const medium of document.querySelectorAll("video")) {
       tmg.VIDMutationObserver.observe(medium, { attributes: true, childList: true, subtree: true });
@@ -3733,7 +3736,7 @@ class T_M_G {
           target.classList.contains("T_M_G-media") ? target.tmgPlayer?.Controller?._handleMediaIntersectionChange(isIntersecting) : target.querySelector(".T_M_G-media")?.tmgPlayer?.Controller?._handleMediaParentIntersectionChange(isIntersecting);
         }
       },
-      { root: null, rootMargin: "0px", threshold: 0.3 },
+      { root: null, rootMargin: "0px", threshold: 0.3 }
     );
   static resizeObserver =
     typeof window !== "undefined" &&
@@ -4111,7 +4114,7 @@ class T_M_G {
         clearTimeout(el._clickTimeoutId);
         el._clickTimeoutId = setTimeout(() => onClick(e), 300);
       }),
-      options,
+      options
     );
     el.addEventListener(
       "dblclick",
@@ -4119,7 +4122,7 @@ class T_M_G {
         clearTimeout(el._clickTimeoutId);
         onDblClick(e);
       }),
-      options,
+      options
     );
   }
   static removeSafeClicks(el) {
