@@ -2110,12 +2110,12 @@ class T_M_G_Video_Controller {
   }
   previewCaptions(show = "") {
     this.videoContainer.classList.add("T_M_G-video-captions-preview");
-    const text = !this.isModeActive("captions") || !this.DOM.cueContainer.innerHTML ? show || `${tmg.capitalize(this.videoContainer.dataset.trackKind || "captions")} look like this` : this.lastCueText;
-    this._handleCueChange({ text });
+    const fallback = show || `${tmg.capitalize(this.videoContainer.dataset.trackKind || "captions")} look like this`;
+    this._handleCueChange({ text: !this.isModeActive("captions") || !this.DOM.cueContainer.innerHTML ? fallback : this.lastCueText });
     clearTimeout(this.previewCaptionsTimeoutId);
     this.previewCaptionsTimeoutId = setTimeout(() => {
       this.videoContainer.classList.remove("T_M_G-video-captions-preview");
-      if (this.DOM.cueContainer.textContent.replace(/\s/g, "") === text.replace(/\s/g, "")) this.DOM.cueContainer.innerHTML = "";
+      if (this.DOM.cueContainer.textContent.replace(/\s/g, "") === fallback.replace(/\s/g, "")) this.DOM.cueContainer.innerHTML = "";
     }, 1500);
   }
   _handleCueChange(cue) {
@@ -2165,32 +2165,32 @@ class T_M_G_Video_Controller {
     }
     this.previewCaptions();
   }
-  rotateCaptionsFontOpacity() {
-    const steps = tmg.parseConfig(this.settings.captions).font.opacity.values;
-    const opacity = Number(this.videoCaptionsFontOpacity);
-    const i = steps.reduce((cIdx, s, idx) => (Math.abs(s - opacity) < Math.abs(steps[cIdx] - opacity) ? idx : cIdx), 0);
-    this.videoCaptionsFontOpacity = steps[(i + 1) % steps.length];
+  rotateCaptionsProp(steps, prop, numeric = true) {
+    const curr = this[prop];
+    const i = Math.max(0, numeric ? steps.reduce((cIdx, s, idx) => (Math.abs(s - curr) < Math.abs(steps[cIdx] - curr) ? idx : cIdx), 0) : steps.indexOf(curr));
+    this[prop] = steps[(i + 1) % steps.length];
     this.previewCaptions();
+  }
+  rotateCaptionsFontFamily() {
+    this.rotateCaptionsProp(tmg.parseConfig(this.settings.captions).font.family.values, "videoCaptionsFontFamily", false);
+  }
+  rotateCaptionsFontWeight() {
+    this.rotateCaptionsProp(tmg.parseConfig(this.settings.captions).font.weight.values, "videoCaptionsFontWeight", false);
+  }
+  rotateCaptionsFontVariant() {
+    this.rotateCaptionsProp(tmg.parseConfig(this.settings.captions).font.variant.values, "videoCaptionsFontVariant", false);
+  }
+  rotateCaptionsFontOpacity() {
+    this.rotateCaptionsProp(tmg.parseConfig(this.settings.captions).font.opacity.values, "videoCaptionsFontOpacity");
   }
   rotateCaptionsBackgroundOpacity() {
-    const steps = tmg.parseConfig(this.settings.captions).background.opacity.values;
-    const opacity = Number(this.videoCaptionsBackgroundOpacity);
-    const i = steps.reduce((cIdx, s, idx) => (Math.abs(s - opacity) < Math.abs(steps[cIdx] - opacity) ? idx : cIdx), 0);
-    this.videoCaptionsBackgroundOpacity = steps[(i + 1) % steps.length];
-    this.previewCaptions();
+    this.rotateCaptionsProp(tmg.parseConfig(this.settings.captions).background.opacity.values, "videoCaptionsBackgroundOpacity");
   }
   rotateCaptionsWindowOpacity() {
-    const steps = tmg.parseConfig(this.settings.captions).window.opacity.values;
-    const opacity = Number(this.videoCaptionsWindowOpacity);
-    const i = steps.reduce((cIdx, s, idx) => (Math.abs(s - opacity) < Math.abs(steps[cIdx] - opacity) ? idx : cIdx), 0);
-    this.videoCaptionsWindowOpacity = steps[(i + 1) % steps.length];
-    this.previewCaptions();
+    this.rotateCaptionsProp(tmg.parseConfig(this.settings.captions).window.opacity.values, "videoCaptionsWindowOpacity");
   }
   rotateCaptionsCharacterEdgeStyle() {
-    const steps = tmg.parseConfig(this.settings.captions).characterEdgeStyle.values;
-    const i = steps.indexOf(this.videoCaptionsCharacterEdgeStyle);
-    this.videoCaptionsCharacterEdgeStyle = steps[(i + 1) % steps.length];
-    this.previewCaptions();
+    this.rotateCaptionsProp(tmg.parseConfig(this.settings.captions).characterEdgeStyle.values, "videoCaptionsCharacterEdgeStyle", false);
   }
   _handleCueDragStart(e) {
     this.DOM.cueContainer?.setPointerCapture(e.pointerId);
@@ -2205,22 +2205,19 @@ class T_M_G_Video_Controller {
   }
   _handleCuePosition() {
     if (!this.cuePositionX || !this.cuePositionY) return;
-    this.throttle(
-      "cueDragging",
-      () => {
-        const rect = this.videoContainer.getBoundingClientRect(),
-          { offsetWidth: w, offsetHeight: h } = this.DOM.cueContainer,
-          xR = 0,
-          yR = 0,
-          posX = tmg.clamp(xR + w / 2, rect.width - (this.cuePositionX - rect.left), rect.width - w / 2 - xR),
-          posY = tmg.clamp(yR, rect.height - (this.cuePositionY - rect.top + h / 2), rect.height - h - yR);
-        this.videoCurrentCueX = `${Math.round((posX / rect.width) * 100)}%`;
-        this.videoCurrentCueY = `${Math.round((posY / rect.height) * 100)}%`;
-      },
-      0,
-    );
+    this.RAFLoop("cueDragging", () => {
+      const rect = this.videoContainer.getBoundingClientRect(),
+        { offsetWidth: w, offsetHeight: h } = this.DOM.cueContainer,
+        xR = 0,
+        yR = 0,
+        posX = tmg.clamp(xR + w / 2, rect.width - (this.cuePositionX - rect.left), rect.width - w / 2 - xR),
+        posY = tmg.clamp(yR, rect.height - (this.cuePositionY - rect.top + h / 2), rect.height - h - yR);
+      this.videoCurrentCueX = `${(posX / rect.width) * 100}%`;
+      this.videoCurrentCueY = `${(posY / rect.height) * 100}%`;
+    });
   }
   _handleCueDragEnd() {
+    this.cancelRAFLoop("cueDragging");
     this.videoContainer.classList.remove("T_M_G-video-cue-dragging");
     this.DOM.cueContainer?.removeEventListener("pointermove", this._handleCueDragging);
     this.DOM.cueContainer?.removeEventListener("pointerup", this._handleCueDragEnd);
@@ -2638,22 +2635,18 @@ class T_M_G_Video_Controller {
     e.preventDefault();
     this.removeOverlay("force");
     this.videoContainer.classList.add("T_M_G-video-player-dragging");
-    this.RAFLoop(
-      "miniPlayerDragging",
-      () => {
-        let { innerWidth: ww, innerHeight: wh } = window,
-          { offsetWidth: w, offsetHeight: h } = this.videoContainer;
-        const x = e.clientX ?? e.changedTouches[0].clientX,
-          y = e.clientY ?? e.changedTouches[0].clientY,
-          xR = 0,
-          yR = 0,
-          posX = tmg.clamp(xR, ww - x - w / 2, ww - w - xR),
-          posY = tmg.clamp(yR, wh - y - h / 2, wh - h - yR);
-        this.videoCurrentMiniPlayerX = `${Math.round((posX / ww) * 100)}%`;
-        this.videoCurrentMiniPlayerY = `${Math.round((posY / wh) * 100)}%`;
-      },
-      0,
-    );
+    this.RAFLoop("miniPlayerDragging", () => {
+      let { innerWidth: ww, innerHeight: wh } = window,
+        { offsetWidth: w, offsetHeight: h } = this.videoContainer;
+      const x = e.clientX ?? e.changedTouches[0].clientX,
+        y = e.clientY ?? e.changedTouches[0].clientY,
+        xR = 0,
+        yR = 0,
+        posX = tmg.clamp(xR, ww - x - w / 2, ww - w - xR),
+        posY = tmg.clamp(yR, wh - y - h / 2, wh - h - yR);
+      this.videoCurrentMiniPlayerX = `${(posX / ww) * 100}%`;
+      this.videoCurrentMiniPlayerY = `${(posY / wh) * 100}%`;
+    });
   }
   emptyMiniPlayerListeners() {
     this.cancelRAFLoop("miniPlayerDragging");
@@ -3086,17 +3079,14 @@ class T_M_G_Video_Controller {
           case "captionsFontSizeDown":
             this.changeCaptionsFontSize(-this.settings.captions.font.size.skip);
             break;
-          case "captionsCharacterEdgeStyle":
-            this.rotateCaptionsCharacterEdgeStyle();
-            break;
+          case "captionsFontWeight":
+          case "captionsFontVariant":
+          case "captionsFontFamily":
           case "captionsFontOpacity":
-            this.rotateCaptionsFontOpacity();
-            break;
           case "captionsBackgroundOpacity":
-            this.rotateCaptionsBackgroundOpacity();
-            break;
           case "captionsWindowOpacity":
-            this.rotateCaptionsWindowOpacity();
+          case "captionsCharacterEdgeStyle":
+            this[`rotate${tmg.capitalize(action)}`]?.();
             break;
           case "escape": // -w
             this.isModeActive("miniPlayer") && this.removeMiniPlayer();
@@ -3389,7 +3379,7 @@ class T_M_G {
       captions: {
         font: {
           family: {
-            value: "default",
+            value: "inherit",
             options: [
               { value: "inherit", display: "Default" },
               { value: "monospace", display: "Monospace" },
@@ -3445,7 +3435,7 @@ class T_M_G {
             ],
           },
           weight: {
-            value: "light",
+            value: "400",
             options: [
               { value: "100", display: "Thin" },
               { value: "200", display: "Extra Light" },
@@ -3563,6 +3553,9 @@ class T_M_G {
           captions: "c",
           captionsFontSizeUp: "=",
           captionsFontSizeDown: "-",
+          captionsFontFamily: "u",
+          captionsFontWeight: "g",
+          captionsFontVariant: "v",
           captionsFontOpacity: "o",
           captionsBackgroundOpacity: "b",
           captionsWindowOpacity: "w",
