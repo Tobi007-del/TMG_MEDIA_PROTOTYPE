@@ -337,15 +337,6 @@
   -webkit-user-drag: element;
 }
 
-.T_M_G-video-container :is(.T_M_G-video-playlist-next-video-title, #o#o#o#o#o#o#o#o#o#o) {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  word-break: break-all;
-  overflow: hidden;
-}
-
 .T_M_G-video-container :is(*:focus-visible, #o#o#o#o#o#o#o#o#o#o) {
   outline: var(--T_M_G-video-focus-visible-outline);
   outline-offset: 3.5px;
@@ -705,10 +696,10 @@ body:where(:has(.T_M_G-video-floating-player)) {
   --T_M_G-video-icons-color: var(--T_M_G-video-disabled-color);
   --T_M_G-video-controls-color: var(--T_M_G-video-disabled-color);
   --T_M_G-video-text-color: var(--T_M_G-video-disabled-color);
+  cursor: not-allowed;
 }
 
-.T_M_G-video-container:is(.T_M_G-video-disabled, .T_M_G-video-locked, #o#o#o#o#o#o#o#o#o#o) {
-  cursor: not-allowed;
+.T_M_G-video-container:is(.T_M_G-video-disabled, .T_M_G-video-locked, :has(.T_M_G-video-toast-container), #o#o#o#o#o#o#o#o#o#o) {
   overflow: hidden;
 }
 
@@ -717,7 +708,7 @@ body:where(:has(.T_M_G-video-floating-player)) {
   animation: none !important;
 }
 
-.T_M_G-video-container:is(.T_M_G-video-locked, #o#o#o#o#o#o#o#o#o#o) > *:not(.T_M_G-video-screen-locked-wrapper) {
+.T_M_G-video-container:is(.T_M_G-video-locked, #o#o#o#o#o#o#o#o#o#o) > *:not(.T_M_G-video-screen-locked-wrapper, .T_M_G-video-toast-container) {
   pointer-events: none;
 }
 
@@ -1144,7 +1135,6 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 }
 
 .T_M_G-video-toast-container {
-  touch-action: none;
   display: flex;
   align-items: center;
   position: absolute;
@@ -1160,6 +1150,7 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   background-color: var(--T_M_G-video-curtain-color);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
+  touch-action: none;
   overflow: hidden;
   z-index: 1000;
   transition:
@@ -1168,12 +1159,12 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   animation: T_M_G-slide-in var(--T_M_G-video-slow-transition-time) forwards var(--T_M_G-video-bounce-timing);
 }
 
-.T_M_G-video-container:is(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-toast-container {
-  margin-block-end: calc(var(--T_M_G-video-current-unit) * 2.5);
-}
-
 .T_M_G-media-container[data-size-tier^="xxx"] .T_M_G-video-toast-container {
   max-width: calc(100% - var(--T_M_G-video-current-unit) / 1.25);
+}
+
+.T_M_G-video-container:is(.T_M_G-video-overlay, :has(:focus-visible)) .T_M_G-video-toast-container {
+  margin-block-end: calc(var(--T_M_G-video-current-unit) * 2.25);
 }
 
 .T_M_G-video-toast-container::before,
@@ -1231,14 +1222,14 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 
 .T_M_G-video-playlist-next-video-info {
   flex-grow: 1;
-  border-radius: calc(var(--T_M_G-video-current-unit) / 5);
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: calc(var(--T_M_G-video-current-unit) / 7.5);
-  padding: calc(var(--T_M_G-video-current-unit) / 7.5);
-  padding-inline: 0;
+  padding-block: calc(var(--T_M_G-video-current-unit) / 7.5);
   text-align: left;
+  border-radius: calc(var(--T_M_G-video-current-unit) / 5);
 }
 
 .T_M_G-video-playlist-next-video-info h2 {
@@ -1254,6 +1245,10 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
 .T_M_G-video-playlist-next-video-title {
   color: var(--T_M_G-video-text-color);
   font-size: calc(var(--T_M_G-video-current-unit) / 2);
+  word-break: break-all;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .T_M_G-video-playlist-next-video-cancel-btn {
@@ -1877,8 +1872,7 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   touch-action: none;
   cursor: grab;
   will-change: right, bottom;
-  transition:
-    var(--T_M_G-video-motion-transition);
+  transition: var(--T_M_G-video-motion-transition);
 }
 
 .T_M_G-video-container:is(.T_M_G-video-captions, .T_M_G-video-captions-preview) .T_M_G-video-cue-container:not(:empty, :has(:empty)) {
