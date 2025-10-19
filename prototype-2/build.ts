@@ -88,7 +88,10 @@ interface Settings {
   };
   modes: Record<Mode, boolean>;
   notifiers: boolean;
-  overlayDelay: number;
+  overlay: {
+    delay: number;
+    behavior: "persistent" | "auto" | "strict";
+  };
   persist: boolean;
   playbackRate: Range;
   playsInline: boolean;
