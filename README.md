@@ -43,6 +43,7 @@
 ### Live Demos
 
 Try the player in action:
+
 - **[Main Demo](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/)** - Landing page with all prototypes
 - **[Prototype 1](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-1/prototype-1.html)** - Basic initial implementation
 - **[Prototype 2](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2.html)** - Full-featured player
@@ -51,11 +52,13 @@ Try the player in action:
 ### Key Features in Action
 
 **Timeline with Preview Thumbnails**
+
 - Hover over the timeline to see video previews
 - Supports image sprites or real-time canvas rendering
 - Configurable preview intervals
 
 **Multiple Display Modes**
+
 - Fullscreen mode with orientation lock
 - Theater mode for expanded viewing
 - Picture-in-Picture for multitasking
@@ -63,12 +66,14 @@ Try the player in action:
 - Floating player (Document PiP)
 
 **Gesture Controls**
+
 - Swipe left/right for timeline scrubbing
 - Swipe up/down on left side for brightness
 - Swipe up/down on right side for volume
 - Pinch to zoom (if enabled)
 
 **Playlist Management**
+
 - Auto-play next video with countdown
 - Swipeable toast notifications
 - Per-video metadata and settings
@@ -79,6 +84,7 @@ Try the player in action:
 ## ✨ Features
 
 ### 🎮 Playback Controls
+
 - Play/pause with multiple trigger methods
 - Frame-by-frame stepping (forward/backward)
 - Variable playback rate (0.25x - 8x)
@@ -88,6 +94,7 @@ Try the player in action:
 - Auto-play next video in playlist
 
 ### 🖼️ Display Modes
+
 - **Fullscreen** - Native fullscreen with orientation lock
 - **Theater Mode** - Expanded view without fullscreen
 - **Picture-in-Picture** - Standard and Document PiP
@@ -95,6 +102,7 @@ Try the player in action:
 - **Floating Player** - Beta feature using Document PiP API
 
 ### ⏱️ Timeline & Scrubbing
+
 - Interactive timeline with hover preview
 - Image sprite-based thumbnail previews
 - Real-time canvas rendering for previews
@@ -102,6 +110,7 @@ Try the player in action:
 - Keyboard navigation with percentage jumps
 
 ### 🔊 Audio & Visual Controls
+
 - Volume control (0-300% with boost capability)
 - Brightness adjustment (0-150%)
 - Web Audio API integration for advanced processing
@@ -109,6 +118,7 @@ Try the player in action:
 - Dark mode toggle
 
 ### 📝 Captions & Subtitles
+
 - Full WebVTT support
 - Extensive customization:
   - Font family, size, color, opacity, weight, variant
@@ -119,6 +129,7 @@ Try the player in action:
 - Auto-captions option
 
 ### 👆 Gesture Controls (Beta)
+
 - Touch gestures for timeline scrubbing
 - Swipe gestures for volume/brightness adjustment
 - Wheel/trackpad support for precise control
@@ -126,6 +137,7 @@ Try the player in action:
 - Zone-based gesture recognition
 
 ### 📚 Playlist Management
+
 - Sequential playlist playback
 - Auto-next with countdown toast notification
 - Per-video settings (start time, end time, previews)
@@ -133,6 +145,7 @@ Try the player in action:
 - Media metadata per video (title, artist, artwork)
 
 ### 🚀 Advanced Features
+
 - Screen capture/screenshot with monochrome option
 - Frame statistics (FPS, dropped frames, processing duration)
 - Drag-and-drop control panel customization
@@ -146,6 +159,7 @@ Try the player in action:
 ## 🛠️ Tech Stack
 
 ### Core Technologies
+
 - **Vanilla JavaScript (ES6+)** - No framework dependencies
 - **HTML5** - Semantic markup with custom data attributes
 - **CSS3** - Custom properties, animations, modern layouts
@@ -156,6 +170,7 @@ Try the player in action:
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Modern browser with ES6+ support
 - Static file server (for local development)
 - No build tools or dependencies required
@@ -163,12 +178,14 @@ Try the player in action:
 ### Installation
 
 1. **Clone the repository**:
+
 ```bash
 git clone https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE.git
 cd TMG_MEDIA_PROTOTYPE
 ```
 
 2. **Serve locally** (choose one):
+
 ```bash
 # Python
 python -m http.server 8000
@@ -181,6 +198,7 @@ php -S localhost:8000
 ```
 
 3. **Open in browser**:
+
 ```
 http://localhost:8000
 ```
@@ -188,6 +206,7 @@ http://localhost:8000
 ### Quick Test
 
 Open any of these URLs to see the player in action or just grab the files you need and move to your project setup:
+
 - **Landing Page**: `http://localhost:8000/`
 - **Prototype 1**: `http://localhost:8000/prototype-1/prototype-1.html`
 - **Prototype 2**: `http://localhost:8000/prototype-2/prototype-2.html`
@@ -202,29 +221,22 @@ Open any of these URLs to see the player in action or just grab the files you ne
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <script src="prototype-2/prototype-2.js" defer></script>
-</head>
-<body>
-  <video 
-    tmgcontrols
-    tmg--media--title="My Video Title"
-    tmg--media--artist="Artist Name"
-    tmg--settings--time--previews--address="previews/preview$.jpg"
-    tmg--settings--time--previews--spf="10"
-    muted 
-    src="video.mp4"
-    poster="poster.jpg">
-    <track kind="subtitles" srclang="en" src="subtitles.vtt" label="English" />
-  </video>
-  <!-- tmgcontrols replaces default controls attribute -->
-</body>
+  <head>
+    <script src="prototype-2/prototype-2.js" defer></script>
+  </head>
+  <body>
+    <video tmgcontrols tmg--media--title="My Video Title" tmg--media--artist="Artist Name" tmg--settings--time--previews--address="previews/preview$.jpg" tmg--settings--time--previews--spf="10" muted src="video.mp4" poster="poster.jpg">
+      <track kind="subtitles" srclang="en" src="subtitles.vtt" label="English" />
+    </video>
+    <!-- tmgcontrols replaces default controls attribute -->
+  </body>
 </html>
 ```
 
 ### Method 2: JSON Configuration
 
 **config.json**:
+
 ```json
 {
   "media": {
@@ -247,6 +259,7 @@ Open any of these URLs to see the player in action or just grab the files you ne
 ```
 
 **HTML**:
+
 ```html
 <video tmg="config.json"></video>
 ```
@@ -264,24 +277,24 @@ player.configure({
   settings: {
     volume: { max: 200, value: 80 },
     brightness: { max: 150, value: 100 },
-    beta: { 
+    beta: {
       gestureControls: true,
-      floatingPlayer: true 
+      floatingPlayer: true,
     },
     time: {
       previews: {
         address: "previews/preview$.jpg",
-        spf: 10
-      }
-    }
+        spf: 10,
+      },
+    },
   },
   playlist: [
     {
       src: "video1.mp4",
-      media: { 
-        title: "Video 1", 
+      media: {
+        title: "Video 1",
         artist: "Artist Name",
-        artwork: [{ src: "poster1.jpg" }] 
+        artwork: [{ src: "poster1.jpg" }],
       },
       tracks: [
         {
@@ -289,19 +302,19 @@ player.configure({
           srclang: "en",
           src: "subtitles1.vtt",
           label: "English",
-          default: true
-        }
-      ]
+          default: true,
+        },
+      ],
     },
     {
       src: "video2.mp4",
-      media: { title: "Video 2" }
-    }
-  ]
+      media: { title: "Video 2" },
+    },
+  ],
 });
 
 // Attach to video element
-await player.attach(document.querySelector('video'));
+await player.attach(document.querySelector("video"));
 
 // Or detach
 player.detach();
@@ -312,6 +325,7 @@ player.detach();
 ## ⚙️ Configuration
 
 ### Configuration Priority (Highest to Lowest)
+
 1. Runtime API (`player.configure()`)
 2. User Settings (localStorage)
 3. HTML Attributes (`tmg--*`)
@@ -321,15 +335,15 @@ player.detach();
 ### HTML Attribute Syntax
 
 Use double dashes (`--`) for nested properties and a single dash (`-`) for word spacing:
+
 ```html
-tmg--settings--time--previews--address="path/to/preview$.jpg"
-tmg--settings--volume--max="200"
-tmg--settings--beta--gesture-controls="true"
+tmg--settings--time--previews--address="path/to/preview$.jpg" tmg--settings--volume--max="200" tmg--settings--beta--gesture-controls="true"
 ```
 
 ### Key Configuration Options
 
 #### Media Metadata
+
 ```javascript
 media: {
   title: "Video Title",
@@ -342,6 +356,7 @@ media: {
 ```
 
 #### Volume Settings
+
 ```javascript
 volume: {
   min: 0,
@@ -353,6 +368,7 @@ volume: {
 ```
 
 #### Brightness Settings
+
 ```javascript
 brightness: {
   min: 0,
@@ -363,6 +379,7 @@ brightness: {
 ```
 
 #### Timeline Previews
+
 ```javascript
 time: {
   previews: {
@@ -377,6 +394,7 @@ time: {
 ```
 
 #### Keyboard Shortcuts
+
 ```javascript
 keys: {
   disabled: false,
@@ -395,6 +413,7 @@ keys: {
 ```
 
 #### Beta Features
+
 ```javascript
 beta: {
   rewind: true,              // Enable rewind functionality
@@ -404,14 +423,15 @@ beta: {
 ```
 
 #### Control Panel Customization
+
 ```javascript
 controlPanel: {
   bottom: [
-    "prev", "playpause", "next", 
-    "brightness", "volume", "duration", 
-    "spacer", 
-    "playbackrate", "captions", "settings", 
-    "objectfit", "pictureinpicture", 
+    "prev", "playpause", "next",
+    "brightness", "volume", "duration",
+    "spacer",
+    "playbackrate", "captions", "settings",
+    "objectfit", "pictureinpicture",
     "theater", "fullscreen"
   ],
   top: false  // Disable top controls
@@ -428,109 +448,120 @@ player.configure({
       2: "Network error occurred",
       3: "Video decoding failed",
       4: "Video format not supported",
-      5: "Unknown error occurred"
-    }
-  }
+      5: "Unknown error occurred",
+    },
+  },
 });
 ```
 
 ### ⌨️ Keyboard Shortcuts
 
 ### Playback Controls
-| Key | Action |
-|-----|--------|
-| `k` or `Space` | Play/Pause |
-| `l` or `→` | Skip forward (5s default) |
-| `j` or `←` | Skip backward (5s default) |
-| `Shift + →` | Skip forward (10s) |
-| `Shift + ←` | Skip backward (10s) |
-| `.` | Step forward one frame when paused |
-| `,` | Step backward one frame when paused |
-| `Shift + p` | Replay video |
+
+| Key            | Action                              |
+| -------------- | ----------------------------------- |
+| `k` or `Space` | Play/Pause                          |
+| `l` or `→`     | Skip forward (5s default)           |
+| `j` or `←`     | Skip backward (5s default)          |
+| `Shift + →`    | Skip forward (10s)                  |
+| `Shift + ←`    | Skip backward (10s)                 |
+| `.`            | Step forward one frame when paused  |
+| `,`            | Step backward one frame when paused |
+| `Shift + p`    | Replay video                        |
 
 ### Volume & Audio
-| Key | Action |
-|-----|--------|
-| `↑` | Volume up |
+
+| Key | Action      |
+| --- | ----------- |
+| `↑` | Volume up   |
 | `↓` | Volume down |
 | `m` | Toggle mute |
 
 ### Brightness
-| Key | Action |
-|-----|--------|
-| `y` | Brightness up |
+
+| Key | Action          |
+| --- | --------------- |
+| `y` | Brightness up   |
 | `h` | Brightness down |
 
 ### Playback Speed
-| Key | Action |
-|-----|--------|
+
+| Key                | Action                 |
+| ------------------ | ---------------------- |
 | `>` or `Shift + .` | Increase playback rate |
 | `<` or `Shift + ,` | Decrease playback rate |
 
 ### Display Modes
-| Key | Action |
-|-----|--------|
-| `f` | Toggle fullscreen |
-| `t` | Toggle theater mode |
-| `i` | Toggle picture-in-picture |
-| `e` | Expand mini-player |
-| `Escape` | Exit fullscreen/theater |
+
+| Key      | Action                    |
+| -------- | ------------------------- |
+| `f`      | Toggle fullscreen         |
+| `t`      | Toggle theater mode       |
+| `i`      | Toggle picture-in-picture |
+| `e`      | Expand mini-player        |
+| `Escape` | Exit fullscreen/theater   |
 
 ### Timeline Navigation
-| Key | Action |
-|-----|--------|
-| `0-9` | Jump to 0%-90% of video |
-| `Home` | Jump to start |
-| `End` | Jump to end |
+
+| Key    | Action                  |
+| ------ | ----------------------- |
+| `0-9`  | Jump to 0%-90% of video |
+| `Home` | Jump to start           |
+| `End`  | Jump to end             |
 
 ### Captions
-| Key | Action |
-|-----|--------|
-| `c` | Toggle captions |
-| `+` | Increase caption font size |
-| `-` | Decrease caption font size |
-| `v` | Rotate caption font variant |
-| `g` | Rotate caption font weight |
-| `u` | Rotate caption font style |
-| `o` | Rotate caption opacity |
+
+| Key | Action                            |
+| --- | --------------------------------- |
+| `c` | Toggle captions                   |
+| `+` | Increase caption font size        |
+| `-` | Decrease caption font size        |
+| `v` | Rotate caption font variant       |
+| `g` | Rotate caption font weight        |
+| `u` | Rotate caption font style         |
+| `o` | Rotate caption opacity            |
 | `b` | Rotate caption background opacity |
-| `w` | Rotate caption window opacity |
+| `w` | Rotate caption window opacity     |
 
 ### Other
-| Key | Action |
-|-----|--------|
-| `s` | Take screenshot |
-| `d` | Toggle dark mode |
+
+| Key | Action                  |
+| --- | ----------------------- |
+| `s` | Take screenshot         |
+| `d` | Toggle dark mode        |
 | `o` | Rotate object-fit modes |
-| `?` | Show settings view |
+| `?` | Show settings view      |
 
 ### Playlist
-| Key | Action |
-|-----|--------|
-| `Shift + n` | Next video |
+
+| Key         | Action         |
+| ----------- | -------------- |
+| `Shift + n` | Next video     |
 | `Shift + p` | Previous video |
 
 ---
 
 ## 🌐 Browser Support
 
-| Browser | Version | Support Level |
-|---------|---------|---------------|
-| Chrome | 90+ | ✅ Full Support |
-| Edge | 90+ | ✅ Full Support |
-| Firefox | 88+ | ✅ Full Support |
-| Safari | 14+ | ⚠️ Most Features* |
-| Opera | 76+ | ✅ Full Support |
-| Mobile Chrome | Latest | ✅ Full Support |
-| Mobile Safari | 14+ | ⚠️ Most Features* |
-| IE 11 | - | ❌ Not Supported |
+| Browser       | Version | Support Level      |
+| ------------- | ------- | ------------------ |
+| Chrome        | 90+     | ✅ Full Support    |
+| Edge          | 90+     | ✅ Full Support    |
+| Firefox       | 88+     | ✅ Full Support    |
+| Safari        | 14+     | ⚠️ Most Features\* |
+| Opera         | 76+     | ✅ Full Support    |
+| Mobile Chrome | Latest  | ✅ Full Support    |
+| Mobile Safari | 14+     | ⚠️ Most Features\* |
+| IE 11         | -       | ❌ Not Supported   |
 
-*Safari limitations:
+\*Safari limitations:
+
 - Document Picture-in-Picture not supported
 - Some gesture controls may behave differently
 - Web Audio API has some restrictions
 
 ### Required Browser Features
+
 - ES6+ JavaScript support
 - HTML5 Video API
 - CSS Custom Properties
@@ -568,11 +599,12 @@ Enable debug mode:
 ```javascript
 const player = new tmg.Player();
 player.configure({
-  debug: true  // Enables console logging
+  debug: true, // Enables console logging
 });
 ```
 
 Or via HTML:
+
 ```html
 <video tmgcontrols tmg--debug="true" src="video.mp4"></video>
 ```
@@ -613,6 +645,7 @@ Contributions are welcome! Here's how you can help:
 8. Open a Pull Request
 
 **PR Guidelines**:
+
 - Keep changes focused and atomic
 - Update documentation if needed
 - Maintain existing code style
@@ -620,6 +653,7 @@ Contributions are welcome! Here's how you can help:
 - Add comments for complex logic
 
 ### Reporting Issues
+
 Found a bug? [Report it here](https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE/issues)
 
 ---
@@ -631,32 +665,22 @@ Found a bug? [Report it here](https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE
 ```html
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TMG Player Demo</title>
-  <script src="prototype-2/prototype-2.js" defer></script>
-</head>
-<body>
-  <video 
-    tmgcontrols 
-    src="video.mp4" 
-    poster="poster.jpg">
-  </video>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TMG Player Demo</title>
+    <script src="prototype-2/prototype-2.js" defer></script>
+  </head>
+  <body>
+    <video tmgcontrols src="video.mp4" poster="poster.jpg"></video>
+  </body>
 </html>
 ```
 
 ### Player with Previews
 
 ```html
-<video 
-  tmgcontrols 
-  tmg--media--title="My Video"
-  tmg--settings--time--previews--address="previews/frame$.jpg"
-  tmg--settings--time--previews--spf="10"
-  src="video.mp4">
-</video>
+<video tmgcontrols tmg--media--title="My Video" tmg--settings--time--previews--address="previews/frame$.jpg" tmg--settings--time--previews--spf="10" src="video.mp4"></video>
 ```
 
 ### Playlist Player
@@ -666,28 +690,28 @@ const player = new tmg.Player();
 
 player.configure({
   settings: {
-    auto: { next: true },  // Auto-play next video
-    time: { previews: true }
+    auto: { next: true }, // Auto-play next video
+    time: { previews: true },
   },
   playlist: [
     {
       src: "video1.mp4",
-      media: { 
+      media: {
         title: "Episode 1",
-        artwork: [{ src: "poster1.jpg" }]
-      }
+        artwork: [{ src: "poster1.jpg" }],
+      },
     },
     {
       src: "video2.mp4",
-      media: { 
+      media: {
         title: "Episode 2",
-        artwork: [{ src: "poster2.jpg" }]
-      }
-    }
-  ]
+        artwork: [{ src: "poster2.jpg" }],
+      },
+    },
+  ],
 });
 
-await player.attach(document.querySelector('video'));
+await player.attach(document.querySelector("video"));
 ```
 
 ### Custom Keyboard Shortcuts
@@ -697,22 +721,22 @@ player.configure({
   settings: {
     keys: {
       shortcuts: {
-        playPause: ["p", "Space"],      // p or Space
-        skipFwd: ["l", "ArrowRight"],   // l or Right Arrow
-        skipBwd: ["j", "ArrowLeft"],    // j or Left Arrow
-        fullScreen: "f",       // f 
-        volumeUp: ["ArrowUp", "+"],     // Up Arrow or +
-        volumeDown: ["ArrowDown", "-"]  // Down Arrow or -
-      }
-    }
-  }
+        playPause: ["p", "Space"], // p or Space
+        skipFwd: ["l", "ArrowRight"], // l or Right Arrow
+        skipBwd: ["j", "ArrowLeft"], // j or Left Arrow
+        fullScreen: "f", // f
+        volumeUp: ["ArrowUp", "+"], // Up Arrow or +
+        volumeDown: ["ArrowDown", "-"], // Down Arrow or -
+      },
+    },
+  },
 });
 ```
 
 ### Programmatic Control
 
 ```javascript
-const video = document.querySelector('video');
+const video = document.querySelector("video");
 const controller = video.tmgController;
 
 // Play/Pause
@@ -740,18 +764,18 @@ controller.nextVideo();
 ### Event Handling
 
 ```javascript
-const video = document.querySelector('video');
+const video = document.querySelector("video");
 
-video.addEventListener('tmgready', (e) => {
-  console.log('Player initialized', e.detail);
+video.addEventListener("tmgready", (e) => {
+  console.log("Player initialized", e.detail);
 });
 
-video.addEventListener('play', () => {
-  console.log('Video started playing');
+video.addEventListener("play", () => {
+  console.log("Video started playing");
 });
 
-video.addEventListener('pause', () => {
-  console.log('Video paused');
+video.addEventListener("pause", () => {
+  console.log("Video paused");
 });
 
 // use all video events like normal
@@ -806,17 +830,17 @@ Override CSS variables:
 
 ## 🔍 Comparison with Other Players
 
-| Feature | TMG Player | Plyr | Video.js | Shaka |
-|---------|-----------|------|----------|-------|
-| Dependencies | 0 | 0 | 0 | 0 |
-| File Size | ~150KB | ~50KB | ~250KB | ~500KB |
-| Gesture Controls | ✅ | ❌ | ❌ | ❌ |
-| Floating Player | ✅ | ❌ | ❌ | ❌ |
-| Brightness Control | ✅ | ❌ | ❌ | ❌ |
-| Frame Stepping | ✅ | ❌ | ❌ | ❌ |
-| Playlist Support | ✅ | ❌ | ✅ | ❌ |
-| HLS/DASH | ❌ | ❌ | ✅ | ✅ |
-| Customization | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
+| Feature            | TMG Player | Plyr     | Video.js   | Shaka  |
+| ------------------ | ---------- | -------- | ---------- | ------ |
+| Dependencies       | 0          | 0        | 0          | 0      |
+| File Size          | ~150KB     | ~50KB    | ~250KB     | ~500KB |
+| Gesture Controls   | ✅         | ❌       | ❌         | ❌     |
+| Floating Player    | ✅         | ❌       | ❌         | ❌     |
+| Brightness Control | ✅         | ❌       | ❌         | ❌     |
+| Frame Stepping     | ✅         | ❌       | ❌         | ❌     |
+| Playlist Support   | ✅         | ❌       | ✅         | ❌     |
+| HLS/DASH           | ❌         | ❌       | ✅         | ✅     |
+| Customization      | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
 
 ---
 
@@ -828,14 +852,14 @@ Override CSS variables:
 player.configure({
   settings: {
     modes: {
-      fullScreen: false,      // Disable fullscreen
-      pictureInPicture: false // Disable PiP
+      fullScreen: false, // Disable fullscreen
+      pictureInPicture: false, // Disable PiP
     },
     keys: {
-      disabled: true          // Disable all keyboard shortcuts
+      disabled: true, // Disable all keyboard shortcuts
     },
-    notifiers: false          // Disable visual notifications
-  }
+    notifiers: false, // Disable visual notifications
+  },
 });
 ```
 
@@ -846,9 +870,9 @@ player.configure({
 player.configure({
   settings: {
     time: {
-      previews: true  // Auto-generates previews from video
-    }
-  }
+      previews: true, // Auto-generates previews from video
+    },
+  },
 });
 ```
 
@@ -857,9 +881,9 @@ player.configure({
 ```javascript
 player.configure({
   settings: {
-    persist: true,  // Save settings to localStorage
-    allowOverride: true  // Allow all settings to be overridden
-  }
+    persist: true, // Save settings to localStorage
+    allowOverride: true, // Allow all settings to be overridden
+  },
 });
 ```
 
@@ -868,11 +892,11 @@ player.configure({
 ```javascript
 player.configure({
   settings: {
-    playsInline: true,  // Prevent fullscreen on iOS
+    playsInline: true, // Prevent fullscreen on iOS
     beta: {
-      gestureControls: true  // Enable touch gestures
-    }
-  }
+      gestureControls: true, // Enable touch gestures
+    },
+  },
 });
 ```
 
@@ -881,6 +905,7 @@ player.configure({
 ## 🔮 Future Enhancements
 
 ### Short Term (v2.0)
+
 - [ ] Minified production build
 - [ ] Source maps for debugging
 - [ ] Automated test suite (Jest/Playwright)
@@ -888,6 +913,7 @@ player.configure({
 - [ ] Performance profiling and optimization
 
 ### Medium Term (v3.0)
+
 - [ ] HLS streaming support (via hls.js integration)
 - [ ] DASH streaming support (via dash.js integration)
 - [ ] Quality selector for adaptive streaming
@@ -895,6 +921,7 @@ player.configure({
 - [ ] Advanced analytics dashboard
 
 ### Long Term (v4.0)
+
 - [ ] 360° video support
 - [ ] VR mode with WebXR
 - [ ] Live streaming support
@@ -908,18 +935,21 @@ player.configure({
 ## 📚 Additional Resources
 
 ### Documentation
+
 - [HTML5 Video API](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement)
 - [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
 - [Picture-in-Picture API](https://developer.mozilla.org/en-US/docs/Web/API/Picture-in-Picture_API)
 - [Media Session API](https://developer.mozilla.org/en-US/docs/Web/API/Media_Session_API)
 
 ### Related Projects
+
 - [THE_MOVIE_GARDEN](https://tobi007-del.github.io/TMG.com/) - Main project
 - [Plyr](https://github.com/sampotts/plyr) - Simple HTML5 media player
 - [Video.js](https://github.com/videojs/video.js) - Open source HTML5 video player
 - [Shaka Player](https://github.com/shaka-project/shaka-player) - JavaScript player for adaptive media
 
 ### Community
+
 - [GitHub Discussions](https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE/discussions) - Ask questions, share ideas
 - [GitHub Issues](https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE/issues) - Report bugs, request features
 
@@ -928,6 +958,7 @@ player.configure({
 ## 📄 Changelog
 
 ### Version 2.0 (Current - Prototype 2)
+
 - ✅ Complete rewrite with class-based architecture
 - ✅ Playlist support with auto-next
 - ✅ Gesture controls (beta)
@@ -940,6 +971,7 @@ player.configure({
 - ✅ Performance monitoring
 
 ### Version 1.0 (Prototype 1)
+
 - ✅ Basic video controls
 - ✅ Timeline scrubbing
 - ✅ Volume control
@@ -953,15 +985,18 @@ player.configure({
 ## 🏆 Credits
 
 ### Developer
+
 - **Tobi007-del** - [GitHub](https://github.com/Tobi007-del)
 
 ### Inspiration
+
 - YouTube Player - UI/UX inspiration
 - VLC Player - Gesture controls inspiration
 - Shaka Player - Clean API design inspiration
 - Video.js - Plugin architecture inspiration
 
 ### Special Thanks
+
 - Open source contributors
 - Beta testers and early adopters
 - A couple of school friends
@@ -983,33 +1018,43 @@ player.configure({
 ## 💬 FAQ
 
 ### Q: Can I use this in production?
+
 **A:** Yes! The player is stable and feature-complete. However, test thoroughly in your environment first.
 
 ### Q: Does it work with React/Vue/Angular?
+
 **A:** Yes! It's vanilla JavaScript, so it works with any framework. Just attach the player to a video element.
 
 ### Q: Can I customize the UI?
+
 **A:** Absolutely! Override CSS variables or modify the CSS file directly.
 
 ### Q: Does it support streaming (HLS/DASH)?
+
 **A:** Not natively, but you can integrate hls.js or dash.js for streaming support.
 
 ### Q: Is it mobile-friendly?
+
 **A:** Yes! Includes touch gestures and responsive design.
 
 ### Q: Can I disable certain features?
+
 **A:** Yes! All features can be disabled via configuration.
 
 ### Q: Does it track users?
+
 **A:** No! Zero tracking, zero analytics, zero external requests.
 
 ### Q: What's the file size?
+
 **A:** ~150KB unminified, ~50KB minified (estimated).
 
 ### Q: Can I contribute?
+
 **A:** Yes! Pull requests are welcome. See [Contributing](#contributing) section.
 
 ### Q: Is there a React wrapper?
+
 **A:** Not yet, but it's on the roadmap. You can easily wrap it yourself.
 
 ---
