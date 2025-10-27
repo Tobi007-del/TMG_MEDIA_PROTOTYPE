@@ -7,7 +7,6 @@ vp.configure({
       settings: { time: { previews: true } },
       media: {
         title: "Zack Snyder's Justice League Trailer",
-        artist: "TMG MEDIA PROTOTYPE",
         artwork: [{ src: "https://tobi007-del.github.io/TMG.com/SPARE-PICS/zack-snyder-justice-league-b.jpg" }],
       },
       src: "https://tobi007-del.github.io/TMG.com/MOVIES/Justice League/Zack Snyder's Justice League - Official Trailer - Warner Bros. UK.mp4",
