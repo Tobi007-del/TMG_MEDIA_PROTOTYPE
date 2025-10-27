@@ -4,25 +4,41 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[Live Demo](https://tmg-media-prototype.vercel.app) | [Prototype 1](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-1/prototype-1.html) | [Prototype 2](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2.html)
+[Live Demo](https://tmg-video-player.vercel.app) | [Prototype 1](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-1/prototype-1.html) | [Prototype 2](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2.html)
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Browser Support](#browser-support)
-- [Development](#development)
-- [Contributing](#contributing)
+- [TMG Media Player - Custom Video Controls](#tmg-media-player---custom-video-controls)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Demo \& Screenshots](#demo--screenshots)
+  - [Features](#features)
+  - [Tech Stack](#tech-stack)
+  - [Getting Started](#getting-started)
+  - [Usage](#usage)
+  - [Configuration](#configuration)
+  - [Browser Support](#browser-support)
+  - [Contributing](#contributing)
+  - [Examples](#examples)
+  - [Customization](#customization)
+  - [Acknowledgments](#acknowledgments)
+  - [Stats](#stats)
+  - [Learning Resources](#learning-resources)
+  - [Comparison with Other Players](#comparison-with-other-players)
+  - [Tips \& Tricks](#tips--tricks)
+  - [Future Enhancements](#future-enhancements)
+  - [Additional Resources](#additional-resources)
+  - [Changelog](#changelog)
+  - [Credits](#credits)
+  - [Project Stats](#project-stats)
+  - [FAQ](#faq)
+  - [Star History](#star-history)
 
 ---
 
-## 🎯 Overview
+## Overview
 
 **TMG Media Player** is a sophisticated, zero-dependency video player built with vanilla JavaScript. It provides a modern, feature-rich playback experience with advanced controls, gesture support, playlist management, and extensive customization options.
 
@@ -38,7 +54,7 @@
 
 ---
 
-## 🎬 Demo & Screenshots
+## Demo & Screenshots
 
 ### Live Demos
 
@@ -81,7 +97,7 @@ Try the player in action:
 
 ---
 
-## ✨ Features
+## Features
 
 ### 🎮 Playback Controls
 
@@ -156,7 +172,7 @@ Try the player in action:
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Core Technologies
 
@@ -167,7 +183,7 @@ Try the player in action:
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -205,7 +221,7 @@ http://localhost:8000
 
 ### Quick Test
 
-Open any of these URLs to see the player in action or just grab the files you need and move to your project setup:
+Open any of these URLs to see the player in action or just grab the files you need and use in your project setup:
 
 - **Landing Page**: `http://localhost:8000/`
 - **Prototype 1**: `http://localhost:8000/prototype-1/prototype-1.html`
@@ -214,7 +230,7 @@ Open any of these URLs to see the player in action or just grab the files you ne
 
 ---
 
-## 💻 Usage
+## Usage
 
 ### Method 1: HTML Attributes (Simplest)
 
@@ -228,7 +244,7 @@ Open any of these URLs to see the player in action or just grab the files you ne
     <video tmgcontrols tmg--media--title="My Video Title" tmg--media--artist="Artist Name" tmg--settings--time--previews--address="previews/preview$.jpg" tmg--settings--time--previews--spf="10" muted src="video.mp4" poster="poster.jpg">
       <track kind="subtitles" srclang="en" src="subtitles.vtt" label="English" />
     </video>
-    <!-- tmgcontrols replaces default controls attribute -->
+    <!-- 'tmgcontrols' replaces default 'controls' attribute -->
   </body>
 </html>
 ```
@@ -322,7 +338,7 @@ player.detach();
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ### Configuration Priority (Highest to Lowest)
 
@@ -541,7 +557,7 @@ player.configure({
 
 ---
 
-## 🌐 Browser Support
+## Browser Support
 
 | Browser       | Version | Support Level      |
 | ------------- | ------- | ------------------ |
@@ -611,7 +627,7 @@ Or via HTML:
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Here's how you can help:
 
@@ -658,7 +674,7 @@ Found a bug? [Report it here](https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE
 
 ---
 
-## 📖 Examples
+## Examples
 
 ### Basic Video Player
 
@@ -783,7 +799,7 @@ video.addEventListener("pause", () => {
 
 ---
 
-## 🎨 Customization
+## Customization
 
 ### Custom Styling
 
@@ -793,20 +809,20 @@ Override CSS variables:
 :root {
   --T_M_G-video-brand-color: #ff6b6b;
   --T_M_G-video-brand-complement-color: #ff6b6b77;
-  --T_M_G-video-font-family: 'Roboto', sans-serif;
+  --T_M_G-video-font-family: "Roboto", sans-serif;
   // check the css file in the repository for more
 }
 ```
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Inspired by modern video players like Plyr, Video.js, and YouTube
 - Built for [THE_MOVIE_GARDEN](https://tobi007-del.github.io/TMG.com/) initiative
 - Demo video: Justice League (Warner Bros.)
 
-## 📈 Stats
+## Stats
 
 - **Lines of Code**: ~4,200 (prototype-2.js)
 - **File Size**: ~150KB (unminified)
@@ -817,7 +833,7 @@ Override CSS variables:
 
 ---
 
-## 🎓 Learning Resources
+## Learning Resources
 
 ### Understanding the Codebase
 
@@ -828,7 +844,7 @@ Override CSS variables:
 
 ---
 
-## 🔍 Comparison with Other Players
+## Comparison with Other Players
 
 | Feature            | TMG Player | Plyr     | Video.js   | Shaka  |
 | ------------------ | ---------- | -------- | ---------- | ------ |
@@ -844,7 +860,7 @@ Override CSS variables:
 
 ---
 
-## 💡 Tips & Tricks
+## Tips & Tricks
 
 ### Disable Specific Features
 
@@ -902,7 +918,7 @@ player.configure({
 
 ---
 
-## 🔮 Future Enhancements
+## Future Enhancements
 
 ### Short Term (v2.0)
 
@@ -932,7 +948,7 @@ player.configure({
 
 ---
 
-## 📚 Additional Resources
+## Additional Resources
 
 ### Documentation
 
@@ -943,7 +959,8 @@ player.configure({
 
 ### Related Projects
 
-- [THE_MOVIE_GARDEN](https://tobi007-del.github.io/TMG.com/) - Main project
+- [THE_MOVIE_GARDEN](https://tobi007-del.github.io/TMG.com/) - Initiative project
+- [TMG_VIDEO_PLAYER](https://tmg-video-player.vercel.app) - Offline web video player
 - [Plyr](https://github.com/sampotts/plyr) - Simple HTML5 media player
 - [Video.js](https://github.com/videojs/video.js) - Open source HTML5 video player
 - [Shaka Player](https://github.com/shaka-project/shaka-player) - JavaScript player for adaptive media
@@ -955,7 +972,7 @@ player.configure({
 
 ---
 
-## 📄 Changelog
+## Changelog
 
 ### Version 2.0 (Current - Prototype 2)
 
@@ -982,7 +999,7 @@ player.configure({
 
 ---
 
-## 🏆 Credits
+## Credits
 
 ### Developer
 
@@ -1003,7 +1020,7 @@ player.configure({
 
 ---
 
-## 📊 Project Stats
+## Project Stats
 
 ![GitHub stars](https://img.shields.io/github/stars/Tobi007-del/TMG_MEDIA_PROTOTYPE?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/Tobi007-del/TMG_MEDIA_PROTOTYPE?style=social)
@@ -1015,7 +1032,7 @@ player.configure({
 
 ---
 
-## 💬 FAQ
+## FAQ
 
 ### Q: Can I use this in production?
 
@@ -1059,7 +1076,7 @@ player.configure({
 
 ---
 
-## 🌟 Star History
+## Star History
 
 If you find this project useful, please consider giving it a star! ⭐
 
@@ -1069,4 +1086,4 @@ If you find this project useful, please consider giving it a star! ⭐
 
 **Made with ❤️ for THE_MOVIE_GARDEN initiative**
 
-**[⬆ Back to Top](#tmg-media-player---custom-video-controls-prototype)**
+**[⬆ Back to Top](#tmg-media-player---custom-video-controls)**
