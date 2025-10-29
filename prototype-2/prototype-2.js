@@ -3524,7 +3524,7 @@ class T_M_G {
       },
       modes: { fullScreen: true, theater: true, pictureInPicture: true, miniPlayer: true },
       notifiers: true,
-      overlay: { delay: 3000, behavior: "persistent" },
+      overlay: { delay: 3000, behavior: "strict" },
       persist: true,
       playbackRate: { min: 0.25, max: 8, value: null, skip: 0.25, fast: 2 },
       playsInline: true,
