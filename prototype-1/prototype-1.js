@@ -293,7 +293,7 @@ videos.forEach((video, i) => {
               fire("volumedown");
           }
         }
-      }),
+      })
     );
 
     //Disabling right click
@@ -331,7 +331,7 @@ videos.forEach((video, i) => {
           toggleScrubbing(e);
           timelineContainer.removeEventListener("pointermove", handleTimelineUpdate);
         },
-        { once: true },
+        { once: true }
       );
     });
 
