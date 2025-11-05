@@ -1,7 +1,7 @@
 const modes = ["fullScreen", "theater", "pictureInPicture", "miniPlayer"] as const;
 const betaFeatures = ["rewind", "gestureControls", "floatingPlayer"] as const;
 const controlPanel = ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "playbackrate", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
-const keyShortcutActions = ["prev", "next", "playPause", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "timeMode", "timeFormat", "screenshot", "objectFit", "pictureInPicture", "theater", "fullScreen", "captions", "captionsFontSizeUp", "captionsFontSizeDown", "captionsFontFamily", "captionsFontWeight", "captionsFontVariant", "captionsFontOpacity", "captionsBackgroundOpacity", "captionsWindowOpacity", "captionsCharacterEdgeStyle", "settings"] as const;
+const keyShortcutActions = ["prev", "next", "playPause", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "timeMode", "timeFormat", "capture", "objectFit", "pictureInPicture", "theater", "fullScreen", "captions", "captionsFontSizeUp", "captionsFontSizeDown", "captionsFontFamily", "captionsFontWeight", "captionsFontVariant", "captionsFontOpacity", "captionsBackgroundOpacity", "captionsWindowOpacity", "captionsCharacterEdgeStyle", "settings"] as const;
 const errorCodes = [
   1, // MEDIA_ERR_ABORTED
   2, // MEDIA_ERR_NETWORK
@@ -16,6 +16,8 @@ type BetaFeature = (typeof betaFeatures)[number];
 type KeyShortcut = (typeof keyShortcutActions)[number];
 type ErrorCode = (typeof errorCodes)[number];
 
+interface ToastsOptions {}
+
 interface PreviewsInfo {
   address: string; // folder/image$.jpg
   spf: number; // 10
@@ -28,6 +30,15 @@ interface Range {
   skip: number;
 }
 
+interface Track {
+  kind: string;
+  label: string;
+  srclang: string;
+  src: string;
+  default: boolean;
+  id: string;
+}
+
 interface CaptionOption<T> {
   value: T;
   display: string;
@@ -36,15 +47,6 @@ interface CaptionOption<T> {
 interface CaptionSetting<T> {
   value: T;
   options: CaptionOption<T>[];
-}
-
-interface Track {
-  kind: string;
-  label: string;
-  srclang: string;
-  src: string;
-  default: boolean;
-  id: string;
 }
 
 interface Captions {
@@ -99,6 +101,7 @@ interface Settings {
     linePosition: "top" | "bottom";
     progressBar: boolean | null;
     previews: PreviewsInfo | boolean;
+    toasts: ToastsOptions | boolean;
     mode: "remaining" | "elapsed";
     format: "digital" | "human";
     loop: boolean;
