@@ -1,5 +1,5 @@
+// Everything in this file is used for type checking and building the video player prototype, all properties are optional
 const modes = ["fullScreen", "theater", "pictureInPicture", "miniPlayer"] as const;
-const betaFeatures = ["rewind", "gestureControls", "floatingPlayer"] as const;
 const controlPanel = ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "playbackrate", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
 const keyShortcutActions = ["prev", "next", "playPause", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "timeMode", "timeFormat", "capture", "objectFit", "pictureInPicture", "theater", "fullScreen", "captions", "captionsFontSizeUp", "captionsFontSizeDown", "captionsFontFamily", "captionsFontWeight", "captionsFontVariant", "captionsFontOpacity", "captionsBackgroundOpacity", "captionsWindowOpacity", "captionsCharacterEdgeStyle", "settings"] as const;
 const errorCodes = [
@@ -12,8 +12,7 @@ const errorCodes = [
 
 type Mode = (typeof modes)[number];
 type Control = (typeof controlPanel)[number];
-type BetaFeature = (typeof betaFeatures)[number];
-type KeyShortcut = (typeof keyShortcutActions)[number];
+type KeyShortcutAction = (typeof keyShortcutActions)[number];
 type ErrorCode = (typeof errorCodes)[number];
 
 interface ToastsOptions {}
@@ -72,23 +71,44 @@ interface Captions {
 interface Settings {
   allowOverride: Exclude<keyof Settings, "allowOverride">[] | boolean;
   auto: {
-    play: boolean | null;
+    play: boolean;
     next: boolean;
     captions: boolean;
   };
-  beta: Record<BetaFeature, boolean>;
+  beta: {
+    rewind: boolean;
+    gesture: {
+      touch: { volumeDisabled: boolean; brightnessDisabled: boolean; timelineDisabled: boolean; threshold: number; axesRatio: number; inset: number; sliderTimeout: number; xRatio: number; yRatio: number };
+      wheel: { volumeDisabled: boolean; brightnessDisabled: boolean; timelineDisabled: boolean; timeout: number; xRatio: number; yRatio: number };
+    };
+    floatingPlayer: {
+      width: number;
+      height: number;
+      disallowReturnToOpener: boolean;
+      preferInitialWindowPlacement: boolean;
+    };
+  };
+  css: Record<string, string>;
   brightness: Range;
   captions: Captions;
   controlPanel: Record<"top" | "bottom", Control[] | boolean>;
   errorMessages: Record<ErrorCode, string>;
+  fastPlay: { disabled: boolean; playbackRate: number; pointer: { threshold: number; inset: number } };
   keys: {
     disabled: boolean;
     strictMatches: boolean;
     overrides: string[];
     blocks: string[];
-    shortcuts: Record<KeyShortcut, string>;
+    shortcuts: Record<KeyShortcutAction, string>;
   };
-  modes: Record<Mode, boolean>;
+  modes: {
+    fullScreen: boolean;
+    theater: boolean;
+    pictureInPicture: boolean;
+    miniPlayer: {
+      minWindowWidth: number;
+    };
+  };
   notifiers: boolean;
   overlay: {
     delay: number;
@@ -99,15 +119,15 @@ interface Settings {
   playsInline: boolean;
   time: Pick<Range, "skip"> & {
     linePosition: "top" | "bottom";
-    progressBar: boolean | null;
+    progressBar: boolean;
     previews: PreviewsInfo | boolean;
-    toasts: ToastsOptions | boolean;
     mode: "remaining" | "elapsed";
     format: "digital" | "human";
     loop: boolean;
-    start: number | null;
-    end: number | null;
+    start: number;
+    end: number;
   };
+  toasts: ToastsOptions | boolean;
   volume: Range & { muted: boolean };
 }
 
