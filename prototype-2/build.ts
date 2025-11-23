@@ -49,6 +49,7 @@ interface CaptionSetting<T> {
 }
 
 interface Captions {
+  disabled: boolean;
   font: {
     family: CaptionSetting<string>;
     size: Range & { options: CaptionOption<number>[] };
@@ -73,15 +74,45 @@ interface Settings {
   auto: {
     play: boolean;
     next: boolean;
-    captions: boolean;
   };
   beta: {
+    disabled: boolean;
     rewind: boolean;
     gesture: {
-      touch: { volumeDisabled: boolean; brightnessDisabled: boolean; timelineDisabled: boolean; threshold: number; axesRatio: number; inset: number; sliderTimeout: number; xRatio: number; yRatio: number };
-      wheel: { volumeDisabled: boolean; brightnessDisabled: boolean; timelineDisabled: boolean; timeout: number; xRatio: number; yRatio: number };
+      disabled: boolean;
+      touch: {
+        disabled: boolean;
+        volume: boolean;
+        brightness: boolean;
+        timeline: boolean;
+        threshold: number;
+        axesRatio: number;
+        inset: number;
+        sliderTimeout: number;
+        xRatio: number;
+        yRatio: number;
+      };
+      wheel: {
+        disabled: boolean;
+        volume: {
+          normal: boolean;
+          slider: boolean;
+        };
+        brightness: {
+          normal: boolean;
+          slider: boolean;
+        };
+        timeline: {
+          normal: boolean;
+          slider: boolean;
+        };
+        timeout: number;
+        xRatio: number;
+        yRatio: number;
+      };
     };
     floatingPlayer: {
+      disabled: boolean;
       width: number;
       height: number;
       disallowReturnToOpener: boolean;
@@ -93,7 +124,16 @@ interface Settings {
   captions: Captions;
   controlPanel: Record<"top" | "bottom", Control[] | boolean>;
   errorMessages: Record<ErrorCode, string>;
-  fastPlay: { disabled: boolean; playbackRate: number; pointer: { threshold: number; inset: number } };
+  fastPlay: {
+    disabled: boolean;
+    playbackRate: number;
+    key: true,
+    pointer: {
+      type: string;
+      threshold: number;
+      inset: number;
+    };
+  };
   keys: {
     disabled: boolean;
     strictMatches: boolean;
@@ -105,14 +145,12 @@ interface Settings {
     fullScreen: boolean;
     theater: boolean;
     pictureInPicture: boolean;
-    miniPlayer: {
-      minWindowWidth: number;
-    };
+    miniPlayer: { disabled: boolean; minWindowWidth: number };
   };
   notifiers: boolean;
   overlay: {
     delay: number;
-    behavior: "persistent" | "auto" | "strict";
+    behavior: "persistent" | "auto" | "strict" | "hidden";
   };
   persist: boolean;
   playbackRate: Range;
@@ -127,7 +165,7 @@ interface Settings {
     start: number;
     end: number;
   };
-  toasts: ToastsOptions | boolean;
+  toasts: { disabled: boolean } & ToastsOptions;
   volume: Range & { muted: boolean };
 }
 
