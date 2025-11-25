@@ -127,7 +127,7 @@ interface Settings {
   fastPlay: {
     disabled: boolean;
     playbackRate: number;
-    key: true,
+    key: true;
     pointer: {
       type: string;
       threshold: number;
@@ -156,11 +156,15 @@ interface Settings {
   playbackRate: Range;
   playsInline: boolean;
   time: Pick<Range, "skip"> & {
-    linePosition: "top" | "bottom";
+    line: {
+      position: "top" | "bottom";
+      seekCancel: { delta: number; timeout: number };
+    };
     progressBar: boolean;
     previews: PreviewsInfo | boolean;
     mode: "remaining" | "elapsed";
     format: "digital" | "human";
+    seekSync: boolean;
     loop: boolean;
     start: number;
     end: number;
