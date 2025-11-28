@@ -127,12 +127,13 @@ interface Settings {
   fastPlay: {
     disabled: boolean;
     playbackRate: number;
-    key: true;
+    key: boolean;
     pointer: {
       type: string;
       threshold: number;
       inset: number;
     };
+    reset: boolean;
   };
   keys: {
     disabled: boolean;
