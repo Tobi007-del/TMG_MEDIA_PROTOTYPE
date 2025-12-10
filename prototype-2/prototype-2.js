@@ -842,7 +842,7 @@ class T_M_G_Video_Controller {
     css.forEach(([k, v]) => (this.settings.css[k] = v)); // burning css props into the doc
     this.videoContainer.setAttribute("data-object-fit", this.settings.css.objectFit || "contain");
     this.syncAspectRatio();
-    this.syncMediaBrandColor();
+    // this.syncMediaBrandColor();
   }
   buildPlayerInterface() {
     this.videoContainer.insertAdjacentHTML(
@@ -1667,7 +1667,7 @@ class T_M_G_Video_Controller {
     this.pseudoVideo.crossOrigin = this.video.crossOrigin;
     this.stats = { fps: 30 };
     this.syncAspectRatio();
-    this.syncMediaBrandColor();
+    // this.syncMediaBrandColor();
     this.setCaptionsState();
     if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = this.toTimeText(this.video.duration);
     this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = this.currentTime < 1 ? (this.settings.css.currentBufferedPosition = 0) : tmg.parseNumber(this.video.currentTime / this.video.duration);
