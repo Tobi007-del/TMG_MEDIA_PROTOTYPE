@@ -842,7 +842,7 @@ class T_M_G_Video_Controller {
     css.forEach(([k, v]) => (this.settings.css[k] = v)); // burning css props into the doc
     this.videoContainer.setAttribute("data-object-fit", this.settings.css.objectFit || "contain");
     this.syncAspectRatio();
-    // this.syncMediaBrandColor();
+    this.syncMediaBrandColor();
   }
   buildPlayerInterface() {
     this.videoContainer.insertAdjacentHTML(
@@ -1667,7 +1667,7 @@ class T_M_G_Video_Controller {
     this.pseudoVideo.crossOrigin = this.video.crossOrigin;
     this.stats = { fps: 30 };
     this.syncAspectRatio();
-    // this.syncMediaBrandColor();
+    this.syncMediaBrandColor();
     this.setCaptionsState();
     if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = this.toTimeText(this.video.duration);
     this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = this.currentTime < 1 ? (this.settings.css.currentBufferedPosition = 0) : tmg.parseNumber(this.video.currentTime / this.video.duration);
@@ -1960,7 +1960,7 @@ class T_M_G_Video_Controller {
     this.setControlsState("playbackrate");
   }
   fastPlay(pos) {
-    if (this.settings.fastPlay.disabled || this.speedCheck) return;
+    if (this.speedCheck) return;
     this.speedCheck = true;
     this.wasPaused = this.video.paused;
     this.lastPlaybackRate = this.playbackRate;
@@ -2636,7 +2636,7 @@ class T_M_G_Video_Controller {
   _handleFocusIn = ({ target: t }) => (this.focusSubjectId = t?.dataset?.controlId && !t.matches(":focus-visible") ? t.dataset.controlId : null);
   _handleKeyFocusIn = ({ target: t }) => t?.dataset?.controlId === this.focusSubjectId && t.blur();
   _handleGestureWheel(e) {
-    if (!this.settings.beta.disabled && !this.settings.beta.gesture.wheel.disabled && !this.locked && !this.disabled && (this.overVolume || this.overBrightness || this.overTimeline || (e.target === this.DOM.controlsContainer && !this.gestureTouchXCheck && !this.gestureTouchYCheck && !this.speedCheck && (this.isUIActive("fullScreen") || this.inFloatingPlayer)))) {
+    if (!this.settings.beta.disabled && !this.locked && !this.disabled && (this.overVolume || this.overBrightness || this.overTimeline || (e.target === this.DOM.controlsContainer && !this.gestureTouchXCheck && !this.gestureTouchYCheck && !this.speedCheck && (this.isUIActive("fullScreen") || this.inFloatingPlayer)))) {
       e.preventDefault();
       this.gestureWheelTimeoutId ? clearTimeout(this.gestureWheelTimeoutId) : this._handleGestureWheelInit(e);
       this.gestureWheelTimeoutId = setTimeout(this._handleGestureWheelStop, this.settings.beta.gesture.wheel.timeout);
@@ -2721,7 +2721,7 @@ class T_M_G_Video_Controller {
   }
   setGestureTouchCancel = () => (this.gestureTouchCanCancel = true);
   _handleGestureTouchStart(e) {
-    if (this.settings.beta.disabled || this.settings.beta.gesture.touch.disabled || e.touches?.length > 1 || e.target !== this.DOM.controlsContainer || this.isUIActive("miniPlayer") || this.speedCheck) return;
+    if (this.settings.beta.disabled || e.touches?.length > 1 || e.target !== this.DOM.controlsContainer || this.isUIActive("miniPlayer") || this.speedCheck) return;
     this._handleGestureTouchEnd();
     this.lastGestureTouchX = e.clientX ?? e.targetTouches[0].clientX;
     this.lastGestureTouchY = e.clientY ?? e.targetTouches[0].clientY;
@@ -2823,7 +2823,7 @@ class T_M_G_Video_Controller {
     this.videoContainer.removeEventListener("touchcancel", this._handleGestureTouchEnd);
   }
   _handleSpeedPointerDown(e) {
-    if (this.settings.fastPlay.disabled || !this.settings.fastPlay.pointer.type.match(new RegExp(`all|${e.pointerType}`)) || e.target !== this.DOM.controlsContainer || this.isUIActive("miniPlayer")) return;
+    if (!this.settings.fastPlay.pointer.type.match(new RegExp(`all|${e.pointerType}`)) || e.target !== this.DOM.controlsContainer || this.isUIActive("miniPlayer") || this.speedCheck) return;
     this.videoContainer.addEventListener("touchmove", this._handleSpeedPointerUp); // tm: if user moves finger before speedup is called like during scrolling
     this.videoContainer.addEventListener("mouseup", this._handleSpeedPointerUp);
     this.videoContainer.addEventListener("mouseleave", this._handleSpeedPointerOut);
@@ -3910,8 +3910,8 @@ if (typeof window !== "undefined") {
         disabled: false,
         rewind: true,
         gesture: {
-          touch: { disabled: false, volume: true, brightness: true, timeline: true, threshold: 200, axesRatio: 3, inset: 20, sliderTimeout: 1000, xRatio: 1, yRatio: 1 },
-          wheel: { disabled: false, volume: { normal: true, slider: true }, brightness: { normal: true, slider: true }, timeline: { normal: true, slider: true }, timeout: 2000, xRatio: 12, yRatio: 6 },
+          touch: { volume: true, brightness: true, timeline: true, threshold: 200, axesRatio: 3, inset: 20, sliderTimeout: 1000, xRatio: 1, yRatio: 1 },
+          wheel: { volume: { normal: true, slider: true }, brightness: { normal: true, slider: true }, timeline: { normal: true, slider: true }, timeout: 2000, xRatio: 12, yRatio: 6 },
         },
         floatingPlayer: { disabled: false, width: 270, height: 145, disallowReturnToOpener: false, preferInitialWindowPlacement: false },
       },
@@ -4065,7 +4065,7 @@ if (typeof window !== "undefined") {
         bottom: ["prev", "playpause", "next", "brightness", "volume", "timeandduration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"],
       },
       errorMessages: { 1: "The video playback was aborted :(", 2: "The video failed due to a network error :(", 3: "The video could not be decoded :(", 4: "The video source is not supported :(" },
-      fastPlay: { disabled: false, playbackRate: 2, key: true, pointer: { type: "all", threshold: 800, inset: 20 }, reset: true },
+      fastPlay: { playbackRate: 2, key: true, pointer: { type: "all", threshold: 800, inset: 20 }, reset: true },
       keys: {
         disabled: false,
         strictMatches: false,

@@ -79,9 +79,7 @@ interface Settings {
     disabled: boolean;
     rewind: boolean;
     gesture: {
-      disabled: boolean;
       touch: {
-        disabled: boolean;
         volume: boolean;
         brightness: boolean;
         timeline: boolean;
@@ -93,7 +91,6 @@ interface Settings {
         yRatio: number;
       };
       wheel: {
-        disabled: boolean;
         volume: {
           normal: boolean;
           slider: boolean;
@@ -125,7 +122,6 @@ interface Settings {
   controlPanel: Record<"top" | "bottom", Control[] | boolean>;
   errorMessages: Record<ErrorCode, string>;
   fastPlay: {
-    disabled: boolean;
     playbackRate: number;
     key: boolean;
     pointer: {
@@ -159,7 +155,11 @@ interface Settings {
   time: Pick<Range, "skip"> & {
     line: {
       position: "top" | "bottom";
-      seekCancel: { delta: number; timeout: number };
+      seek: { 
+        relative: boolean; 
+        cancel: { delta: number; timeout: number } 
+      };
+      thumbIndicator: boolean;
     };
     progressBar: boolean;
     previews: PreviewsInfo | boolean;
