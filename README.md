@@ -342,10 +342,10 @@ player.detach();
 
 ### Configuration Priority (Highest to Lowest)
 
-1. Runtime API (`player.configure()`)
-2. User Settings (localStorage)
-3. HTML Attributes (`tmg--*`)
-4. JSON File (via `tmg` attribute)
+1. HTML Attributes (`tmg--*`)
+2. JSON File (via `tmg` attribute)
+3. Runtime API (`player.configure()`)
+4. User Settings (localStorage)
 5. Default Build
 
 ### HTML Attribute Syntax
