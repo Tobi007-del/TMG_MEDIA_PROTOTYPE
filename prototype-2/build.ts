@@ -154,10 +154,10 @@ interface Settings {
   playsInline: boolean;
   time: Pick<Range, "skip"> & {
     line: {
-      position: "top" | "bottom";
-      seek: { 
-        relative: boolean; 
-        cancel: { delta: number; timeout: number } 
+      shown: boolean;
+      seek: {
+        relative: boolean;
+        cancel: { delta: number; timeout: number };
       };
       thumbIndicator: boolean;
     };
