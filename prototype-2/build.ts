@@ -119,7 +119,12 @@ interface Settings {
   css: Record<string, string>;
   brightness: Range;
   captions: Captions;
-  controlPanel: Record<"top" | "bottom", Control[] | boolean>;
+  controlPanel: {
+    title: string | boolean;
+    artist: string | boolean;
+    top: Control[] | boolean;
+    bottom: [Control[], Control[]] | boolean;
+  };
   errorMessages: Record<ErrorCode, string>;
   fastPlay: {
     playbackRate: number;
