@@ -1,7 +1,7 @@
 // Everything in this file is used for type checking and building the video player prototype, all properties are optional
 const modes = ["fullScreen", "theater", "pictureInPicture", "miniPlayer"] as const;
 const controlPanel = ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "playbackrate", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
-const keyShortcutActions = ["prev", "next", "playPause", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "timeMode", "timeFormat", "capture", "objectFit", "pictureInPicture", "theater", "fullScreen", "captions", "captionsFontSizeUp", "captionsFontSizeDown", "captionsFontFamily", "captionsFontWeight", "captionsFontVariant", "captionsFontOpacity", "captionsBackgroundOpacity", "captionsWindowOpacity", "captionsCharacterEdgeStyle", "settings"] as const;
+const keyShortcutActions = ["prev", "next", "playPause", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "timeMode", "timeFormat", "capture", "objectFit", "pictureInPicture", "theater", "fullScreen", "captions", "captionsFontSizeUp", "captionsFontSizeDown", "captionsFontFamily", "captionsFontWeight", "captionsFontVariant", "captionsFontOpacity", "captionsBackgroundOpacity", "captionsWindowOpacity", "captionsCharacterEdgeStyle", "captionsTextAlignment", "settings"] as const;
 const errorCodes = [
   1, // MEDIA_ERR_ABORTED
   2, // MEDIA_ERR_NETWORK
@@ -67,12 +67,14 @@ interface Captions {
     opacity: CaptionSetting<number>;
   };
   characterEdgeStyle: CaptionSetting<"none" | "raised" | "depressed" | "outline" | "drop-shadow">;
+  textAlignment: CaptionSetting<"left" | "center" | "right">;
 }
 
 interface Settings {
   allowOverride: Exclude<keyof Settings, "allowOverride">[] | boolean;
   auto: {
-    play: boolean;
+    play: boolean | "in-view" | "out-view" | "in-view-always" | "out-view-always";
+    pause: boolean | "in-view" | "out-view" | "in-view-always" | "out-view-always";
     next: boolean;
   };
   beta: {
@@ -141,7 +143,7 @@ interface Settings {
     strictMatches: boolean;
     overrides: string[];
     blocks: string[];
-    shortcuts: Record<KeyShortcutAction, string>;
+    shortcuts: Record<KeyShortcutAction, string | string[]>;
   };
   modes: {
     fullScreen: boolean;
