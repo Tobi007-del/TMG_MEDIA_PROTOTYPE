@@ -177,7 +177,11 @@ interface Settings {
     start: number;
     end: number;
   };
-  toasts: { disabled: boolean } & ToastsOptions;
+  toasts: {
+    disabled: boolean;
+    nextVideoPreview: number;
+    captureAutoClose: number;
+  } & ToastsOptions;
   volume: Range & { muted: boolean };
 }
 
