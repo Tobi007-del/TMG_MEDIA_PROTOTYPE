@@ -2,6 +2,7 @@
 const modes = ["fullScreen", "theater", "pictureInPicture", "miniPlayer"] as const;
 const controlPanel = ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "playbackrate", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
 const keyShortcutActions = ["prev", "next", "playPause", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "timeMode", "timeFormat", "capture", "objectFit", "pictureInPicture", "theater", "fullScreen", "captions", "captionsFontSizeUp", "captionsFontSizeDown", "captionsFontFamily", "captionsFontWeight", "captionsFontVariant", "captionsFontOpacity", "captionsBackgroundOpacity", "captionsWindowOpacity", "captionsCharacterEdgeStyle", "captionsTextAlignment", "settings"] as const;
+const moddedKeyShorcutActions = ["skip", "volume", "brightness", "playbackRate", "captionsFontSize"] as const;
 const errorCodes = [
   1, // MEDIA_ERR_ABORTED
   2, // MEDIA_ERR_NETWORK
@@ -13,6 +14,7 @@ const errorCodes = [
 type Mode = (typeof modes)[number];
 type Control = (typeof controlPanel)[number];
 type KeyShortcutAction = (typeof keyShortcutActions)[number];
+type ModdedKeyShortcutAction = (typeof moddedKeyShorcutActions)[number];
 type ErrorCode = (typeof errorCodes)[number];
 
 interface ToastsOptions {}
@@ -71,7 +73,7 @@ interface Captions {
 }
 
 interface Settings {
-  allowOverride: Exclude<keyof Settings, "allowOverride">[] | boolean;
+  noOverride: keyof Settings | boolean;
   auto: {
     play: boolean | "in-view" | "out-view" | "in-view-always" | "out-view-always";
     pause: boolean | "in-view" | "out-view" | "in-view-always" | "out-view-always";
@@ -124,6 +126,7 @@ interface Settings {
   controlPanel: {
     title: string | boolean;
     artist: string | boolean;
+    profile: string | boolean;
     top: Control[] | boolean;
     bottom: [Control[], Control[]] | boolean;
   };
@@ -144,6 +147,7 @@ interface Settings {
     overrides: string[];
     blocks: string[];
     shortcuts: Record<KeyShortcutAction, string | string[]>;
+    mods: { disabled: boolean } & Record<ModdedKeyShortcutAction, Record<"ctrl" | "alt" | "shift", number>>;
   };
   modes: {
     fullScreen: boolean;
@@ -196,7 +200,7 @@ type VideoBuild = {
   disabled: boolean;
   initialMode: Mode;
   initialState: boolean;
-  media: MediaMetadata;
+  media: MediaMetadata & { profile: string; links: Record<"title" | "artist" | "profile", string> };
   mediaPlayer: "TMG";
   mediaType: "video";
   playlist: PlaylistItem[];
