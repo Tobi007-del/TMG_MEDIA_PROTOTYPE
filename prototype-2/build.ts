@@ -150,7 +150,7 @@ interface Settings {
     mods: { disabled: boolean } & Record<ModdedKeyShortcutAction, Record<"ctrl" | "alt" | "shift", number>>;
   };
   modes: {
-    fullScreen: boolean;
+    fullScreen: { disabled: boolean; orientationLock: boolean | "auto" | "landscape" | "portrait" | "portrait-primary" | "portrait-secondary" | "landscape-primary" | "landscape-secondary" };
     theater: boolean;
     pictureInPicture: boolean;
     miniPlayer: { disabled: boolean; minWindowWidth: number };
