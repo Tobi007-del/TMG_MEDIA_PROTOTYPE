@@ -1,6 +1,8 @@
 // Everything in this file is used for type checking and building the video player prototype, all properties are optional
 const modes = ["fullScreen", "theater", "pictureInPicture", "miniPlayer"] as const;
-const controlPanel = ["prev", "playpause", "next", "brightness", "volume", "duration", "spacer", "playbackrate", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
+const controls = ["capture", "fullscreenorientation", "fullscreenlock", "prev", "playpause", "next", "brightness", "volume", "timeandduration", "spacer", "playbackrate", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
+const bigControls = ["bigprev", "bigplaypause", "bignext"] as const;
+const allControls = [...controls, ...bigControls, "expandminiplayer", "removeminiplayer", "timeline"] as const;
 const keyShortcutActions = ["prev", "next", "playPause", "skipBwd", "skipFwd", "stepFwd", "stepBwd", "mute", "dark", "volumeUp", "volumeDown", "brightnessUp", "brightnessDown", "playbackRateUp", "playbackRateDown", "timeMode", "timeFormat", "capture", "objectFit", "pictureInPicture", "theater", "fullScreen", "captions", "captionsFontSizeUp", "captionsFontSizeDown", "captionsFontFamily", "captionsFontWeight", "captionsFontVariant", "captionsFontOpacity", "captionsBackgroundOpacity", "captionsWindowOpacity", "captionsCharacterEdgeStyle", "captionsTextAlignment", "settings"] as const;
 const moddedKeyShorcutActions = ["skip", "volume", "brightness", "playbackRate", "captionsFontSize"] as const;
 const errorCodes = [
@@ -12,7 +14,9 @@ const errorCodes = [
 ] as const;
 
 type Mode = (typeof modes)[number];
-type Control = (typeof controlPanel)[number];
+type Control = (typeof controls)[number];
+type BigControl = (typeof bigControls)[number];
+type AnyControl = (typeof allControls)[number];
 type KeyShortcutAction = (typeof keyShortcutActions)[number];
 type ModdedKeyShortcutAction = (typeof moddedKeyShorcutActions)[number];
 type ErrorCode = (typeof errorCodes)[number];
@@ -22,6 +26,12 @@ interface ToastsOptions {}
 interface PreviewsInfo {
   address: string; // folder/image$.jpg
   spf: number; // 10
+}
+
+interface PosterPreview {
+  usePoster: boolean;
+  time: number;
+  tease?: boolean;
 }
 
 interface Range {
@@ -124,11 +134,21 @@ interface Settings {
   brightness: Range;
   captions: Captions;
   controlPanel: {
+    profile: string | boolean;
     title: string | boolean;
     artist: string | boolean;
-    profile: string | boolean;
     top: Control[] | boolean;
+    timeline:
+      | {
+          thumbIndicator: boolean;
+          seek: {
+            relative: boolean;
+            cancel: { delta: number; timeout: number };
+          };
+        }
+      | boolean;
     bottom: [Control[], Control[]] | boolean;
+    progressBar: boolean;
   };
   errorMessages: Record<ErrorCode, string>;
   fastPlay: {
@@ -164,15 +184,6 @@ interface Settings {
   playbackRate: Range;
   playsInline: boolean;
   time: Pick<Range, "skip"> & {
-    line: {
-      shown: boolean;
-      seek: {
-        relative: boolean;
-        cancel: { delta: number; timeout: number };
-      };
-      thumbIndicator: boolean;
-    };
-    progressBar: boolean;
     previews: PreviewsInfo | boolean;
     mode: "remaining" | "elapsed";
     format: "digital" | "human";
@@ -183,7 +194,7 @@ interface Settings {
   };
   toasts: {
     disabled: boolean;
-    nextVideoPreview: number;
+    nextVideoPreview: PosterPreview;
     captureAutoClose: number;
   } & ToastsOptions;
   volume: Range & { muted: boolean };
@@ -199,7 +210,11 @@ type VideoBuild = {
   debug: boolean;
   disabled: boolean;
   initialMode: Mode;
-  initialState: boolean;
+  lightState: {
+    disabled: boolean;
+    controls: (Control | BigControl)[] | boolean;
+    preview: PosterPreview;
+  };
   media: MediaMetadata & { profile: string; links: Record<"title" | "artist" | "profile", string> };
   mediaPlayer: "TMG";
   mediaType: "video";
