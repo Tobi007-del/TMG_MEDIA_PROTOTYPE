@@ -289,13 +289,20 @@ const player = new tmg.Player();
 // Configure
 player.configure({
   debug: true,
-  initialState: false, // Start paused with beating play button
+  lightState: false, // Start paused with beating play button
   settings: {
     volume: { max: 200, value: 80 },
     brightness: { max: 150, value: 100 },
     beta: {
-      gestureControls: true,
-      floatingPlayer: true,
+      gesture: {
+        wheel: { 
+          volume: { normal: false, slider: true }, 
+          brightness: { normal: false, slider: true }, timeline: { normal: false, slider: true } 
+        }
+      },
+      floatingPlayer: { 
+        disabled: false
+      },
     },
     time: {
       previews: {
@@ -432,9 +439,25 @@ keys: {
 
 ```javascript
 beta: {
-  rewind: true,              // Enable rewind functionality
-  gestureControls: true,     // Touch/wheel gestures
-  floatingPlayer: true       // Document PiP floating player
+  disabled: false,
+  rewind: true, // Enable rewind functionality
+  gesture: { 
+    touch: { 
+      volume: true, 
+      brightness: true, 
+      timeline: true 
+    },
+    wheel: { 
+      volume: { normal: true, slider: true }, 
+      brightness: { normal: true, slider: true }, timeline: { normal: true, slider: true } 
+    }
+  }, // Touch/wheel gestures
+  floatingPlayer: { 
+    disabled: false, 
+    width: 270, 
+    height: 145, 
+    disallowReturnToOpener: false, preferInitialWindowPlacement: false 
+  }, // Document PiP floating player
 }
 ```
 
@@ -443,12 +466,13 @@ beta: {
 ```javascript
 controlPanel: {
   bottom: [
-    "prev", "playpause", "next",
+    [],
+    ["prev", "playpause", "next",
     "brightness", "volume", "duration",
     "spacer",
     "playbackrate", "captions", "settings",
     "objectfit", "pictureinpicture",
-    "theater", "fullscreen"
+    "theater", "fullscreen"]
   ],
   top: false  // Disable top controls
 }
@@ -527,17 +551,19 @@ player.configure({
 
 ### Captions
 
-| Key | Action                            |
-| --- | --------------------------------- |
-| `c` | Toggle captions                   |
-| `+` | Increase caption font size        |
-| `-` | Decrease caption font size        |
-| `v` | Rotate caption font variant       |
-| `g` | Rotate caption font weight        |
-| `u` | Rotate caption font style         |
-| `o` | Rotate caption opacity            |
-| `b` | Rotate caption background opacity |
-| `w` | Rotate caption window opacity     |
+| Key | Action                              |
+| --- | ----------------------------------- |
+| `c` | Toggle captions                     |
+| `+` | Increase caption font size          |
+| `-` | Decrease caption font size          |
+| `v` | Rotate caption font variant         |
+| `g` | Rotate caption font weight          |
+| `u` | Rotate caption font style           |
+| `o` | Rotate caption opacity              |
+| `b` | Rotate caption background opacity   |
+| `w` | Rotate caption window opacity       |
+| `x` | Rotate caption text alignment       |
+| `e` | Rotate caption character edge style |
 
 ### Other
 
@@ -559,8 +585,8 @@ player.configure({
 
 ## Browser Support
 
-| Browser       | Version | Support Level      |
-| ------------- | ------- | ------------------ |
+| Browser       | Version | Support Level     |
+| ------------- | ------- | ----------------- |
 | Chrome        | 90+     | ✅ Full Support    |
 | Edge          | 90+     | ✅ Full Support    |
 | Firefox       | 88+     | ✅ Full Support    |
@@ -846,17 +872,17 @@ Override CSS variables:
 
 ## Comparison with Other Players
 
-| Feature            | TMG Player | Plyr     | Video.js   | Shaka  |
-| ------------------ | ---------- | -------- | ---------- | ------ |
-| Dependencies       | 0          | 0        | 0          | 0      |
-| File Size          | ~150KB     | ~50KB    | ~250KB     | ~500KB |
-| Gesture Controls   | ✅         | ❌       | ❌         | ❌     |
-| Floating Player    | ✅         | ❌       | ❌         | ❌     |
-| Brightness Control | ✅         | ❌       | ❌         | ❌     |
-| Frame Stepping     | ✅         | ❌       | ❌         | ❌     |
-| Playlist Support   | ✅         | ❌       | ✅         | ❌     |
-| HLS/DASH           | ❌         | ❌       | ✅         | ✅     |
-| Customization      | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
+| Feature            | TMG Player | Plyr  | Video.js | Shaka  |
+| ------------------ | ---------- | ----- | -------- | ------ |
+| Dependencies       | 0          | 0     | 0        | 0      |
+| File Size          | ~150KB     | ~50KB | ~250KB   | ~500KB |
+| Gesture Controls   | ✅          | ❌     | ❌        | ❌      |
+| Floating Player    | ✅          | ❌     | ❌        | ❌      |
+| Brightness Control | ✅          | ❌     | ❌        | ❌      |
+| Frame Stepping     | ✅          | ❌     | ❌        | ❌      |
+| Playlist Support   | ✅          | ❌     | ✅        | ❌      |
+| HLS/DASH           | ❌          | ❌     | ✅        | ✅      |
+| Customization      | ⭐⭐⭐⭐⭐      | ⭐⭐⭐⭐  | ⭐⭐⭐⭐⭐    | ⭐⭐⭐    |
 
 ---
 
@@ -910,7 +936,13 @@ player.configure({
   settings: {
     playsInline: true, // Prevent fullscreen on iOS
     beta: {
-      gestureControls: true, // Enable touch gestures
+      gesture: {
+        touch: { 
+          volume: true, 
+          brightness: true, 
+          timeline: true 
+        }
+      } // Enable touch gestures
     },
   },
 });
