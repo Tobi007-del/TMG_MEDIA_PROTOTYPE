@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../prototype-3/src/ts/index.ts", "../prototype-3/src/ts/mixins/reactor.ts"],
+  "sourcesContent": ["export * as Reactor from \"./mixins/reactor\";\n\nif (typeof window !== \"undefined\") {\n  window.tmg ||= {};\n  window.TMG_VIDEO_ALT_IMG_SRC ??= \"/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png\";\n  window.TMG_VIDEO_CSS_SRC ??= \"/TMG_MEDIA_PROTOTYPE/prototype-3/prototype-3-video.css\";\n  window.T007_TOAST_JS_SRC ??= \"/T007_TOOLS/T007_toast_library/T007_toast.js\";\n} else {\n  console.log(\"\\x1b[38;2;139;69;19mTMG Media Player Unavailable\\x1b[0m\");\n  console.error(\"TMG Media Player cannot run in a terminal!\"), console.warn(\"Consider moving to a browser environment to use the TMG Media Player\");\n}\n", "export const TERMINATOR = {};\n\nclass Reactor {\n    constructor (object) {\n        \n    }\n}"],
+  "mappings": ";;;;;;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AAAA;;;ACAA;AAAA;AAAA;AAAA;AAAO,MAAM,aAAa,CAAC;;;ADE3B,MAAI,OAAO,WAAW,aAAa;AACjC,WAAO,QAAP,OAAO,MAAQ,CAAC;AAChB,WAAO,0BAAP,OAAO,wBAA0B;AACjC,WAAO,sBAAP,OAAO,oBAAsB;AAC7B,WAAO,sBAAP,OAAO,oBAAsB;AAAA,EAC/B,OAAO;AACL,YAAQ,IAAI,yDAAyD;AACrE,YAAQ,MAAM,4CAA4C,GAAG,QAAQ,KAAK,sEAAsE;AAAA,EAClJ;",
+  "names": []
+}

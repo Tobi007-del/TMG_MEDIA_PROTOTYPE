@@ -1,0 +1,23 @@
+{
+  "media": {
+    "title": "Justice League Teaser",
+    "artist": "TMG MEDIA PROTOTYPE 2",
+    "artwork": [
+      {
+        "src": "../assets/justice-league-b.jpeg"
+      }
+    ]
+  },
+  "settings": {
+    "time": {
+      "previews": {
+        "address": "../assets/previewImgs/preview$.jpg",
+        "sfp": 10
+      }
+    },
+    "volume": {
+      "muted": true
+    }
+  },
+  "src": "../assets/justice_league_preview.mp4"
+}
