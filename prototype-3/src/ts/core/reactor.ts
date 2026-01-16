@@ -1,62 +1,112 @@
-import type { Terminator, Payload, Target, Mediator, Listener } from "../types/reactor";
-import type { Paths } from "../types/paths";
+import { Target, Payload, Mediator, Listener, ListenerOptions, ListenerRecord, Terminator, ListenerOptionsTuple, ReactorOptions } from "../types/reactor";
+import type { Paths, WCPaths } from "../types/paths";
+import { isObj, isArr, assignAny, getTrailPaths, getTrailRecord } from "../utils";
 
 export const TERMINATOR: Terminator = Symbol("TERMINATOR");
 
+export class Event<T, P extends WCPaths<T> = WCPaths<T>> {
+  static readonly NONE = 0;
+  static readonly CAPTURING_PHASE = 1;
+  static readonly AT_TARGET = 2;
+  static readonly BUBBLING_PHASE = 3;
+  public type: string;
+  public currentTarget: Payload<T, P>["target"];
+  public eventPhase: number = Event.NONE;
+  readonly target: Payload<T, P>["target"];
+  readonly path: Target<T, P>["path"];
+  readonly value: Target<T, P>["value"];
+  readonly oldValue: Target<T, P>["oldValue"];
+  readonly bubbles: boolean;
+  readonly rejectable: boolean;
+  readonly timestamp: number;
+  private _propagationStopped = false;
+  private _immediatePropagationStopped = false;
+  private _rejected = "";
+
+  constructor(payload: Payload<T, P> & { bubbles?: boolean; rejectable?: boolean }) {
+    this.type = payload.type;
+    this.target = payload.target;
+    this.currentTarget = payload.currentTarget;
+    this.value = payload.target.value;
+    this.oldValue = payload.target.oldValue;
+    this.path = payload.target.path;
+    this.bubbles = payload.bubbles ?? true;
+    this.rejectable = payload.rejectable ?? true;
+    this.timestamp = Date.now();
+  }
+  get propagationStopped(): boolean {
+    return this._propagationStopped;
+  }
+  stopPropagation(): void {
+    this._propagationStopped = true;
+  }
+  get immediatePropagationStopped(): boolean {
+    return this._immediatePropagationStopped;
+  }
+  stopImmediatePropagation(): void {
+    this._propagationStopped = true;
+    this._immediatePropagationStopped = true;
+  }
+  get rejected(): string {
+    return this._rejected;
+  }
+  reject(reason?: string): void {
+    if (!this.rejectable) return console.warn(`Ignored reject() call on a non-rejectable "${this.type}" at "${this.path}"`);
+    if (this.eventPhase !== Event.CAPTURING_PHASE) console.warn(`Rejecting an intent on "${this.type}" at "${this.path}" outside of the capture phase is unadvised.`);
+    if (this.rejectable) console.log((this._rejected = reason || `Couldn't ${this.type} intended value at "${this.path}"`));
+  }
+  composedPath(): WCPaths<T>[] {
+    return getTrailPaths(this.path);
+  }
+}
+// uses low level non-stack loops considering this is surgical work on data
 export default class Reactor<T extends object> {
+  private rejectable: boolean;
   private getters = new Map<Paths<T>, Set<Mediator<T>>>();
   private setters = new Map<Paths<T>, Set<Mediator<T>>>();
-  private listeners = new Map<Paths<T>, Set<Listener<T>>>();
-
-  private batch = new Map<Paths<T>, Payload<T>>();
+  private listenersRecord = new Map<WCPaths<T>, Set<ListenerRecord<T>>>();
+  private batch = new Map<WCPaths<T>, Payload<T>>();
   private isBatching = false;
   private proxyCache = new WeakMap<object, any>();
+  public core: T;
 
-  public root: T;
-
-  constructor(obj: T) {
-    this.root = this._proxify(obj);
+  constructor(obj: T = {} as T, options: ReactorOptions = {}) {
+    this.rejectable = options.rejectable ?? false;
+    this.core = this._proxify(obj);
   }
 
-  private _proxify(target: any, path = ""): any {
-    if (target instanceof Element || target instanceof Window || target instanceof EventTarget) return target;
-    if (this.proxyCache.has(target)) return this.proxyCache.get(target);
-
-    const proxy = new Proxy(target, {
+  private _proxify(obj: any, path = ""): any {
+    if (!(isObj(obj) || isArr(obj)) || "symbol" === typeof obj || "function" === typeof obj || obj instanceof Map || obj instanceof Set || obj instanceof WeakMap || obj instanceof Promise || obj instanceof Element || obj instanceof EventTarget) return obj; // handles direct objects and arrays
+    if (this.proxyCache.has(obj)) return this.proxyCache.get(obj);
+    // Robust Proxy handler
+    const proxy = new Proxy(obj, {
       get: (object, key, receiver) => {
         const safeKey = String(key),
-          fullPath = (path ? `${path}.${safeKey}` : safeKey) as Paths<T>,
+          fullPath = (path ? `${path}.${safeKey}` : safeKey) as WCPaths<T>,
           target: Target<T> = { path: fullPath, value: Reflect.get(object, key, receiver), key: safeKey, object },
-          payload: Payload<T> = { type: "get", target, currentTarget: target, root: this.root };
-
-        if (this.getters.has(fullPath)) return this._mediate(fullPath, payload, false);
-        if (typeof key === "symbol" || target.value === null || typeof target.value !== "object") return target.value;
+          payload: Payload<T> = { type: "get", target, currentTarget: target, root: this.core };
+        if (this.getters.has(fullPath as Paths<T>)) return this._mediate(fullPath as Paths<T>, payload as Payload<T, Paths<T>>, false);
         return this._proxify(target.value, fullPath);
       },
       set: (object, key, value, receiver) => {
         const safeKey = String(key),
-          fullPath = (path ? `${path}.${safeKey}` : safeKey) as Paths<T>,
+          fullPath = (path ? `${path}.${safeKey}` : safeKey) as WCPaths<T>,
           target: Target<T> = { path: fullPath, value, oldValue: Reflect.get(object, key, receiver), key: safeKey, object },
-          payload: Payload<T> = { type: "set", target, currentTarget: target, root: this.root };
-        if (this.setters.has(fullPath)) target.value = this._mediate(fullPath, payload, true);
-        if (target.value === TERMINATOR) return false;
-        if (!Reflect.set(object, key, target.value, receiver)) return false;
-        return this._schedule(fullPath, payload), this._bubble(path, payload), true;
+          payload: Payload<T> = { type: "set", target, currentTarget: target, root: this.core };
+        if (this.setters.has(fullPath as Paths<T>)) target.value = this._mediate(fullPath as Paths<T>, payload as Payload<T, Paths<T>>, true);
+        return target.value !== TERMINATOR && Reflect.set(object, key, target.value, receiver) && this._schedule(fullPath, payload), true;
       },
       deleteProperty: (object, key) => {
         const safeKey = String(key),
-          fullPath = (path ? `${path}.${safeKey}` : safeKey) as Paths<T>,
+          fullPath = (path ? `${path}.${safeKey}` : safeKey) as WCPaths<T>,
           target: Target<T> = { path: fullPath, oldValue: Reflect.get(object, key), key: safeKey, object },
-          payload: Payload<T> = { type: "delete", target, currentTarget: target, root: this.root };
-
-        if (this.setters.has(fullPath)) target.value = this._mediate(fullPath, payload, true);
-        if (target.value === TERMINATOR) return false;
-        if (!Reflect.deleteProperty(object, key)) return false;
-        return this._schedule(fullPath, payload), this._bubble(path, payload), true;
+          payload: Payload<T> = { type: "delete", target, currentTarget: target, root: this.core };
+        if (this.setters.has(fullPath as Paths<T>)) target.value = this._mediate(fullPath as Paths<T>, payload as Payload<T, Paths<T>>, true);
+        return target.value !== TERMINATOR && !Reflect.deleteProperty(object, key) && this._schedule(fullPath, payload), true;
       },
     });
 
-    this.proxyCache.set(target, proxy);
+    this.proxyCache.set(obj, proxy);
     return proxy;
   }
 
@@ -73,29 +123,54 @@ export default class Reactor<T extends object> {
     return value;
   }
 
-  private _bubble(path: string, { type, target: currentTarget, root }: Payload<T>): void {
-    if (!path) return;
-    const parts = path.split(".");
-    let parent: any = this.root;
-
-    for (let i = 0; i < parts.length; i++) {
-      const target = { path: parts.slice(0, i + 1).join("."), value: (parent = Reflect.get(parent, parts[i])), key: parts[i], object: parent } as Target<T>;
-      this._schedule(target.path as Paths<T>, { type: "update", target, currentTarget, root });
+  private _wave(path: WCPaths<T>, payload: Payload<T>): void {
+    const e = new Event<T>({ ...payload, rejectable: this.rejectable }),
+      chain = getTrailRecord(this.core, path); // either build a large array to climb back up or have to derive
+    // 1: CAPTURE phase (core -> parent)
+    e.eventPhase = Event.CAPTURING_PHASE;
+    for (let i = 0; i <= chain.length - 2; i++) {
+      if (e.propagationStopped) break;
+      this._fire(chain[i], e, true);
     }
-
-    this._schedule("*", { type, target: { path: "*", value: root, key: "*", object: root } as unknown as Target<T>, currentTarget, root });
+    if (e.propagationStopped) return;
+    // 2: TARGET phase (leaf)
+    e.eventPhase = Event.AT_TARGET;
+    this._fire(chain[chain.length - 1], e, true); // CAPTURE
+    !e.immediatePropagationStopped && this._fire(chain[chain.length - 1], e, false); // BUBBLE
+    if (!e.bubbles) return;
+    // 3: BUBBLE phase (parent -> core)
+    e.eventPhase = Event.BUBBLING_PHASE;
+    for (let i = chain.length - 2; i >= 0; i--) {
+      if (e.propagationStopped) break;
+      this._fire(chain[i], e, false);
+    }
+    if (e.rejected) return; // 4: DEFAULT phase if ever
   }
 
-  private _schedule(path: Paths<T>, payload: Payload<T>): void {
-    this.batch.set(path, payload);
-    if (!this.isBatching) {
-      this.isBatching = true;
-      queueMicrotask(() => this._flush());
+  private _fire([path, object, value]: ReturnType<typeof getTrailRecord<T>>[number], e: Event<T>, isCapture: boolean): void {
+    const records = this.listenersRecord.get(path);
+    if (!records?.size) return;
+    const originalType = e.type;
+    e.type = path !== e.target.path ? "update" : e.type; // `update` for ancestors
+    e.currentTarget = { path, value, key: path.split(".").pop() || "", object };
+    for (const record of [...records]) {
+      if (e.immediatePropagationStopped) break;
+      if (record.capture !== isCapture) continue;
+      if (record.once) records.delete(record);
+      record.cb(e);
     }
+    e.type = originalType;
+  }
+
+  private _schedule(path: WCPaths<T>, payload: Payload<T>): void {
+    this.batch.set(path, payload);
+    if (this.isBatching) return;
+    this.isBatching = true;
+    queueMicrotask(() => this._flush());
   }
 
   private _flush(): void {
-    for (const [path, payload] of this.batch.entries()) this.listeners.get(path)?.forEach((cb) => cb(payload));
+    for (const [path, payload] of this.batch.entries()) this._wave(path, payload);
     this.batch.clear(), (this.isBatching = false);
   }
 
@@ -113,23 +188,44 @@ export default class Reactor<T extends object> {
     this.setters.get(path)?.delete(cb as Mediator<T>);
   }
 
-  on<P extends Paths<T>>(path: P, cb: Listener<T, P>): void {
-    (this.listeners.get(path) ?? this.listeners.set(path, new Set()).get(path)!).add(cb as Listener<T>);
+  private static _parseEOpt = (options: ListenerOptions = false, opt: keyof ListenerOptionsTuple) => ("boolean" === typeof options ? options : !!options?.[opt]);
+  on<P extends WCPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): (typeof this)["off"] {
+    const records = this.listenersRecord.get(path),
+      capture = Reactor._parseEOpt(options, "capture");
+    let hasRecord = false;
+    for (const record of records ?? []) {
+      if (record.cb === cb && capture === record.capture) {
+        hasRecord = true;
+        break;
+      }
+    }
+    if (!hasRecord) (records ?? this.listenersRecord.set(path, new Set()).get(path)!).add({ cb: cb as Listener<T>, capture, once: Reactor._parseEOpt(options, "once") });
+    return () => this.off<P>(path, cb, options);
   }
-  off<P extends Paths<T>>(path: P, cb: Listener<T, P>): void {
-    this.listeners.get(path)?.delete(cb as Listener<T>);
+  off<P extends WCPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): void {
+    const records = this.listenersRecord.get(path),
+      capture = Reactor._parseEOpt(options, "capture");
+    if (!records) return;
+    for (const record of [...records]) {
+      if (record.cb === cb && record.capture === capture) {
+        records.delete(record);
+        break;
+      }
+    }
+    if (!records.size) this.listenersRecord.delete(path);
   }
 
-  propagate = ({ type, target: { path, value: sets } }: Payload<T>): void => {
-    if ((type === "set" || type === "delete") && sets) Object.entries(sets).forEach(([k, v]) => assignAny(this.root, `${path}.${k}`, v));
+  cascade = ({ type, currentTarget: { path, value: sets } }: Event<T>): void => {
+    if (!sets || (type !== "set" && type !== "delete")) return;
+    for (const [key, value] of Object.entries(sets)) assignAny(this.core, `${path}.${key}` as Paths<T>, value);
   };
 
   tick = this._flush;
 
   reset(): void {
-    this.getters.clear(), this.setters.clear(), this.listeners.clear();
+    this.getters.clear(), this.setters.clear(), this.listenersRecord.clear();
     this.batch.clear(), (this.isBatching = false);
     this.proxyCache = new WeakMap();
-    (this.root as any) = null;
+    (this.core as any) = null;
   }
 }

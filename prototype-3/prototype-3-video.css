@@ -1090,6 +1090,7 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
 }
 .tmg-video-profile-link {
   flex-shrink: 0;
+  flex-grow: 0;
   width: calc(var(--tmg-video-current-unit) * 1.5);
   height: calc(var(--tmg-video-current-unit) * 1.5);
   overflow: hidden;
@@ -1101,13 +1102,13 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
   height: 100%;
   object-fit: cover;
 }
-.tmg-video-meta-wrapper-cover {
+.tmg-video-meta-text-wrapper-cover {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: calc(var(--tmg-video-current-unit) / 140);
 }
-.tmg-video-meta-wrapper-cover > * {
+.tmg-video-meta-text-wrapper-cover > * {
   display: flex;
   padding: calc(var(--tmg-video-current-unit) / 13);
 }
@@ -1133,7 +1134,7 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
   font-weight: 500;
 }
 .tmg-video-profile-link:has(img[data-loaded="false"]),
-.tmg-video-meta-wrapper-cover > *:has(a:empty),
+.tmg-video-meta-text-wrapper-cover > *:has(a:empty),
 .tmg-video-container.tmg-video-miniplayer :is(.tmg-video-profile-link, .tmg-video-artist-wrapper) {
   display: none;
 }

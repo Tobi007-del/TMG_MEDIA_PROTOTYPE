@@ -7,26 +7,25 @@ export type Primitive =
   | null
   | undefined;
 
-export type Paths<T> =
-  | "*"
-  | (T extends Primitive
-      ? never
-      : T extends readonly (infer U)[]
-      ?
-          | `${Extract<keyof T, number>}`
-          | `${Extract<keyof T, number>}.${Paths<U>}`
-      : {
-          [K in keyof T & (string | number)]: T[K] extends Primitive
-            ? `${K}`
-            : `${K}` | `${K}.${Paths<T[K]>}`;
-        }[keyof T & (string | number)]);
+export type WCPaths<T> = "*" | Paths<T>;
 
-export type PathValue<
-  T,
-  P extends string
-> = P extends `${infer K}.${infer Rest}`
+export type Paths<T, S = "."> = T extends Primitive
+  ? never
+  : T extends readonly (infer U)[]
+  ?
+      | `${Extract<keyof T, number>}`
+      | `${Extract<keyof T, number>}${S}${Paths<U, S>}`
+  : {
+      [K in keyof T & (string | number)]: T[K] extends Primitive
+        ? `${K}`
+        : `${K}` | `${K}${S}${Paths<T[K], S>}`;
+    }[keyof T & (string | number)];
+
+export type PathValue<T, P extends string, S = "."> = P extends "*"
+  ? T
+  : P extends `${infer K}${S}${infer Rest}`
   ? K extends keyof T
-    ? PathValue<T[K], Rest>
+    ? PathValue<T[K], Rest, S>
     : never
   : P extends keyof T
   ? T[P]

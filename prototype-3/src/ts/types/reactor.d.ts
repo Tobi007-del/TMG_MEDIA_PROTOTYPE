@@ -1,29 +1,25 @@
-import type { Paths, PathValue } from "./paths";
+import Reactor, { Event } from "../core/reactor";
+import type { Paths, WCPaths, PathValue } from "./paths";
+import { getComposedPath } from "../utils";
 
-export interface ReactorAPI<T extends object> {
-  get<P extends Paths<T>>(path: P, callback: Mediator<T, P>): void;
-  noget<P extends Paths<T>>(path: P, callback: Mediator<T, P>): void;
-  set<P extends Paths<T>>(path: P, callback: Mediator<T, P>): void;
-  noset<P extends Paths<T>>(path: P, callback: Mediator<T, P>): void;
-  on<P extends Paths<T>>(path: P, callback: Listener<T, P>): void;
-  off<P extends Paths<T>>(path: P, callback: Listener<T, P>): void;
-  propagate(payload: Payload<T>): void;
-  tick(): Promise<void>;
-  reset(): void;
+export interface ReactorOptions {
+  rejectable?: boolean; // State Vs. Intent
 }
+export type Reactor<T> = typeof Reactor<T>;
+export type Terminator = unique symbol;
 
-export interface Target<T, P extends Paths<T> = Paths<T>> {
+export type Event<T, P> = typeof Event<T, P>;
+export interface Target<T, P extends WCPaths<T> = WCPaths<T>> {
   path: P;
   value?: PathValue<T, P>;
   oldValue?: PathValue<T, P>;
   key: string;
-  object: object;
+  object: PathValue<T, P>;
 }
-
-export interface Payload<T, P extends Paths<T> = Paths<T>> {
+export interface Payload<T, P extends WCPaths<T> = WCPaths<T>> {
   type: "get" | "set" | "delete" | "update";
   target: Target<T, P>;
-  currentTarget: Target<T, P>;
+  currentTarget: Target<T, P>; // use this always to survive shape changes from nesting
   root: T;
 }
 
@@ -33,6 +29,14 @@ export type Mediator<T, P extends Paths<T> = Paths<T>> = (
   payload: Payload<T, P>
 ) => PathValue<T, P> | typeof TERMINATOR;
 
-export type Listener<T, P extends Paths<T> = Paths<T>> = (payload: Payload<T, P>) => void;
-
-export type Terminator = unique symbol;
+export type Listener<T, P extends WCPaths<T> = WCPaths<T>> = (
+  event: Event<T, P>
+) => void;
+export type ListenerOptionsTuple = {
+  capture?: boolean;
+  once?: boolean;
+};
+export type ListenerOptions = boolean | ListenerOptionsTuple;
+export type ListenerRecord<T, P extends WCPaths<T> = WCPaths<T>> = {
+  cb: Listener<T, P>;
+} & ListenerOptionsTuple;

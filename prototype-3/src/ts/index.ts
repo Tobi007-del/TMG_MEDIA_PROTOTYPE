@@ -7,3 +7,11 @@ if (typeof window !== "undefined") {
   console.log("\x1b[38;2;139;69;19mTMG Media Player Unavailable\x1b[0m");
   console.error("TMG Media Player cannot run in a terminal!"), console.warn("Consider moving to a browser environment to use the TMG Media Player");
 }
+
+export * as reactor from "./core/reactor";
+// export * as browser from "./utils/browser";
+export * as chores from "./utils/chores";
+export * as dom from "./utils/dom";
+export * as num from "./utils/num";
+export * as obj from "./utils/obj";
+export * as str from "./utils/str";
