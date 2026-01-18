@@ -18,6 +18,11 @@ export type KeyShortcutAction = (typeof keyShortcutActions)[number];
 export type ModdedKeyShortcutAction = (typeof moddedKeyShortcutActions)[number];
 export type ErrorCode = (typeof errorCodes)[number];
 
+export interface ControlPanelBottomTuple {
+  1: Control[];
+  2: Control[];
+  3: Control[];
+}
 export interface PosterPreview {
   usePoster: boolean;
   time: number;
@@ -118,7 +123,11 @@ export interface Settings {
     artist: string | boolean;
     top: Control[] | boolean;
     center: BigControl[] | boolean;
-    bottom: { 1: Control[]; 2: Control[]; 3: Control[] } | boolean;
+    bottom:
+      | boolean // Case: true/false
+      | Control[] // Case: Flat Array ['play', 'pause'] (Logic puts this in Row 3)
+      | Control[][] // Case: Array of Rows [['time'], ['play'], ['vol']]
+      | Partial<ControlPanelBottomTuple>; // Case: Explicit Object { 1: [...], 2: [...] }
     timeline:
       | {
           thumbIndicator: boolean;
@@ -198,7 +207,7 @@ export interface Settings {
   persist: boolean;
   playbackRate: Range;
   playsInline: boolean;
-  time: Pick<Range, "skip"> & {
+  time: Range & {
     previews:
       | {
           address: string; // folder/image$.jpg
@@ -220,7 +229,7 @@ export interface Settings {
   volume: Range & { muted: boolean };
 }
 
-export type PlaylistItem = Pick<
+export type PlaylistItemBuild = Pick<
   VideoBuild,
   "media" | "src" | "sources" | "tracks"
 > & {
@@ -246,7 +255,7 @@ export type VideoBuild = {
   };
   mediaPlayer: "TMG";
   mediaType: "video";
-  playlist: PlaylistItem[];
+  playlist: PlaylistItemBuild[];
   settings: Settings;
   sources: string[];
   src: string;

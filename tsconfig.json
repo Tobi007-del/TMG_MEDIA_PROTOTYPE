@@ -8,7 +8,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "incremental": true,
-    "forceConsistentCasingInFileNames": true,
+    "forceConsistentCasingInFileNames": true
   },
   "include": ["prototype-3/src/ts/**/*.ts"],
   "exclude": ["node_modules", "dist"]

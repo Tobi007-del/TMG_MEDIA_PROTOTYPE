@@ -5,7 +5,7 @@ if (typeof window !== "undefined") {
   window.T007_TOAST_JS_SRC ??= "/T007_TOOLS/T007_toast_library/T007_toast.js";
 } else {
   console.log("\x1b[38;2;139;69;19mTMG Media Player Unavailable\x1b[0m");
-  console.error("TMG Media Player cannot run in a terminal!"), console.warn("Consider moving to a browser environment to use the TMG Media Player");
+  (console.error("TMG Media Player cannot run in a terminal!"), console.warn("Consider moving to a browser environment to use the TMG Media Player"));
 }
 
 export * as reactor from "./core/reactor";

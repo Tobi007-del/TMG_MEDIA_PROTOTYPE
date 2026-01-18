@@ -6,12 +6,12 @@ await esbuild.build({
   entryPoints: ["prototype-3/src/ts/index.ts"],
   outfile: "dist/tmg-player.js",
   bundle: true,
-  format: "iife",        // <- single global file
-  globalName: "tmg",     // window.tmg
+  format: "iife", // <- single global file
+  globalName: "tmg", // window.tmg
   sourcemap: !isProd,
   minify: isProd,
   target: ["es2020"],
-  platform: "browser"
+  platform: "browser",
 });
 
 await esbuild.build({
@@ -20,5 +20,5 @@ await esbuild.build({
   bundle: true,
   format: "esm",
   sourcemap: true,
-  target: ["es2020"]
+  target: ["es2020"],
 });

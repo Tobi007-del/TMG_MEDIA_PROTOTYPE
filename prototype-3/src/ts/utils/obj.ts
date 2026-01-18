@@ -1,38 +1,38 @@
-import type { WCPaths, Paths, PathValue } from "../types/paths";
+import type { DeepMerge, Unflatten, WCPaths, Paths, PathValue } from "../types/obj";
 import type { UIObject, UISettings } from "../types/UIOptions";
 import { isDef, camelize } from ".";
 
-export function isIter(obj: any): boolean {
+export function isIter<T = unknown>(obj: any): obj is Iterable<T> {
   return obj != null && "function" === typeof obj[Symbol.iterator];
 }
 
-export function isObj(obj: any): boolean {
+export function isObj<T extends object = object>(obj: any): obj is T {
   return "object" === typeof obj && obj !== null && !isArr(obj) && "function" !== typeof obj;
 }
 
-export function isArr(obj: any): boolean {
+export function isArr<T = unknown>(obj: any): obj is T[] {
   return Array.isArray(obj);
 }
 
-export function assignDef(target: any, key: string, value: any): void {
+export function isUISetting<T = unknown>(obj: any): obj is UISettings<T> {
+  return isObj(obj) && "options" in obj && isArr(obj.options);
+}
+
+export function assignDef<T extends object>(target: T, key: Paths<T>, value: PathValue<T, typeof key>): void {
   isDef(value) && target != null && assignAny(target, key, value);
 }
 
-export function assignHTMLConfig<T extends object>(target: T, attr: `tmg--${Paths<T, "--">}`, value: any): void {
-  assignAny<T, "--">(
-    target,
-    attr.replace("tmg--", "") as Paths<T, "--">,
-    (() => {
-      if (value.includes(",")) return value.split(",")?.map((v: string) => v.replace(/\s+/g, ""));
-      if (/^(true|false|null|\d+)$/.test(value)) return JSON.parse(value);
-      return value;
-    })(),
-    "--",
-    (p) => camelize(p)
-  );
+export function assignHTMLConfig<T extends object>(target: T, attr: `tmg--${Paths<T, "--">}`, value: string): void {
+  const path = attr.replace("tmg--", "") as Paths<T, "--">;
+  const parsedValue = (() => {
+    if (value.includes(",")) return value.split(",")?.map((v: string) => v.replace(/\s+/g, ""));
+    if (/^(true|false|null|\d+)$/.test(value)) return JSON.parse(value);
+    return value;
+  })();
+  assignAny<T, "--">(target, path, parsedValue, "--", (p) => camelize(p));
 }
 
-export function assignAny<T extends object, const S extends string = ".">(target: T, key: Paths<T, S>, value: any, separator: S = "." as S, keyFunc = (p: string): string => p): void {
+export function assignAny<T extends object, const S extends string = ".">(target: T, key: Paths<T, S>, value: PathValue<T, typeof key, S>, separator: S = "." as S, keyFunc = (p: string): string => p): void {
   const keys = key.split(separator).map((p) => keyFunc(p));
   let currObj: any = target;
   keys.forEach((key, i) => {
@@ -41,10 +41,10 @@ export function assignAny<T extends object, const S extends string = ".">(target
       const [, key, iStr] = match;
       if (!isArr(currObj[key])) currObj[key] = [];
       if (i === keys.length - 1) currObj[key][Number(iStr)] = value;
-      else (currObj[key][Number(iStr)] ||= {}), (currObj = currObj[key][Number(iStr)]);
+      else ((currObj[key][Number(iStr)] ||= {}), (currObj = currObj[key][Number(iStr)]));
     } else {
       if (i === keys.length - 1) currObj[key] = value;
-      else (currObj[key] ||= {}), (currObj = currObj[key]);
+      else ((currObj[key] ||= {}), (currObj = currObj[key]));
     }
   });
 }
@@ -59,11 +59,42 @@ export function deriveAny<T extends object, const S extends string = ".">(source
       if (!isArr(currObj[key])) return undefined;
       currObj = currObj[key][Number(iStr)];
     } else {
-      if (!isObj(currObj) || !(key in currObj)) return undefined;
+      if (!isObj<Record<string, any>>(currObj) || !(key in currObj)) return undefined;
       currObj = currObj[key];
     }
   }
   return currObj;
+}
+
+export function parseUIObj<T extends Record<string, any>>(obj: T): UIObject<T> {
+  const result: any = {} as UIObject<T>;
+  for (const key of Object.keys(obj)) {
+    const entry = obj[key];
+    if (!isObj(entry)) continue;
+    if (isUISetting(entry)) {
+      result[key] = {
+        values: entry.options.map((opt: any) => ("value" in opt ? opt.value : opt)),
+        displays: entry.options.map((opt: any) => ("display" in opt ? opt.display : `${opt}`)),
+      };
+    } else result[key] = parseUIObj(entry); // recurse on sub-branch
+  }
+  return result;
+}
+
+export function parseAnyObj<T extends Record<string, any>, const S extends string = ".">(obj: T, separator: S = "." as S, keyFunc = (p: string) => p, visited = new WeakSet()): Unflatten<T, S> {
+  if (!isObj(obj) || visited.has(obj)) return obj as Unflatten<T, S>; // no circular references
+  visited.add(obj);
+  const result: any = {};
+  Object.entries(obj).forEach(([k, v]) => (k.includes(separator) ? assignAny(result, k as any, parseAnyObj(v as any, separator, keyFunc, visited), separator, keyFunc) : (result[k] = isObj(v) ? parseAnyObj(v as any, separator, keyFunc, visited) : v)));
+  return result as Unflatten<T, S>;
+}
+
+export function mergeObjs<T1 extends object, T2 extends object>(o1: T1, o2: T2): DeepMerge<T1, T2>;
+export function mergeObjs<T1 extends object>(o1: T1): T1;
+export function mergeObjs<T2 extends object>(o1: undefined | null, o2: T2): T2;
+export function mergeObjs(o1: any = {}, o2: any = {}): any {
+  const merged = { ...(o1 || {}), ...(o2 || {}) };
+  return (Object.keys(merged).forEach((k) => isObj(o1?.[k]) && isObj(o2?.[k]) && (merged[k] = mergeObjs(o1[k], o2[k]))), merged);
 }
 
 export function getTrailPaths<T>(path: WCPaths<T>, reverse: boolean = true): WCPaths<T>[] {
@@ -87,22 +118,4 @@ export function getTrailRecord<T extends object>(obj: T, path: WCPaths<T>): [WCP
     record.push([acc as WCPaths<T>, currObj, (currObj = Reflect.get(currObj, parts[i]))]); // at most one iteration per depth, storage over derivation
   }
   return record;
-}
-
-function isUISetting(obj: any): obj is UISettings<any> {
-  return isObj(obj) && "options" in obj && isArr(obj.options);
-}
-export function parseUIObj<T extends object>(obj: T): UIObject<T> {
-  const result: any = {} as UIObject<T>;
-  for (const key of Object.keys(obj)) {
-    const entry = (obj as any)[key];
-    if (!isObj(entry)) continue;
-    if (isUISetting(entry)) {
-      result[key] = {
-        values: entry.options.map((opt: any) => ("value" in opt ? opt.value : opt)),
-        displays: entry.options.map((opt: any) => ("display" in opt ? opt.display : `${opt}`)),
-      };
-    } else result[key] = parseUIObj(entry); // recurse on sub-branch
-  }
-  return result;
 }

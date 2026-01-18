@@ -5,8 +5,8 @@ export function clamp(min = 0, val: number, max = Infinity) {
 }
 
 export function isValidNumber(val: any): boolean {
-  return !isNaN(val ?? NaN) && val !== Infinity
-};
+  return !isNaN(val ?? NaN) && val !== Infinity;
+}
 
 export function parseNumber(number: any, fallback = 0): number {
   return isValidNumber(number) ? number : fallback;

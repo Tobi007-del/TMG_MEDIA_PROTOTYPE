@@ -297,13 +297,14 @@ player.configure({
     brightness: { max: 150, value: 100 },
     beta: {
       gesture: {
-        wheel: { 
-          volume: { normal: false, slider: true }, 
-          brightness: { normal: false, slider: true }, timeline: { normal: false, slider: true } 
-        }
+        wheel: {
+          volume: { normal: false, slider: true },
+          brightness: { normal: false, slider: true },
+          timeline: { normal: false, slider: true },
+        },
       },
-      floatingPlayer: { 
-        disabled: false
+      floatingPlayer: {
+        disabled: false,
       },
     },
     time: {
@@ -443,22 +444,22 @@ keys: {
 beta: {
   disabled: false,
   rewind: true, // Enable rewind functionality
-  gesture: { 
-    touch: { 
-      volume: true, 
-      brightness: true, 
-      timeline: true 
+  gesture: {
+    touch: {
+      volume: true,
+      brightness: true,
+      timeline: true
     },
-    wheel: { 
-      volume: { normal: true, slider: true }, 
-      brightness: { normal: true, slider: true }, timeline: { normal: true, slider: true } 
+    wheel: {
+      volume: { normal: true, slider: true },
+      brightness: { normal: true, slider: true }, timeline: { normal: true, slider: true }
     }
   }, // Touch/wheel gestures
-  floatingPlayer: { 
-    disabled: false, 
-    width: 270, 
-    height: 145, 
-    disallowReturnToOpener: false, preferInitialWindowPlacement: false 
+  floatingPlayer: {
+    disabled: false,
+    width: 270,
+    height: 145,
+    disallowReturnToOpener: false, preferInitialWindowPlacement: false
   }, // Document PiP floating player
 }
 ```
@@ -587,8 +588,8 @@ player.configure({
 
 ## Browser Support
 
-| Browser       | Version | Support Level     |
-| ------------- | ------- | ----------------- |
+| Browser       | Version | Support Level      |
+| ------------- | ------- | ------------------ |
 | Chrome        | 90+     | ✅ Full Support    |
 | Edge          | 90+     | ✅ Full Support    |
 | Firefox       | 88+     | ✅ Full Support    |
@@ -874,17 +875,17 @@ Override CSS variables:
 
 ## Comparison with Other Players
 
-| Feature            | TMG Player | Plyr  | Video.js | Shaka  |
-| ------------------ | ---------- | ----- | -------- | ------ |
-| Dependencies       | 0          | 0     | 0        | 0      |
-| File Size          | ~150KB     | ~50KB | ~250KB   | ~500KB |
-| Gesture Controls   | ✅          | ❌     | ❌        | ❌      |
-| Floating Player    | ✅          | ❌     | ❌        | ❌      |
-| Brightness Control | ✅          | ❌     | ❌        | ❌      |
-| Frame Stepping     | ✅          | ❌     | ❌        | ❌      |
-| Playlist Support   | ✅          | ❌     | ✅        | ❌      |
-| HLS/DASH           | ❌          | ❌     | ✅        | ✅      |
-| Customization      | ⭐⭐⭐⭐⭐      | ⭐⭐⭐⭐  | ⭐⭐⭐⭐⭐    | ⭐⭐⭐    |
+| Feature            | TMG Player | Plyr     | Video.js   | Shaka  |
+| ------------------ | ---------- | -------- | ---------- | ------ |
+| Dependencies       | 0          | 0        | 0          | 0      |
+| File Size          | ~150KB     | ~50KB    | ~250KB     | ~500KB |
+| Gesture Controls   | ✅         | ❌       | ❌         | ❌     |
+| Floating Player    | ✅         | ❌       | ❌         | ❌     |
+| Brightness Control | ✅         | ❌       | ❌         | ❌     |
+| Frame Stepping     | ✅         | ❌       | ❌         | ❌     |
+| Playlist Support   | ✅         | ❌       | ✅         | ❌     |
+| HLS/DASH           | ❌         | ❌       | ✅         | ✅     |
+| Customization      | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
 
 ---
 
@@ -939,12 +940,12 @@ player.configure({
     playsInline: true, // Prevent fullscreen on iOS
     beta: {
       gesture: {
-        touch: { 
-          volume: true, 
-          brightness: true, 
-          timeline: true 
-        }
-      } // Enable touch gestures
+        touch: {
+          volume: true,
+          brightness: true,
+          timeline: true,
+        },
+      }, // Enable touch gestures
     },
   },
 });
