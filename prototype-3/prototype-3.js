@@ -55,6 +55,7 @@ class Reactor {
   constructor(obj = {}, options = {}) {
     this.getters = new Map();
     this.setters = new Map();
+    this.watchers = new Map();
     this.listenersRecord = new Map(); // Changed to records
     this.batch = new Map();
     this.isBatching = false;
@@ -81,7 +82,7 @@ class Reactor {
           target = { path: fullPath, value, oldValue: Reflect.get(object, key, receiver), key: safeKey, object },
           payload = { type: "set", target, currentTarget: target, root: this.core };
         if (this.setters.has(fullPath)) target.value = this._mediate(fullPath, payload, true);
-        return (target.value !== TERMINATOR && Reflect.set(object, key, target.value, receiver) && this._schedule(fullPath, payload), true);
+        return (target.value !== TERMINATOR && Reflect.set(object, key, target.value, receiver) && this._notify(fullPath, payload), true);
       },
       deleteProperty: (object, key) => {
         const safeKey = String(key),
@@ -89,7 +90,7 @@ class Reactor {
           target = { path: fullPath, oldValue: Reflect.get(object, key), key: safeKey, object },
           payload = { type: "delete", target, currentTarget: target, root: this.core };
         if (this.setters.has(fullPath)) target.value = this._mediate(fullPath, payload, true);
-        return (target.value !== TERMINATOR && Reflect.deleteProperty(object, key) && this._schedule(fullPath, payload), true);
+        return (target.value !== TERMINATOR && Reflect.deleteProperty(object, key) && this._notify(fullPath, payload), true);
       },
     });
     this.proxyCache.set(obj, proxy);
@@ -107,6 +108,20 @@ class Reactor {
       if (!terminated) value = response;
     }
     return value;
+  }
+  _notify(path, payload) {
+    if (this.watchers.has(path)) for (const fn of this.watchers.get(path)) fn(payload.target.value, payload);
+    this._schedule(path, payload);
+  }
+  _schedule = (path, payload) => (this.batch.set(path, payload), this._initBatching());
+  _initBatching() {
+    if (this.isBatching) return;
+    ((this.isBatching = true), queueMicrotask(() => this._flush()));
+  }
+  _flush() {
+    (this.tick(this.batch.keys()), this.batch.clear(), (this.isBatching = false));
+    for (const task of this.queue) task();
+    this.queue.clear();
   }
   _wave(path, payload) {
     const e = new ReactorEvent({ ...payload, rejectable: this.rejectable }),
@@ -142,16 +157,6 @@ class Reactor {
     }
     e.type = originalType;
   }
-  _schedule = (path, payload) => (this.batch.set(path, payload), this._initBatching());
-  _initBatching() {
-    if (this.isBatching) return;
-    ((this.isBatching = true), queueMicrotask(() => this._flush()));
-  }
-  _flush() {
-    (this.tick(this.batch.keys()), this.batch.clear(), (this.isBatching = false));
-    for (const task of this.queue) task();
-    this.queue.clear();
-  }
   tick(paths) {
     if (!paths) return this._flush();
     for (const path of "string" === typeof paths ? [paths] : paths) this.batch.has(path) && (this._wave(path, this.batch.get(path)), this.batch.delete(path));
@@ -170,7 +175,12 @@ class Reactor {
     return () => (lazy && this.nostall(task), this.noset < P > (path, cb));
   }
   noset = (path, cb) => this.setters.get(path)?.delete(cb);
-  static parseEOpt = (options = false, opt) => ("boolean" === typeof options ? options : !!options?.[opt]);
+  watch(path, cb, lazy) {
+    const task = () => (this.watchers.get(path) ?? this.watchers.set(path, new Set()).get(path)).add(cb);
+    lazy ? this.stall(task) : task();
+    return () => (lazy && this.nostall(task), this.nowatch(path, cb));
+  }
+  nowatch = (path, cb) => this.watchers.get(path)?.delete(cb);
   on = (path, cb, options) => {
     const records = this.listenersRecord.get(path),
       capture = Reactor.parseEOpt(options, "capture");
@@ -184,6 +194,7 @@ class Reactor {
     if (!added) (records ?? this.listenersRecord.set(path, new Set()).get(path)).add({ cb, capture, once: Reactor.parseEOpt(options, "once") });
     return () => this.off(path, cb, options);
   };
+  once = (path, cb, options) => this.on(path, cb, { ...options, once: true });
   off = (path, cb, options) => {
     const records = this.listenersRecord.get(path),
       capture = Reactor.parseEOpt(options, "capture");
@@ -193,12 +204,13 @@ class Reactor {
     }
     return false;
   };
+  static parseEOpt = (options = false, opt) => ("boolean" === typeof options ? options : !!options?.[opt]);
   cascade = ({ type, currentTarget: { path, value: news, oldValue: olds } }, objSafe = true) => {
     if ((type !== "set" && type !== "delete") || !tmg.isObj(news) || !tmg.isObj(olds)) return;
     for (const [key, value] of Object.entries(objSafe ? tmg.mergeObjs(olds, news) : news)) tmg.assignAny(this.core, `${path}.${key}`, value); // smart progressive enhancement for objects
   };
   reset = () => {
-    (this.getters.clear(), this.setters.clear(), this.listenersRecord.clear());
+    (this.getters.clear(), this.setters.clear(), this.watchers.clear(), this.listenersRecord.clear());
     (this.queue.clear(), this.batch.clear(), (this.isBatching = false));
     this.proxyCache = new WeakMap();
     this.core = null;
@@ -206,14 +218,14 @@ class Reactor {
 }
 function reactified(target, options) {
   const r = target instanceof Reactor ? target : new Reactor(target, options);
-  return (Object.assign(r.core, { tick: r.tick.bind(r), get: r.get.bind(r), noget: r.noget.bind(r), set: r.set.bind(r), noset: r.noset.bind(r), on: r.on.bind(r), off: r.off.bind(r), cascade: r.cascade.bind(r), reset: r.reset.bind(r) }), r.core);
+  return (Object.assign(r.core, { tick: r.tick.bind(r), stall: r.stall.bind(r), nostall: r.nostall.bind(r), get: r.get.bind(r), noget: r.noget.bind(r), set: r.set.bind(r), noset: r.noset.bind(r), watch: r.watch.bind(r), nowatch: r.nowatch.bind(r), on: r.on.bind(r), once: r.once.bind(r), off: r.off.bind(r), cascade: r.cascade.bind(r), reset: r.reset.bind(r) }), r.core);
 }
 
 class tmg_Video_Controller {
   constructor(build) {
     ((this.video = build.video), (this.buildCache = { ...build }));
     this.setReadyState(0); // had to be done before binding, for user info
-    this.bindMethods(); // first thing, same this.zoneRefs throughout life cycle
+    this.bindMethods(); // first thing, same this.cZoneWs throughout life cycle
     this.config = reactified(build); // merging the video build into the Video Player Instance
     this.settings = this.config.settings; // alias for devx, for non reassignable common config
     (this.guardGenericPaths(), this.guardTimeValues(), this.plugSources(), this.plugTracks(), this.plugPlaylist());
@@ -222,7 +234,6 @@ class tmg_Video_Controller {
     this.audioSetup = this.loaded = this.locked = this.inLightState = this.isScrubbing = this.buffering = this.inFullscreen = this.inFloatingPlayer = this.overTimeline = this.overVolume = this.overBrightness = this.gestureTouchXCheck = this.gestureTouchYCheck = this.gestureWheelXCheck = this.gestureWheelYCheck = this.shouldSetLastVolume = this.shouldSetLastBrightness = this.speedPointerCheck = this.speedCheck = this.skipPersist = this.shouldCancelTimeScrub = false;
     this.parentIntersecting = this.isIntersecting = this.gestureTouchCanCancel = this.canAutoMovePlaylist = this.stallCancelTimeScrub = true;
     this.currentPlaylistIndex = this.skipDuration = this.textTrackIndex = this.rewindPlaybackRate = this.playTriggerCounter = 0;
-    this.lastCaptionsText = "";
     this.wasPaused = !this.video.autoplay;
     this.sliderAptVolume = this.sliderAptBrightness = 5;
     ((this.throttleMap = new Map()), (this.rafLoopMap = new Map()), (this.rafLoopFnMap = new Map()));
@@ -237,17 +248,19 @@ class tmg_Video_Controller {
   }
   guardGenericPaths = () => ["media", "media.links", "settings.toasts", "settings.css", "settings.controlPanel", "lightState", "lightState.preview", "settings.time", "settings.playbackRate", "settings.volume", "settings.brightness"].forEach((p) => this.config.on(p, this.config.cascade));
   plugSources() {
-    this.config.on("src", ({ target: { value } }) => !tmg.isSameURL(this.config.src, value) && (tmg.removeSources(this.video), (this.video.src = value)));
-    this.config.on("sources", ({ currentTarget: { value = [] } }) => this.config.sources.some((s) => !value?.some((so) => tmg.isSameURL(so.src, s.src))) && (tmg.removeSources(this.video), value?.length && tmg.addSources(value, this.video)));
-    if ("src" in this.config) this.config.src = this.config.src;
-    if ("sources" in this.config) this.config.sources = this.config.sources;
+    const { src, sources } = this.config;
     this.config.get("src", () => this.video.src);
     this.config.get("sources", () => tmg.getSources(this.video));
+    this.config.watch("src", (value) => !tmg.isSameURL(this.config.src, value) && (tmg.removeSources(this.video), (this.video.src = value)));
+    this.config.watch("sources", (value = []) => this.config.sources.some((s) => !value?.some((so) => tmg.isSameURL(so.src, s.src))) && (tmg.removeSources(this.video), value?.length && tmg.addSources(value, this.video)));
+    if ("src" in this.config) this.config.src = src;
+    if ("sources" in this.config) this.config.sources = sources;
   }
   plugTracks() {
-    this.config.on("tracks", ({ currentTarget: { value = [] } }) => this.config.tracks.some((t) => !value?.some((tr) => tmg.isSameURL(tr.src, t.src))) && (tmg.removeTracks(this.video), value?.length && tmg.addTracks(value, this.video)));
-    this.config.tracks = this.config.tracks;
+    const { tracks } = this.config;
     this.config.get("tracks", () => tmg.getTracks(this.video));
+    this.config.watch("tracks", (value = []) => this.config.tracks.some((t) => !value?.some((tr) => tmg.isSameURL(tr.src, t.src))) && (tmg.removeTracks(this.video), value?.length && tmg.addTracks(value, this.video)));
+    if ("tracks" in this.config) this.config.tracks = tracks;
   }
   plugPlaylist() {
     this.config.get("playlist", (value) => (value?.length ? value : null));
@@ -259,7 +272,6 @@ class tmg_Video_Controller {
       if (v) {
         this.config.media = v.media;
         ["min", "max", "start", "end", "previews"].forEach((prop) => (this.settings.time[prop] = v.settings.time[prop]));
-        this.settings.status.ui.previews = this.settings.time.previews?.address && this.settings.time.previews?.spf;
         this.config.tracks = v.tracks ?? [];
         this.setControlsState("playlist");
       } else this.movePlaylistTo(this.currentPlaylistIndex);
@@ -269,7 +281,7 @@ class tmg_Video_Controller {
   setPosterState = (poster = this.config.media.artwork?.[0]?.src) => !tmg.isSameURL(poster, this.video.poster) && (poster ? this.video.setAttribute("poster", poster) : this.video.removeAttribute("poster"));
   plugMedia() {
     this.setImgLoadState({ target: this.DOM.videoProfile });
-    ["media.title", "media.artist", "media.profile"].forEach((e) => this.config.on(e, ({ target: { key, value } }) => (this.DOM[`video${tmg.capitalize(key)}`][key === "profile" ? "src" : "textContent"] = (this.settings.controlPanel[key] === true ? value : this.settings.controlPanel[key]) || "")));
+    ["media.title", "media.artist", "media.profile"].forEach((e) => this.config.watch(e, (value) => (this.settings.controlPanel[e.replace("media.", "")] = value)));
     ["media.links.title", "media.links.artist"].forEach((p) =>
       this.config.on(p, ({ target: { key, value } }) => {
         value ? this.DOM[`video${tmg.capitalize(key)}`].setAttribute("href", value) : this.DOM[`video${tmg.capitalize(key)}`].removeAttribute("href");
@@ -380,11 +392,15 @@ class tmg_Video_Controller {
     this.settings.css = this.settings.css;
     this.CSSCache ??= {};
     ["captionsCharacterEdgeStyle", "captionsTextAlignment"].forEach((key) =>
-      this.config.get(`css.${key}`, () => {
-        const pre = `tmg-video-${tmg.uncamelize(key, "-")}`,
-          value = [...(this.DOM.captionsContainer?.classList ?? [])].find((cls) => cls.startsWith(pre))?.replace(`${pre}-`, "");
-        return tmg.parseUIObj(this.settings.captions)[tmg.camelize(key.slice(8))].values.includes(value) ? value : "none";
-      })
+      this.config.get(
+        `settings.css.${key}`,
+        () => {
+          const pre = `tmg-video-${tmg.uncamelize(key, "-")}`,
+            value = [...(this.DOM.captionsContainer?.classList ?? [])].find((cls) => cls.startsWith(pre))?.replace(`${pre}-`, "");
+          return tmg.parseUIObj(this.settings.captions)[tmg.camelize(key.slice(8))].values.includes(value) ? value : "none";
+        },
+        true
+      )
     );
     for (const sheet of document.styleSheets) {
       try {
@@ -394,7 +410,7 @@ class tmg_Video_Controller {
             if (!property.startsWith("--tmg-video-")) continue;
             const field = tmg.camelize(property.replace("--tmg-video-", ""));
             this.CSSCache[field] = cssRule.style.getPropertyValue(property);
-            this.config.get(`css.${field}`, () => getComputedStyle(this.videoContainer).getPropertyValue(property));
+            this.config.get(`settings.css.${field}`, () => getComputedStyle(this.videoContainer).getPropertyValue(property), true);
           }
         }
       } catch {
@@ -407,7 +423,7 @@ class tmg_Video_Controller {
     this.setPosterState(); // had to do this early for the UI
     this.video.parentElement?.insertBefore((this.videoContainer = tmg.createEl("div", { role: "region", ariaLabel: "Video Player", className: `tmg-video-container tmg-media-container${tmg.ON_MOBILE ? " tmg-video-mobile" : ""}${this.video.paused ? " tmg-video-paused" : ""}` }, { trackKind: "captions", volumeLevel: "muted", brightnessLevel: "dark" })), this.video);
     (this.pseudoVideoContainer = tmg.createEl("div", { role: "status", ariaLabel: "Video Player Placeholder", ariaLive: "polite", className: "tmg-pseudo-video-container tmg-media-container" })).append((this.pseudoVideo = tmg.createEl("video", { tmgPlayer: this.video.tmgPlayer, ariaHidden: true, className: "tmg-pseudo-video tmg-media", muted: true, autoplay: false })));
-    this.plugCSSSettings();
+    this.plugCSSSettings(); // as soon as container is ready
     this.videoContainer.dataset.objectFit = this.settings.css.objectFit || "contain";
     (this.syncMediaAspectRatio(), this.syncMediaBrandColor());
   }
@@ -459,242 +475,191 @@ class tmg_Video_Controller {
     this.queryDOM(".tmg-video-container-content").prepend(this.video);
   }
   getPlayerElements() {
-    const { ui } = this.settings.status,
-      k = this.fetchKeyShortcutsForDisplay();
+    const k = this.fetchKeyShortcutsForDisplay();
     const _batch = (...els) => els.filter(Boolean);
     return {
       pictureinpicturewrapper: tmg.createEl("div", {
         className: "tmg-video-picture-in-picture-wrapper",
         innerHTML: `<button type="button" class="tmg-video-picture-in-picture-icon-wrapper"><svg class="tmg-video-picture-in-picture-icon" viewBox="0 0 73 73"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><g transform="translate(2, 2)" fill-rule="nonzero" stroke-width="2" class="tmg-video-pip-icon-background"><rect x="-1" y="-1" width="71" height="71" rx="14"></rect></g><g transform="translate(15, 15)" fill-rule="nonzero"><g><polygon class="tmg-video-pip-icon-content-background" points="0 0 0 36 36 36 36 0"></polygon><rect class="tmg-video-pip-icon-content-backdrop" x="4.2890625" y="4.2890625" width="27.421875" height="13.2679687"></rect><g transform="translate(4.289063, 27.492187)"><rect x="0" y="0" width="3.1640625" height="2.109375" class="tmg-video-pip-icon-timeline-progress"></rect><rect x="7.3828125" y="0" width="20.0390625" height="2.109375" class="tmg-video-pip-icon-timeline-base"></rect></g><circle class="tmg-video-pip-icon-thumb-indicator" cx="9.5625" cy="28.546875" r="3.1640625"></circle><polygon class="tmg-video-pip-icon-content" points="31.7109375 17.5569609 31.7109375 23.2734375 4.2890625 23.2734375 4.2890625 17.5569609 13.78125 8.06477344 20.109375 14.3928984 24.328125 10.1741484"></polygon></g><g transform="translate(21, 26)"><polygon class="tmg-video-pip-icon-content-background" points="0 0 0 17.7727273 23 17.7727273 23 0"></polygon><rect class="tmg-video-pip-icon-content-backdrop" x="2.74023438" y="2.74023438" width="17.5195312" height="8.47675781"></rect><polygon class="tmg-video-pip-icon-content"points="20.2597656 11.2169473 20.2597656 14.8691406 2.74023438 14.8691406 2.74023438 11.2169473 8.8046875 5.15249414 12.8476562 9.19546289 15.5429687 6.50015039"></polygon></g></g></g></svg></button><p>Playing in picture-in-picture</p>`,
       }),
-      meta: tmg.createEl("div", {
-        className: "tmg-video-meta-wrapper-cover",
-        innerHTML: `<a class="tmg-video-profile-link"><img alt="Profile" class="tmg-video-profile"></a><div class="tmg-video-meta-text-wrapper-cover"><div class="tmg-video-title-wrapper"><a class="tmg-video-title"></a></div><div class="tmg-video-artist-wrapper"><a class="tmg-video-artist"></a></div></div>`,
+      meta: tmg.createEl("div", { className: "tmg-video-meta-wrapper-cover", innerHTML: `<a class="tmg-video-profile-link"><img alt="Profile" class="tmg-video-profile"></a><div class="tmg-video-meta-text-wrapper-cover"><div class="tmg-video-title-wrapper"><a class="tmg-video-title"></a></div><div class="tmg-video-artist-wrapper"><a class="tmg-video-artist"></a></div></div>` }, { draggableControl: "", dragId: "wrapper", controlId: "meta" }),
+      videobuffer: tmg.createEl("div", { className: "tmg-video-buffer", innerHTML: `<div class="tmg-video-buffer-accent"></div><div class="tmg-video-buffer-eclipse"><div class="tmg-video-buffer-left"><div class="tmg-video-buffer-circle"></div></div><div class="tmg-video-buffer-right"><div class="tmg-video-buffer-circle"></div></div></div>` }),
+      thumbnail: _batch(tmg.createEl("div", { className: "tmg-video-thumbnail" }), tmg.createEl("canvas", { className: "tmg-video-thumbnail" })),
+      captionsContainer: tmg.createEl("div", { className: "tmg-video-captions-container" }, { part: "region" }),
+      playpausenotifier: _batch(tmg.createEl("div", { className: "tmg-video-notifier tmg-video-play-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-play-notifier-icon"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg>` }), tmg.createEl("div", { className: "tmg-video-notifier tmg-video-pause-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-pause-notifier-icon"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg>` })),
+      prevnextnotifier: _batch(tmg.createEl("div", { className: "tmg-video-notifier tmg-video-prev-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-prev-icon"><rect x="4" y="5.14" width="2.5" height="14" transform="translate(2.1,0)"/><path d="M17,5.14V19.14L6,12.14L17,5.14Z" transform="translate(2.5,0)" /></svg>` }), tmg.createEl("div", { className: "tmg-video-notifier tmg-video-next-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-next-icon"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" transform="translate(-2.5,0)" /><rect x="19" y="5.14" width="2.5" height="14" transform="translate(-2.5,0)"/></svg>` })),
+      captionsnotifier: tmg.createEl("div", { className: "tmg-video-notifier tmg-video-captions-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-subtitles-icon"><path style="scale: 0.5;" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-captions-icon" style="scale: 1.15;"><path d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z"></path></svg>` }),
+      capturenotifier: tmg.createEl("div", { className: "tmg-video-notifier tmg-video-capture-notifier", innerHTML: `<svg viewBox="0 0 24 24" class="tmg-video-capture-icon"><path fill-rule="evenodd" d="M6.937 5.845c.07-.098.15-.219.25-.381l.295-.486C8.31 3.622 8.913 3 10 3h4c1.087 0 1.69.622 2.518 1.978l.295.486c.1.162.18.283.25.381q.071.098.12.155H20a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3h2.816q.05-.057.121-.155M4 8a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-3c-.664 0-1.112-.364-1.56-.987a8 8 0 0 1-.329-.499c-.062-.1-.27-.445-.3-.492C14.36 5.282 14.088 5 14 5h-4c-.087 0-.36.282-.812 1.022-.029.047-.237.391-.3.492a8 8 0 0 1-.327.5C8.112 7.635 7.664 8 7 8zm15 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-7 7a5 5 0 1 1 0-10 5 5 0 0 1 0 10m0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>` }),
+      playbackratenotifier: _batch(
+        tmg.createEl("div", { className: "tmg-video-notifier tmg-video-playback-rate-notifier", innerHTML: `<svg viewBox="0 0 30 24"><path d="M22,5.14V19.14L11,12.14L22,5.14Z" /><path d="M11,5.14V19.14L0,12.14L11,5.14Z" /></svg><p class="tmg-video-playback-rate-notifier-text"></p><svg viewBox="0 0 30 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /><path d="M19,5.14V19.14L30,12.14L19,5.14Z" /></svg>` }),
+        tmg.createEl("div", { className: "tmg-video-notifier tmg-video-playback-rate-notifier-content" }),
+        tmg.createEl("div", { className: "tmg-video-notifier tmg-video-playback-rate-up-notifier", innerHTML: `<svg viewBox="0 0 30 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" transform="translate(-2.5, 0)" /><path d="M19,5.14V19.14L30,12.14L19,5.14Z" transform="translate(-2.5, 0)" /></svg>` }),
+        tmg.createEl("div", { className: "tmg-video-notifier tmg-video-playback-rate-down-notifier", innerHTML: `<svg viewBox="0 0 30 24"><path d="M22,5.14V19.14L11,12.14L22,5.14Z" transform="translate(2.5, 0)" /><path d="M11,5.14V19.14L0,12.14L11,5.14Z" transform="translate(2.5, 0)" /></svg>` })
+      ),
+      volumenotifier: _batch(
+        tmg.createEl("div", { className: "tmg-video-notifier tmg-video-volume-notifier-content" }),
+        tmg.createEl("div", { className: "tmg-video-notifier tmg-video-volume-up-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-volume-up-notifier-icon" ><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" /></svg>` }),
+        tmg.createEl("div", { className: "tmg-video-notifier tmg-video-volume-down-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-volume-down-notifier-icon"><path d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z" /></svg>` }),
+        tmg.createEl("div", { className: "tmg-video-notifier tmg-video-volume-muted-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-volume-muted-notifier-icon"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" /></svg>` })
+      ),
+      brightnessnotifier: _batch(
+        tmg.createEl("div", { className: "tmg-video-notifier tmg-video-brightness-notifier-content" }),
+        tmg.createEl("div", { className: "tmg-video-notifier tmg-video-brightness-up-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-brightness-up-icon"><path transform="translate(1.5, 1.5)" style="scale: 1.05;" d="M10 14.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h3a1 1 0 0 1 0 2h-3a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm0-15a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm-9 9h3a1 1 0 1 1 0 2H1a1 1 0 0 1 0-2zm13.95 4.535l2.121 2.122a1 1 0 0 1-1.414 1.414l-2.121-2.121a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-2.12 2.12a1 1 0 1 1-1.415-1.413l2.121-2.122a1 1 0 0 1 1.414 0zM17.071 3.787a1 1 0 0 1 0 1.414L14.95 7.322a1 1 0 0 1-1.414-1.414l2.12-2.121a1 1 0 0 1 1.415 0zm-12.728 0l2.121 2.121A1 1 0 1 1 5.05 7.322L2.93 5.201a1 1 0 0 1 1.414-1.414z"></path></svg>` }),
+        tmg.createEl("div", { className: "tmg-video-notifier tmg-video-brightness-down-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-brightness-down-icon"><path transform="translate(3.25, 3.25)" style="scale: 1.05;" d="M8 12.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h1a1 1 0 0 1 0 2h-1a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1zm0-13a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zm-7 7h1a1 1 0 1 1 0 2H1a1 1 0 1 1 0-2zm11.95 4.535l.707.708a1 1 0 1 1-1.414 1.414l-.707-.707a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-.707.707A1 1 0 0 1 2.343 13.1l.707-.708a1 1 0 0 1 1.414 0zm9.193-9.192a1 1 0 0 1 0 1.414l-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0zm-9.9 0l.707.707A1 1 0 1 1 3.05 5.322l-.707-.707a1 1 0 0 1 1.414-1.414z"></path></svg>` }),
+        tmg.createEl("div", { className: "tmg-video-notifier tmg-video-brightness-dark-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-brightness-dark-icon"><path transform="translate(2, 2.5)" style="scale: 1.2;" d="M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM8.5 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm0 11a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm5-5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm-11 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9.743-4.036a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm-7.779 7.779a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm7.072 0a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707zM3.757 4.464a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707z"></path></svg>` })
+      ),
+      objectfitnotifier: _batch(
+        tmg.createEl("div", { className: "tmg-video-notifier tmg-video-object-fit-notifier-content" }),
+        tmg.createEl("div", {
+          className: "tmg-video-notifier tmg-video-object-fit-contain-notifier",
+          innerHTML: `<svg viewBox="0 0 16 16" style="scale: 0.78;"><rect width="16" height="16" rx="4" ry="4" fill="none" stroke-width="2.25" stroke="currentColor"/><g stroke-width="1" stroke="currentColor" transform="translate(3,3)"><path style="scale: 0.6;" d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M534.330152,212.999001 L532.488194,212.999001 C532.212773,212.999001 531.997715,213.222859 531.997715,213.499001 C531.997715,213.767068 532.21731,213.999001 532.488194,213.999001 L535.507237,213.999001 C535.643364,213.999001 535.764746,213.944316 535.852704,213.855661 C535.94109,213.763694 535.997715,213.642369 535.997715,213.508523 L535.997715,210.48948 C535.997715,210.214059 535.773858,209.999001 535.497715,209.999001 C535.229649,209.999001 534.997715,210.218596 534.997715,210.48948 L534.997715,212.252351 L530.217991,207.472627 C530.022487,207.277123 529.712749,207.283968 529.517487,207.47923 C529.327935,207.668781 529.319269,207.988118 529.510884,208.179734 L534.330152,212.999001 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M521.667563,199 L523.509521,199 C523.784943,199 524,198.776142 524,198.5 C524,198.231934 523.780405,198 523.509521,198 L520.490479,198 C520.354351,198 520.232969,198.054685 520.145011,198.14334 C520.056625,198.235308 520,198.356632 520,198.490479 L520,201.509521 C520,201.784943 520.223858,202 520.5,202 C520.768066,202 521,201.780405 521,201.509521 L521,199.74665 L525.779724,204.526374 C525.975228,204.721878 526.284966,204.715034 526.480228,204.519772 C526.66978,204.33022 526.678447,204.010883 526.486831,203.819268 L521.667563,199 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520 -198)"/></g></svg><svg class="tmg-video-object-fit-fill-icon" data-control-title="Stretch${k["objectFit"]}" viewBox="0 0 16 16" style="scale: 0.75;"><rect x="4" y="4" width="8" height="8" rx="1" ry="1" fill="none" stroke-width="1.5" stroke="currentColor"/><g stroke-width="1" stroke="currentColor" transform="translate(3, 3)"><path style="scale: 0.65;" d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520, -198) translate(-3.25, 2.75)" /><path style="scale: 0.65;" d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520, -198) translate(2.5, -3.25)" /></g></svg>`,
+        })
+      ),
+      fwdnotifier: tmg.createEl("div", { className: "tmg-video-notifier tmg-video-fwd-notifier", innerHTML: `<svg viewBox="0 0 25 25"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg>` }),
+      bwdnotifier: tmg.createEl("div", { className: "tmg-video-notifier tmg-video-bwd-notifier", innerHTML: `<svg viewBox="0 0 25 25"><path d="M17,5.14V19.14L6,12.14L17,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M17,5.14V19.14L6,12.14L17,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M17,5.14V19.14L6,12.14L17,5.14Z" /></svg>` }),
+      scrubnotifier: tmg.createEl("div", { className: "tmg-video-notifier tmg-video-scrub-notifier", innerHTML: `<span><svg viewBox="0 0 25 25"><path d="M17,5.14V19.14L6,12.14L17,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M17,5.14V19.14L6,12.14L17,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M17,5.14V19.14L6,12.14L17,5.14Z" /></svg></span><p class="tmg-video-scrub-notifier-text" tabindex="-1">Double tap left or right to skip ${this.settings.time.skip} seconds</p><span><svg viewBox="0 0 25 25"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg></span>` }),
+      cancelscrubnotifier: tmg.createEl("div", { className: "tmg-video-notifier tmg-video-cancel-scrub-notifier", innerText: "Release to cancel" }),
+      touchtimelinenotifier: tmg.createEl("div", { className: "tmg-video-notifier tmg-video-touch-timeline-notifier tmg-video-touch-notifier" }),
+      touchvolumenotifier: tmg.createEl("div", {
+        className: "tmg-video-notifier tmg-video-touch-volume-notifier tmg-video-touch-vb-notifier",
+        innerHTML: `<span class="tmg-video-touch-volume-content tmg-video-touch-vb-content">0</span><div class="tmg-video-touch-volume-slider tmg-video-touch-vb-slider"></div><span><svg viewBox="0 0 25 25" class="tmg-video-volume-high-icon"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-volume-low-icon"><path d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-volume-muted-icon"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z"></path></svg></span>`,
       }),
-      videobuffer: tmg.createEl("div", {
-        className: "tmg-video-buffer",
-        innerHTML: `<div class="tmg-video-buffer-plain"></div><div class="tmg-video-buffer-rotator"><div class="tmg-video-buffer-left"><div class="tmg-video-buffer-circle"></div></div><div class="tmg-video-buffer-right"><div class="tmg-video-buffer-circle"></div></div></div>`,
+      touchbrightnessnotifier: tmg.createEl("div", {
+        className: "tmg-video-notifier tmg-video-touch-brightness-notifier tmg-video-touch-vb-notifier",
+        innerHTML: `<span class="tmg-video-touch-brightness-content tmg-video-touch-vb-content">0</span><div class="tmg-video-touch-brightness-slider tmg-video-touch-vb-slider"></div><span><svg viewBox="0 0 25 25" class="tmg-video-brightness-high-icon"><path transform="translate(1.5, 1.5)" style="scale: 1.05;" d="M10 14.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h3a1 1 0 0 1 0 2h-3a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm0-15a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm-9 9h3a1 1 0 1 1 0 2H1a1 1 0 0 1 0-2zm13.95 4.535l2.121 2.122a1 1 0 0 1-1.414 1.414l-2.121-2.121a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-2.12 2.12a1 1 0 1 1-1.415-1.413l2.121-2.122a1 1 0 0 1 1.414 0zM17.071 3.787a1 1 0 0 1 0 1.414L14.95 7.322a1 1 0 0 1-1.414-1.414l2.12-2.121a1 1 0 0 1 1.415 0zm-12.728 0l2.121 2.121A1 1 0 1 1 5.05 7.322L2.93 5.201a1 1 0 0 1 1.414-1.414z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-brightness-low-icon"><path transform="translate(3.25, 3.25)" style="scale: 1.05;" d="M8 12.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h1a1 1 0 0 1 0 2h-1a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1zm0-13a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zm-7 7h1a1 1 0 1 1 0 2H1a1 1 0 1 1 0-2zm11.95 4.535l.707.708a1 1 0 1 1-1.414 1.414l-.707-.707a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-.707.707A1 1 0 0 1 2.343 13.1l.707-.708a1 1 0 0 1 1.414 0zm9.193-9.192a1 1 0 0 1 0 1.414l-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0zm-9.9 0l.707.707A1 1 0 1 1 3.05 5.322l-.707-.707a1 1 0 0 1 1.414-1.414z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-brightness-dark-icon"><path transform="translate(2, 2.5)" style="scale: 1.2;" d="M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM8.5 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm0 11a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm5-5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm-11 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9.743-4.036a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm-7.779 7.779a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm7.072 0a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707zM3.757 4.464a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707z"></path></svg></span>`,
       }),
-      thumbnail: _batch(tmg.createEl("img", { className: "tmg-video-thumbnail", alt: "Video Image", src: window.TMG_VIDEO_ALT_IMG_SRC }), tmg.createEl("canvas", { className: "tmg-video-thumbnail" })),
-      captionsContainer: tmg.createEl("div", { className: "tmg-video-captions-container" }),
-      playpausenotifier: ui.notifiers ? _batch(tmg.createEl("div", { className: "tmg-video-notifier tmg-video-play-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-play-notifier-icon"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg>` }), tmg.createEl("div", { className: "tmg-video-notifier tmg-video-pause-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-pause-notifier-icon"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg>` })) : null,
-      prevnextnotifier: ui.notifiers ? _batch(tmg.createEl("div", { className: "tmg-video-notifier tmg-video-prev-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-prev-icon"><rect x="4" y="5.14" width="2.5" height="14" transform="translate(2.1,0)"/><path d="M17,5.14V19.14L6,12.14L17,5.14Z" transform="translate(2.5,0)" /></svg>` }), tmg.createEl("div", { className: "tmg-video-notifier tmg-video-next-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-next-icon"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" transform="translate(-2.5,0)" /><rect x="19" y="5.14" width="2.5" height="14" transform="translate(-2.5,0)"/></svg>` })) : null,
-      captionsnotifier: ui.notifiers
-        ? tmg.createEl("div", {
-            className: "tmg-video-notifier tmg-video-captions-notifier",
-            innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-subtitles-icon"><path style="scale: 0.5;" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-captions-icon" style="scale: 1.15;"><path d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z"></path></svg>`,
-          })
-        : null,
-      capturenotifier: ui.notifiers
-        ? tmg.createEl("div", {
-            className: "tmg-video-notifier tmg-video-capture-notifier",
-            innerHTML: `<svg viewBox="0 0 24 24" class="tmg-video-capture-icon"><path fill-rule="evenodd" d="M6.937 5.845c.07-.098.15-.219.25-.381l.295-.486C8.31 3.622 8.913 3 10 3h4c1.087 0 1.69.622 2.518 1.978l.295.486c.1.162.18.283.25.381q.071.098.12.155H20a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3h2.816q.05-.057.121-.155M4 8a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-3c-.664 0-1.112-.364-1.56-.987a8 8 0 0 1-.329-.499c-.062-.1-.27-.445-.3-.492C14.36 5.282 14.088 5 14 5h-4c-.087 0-.36.282-.812 1.022-.029.047-.237.391-.3.492a8 8 0 0 1-.327.5C8.112 7.635 7.664 8 7 8zm15 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-7 7a5 5 0 1 1 0-10 5 5 0 0 1 0 10m0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>`,
-          })
-        : null,
-      playbackratenotifier: ui.notifiers
-        ? _batch(
-            tmg.createEl("div", { className: "tmg-video-notifier tmg-video-playback-rate-notifier", innerHTML: `<svg viewBox="0 0 30 24"><path d="M22,5.14V19.14L11,12.14L22,5.14Z" /><path d="M11,5.14V19.14L0,12.14L11,5.14Z" /></svg><p class="tmg-video-playback-rate-notifier-text"></p><svg viewBox="0 0 30 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /><path d="M19,5.14V19.14L30,12.14L19,5.14Z" /></svg>` }),
-            tmg.createEl("div", { className: "tmg-video-notifier tmg-video-playback-rate-notifier-content" }),
-            tmg.createEl("div", { className: "tmg-video-notifier tmg-video-playback-rate-up-notifier", innerHTML: `<svg viewBox="0 0 30 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" transform="translate(-2.5, 0)" /><path d="M19,5.14V19.14L30,12.14L19,5.14Z" transform="translate(-2.5, 0)" /></svg>` }),
-            tmg.createEl("div", { className: "tmg-video-notifier tmg-video-playback-rate-down-notifier", innerHTML: `<svg viewBox="0 0 30 24"><path d="M22,5.14V19.14L11,12.14L22,5.14Z" transform="translate(2.5, 0)" /><path d="M11,5.14V19.14L0,12.14L11,5.14Z" transform="translate(2.5, 0)" /></svg>` })
-          )
-        : null,
-      volumenotifier: ui.notifiers
-        ? _batch(
-            tmg.createEl("div", { className: "tmg-video-notifier tmg-video-volume-notifier-content" }),
-            tmg.createEl("div", { className: "tmg-video-notifier tmg-video-volume-up-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-volume-up-notifier-icon" ><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" /></svg>` }),
-            tmg.createEl("div", { className: "tmg-video-notifier tmg-video-volume-down-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-volume-down-notifier-icon"><path d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z" /></svg>` }),
-            tmg.createEl("div", { className: "tmg-video-notifier tmg-video-volume-muted-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-volume-muted-notifier-icon"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" /></svg>` })
-          )
-        : null,
-      brightnessnotifier: ui.notifiers
-        ? _batch(
-            tmg.createEl("div", { className: "tmg-video-notifier tmg-video-brightness-notifier-content" }),
-            tmg.createEl("div", { className: "tmg-video-notifier tmg-video-brightness-up-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-brightness-up-icon"><path transform="translate(1.5, 1.5)" style="scale: 1.05;" d="M10 14.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h3a1 1 0 0 1 0 2h-3a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm0-15a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm-9 9h3a1 1 0 1 1 0 2H1a1 1 0 0 1 0-2zm13.95 4.535l2.121 2.122a1 1 0 0 1-1.414 1.414l-2.121-2.121a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-2.12 2.12a1 1 0 1 1-1.415-1.413l2.121-2.122a1 1 0 0 1 1.414 0zM17.071 3.787a1 1 0 0 1 0 1.414L14.95 7.322a1 1 0 0 1-1.414-1.414l2.12-2.121a1 1 0 0 1 1.415 0zm-12.728 0l2.121 2.121A1 1 0 1 1 5.05 7.322L2.93 5.201a1 1 0 0 1 1.414-1.414z"></path></svg>` }),
-            tmg.createEl("div", { className: "tmg-video-notifier tmg-video-brightness-down-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-brightness-down-icon"><path transform="translate(3.25, 3.25)" style="scale: 1.05;" d="M8 12.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h1a1 1 0 0 1 0 2h-1a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1zm0-13a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zm-7 7h1a1 1 0 1 1 0 2H1a1 1 0 1 1 0-2zm11.95 4.535l.707.708a1 1 0 1 1-1.414 1.414l-.707-.707a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-.707.707A1 1 0 0 1 2.343 13.1l.707-.708a1 1 0 0 1 1.414 0zm9.193-9.192a1 1 0 0 1 0 1.414l-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0zm-9.9 0l.707.707A1 1 0 1 1 3.05 5.322l-.707-.707a1 1 0 0 1 1.414-1.414z"></path></svg>` }),
-            tmg.createEl("div", { className: "tmg-video-notifier tmg-video-brightness-dark-notifier", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-brightness-dark-icon"><path transform="translate(2, 2.5)" style="scale: 1.2;" d="M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM8.5 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm0 11a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm5-5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm-11 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9.743-4.036a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm-7.779 7.779a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm7.072 0a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707zM3.757 4.464a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707z"></path></svg>` })
-          )
-        : null,
-      objectfitnotifier: ui.notifiers
-        ? _batch(
-            tmg.createEl("div", { className: "tmg-video-notifier tmg-video-object-fit-notifier-content" }),
-            tmg.createEl("div", {
-              className: "tmg-video-notifier tmg-video-object-fit-contain-notifier",
-              innerHTML: `<svg viewBox="0 0 16 16" style="scale: 0.78;"><rect width="16" height="16" rx="4" ry="4" fill="none" stroke-width="2.25" stroke="currentColor"/><g stroke-width="1" stroke="currentColor" transform="translate(3,3)"><path style="scale: 0.6;" d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M534.330152,212.999001 L532.488194,212.999001 C532.212773,212.999001 531.997715,213.222859 531.997715,213.499001 C531.997715,213.767068 532.21731,213.999001 532.488194,213.999001 L535.507237,213.999001 C535.643364,213.999001 535.764746,213.944316 535.852704,213.855661 C535.94109,213.763694 535.997715,213.642369 535.997715,213.508523 L535.997715,210.48948 C535.997715,210.214059 535.773858,209.999001 535.497715,209.999001 C535.229649,209.999001 534.997715,210.218596 534.997715,210.48948 L534.997715,212.252351 L530.217991,207.472627 C530.022487,207.277123 529.712749,207.283968 529.517487,207.47923 C529.327935,207.668781 529.319269,207.988118 529.510884,208.179734 L534.330152,212.999001 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M521.667563,199 L523.509521,199 C523.784943,199 524,198.776142 524,198.5 C524,198.231934 523.780405,198 523.509521,198 L520.490479,198 C520.354351,198 520.232969,198.054685 520.145011,198.14334 C520.056625,198.235308 520,198.356632 520,198.490479 L520,201.509521 C520,201.784943 520.223858,202 520.5,202 C520.768066,202 521,201.780405 521,201.509521 L521,199.74665 L525.779724,204.526374 C525.975228,204.721878 526.284966,204.715034 526.480228,204.519772 C526.66978,204.33022 526.678447,204.010883 526.486831,203.819268 L521.667563,199 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520 -198)"/></g></svg><svg class="tmg-video-object-fit-fill-icon" data-control-title="Stretch${k["objectFit"]}" viewBox="0 0 16 16" style="scale: 0.75;"><rect x="4" y="4" width="8" height="8" rx="1" ry="1" fill="none" stroke-width="1.5" stroke="currentColor"/><g stroke-width="1" stroke="currentColor" transform="translate(3, 3)"><path style="scale: 0.65;" d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520, -198) translate(-3.25, 2.75)" /><path style="scale: 0.65;" d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520, -198) translate(2.5, -3.25)" /></g></svg>`,
-            })
-          )
-        : null,
-      fwdnotifier: ui.notifiers
-        ? tmg.createEl("div", {
-            className: "tmg-video-notifier tmg-video-fwd-notifier",
-            innerHTML: `<svg viewBox="0 0 25 25"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg>`,
-          })
-        : null,
-      bwdnotifier: ui.notifiers
-        ? tmg.createEl("div", {
-            className: "tmg-video-notifier tmg-video-bwd-notifier",
-            innerHTML: `<svg viewBox="0 0 25 25"><path d="M17,5.14V19.14L6,12.14L17,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M17,5.14V19.14L6,12.14L17,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M17,5.14V19.14L6,12.14L17,5.14Z" /></svg>`,
-          })
-        : null,
-      scrubnotifier: ui.notifiers
-        ? tmg.createEl("div", {
-            className: "tmg-video-notifier tmg-video-scrub-notifier",
-            innerHTML: `<span><svg viewBox="0 0 25 25"><path d="M17,5.14V19.14L6,12.14L17,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M17,5.14V19.14L6,12.14L17,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M17,5.14V19.14L6,12.14L17,5.14Z" /></svg></span><p class="tmg-video-scrub-notifier-text" tabindex="-1">Double tap left or right to skip ${this.settings.time.skip} seconds</p><span><svg viewBox="0 0 25 25"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg></span>`,
-          })
-        : null,
-      cancelscrubnotifier: ui.notifiers ? tmg.createEl("div", { className: "tmg-video-notifier tmg-video-cancel-scrub-notifier", innerText: "Release to cancel" }) : null,
-      touchtimelinenotifier: ui.notifiers ? tmg.createEl("div", { className: "tmg-video-notifier tmg-video-touch-timeline-notifier tmg-video-touch-notifier" }) : null,
-      touchvolumenotifier: ui.notifiers
-        ? tmg.createEl("div", {
-            className: "tmg-video-notifier tmg-video-touch-volume-notifier tmg-video-touch-vb-notifier",
-            innerHTML: `<span class="tmg-video-touch-volume-content tmg-video-touch-vb-content">0</span><div class="tmg-video-touch-volume-slider tmg-video-touch-vb-slider"></div><span><svg viewBox="0 0 25 25" class="tmg-video-volume-high-icon"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-volume-low-icon"><path d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-volume-muted-icon"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z"></path></svg></span>`,
-          })
-        : null,
-      touchbrightnessnotifier: ui.notifiers
-        ? tmg.createEl("div", {
-            className: "tmg-video-notifier tmg-video-touch-brightness-notifier tmg-video-touch-vb-notifier",
-            innerHTML: `<span class="tmg-video-touch-brightness-content tmg-video-touch-vb-content">0</span><div class="tmg-video-touch-brightness-slider tmg-video-touch-vb-slider"></div><span><svg viewBox="0 0 25 25" class="tmg-video-brightness-high-icon"><path transform="translate(1.5, 1.5)" style="scale: 1.05;" d="M10 14.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h3a1 1 0 0 1 0 2h-3a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm0-15a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm-9 9h3a1 1 0 1 1 0 2H1a1 1 0 0 1 0-2zm13.95 4.535l2.121 2.122a1 1 0 0 1-1.414 1.414l-2.121-2.121a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-2.12 2.12a1 1 0 1 1-1.415-1.413l2.121-2.122a1 1 0 0 1 1.414 0zM17.071 3.787a1 1 0 0 1 0 1.414L14.95 7.322a1 1 0 0 1-1.414-1.414l2.12-2.121a1 1 0 0 1 1.415 0zm-12.728 0l2.121 2.121A1 1 0 1 1 5.05 7.322L2.93 5.201a1 1 0 0 1 1.414-1.414z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-brightness-low-icon"><path transform="translate(3.25, 3.25)" style="scale: 1.05;" d="M8 12.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h1a1 1 0 0 1 0 2h-1a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1zm0-13a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zm-7 7h1a1 1 0 1 1 0 2H1a1 1 0 1 1 0-2zm11.95 4.535l.707.708a1 1 0 1 1-1.414 1.414l-.707-.707a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-.707.707A1 1 0 0 1 2.343 13.1l.707-.708a1 1 0 0 1 1.414 0zm9.193-9.192a1 1 0 0 1 0 1.414l-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0zm-9.9 0l.707.707A1 1 0 1 1 3.05 5.322l-.707-.707a1 1 0 0 1 1.414-1.414z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-brightness-dark-icon"><path transform="translate(2, 2.5)" style="scale: 1.2;" d="M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM8.5 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm0 11a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm5-5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm-11 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9.743-4.036a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm-7.779 7.779a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm7.072 0a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707zM3.757 4.464a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707z"></path></svg></span>`,
-          })
-        : null,
-      expandminiplayer: ui.expandMiniplayer ? tmg.createEl("button", { className: "tmg-video-miniplayer-expand-btn", innerHTML: `<svg class="tmg-video-miniplayer-expand-icon" viewBox="0 -960 960 960" data-control-title="Expand miniplayer" style="scale: 0.9; rotate: 90deg;"><path d="M120-120v-320h80v184l504-504H520v-80h320v320h-80v-184L256-200h184v80H120Z"/></svg>` }, { draggableControl: ui.draggable, controlId: "expandminiplayer" }) : null,
-      removeminiplayer: ui.removeMiniplayer ? tmg.createEl("button", { className: "tmg-video-miniplayer-remove-btn", innerHTML: `<svg class="tmg-video-miniplayer-remove-icon" viewBox="0 -960 960 960" data-control-title="Remove miniplayer"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>` }, { draggableControl: ui.draggable, controlId: "removeminiplayer" }) : null,
-      capture: ui.capture ? tmg.createEl("button", { className: "tmg-video-capture-btn", innerHTML: `<svg viewBox="0 0 24 24" class="tmg-video-capture-icon" data-control-title="Capture${k["capture"]} ↔ DblClick→B&W (+alt)"><path fill-rule="evenodd" d="M6.937 5.845c.07-.098.15-.219.25-.381l.295-.486C8.31 3.622 8.913 3 10 3h4c1.087 0 1.69.622 2.518 1.978l.295.486c.1.162.18.283.25.381q.071.098.12.155H20a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3h2.816q.05-.057.121-.155M4 8a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-3c-.664 0-1.112-.364-1.56-.987a8 8 0 0 1-.329-.499c-.062-.1-.27-.445-.3-.492C14.36 5.282 14.088 5 14 5h-4c-.087 0-.36.282-.812 1.022-.029.047-.237.391-.3.492a8 8 0 0 1-.327.5C8.112 7.635 7.664 8 7 8zm15 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-7 7a5 5 0 1 1 0-10 5 5 0 0 1 0 10m0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>` }, { draggableControl: ui.draggable, lightControl: this.isLight("capture"), controlId: "capture" }) : null,
-      fullscreenorientation: ui.fullscreenOrientation
-        ? tmg.createEl(
-            "button",
-            {
-              className: "tmg-video-fullscreen-orientation-btn",
-              innerHTML: `<svg viewBox="0 0 512 512" class="tmg-video-fullscreen-orientation-icon" data-control-title="Change orientation" style="scale: 0.925;"><path d="M446.81,275.82H236.18V65.19c0-20.78-16.91-37.69-37.69-37.69H65.19c-20.78,0-37.69,16.91-37.69,37.69v255.32c0,20.78,16.91,37.68,37.69,37.68h88.62v88.62c0,20.78,16.9,37.69,37.68,37.69h255.32c20.78,0,37.69-16.91,37.69-37.69v-133.3C484.5,292.73,467.59,275.82,446.81,275.82zM65.19,326.19c-3.14,0-5.69-2.55-5.69-5.68V65.19c0-3.14,2.55-5.69,5.69-5.69h133.3c3.14,0,5.69,2.55,5.69,5.69v210.63h-12.69c-20.78,0-37.68,16.91-37.68,37.69v12.68H65.19zM452.5,446.81c0,3.14-2.55,5.69-5.69,5.69H191.49c-3.13,0-5.68-2.55-5.68-5.69V342.19v-28.68c0-2.94,2.24-5.37,5.1-5.66c0.19-0.02,0.38-0.03,0.58-0.03h28.69h226.63c3.14,0,5.69,2.55,5.69,5.69V446.81z"/><path d="M369.92,181.53c-6.25-6.25-16.38-6.25-22.63,0c-6.25,6.25-6.25,16.38,0,22.63l44.39,44.39c3.12,3.13,7.22,4.69,11.31,4.69c0.21,0,0.42-0.02,0.63-0.03c0.2,0.01,0.4,0.03,0.6,0.03c6.31,0,11.74-3.66,14.35-8.96l37.86-37.86c6.25-6.25,6.25-16.38,0-22.63c-6.25-6.25-16.38-6.25-22.63,0l-13.59,13.59v-86.58c0-8.84-7.16-16-16-16h-86.29l15.95-15.95c6.25-6.25,6.25-16.38,0-22.63c-6.25-6.25-16.38-6.25-22.63,0l-40.33,40.33c-5.19,2.65-8.75,8.03-8.75,14.25c0,0.19,0.02,0.37,0.03,0.56c-0.01,0.19-0.03,0.38-0.03,0.57c0,4.24,1.69,8.31,4.69,11.31l42.14,42.14c3.12,3.12,7.22,4.69,11.31,4.69s8.19-1.56,11.31-4.69c6.25-6.25,6.25-16.38,0-22.63l-15.95-15.95h72.54v73.05L369.92,181.53z"/></svg>`,
-            },
-            { draggableControl: ui.draggable, lightControl: this.isLight("fullscreenorientation"), controlId: "fullscreenorientation" }
-          )
-        : null,
-      fullscreenlock: ui.fullscreenLock
-        ? tmg.createEl("button", { className: "tmg-video-fullscreen-locked-btn", innerHTML: `<svg class="tmg-video-fullscreen-locked-icon" viewBox="0 0 512 512" data-control-title="Lock Screen" style="scale: 0.825;"><path d="M390.234 171.594v-37.375c.016-36.969-15.078-70.719-39.328-94.906A133.88 133.88 0 0 0 256 0a133.88 133.88 0 0 0-94.906 39.313c-24.25 24.188-39.344 57.938-39.313 94.906v37.375H24.906V512h462.188V171.594zm-210.343-37.375c.016-21.094 8.469-39.938 22.297-53.813C216.047 66.594 234.891 58.125 256 58.125s39.953 8.469 53.813 22.281c13.828 13.875 22.281 32.719 22.297 53.813v37.375H179.891zm-96.86 95.5h345.938v224.156H83.031z"/><path d="M297.859 321.844c0-23.125-18.75-41.875-41.859-41.875-23.125 0-41.859 18.75-41.859 41.875 0 17.031 10.219 31.625 24.828 38.156l-9.25 60.094h52.562L273.016 360c14.609-6.531 24.843-21.125 24.843-38.156"/></svg>` }, { draggableControl: ui.draggable, lightControl: this.isLight("fullscreenlock"), controlId: "fullscreenlock" })
-        : null,
-      bigprev: ui.bigPrev ? tmg.createEl("button", { className: "tmg-video-big-prev-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-prev-icon" data-control-title="Previous video${k["prev"]}"><rect x="4" y="5.14" width="2.5" height="14" transform="translate(2.1,0)"/><path d="M17,5.14V19.14L6,12.14L17,5.14Z" transform="translate(2.5,0)" /></svg>` }, { lightControl: this.isLight("bigprev"), controlId: "bigprev" }) : null,
-      bigplaypause: ui.bigPlayPause ? tmg.createEl("button", { className: "tmg-video-big-play-pause-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-play-icon" data-control-title="Play${k["playPause"]}"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-pause-icon" data-control-title="Pause${k["playPause"]}"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg><svg class="tmg-video-replay-icon" viewBox="0 -960 960 960" data-control-title="Replay${k["playPause"]}" ><path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/></svg>` }, { lightControl: this.isLight("bigplaypause"), controlId: "bigplaypause" }) : null,
-      bignext: ui.bigNext ? tmg.createEl("button", { className: "tmg-video-big-next-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-next-icon" data-control-title="Next video${k["next"]}"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" transform="translate(-2.5,0)" /><rect x="19" y="5.14" width="2.5" height="14" transform="translate(-2.5,0)"/></svg>` }, { lightControl: this.isLight("bignext"), controlId: "bignext" }) : null,
-      timeline: ui.timeline ? tmg.createEl("div", { className: "tmg-video-timeline-container", tabIndex: 0, role: "slider", "aria-label": "Video timeline", "aria-valuemin": "0", "aria-valuenow": "0", "aria-valuetext": "0 seconds out of 0 seconds", innerHTML: `<div class="tmg-video-timeline"><div class="tmg-video-seek-bars-wrapper"><div class="tmg-video-seek-bar tmg-video-base-seek-bar"></div><div class="tmg-video-seek-bar tmg-video-buffered-seek-bar"></div><div class="tmg-video-seek-bar tmg-video-preview-seek-bar"></div><div class="tmg-video-seek-bar tmg-video-played-seek-bar"></div></div><div class="tmg-video-thumb-indicator"></div><div class="tmg-video-preview-container"><img class="tmg-video-preview" alt="Preview image" src="${TMG_VIDEO_ALT_IMG_SRC}"><canvas class="tmg-video-preview"></canvas></div></div>` }, { controlId: "timeline" }) : null,
-      prev: ui.prev ? tmg.createEl("button", { className: "tmg-video-prev-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-prev-icon" data-control-title="Previous video${k["prev"]}"><rect x="4" y="5.14" width="2.5" height="14" transform="translate(2.1,0)"/><path d="M17,5.14V19.14L6,12.14L17,5.14Z" transform="translate(2.5,0)" /></svg>` }, { draggableControl: ui.draggable, lightControl: this.isLight("prev"), controlId: "prev" }) : null,
-      playpause: ui.playPause ? tmg.createEl("button", { className: "tmg-video-play-pause-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-play-icon" data-control-title="Play${k["playPause"]}" style="scale: 1.25;"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-pause-icon" data-control-title="Pause${k["playPause"]}" style="scale: 1.25;"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg><svg class="tmg-video-replay-icon" viewBox="0 -960 960 960" data-control-title="Replay${k["playPause"]}"><path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/></svg>` }, { draggableControl: ui.draggable, lightControl: this.isLight("playpause"), controlId: "playpause" }) : null,
-      next: ui.next ? tmg.createEl("button", { className: "tmg-video-next-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-next-icon" data-control-title="Next video${k["next"]}"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" transform="translate(-2.5,0)" /><rect x="19" y="5.14" width="2.5" height="14" transform="translate(-2.5,0)"/></svg>` }, { draggableControl: ui.draggable, lightControl: this.isLight("next"), controlId: "next" }) : null,
-      volume: ui.volume
-        ? tmg.createEl(
-            "div",
-            {
-              className: "tmg-video-volume-container tmg-video-vb-container",
-              innerHTML: `<button type="button" class="tmg-video-mute-btn tmg-video-vb-btn"><svg viewBox="0 0 25 25" class="tmg-video-volume-high-icon" data-control-title="Mute${k["mute"]}"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-volume-low-icon" data-control-title="Mute${k["mute"]}"><path d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-volume-muted-icon" data-control-title="Unmute${k["mute"]}"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" /></svg></button><span class="tmg-video-volume-slider-wrapper tmg-video-vb-slider-wrapper"><input class="tmg-video-volume-slider tmg-video-vb-slider" type="range" min="0" max="100" step="1"></span>`,
-            },
-            { draggableControl: ui.draggable, lightControl: this.isLight("volume"), controlId: "volume" }
-          )
-        : null,
-      brightness: ui.brightness
-        ? tmg.createEl(
-            "div",
-            {
-              className: "tmg-video-brightness-container tmg-video-vb-container",
-              innerHTML: `<button type="button" class="tmg-video-dark-btn tmg-video-vb-btn"><svg viewBox="0 0 25 25" class="tmg-video-brightness-high-icon" data-control-title="Darken${k["dark"]}"><path transform="translate(1.5, 1.5)" style="scale: 1.05;" d="M10 14.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h3a1 1 0 0 1 0 2h-3a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm0-15a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm-9 9h3a1 1 0 1 1 0 2H1a1 1 0 0 1 0-2zm13.95 4.535l2.121 2.122a1 1 0 0 1-1.414 1.414l-2.121-2.121a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-2.12 2.12a1 1 0 1 1-1.415-1.413l2.121-2.122a1 1 0 0 1 1.414 0zM17.071 3.787a1 1 0 0 1 0 1.414L14.95 7.322a1 1 0 0 1-1.414-1.414l2.12-2.121a1 1 0 0 1 1.415 0zm-12.728 0l2.121 2.121A1 1 0 1 1 5.05 7.322L2.93 5.201a1 1 0 0 1 1.414-1.414z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-brightness-low-icon" data-control-title="Brighten${k["dark"]}"><path transform="translate(3.25, 3.25)" style="scale: 1.05;" d="M8 12.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h1a1 1 0 0 1 0 2h-1a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1zm0-13a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zm-7 7h1a1 1 0 1 1 0 2H1a1 1 0 1 1 0-2zm11.95 4.535l.707.708a1 1 0 1 1-1.414 1.414l-.707-.707a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-.707.707A1 1 0 0 1 2.343 13.1l.707-.708a1 1 0 0 1 1.414 0zm9.193-9.192a1 1 0 0 1 0 1.414l-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0zm-9.9 0l.707.707A1 1 0 1 1 3.05 5.322l-.707-.707a1 1 0 0 1 1.414-1.414z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-brightness-dark-icon" data-control-title="Brighten${k["dark"]}"><path transform="translate(2, 2.5)" style="scale: 1.2;" d="M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM8.5 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm0 11a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm5-5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm-11 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9.743-4.036a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm-7.779 7.779a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm7.072 0a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707zM3.757 4.464a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707z"></path></svg></button><span class="tmg-video-brightness-slider-wrapper tmg-video-vb-slider-wrapper"><input class="tmg-video-brightness-slider tmg-video-vb-slider" type="range" min="0" max="100" step="1"></span>`,
-            },
-            { draggableControl: ui.draggable, lightControl: this.isLight("brightness"), controlId: "brightness" }
-          )
-        : null,
-      timeandduration: ui.timeAndDuration ? tmg.createEl("button", { className: "tmg-video-time-and-duration-btn", title: `Switch (format${k["timeFormat"]} / DblClick→mode${k["timeMode"]})`, innerHTML: `<div class="tmg-video-current-time">0:00</div><span class="tmg-video-time-bridge">/</span><div class="tmg-video-total-time">-:--</div>` }, { draggableControl: ui.draggable, lightControl: this.isLight("timeandduration"), controlId: "timeandduration" }) : null,
-      playbackrate: ui.playbackRate ? tmg.createEl("button", { className: "tmg-video-playback-rate-btn", title: `Playback rate${k["playbackRateUp"]} ↔ DblClick${k["playbackRateDown"]}`, innerText: `${this.playbackRate}x` }, { draggableControl: ui.draggable, lightControl: this.isLight("playbackrate"), controlId: "playbackrate" }) : null,
-      captions: ui.captions
-        ? tmg.createEl(
-            "button",
-            { className: "tmg-video-captions-btn", innerHTML: `<svg viewBox="0 0 25 25" data-control-title="Subtitles${k["captions"]}" class="tmg-video-subtitles-icon"><path style="scale: 0.5;" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" /></svg><svg viewBox="0 0 25 25" data-control-title="Closed captions${k["captions"]}" class="tmg-video-captions-icon" style="scale: 1.15;"><path d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z"></path></svg>` },
-            { draggableControl: ui.draggable, lightControl: this.isLight("captions"), controlId: "captions" }
-          )
-        : null,
-      settings: ui.settings ? tmg.createEl("button", { className: "tmg-video-settings-btn", innerHTML: `<svg class="tmg-video-settings-icon" viewBox="0 -960 960 960" data-control-title="Settings${k["settings"]}"><path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/></svg>` }, { draggableControl: ui.draggable, lightControl: this.isLight("settings"), controlId: "settings" }) : null,
-      objectfit: ui.objectFit
-        ? tmg.createEl(
-            "button",
-            {
-              className: "tmg-video-object-fit-btn",
-              innerHTML: `<svg class="tmg-video-object-fit-contain-icon" data-control-title="Crop to fit${k["objectFit"]}" viewBox="0 0 16 16" style="scale: 0.75;"><rect width="16" height="16" rx="4" ry="4" fill="none" stroke-width="2.25" stroke="currentColor"/><g stroke-width="1" stroke="currentColor" transform="translate(3,3)"><path style="scale: 0.6;" d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M534.330152,212.999001 L532.488194,212.999001 C532.212773,212.999001 531.997715,213.222859 531.997715,213.499001 C531.997715,213.767068 532.21731,213.999001 532.488194,213.999001 L535.507237,213.999001 C535.643364,213.999001 535.764746,213.944316 535.852704,213.855661 C535.94109,213.763694 535.997715,213.642369 535.997715,213.508523 L535.997715,210.48948 C535.997715,210.214059 535.773858,209.999001 535.497715,209.999001 C535.229649,209.999001 534.997715,210.218596 534.997715,210.48948 L534.997715,212.252351 L530.217991,207.472627 C530.022487,207.277123 529.712749,207.283968 529.517487,207.47923 C529.327935,207.668781 529.319269,207.988118 529.510884,208.179734 L534.330152,212.999001 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M521.667563,199 L523.509521,199 C523.784943,199 524,198.776142 524,198.5 C524,198.231934 523.780405,198 523.509521,198 L520.490479,198 C520.354351,198 520.232969,198.054685 520.145011,198.14334 C520.056625,198.235308 520,198.356632 520,198.490479 L520,201.509521 C520,201.784943 520.223858,202 520.5,202 C520.768066,202 521,201.780405 521,201.509521 L521,199.74665 L525.779724,204.526374 C525.975228,204.721878 526.284966,204.715034 526.480228,204.519772 C526.66978,204.33022 526.678447,204.010883 526.486831,203.819268 L521.667563,199 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520 -198)"/></g></svg><svg class="tmg-video-object-fit-cover-icon" data-control-title="Fit to screen${k["objectFit"]}" viewBox="0 0 16 16" style="scale: 0.75;"><rect width="16" height="16" rx="4" ry="4" fill="none" stroke-width="2.25" stroke="currentColor"/><g stroke-width="1" stroke="currentColor" transform="translate(3,3)"><path style="scale: 0.6;" d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M534.330152,212.999001 L532.488194,212.999001 C532.212773,212.999001 531.997715,213.222859 531.997715,213.499001 C531.997715,213.767068 532.21731,213.999001 532.488194,213.999001 L535.507237,213.999001 C535.643364,213.999001 535.764746,213.944316 535.852704,213.855661 C535.94109,213.763694 535.997715,213.642369 535.997715,213.508523 L535.997715,210.48948 C535.997715,210.214059 535.773858,209.999001 535.497715,209.999001 C535.229649,209.999001 534.997715,210.218596 534.997715,210.48948 L534.997715,212.252351 L530.217991,207.472627 C530.022487,207.277123 529.712749,207.283968 529.517487,207.47923 C529.327935,207.668781 529.319269,207.988118 529.510884,208.179734 L534.330152,212.999001 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M521.667563,199 L523.509521,199 C523.784943,199 524,198.776142 524,198.5 C524,198.231934 523.780405,198 523.509521,198 L520.490479,198 C520.354351,198 520.232969,198.054685 520.145011,198.14334 C520.056625,198.235308 520,198.356632 520,198.490479 L520,201.509521 C520,201.784943 520.223858,202 520.5,202 C520.768066,202 521,201.780405 521,201.509521 L521,199.74665 L525.779724,204.526374 C525.975228,204.721878 526.284966,204.715034 526.480228,204.519772 C526.66978,204.33022 526.678447,204.010883 526.486831,203.819268 L521.667563,199 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520 -198)"/></g></svg><svg class="tmg-video-object-fit-fill-icon" data-control-title="Stretch${k["objectFit"]}" viewBox="0 0 16 16" style="scale: 0.75;"><rect x="4" y="4" width="8" height="8" rx="1" ry="1" fill="none" stroke-width="1.5" stroke="currentColor"/><g stroke-width="1" stroke="currentColor" transform="translate(3, 3)"><path style="scale: 0.65;" d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520, -198) translate(-3.25, 2.75)" /><path style="scale: 0.65;" d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520, -198) translate(2.5, -3.25)" /></g></svg>`,
-            },
-            { draggableControl: ui.draggable, lightControl: this.isLight("objectfit"), controlId: "objectfit" }
-          )
-        : null,
-      pictureinpicture: ui.pictureInPicture
-        ? tmg.createEl("button", { className: "tmg-video-picture-in-picture-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-enter-picture-in-picture-icon" data-control-title="Picture-in-picture${k["pictureInPicture"]}"><path fill-rule="nonzero" d="M21 3a1 1 0 0 1 1 1v7h-2V5H4v14h6v2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zm0 10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h8zM6.707 6.293l2.25 2.25L11 6.5V12H5.5l2.043-2.043-2.25-2.25 1.414-1.414z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-leave-picture-in-picture-icon" data-control-title="Exit picture-in-picture${k["pictureInPicture"]}"><path fill-rule="nonzero" d="M21 3a1 1 0 0 1 1 1v7h-2V5H4v14h6v2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zm0 10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h8zm-9.5-6L9.457 9.043l2.25 2.25-1.414 1.414-2.25-2.25L6 12.5V7h5.5z"></path></svg>` }, { draggableControl: ui.draggable, lightControl: this.isLight("pictureinpicture"), controlId: "pictureinpicture" })
-        : null,
-      theater: ui.theater ? tmg.createEl("button", { className: "tmg-video-theater-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-enter-theater-icon" data-control-title="Cinema mode${k["theater"]}"><path fill-rule="evenodd" clip-rule="evenodd" d="M23 7C23 5.34315 21.6569 4 20 4H4C2.34315 4 1 5.34315 1 7V17C1 18.6569 2.34315 20 4 20H20C21.6569 20 23 18.6569 23 17V7ZM21 7C21 6.44772 20.5523 6 20 6H4C3.44772 6 3 6.44771 3 7V17C3 17.5523 3.44772 18 4 18H20C20.5523 18 21 17.5523 21 17V7Z"/></svg><svg viewBox="0 0 25 25" class="tmg-video-leave-theater-icon" data-control-title="Default view${k["theater"]}"><path d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"></path></svg>` }, { draggableControl: ui.draggable, lightControl: this.isLight("theater"), controlId: "theater" }) : null,
-      fullscreen: ui.fullscreen
-        ? tmg.createEl(
-            "button",
-            {
-              className: "tmg-video-fullscreen-btn",
-              innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-enter-fullscreen-icon" data-control-title="Full screen${k["fullscreen"]}" style="scale: 0.8;"><path d="M4 1.5C2.61929 1.5 1.5 2.61929 1.5 4V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H3.5C4.05228 9.5 4.5 9.05228 4.5 8.5V4.5H8.5C9.05228 4.5 9.5 4.05228 9.5 3.5V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H4Z" /><path d="M20 1.5C21.3807 1.5 22.5 2.61929 22.5 4V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H20.5C19.9477 9.5 19.5 9.05228 19.5 8.5V4.5H15.5C14.9477 4.5 14.5 4.05228 14.5 3.5V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H20Z" /><path d="M20 22.5C21.3807 22.5 22.5 21.3807 22.5 20V15.5C22.5 14.9477 22.0523 14.5 21.5 14.5H20.5C19.9477 14.5 19.5 14.9477 19.5 15.5V19.5H15.5C14.9477 19.5 14.5 19.9477 14.5 20.5V21.5C14.5 22.0523 14.9477 22.5 15.5 22.5H20Z" /><path d="M1.5 20C1.5 21.3807 2.61929 22.5 4 22.5H8.5C9.05228 22.5 9.5 22.0523 9.5 21.5V20.5C9.5 19.9477 9.05228 19.5 8.5 19.5H4.5V15.5C4.5 14.9477 4.05228 14.5 3.5 14.5H2.5C1.94772 14.5 1.5 14.9477 1.5 15.5V20Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-leave-fullscreen-icon" data-control-title="Exit full screen${k["fullscreen"]}" style="scale: 0.8;"><path d="M7 9.5C8.38071 9.5 9.5 8.38071 9.5 7V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H7.5C6.94772 1.5 6.5 1.94772 6.5 2.5V6.5H2.5C1.94772 6.5 1.5 6.94772 1.5 7.5V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H7Z" /><path d="M17 9.5C15.6193 9.5 14.5 8.38071 14.5 7V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H16.5C17.0523 1.5 17.5 1.94772 17.5 2.5V6.5H21.5C22.0523 6.5 22.5 6.94772 22.5 7.5V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H17Z" /><path d="M17 14.5C15.6193 14.5 14.5 15.6193 14.5 17V21.5C14.5 22.0523 14.9477 22.5 15.5 22.5H16.5C17.0523 22.5 17.5 22.0523 17.5 21.5V17.5H21.5C22.0523 17.5 22.5 17.0523 22.5 16.5V15.5C22.5 14.9477 22.0523 14.5 21.5 14.5H17Z" /><path d="M9.5 17C9.5 15.6193 8.38071 14.5 7 14.5H2.5C1.94772 14.5 1.5 14.9477 1.5 15.5V16.5C1.5 17.0523 1.94772 17.5 2.5 17.5H6.5V21.5C6.5 22.0523 6.94772 22.5 7.5 22.5H8.5C9.05228 22.5 9.5 22.0523 9.5 21.5V17Z" /></svg>`,
-            },
-            { draggableControl: ui.draggable, lightControl: this.isLight("fullscreen"), controlId: "fullscreen" }
-          )
-        : null,
+      expandminiplayer: tmg.createEl("button", { className: "tmg-video-miniplayer-expand-btn", innerHTML: `<svg class="tmg-video-miniplayer-expand-icon" viewBox="0 -960 960 960" data-control-title="Expand miniplayer" style="scale: 0.9; rotate: 90deg;"><path d="M120-120v-320h80v184l504-504H520v-80h320v320h-80v-184L256-200h184v80H120Z"/></svg>` }, { draggableControl: "", controlId: "expandminiplayer" }),
+      removeminiplayer: tmg.createEl("button", { className: "tmg-video-miniplayer-remove-btn", innerHTML: `<svg class="tmg-video-miniplayer-remove-icon" viewBox="0 -960 960 960" data-control-title="Remove miniplayer"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>` }, { draggableControl: "", controlId: "removeminiplayer" }),
+      capture: tmg.createEl("button", { className: "tmg-video-capture-btn", innerHTML: `<svg viewBox="0 0 24 24" class="tmg-video-capture-icon" data-control-title="Capture${k["capture"]} ↔ DblClick→B&W (+alt)"><path fill-rule="evenodd" d="M6.937 5.845c.07-.098.15-.219.25-.381l.295-.486C8.31 3.622 8.913 3 10 3h4c1.087 0 1.69.622 2.518 1.978l.295.486c.1.162.18.283.25.381q.071.098.12.155H20a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3h2.816q.05-.057.121-.155M4 8a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-3c-.664 0-1.112-.364-1.56-.987a8 8 0 0 1-.329-.499c-.062-.1-.27-.445-.3-.492C14.36 5.282 14.088 5 14 5h-4c-.087 0-.36.282-.812 1.022-.029.047-.237.391-.3.492a8 8 0 0 1-.327.5C8.112 7.635 7.664 8 7 8zm15 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-7 7a5 5 0 1 1 0-10 5 5 0 0 1 0 10m0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>` }, { draggableControl: "", controlId: "capture" }),
+      fullscreenorientation: tmg.createEl(
+        "button",
+        {
+          className: "tmg-video-fullscreen-orientation-btn",
+          innerHTML: `<svg viewBox="0 0 512 512" class="tmg-video-fullscreen-orientation-icon" data-control-title="Change orientation" style="scale: 0.925;"><path d="M446.81,275.82H236.18V65.19c0-20.78-16.91-37.69-37.69-37.69H65.19c-20.78,0-37.69,16.91-37.69,37.69v255.32c0,20.78,16.91,37.68,37.69,37.68h88.62v88.62c0,20.78,16.9,37.69,37.68,37.69h255.32c20.78,0,37.69-16.91,37.69-37.69v-133.3C484.5,292.73,467.59,275.82,446.81,275.82zM65.19,326.19c-3.14,0-5.69-2.55-5.69-5.68V65.19c0-3.14,2.55-5.69,5.69-5.69h133.3c3.14,0,5.69,2.55,5.69,5.69v210.63h-12.69c-20.78,0-37.68,16.91-37.68,37.69v12.68H65.19zM452.5,446.81c0,3.14-2.55,5.69-5.69,5.69H191.49c-3.13,0-5.68-2.55-5.68-5.69V342.19v-28.68c0-2.94,2.24-5.37,5.1-5.66c0.19-0.02,0.38-0.03,0.58-0.03h28.69h226.63c3.14,0,5.69,2.55,5.69,5.69V446.81z"/><path d="M369.92,181.53c-6.25-6.25-16.38-6.25-22.63,0c-6.25,6.25-6.25,16.38,0,22.63l44.39,44.39c3.12,3.13,7.22,4.69,11.31,4.69c0.21,0,0.42-0.02,0.63-0.03c0.2,0.01,0.4,0.03,0.6,0.03c6.31,0,11.74-3.66,14.35-8.96l37.86-37.86c6.25-6.25,6.25-16.38,0-22.63c-6.25-6.25-16.38-6.25-22.63,0l-13.59,13.59v-86.58c0-8.84-7.16-16-16-16h-86.29l15.95-15.95c6.25-6.25,6.25-16.38,0-22.63c-6.25-6.25-16.38-6.25-22.63,0l-40.33,40.33c-5.19,2.65-8.75,8.03-8.75,14.25c0,0.19,0.02,0.37,0.03,0.56c-0.01,0.19-0.03,0.38-0.03,0.57c0,4.24,1.69,8.31,4.69,11.31l42.14,42.14c3.12,3.12,7.22,4.69,11.31,4.69s8.19-1.56,11.31-4.69c6.25-6.25,6.25-16.38,0-22.63l-15.95-15.95h72.54v73.05L369.92,181.53z"/></svg>`,
+        },
+        { draggableControl: "", controlId: "fullscreenorientation" }
+      ),
+      fullscreenlock: tmg.createEl("button", { className: "tmg-video-fullscreen-locked-btn", innerHTML: `<svg class="tmg-video-fullscreen-locked-icon" viewBox="0 0 512 512" data-control-title="Lock Screen" style="scale: 0.825;"><path d="M390.234 171.594v-37.375c.016-36.969-15.078-70.719-39.328-94.906A133.88 133.88 0 0 0 256 0a133.88 133.88 0 0 0-94.906 39.313c-24.25 24.188-39.344 57.938-39.313 94.906v37.375H24.906V512h462.188V171.594zm-210.343-37.375c.016-21.094 8.469-39.938 22.297-53.813C216.047 66.594 234.891 58.125 256 58.125s39.953 8.469 53.813 22.281c13.828 13.875 22.281 32.719 22.297 53.813v37.375H179.891zm-96.86 95.5h345.938v224.156H83.031z"/><path d="M297.859 321.844c0-23.125-18.75-41.875-41.859-41.875-23.125 0-41.859 18.75-41.859 41.875 0 17.031 10.219 31.625 24.828 38.156l-9.25 60.094h52.562L273.016 360c14.609-6.531 24.843-21.125 24.843-38.156"/></svg>` }, { draggableControl: "", controlId: "fullscreenlock" }),
+      bigprev: tmg.createEl("button", { className: "tmg-video-big-prev-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-prev-icon" data-control-title="Previous video${k["prev"]}"><rect x="4" y="5.14" width="2.5" height="14" transform="translate(2.1,0)"/><path d="M17,5.14V19.14L6,12.14L17,5.14Z" transform="translate(2.5,0)" /></svg>` }, { draggableControl: "", dragId: "big", controlId: "bigprev" }),
+      bigplaypause: tmg.createEl("button", { className: "tmg-video-big-play-pause-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-play-icon" data-control-title="Play${k["playPause"]}"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-pause-icon" data-control-title="Pause${k["playPause"]}"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg><svg class="tmg-video-replay-icon" viewBox="0 -960 960 960" data-control-title="Replay${k["playPause"]}" ><path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/></svg>` }, { draggableControl: "", dragId: "big", controlId: "bigplaypause" }),
+      bignext: tmg.createEl("button", { className: "tmg-video-big-next-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-next-icon" data-control-title="Next video${k["next"]}"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" transform="translate(-2.5,0)" /><rect x="19" y="5.14" width="2.5" height="14" transform="translate(-2.5,0)"/></svg>` }, { draggableControl: "", dragId: "big", controlId: "bignext" }),
+      timeline: tmg.createEl("div", { className: "tmg-video-timeline-container", tabIndex: 0, role: "slider", "aria-label": "Video timeline", "aria-valuemin": "0", "aria-valuenow": "0", "aria-valuetext": "0 seconds out of 0 seconds", innerHTML: `<div class="tmg-video-timeline"><div class="tmg-video-seek-bars-wrapper"><div class="tmg-video-seek-bar tmg-video-base-seek-bar"></div><div class="tmg-video-seek-bar tmg-video-buffered-seek-bar"></div><div class="tmg-video-seek-bar tmg-video-preview-seek-bar"></div><div class="tmg-video-seek-bar tmg-video-played-seek-bar"></div></div><div class="tmg-video-thumb-indicator"></div><div class="tmg-video-preview-container"><div class="tmg-video-preview"></div><canvas class="tmg-video-preview"></canvas></div></div>` }, { controlId: "timeline" }),
+      prev: tmg.createEl("button", { className: "tmg-video-prev-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-prev-icon" data-control-title="Previous video${k["prev"]}"><rect x="4" y="5.14" width="2.5" height="14" transform="translate(2.1,0)"/><path d="M17,5.14V19.14L6,12.14L17,5.14Z" transform="translate(2.5,0)" /></svg>` }, { draggableControl: "", controlId: "prev" }),
+      playpause: tmg.createEl("button", { className: "tmg-video-play-pause-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-play-icon" data-control-title="Play${k["playPause"]}" style="scale: 1.25;"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-pause-icon" data-control-title="Pause${k["playPause"]}" style="scale: 1.25;"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg><svg class="tmg-video-replay-icon" viewBox="0 -960 960 960" data-control-title="Replay${k["playPause"]}"><path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/></svg>` }, { draggableControl: "", controlId: "playpause" }),
+      next: tmg.createEl("button", { className: "tmg-video-next-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-next-icon" data-control-title="Next video${k["next"]}"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" transform="translate(-2.5,0)" /><rect x="19" y="5.14" width="2.5" height="14" transform="translate(-2.5,0)"/></svg>` }, { draggableControl: "", controlId: "next" }),
+      volume: tmg.createEl(
+        "div",
+        {
+          className: "tmg-video-volume-container tmg-video-vb-container",
+          innerHTML: `<button type="button" class="tmg-video-mute-btn tmg-video-vb-btn"><svg viewBox="0 0 25 25" class="tmg-video-volume-high-icon" data-control-title="Mute${k["mute"]}"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-volume-low-icon" data-control-title="Mute${k["mute"]}"><path d="M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-volume-muted-icon" data-control-title="Unmute${k["mute"]}"><path d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.45 16.63,19.82 17.68,18.96L19.73,21L21,19.73L12,10.73M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.5,12.43 16.5,12.21 16.5,12Z" /></svg></button><span class="tmg-video-volume-slider-wrapper tmg-video-vb-slider-wrapper"><input class="tmg-video-volume-slider tmg-video-vb-slider" type="range" min="0" max="100" step="1"></span>`,
+        },
+        { draggableControl: "", controlId: "volume" }
+      ),
+      brightness: tmg.createEl(
+        "div",
+        {
+          className: "tmg-video-brightness-container tmg-video-vb-container",
+          innerHTML: `<button type="button" class="tmg-video-dark-btn tmg-video-vb-btn"><svg viewBox="0 0 25 25" class="tmg-video-brightness-high-icon" data-control-title="Darken${k["dark"]}"><path transform="translate(1.5, 1.5)" style="scale: 1.05;" d="M10 14.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h3a1 1 0 0 1 0 2h-3a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm0-15a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm-9 9h3a1 1 0 1 1 0 2H1a1 1 0 0 1 0-2zm13.95 4.535l2.121 2.122a1 1 0 0 1-1.414 1.414l-2.121-2.121a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-2.12 2.12a1 1 0 1 1-1.415-1.413l2.121-2.122a1 1 0 0 1 1.414 0zM17.071 3.787a1 1 0 0 1 0 1.414L14.95 7.322a1 1 0 0 1-1.414-1.414l2.12-2.121a1 1 0 0 1 1.415 0zm-12.728 0l2.121 2.121A1 1 0 1 1 5.05 7.322L2.93 5.201a1 1 0 0 1 1.414-1.414z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-brightness-low-icon" data-control-title="Brighten${k["dark"]}"><path transform="translate(3.25, 3.25)" style="scale: 1.05;" d="M8 12.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h1a1 1 0 0 1 0 2h-1a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1zm0-13a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zm-7 7h1a1 1 0 1 1 0 2H1a1 1 0 1 1 0-2zm11.95 4.535l.707.708a1 1 0 1 1-1.414 1.414l-.707-.707a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-.707.707A1 1 0 0 1 2.343 13.1l.707-.708a1 1 0 0 1 1.414 0zm9.193-9.192a1 1 0 0 1 0 1.414l-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0zm-9.9 0l.707.707A1 1 0 1 1 3.05 5.322l-.707-.707a1 1 0 0 1 1.414-1.414z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-brightness-dark-icon" data-control-title="Brighten${k["dark"]}"><path transform="translate(2, 2.5)" style="scale: 1.2;" d="M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM8.5 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm0 11a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm5-5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm-11 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9.743-4.036a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm-7.779 7.779a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm7.072 0a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707zM3.757 4.464a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707z"></path></svg></button><span class="tmg-video-brightness-slider-wrapper tmg-video-vb-slider-wrapper"><input class="tmg-video-brightness-slider tmg-video-vb-slider" type="range" min="0" max="100" step="1"></span>`,
+        },
+        { draggableControl: "", controlId: "brightness" }
+      ),
+      timeandduration: tmg.createEl("button", { className: "tmg-video-time-and-duration-btn", title: `Switch (format${k["timeFormat"]} / DblClick→mode${k["timeMode"]})`, innerHTML: `<div class="tmg-video-current-time">0:00</div><span class="tmg-video-time-bridge">/</span><div class="tmg-video-total-time">-:--</div>` }, { draggableControl: "", controlId: "timeandduration" }),
+      playbackrate: tmg.createEl("button", { className: "tmg-video-playback-rate-btn", title: `Playback rate${k["playbackRateUp"]} ↔ DblClick${k["playbackRateDown"]}`, innerText: `${this.settings.playbackRate.value}x` }, { draggableControl: "", controlId: "playbackrate" }),
+      captions: tmg.createEl("button", { className: "tmg-video-captions-btn", innerHTML: `<svg viewBox="0 0 25 25" data-control-title="Subtitles${k["captions"]}" class="tmg-video-subtitles-icon"><path style="scale: 0.5;" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" /></svg><svg viewBox="0 0 25 25" data-control-title="Closed captions${k["captions"]}" class="tmg-video-captions-icon" style="scale: 1.15;"><path d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z"></path></svg>` }, { draggableControl: "", controlId: "captions" }),
+      settings: tmg.createEl("button", { className: "tmg-video-settings-btn", innerHTML: `<svg class="tmg-video-settings-icon" viewBox="0 -960 960 960" data-control-title="Settings${k["settings"]}"><path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/></svg>` }, { draggableControl: "", controlId: "settings" }),
+      objectfit: tmg.createEl(
+        "button",
+        {
+          className: "tmg-video-object-fit-btn",
+          innerHTML: `<svg class="tmg-video-object-fit-contain-icon" data-control-title="Crop to fit${k["objectFit"]}" viewBox="0 0 16 16" style="scale: 0.75;"><rect width="16" height="16" rx="4" ry="4" fill="none" stroke-width="2.25" stroke="currentColor"/><g stroke-width="1" stroke="currentColor" transform="translate(3,3)"><path style="scale: 0.6;" d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M534.330152,212.999001 L532.488194,212.999001 C532.212773,212.999001 531.997715,213.222859 531.997715,213.499001 C531.997715,213.767068 532.21731,213.999001 532.488194,213.999001 L535.507237,213.999001 C535.643364,213.999001 535.764746,213.944316 535.852704,213.855661 C535.94109,213.763694 535.997715,213.642369 535.997715,213.508523 L535.997715,210.48948 C535.997715,210.214059 535.773858,209.999001 535.497715,209.999001 C535.229649,209.999001 534.997715,210.218596 534.997715,210.48948 L534.997715,212.252351 L530.217991,207.472627 C530.022487,207.277123 529.712749,207.283968 529.517487,207.47923 C529.327935,207.668781 529.319269,207.988118 529.510884,208.179734 L534.330152,212.999001 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M521.667563,199 L523.509521,199 C523.784943,199 524,198.776142 524,198.5 C524,198.231934 523.780405,198 523.509521,198 L520.490479,198 C520.354351,198 520.232969,198.054685 520.145011,198.14334 C520.056625,198.235308 520,198.356632 520,198.490479 L520,201.509521 C520,201.784943 520.223858,202 520.5,202 C520.768066,202 521,201.780405 521,201.509521 L521,199.74665 L525.779724,204.526374 C525.975228,204.721878 526.284966,204.715034 526.480228,204.519772 C526.66978,204.33022 526.678447,204.010883 526.486831,203.819268 L521.667563,199 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520 -198)"/></g></svg><svg class="tmg-video-object-fit-cover-icon" data-control-title="Fit to screen${k["objectFit"]}" viewBox="0 0 16 16" style="scale: 0.75;"><rect width="16" height="16" rx="4" ry="4" fill="none" stroke-width="2.25" stroke="currentColor"/><g stroke-width="1" stroke="currentColor" transform="translate(3,3)"><path style="scale: 0.6;" d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M534.330152,212.999001 L532.488194,212.999001 C532.212773,212.999001 531.997715,213.222859 531.997715,213.499001 C531.997715,213.767068 532.21731,213.999001 532.488194,213.999001 L535.507237,213.999001 C535.643364,213.999001 535.764746,213.944316 535.852704,213.855661 C535.94109,213.763694 535.997715,213.642369 535.997715,213.508523 L535.997715,210.48948 C535.997715,210.214059 535.773858,209.999001 535.497715,209.999001 C535.229649,209.999001 534.997715,210.218596 534.997715,210.48948 L534.997715,212.252351 L530.217991,207.472627 C530.022487,207.277123 529.712749,207.283968 529.517487,207.47923 C529.327935,207.668781 529.319269,207.988118 529.510884,208.179734 L534.330152,212.999001 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M521.667563,199 L523.509521,199 C523.784943,199 524,198.776142 524,198.5 C524,198.231934 523.780405,198 523.509521,198 L520.490479,198 C520.354351,198 520.232969,198.054685 520.145011,198.14334 C520.056625,198.235308 520,198.356632 520,198.490479 L520,201.509521 C520,201.784943 520.223858,202 520.5,202 C520.768066,202 521,201.780405 521,201.509521 L521,199.74665 L525.779724,204.526374 C525.975228,204.721878 526.284966,204.715034 526.480228,204.519772 C526.66978,204.33022 526.678447,204.010883 526.486831,203.819268 L521.667563,199 Z" transform="translate(-520 -198)"/><path style="scale: 0.6;" d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520 -198)"/></g></svg><svg class="tmg-video-object-fit-fill-icon" data-control-title="Stretch${k["objectFit"]}" viewBox="0 0 16 16" style="scale: 0.75;"><rect x="4" y="4" width="8" height="8" rx="1" ry="1" fill="none" stroke-width="1.5" stroke="currentColor"/><g stroke-width="1" stroke="currentColor" transform="translate(3, 3)"><path style="scale: 0.65;" d="M521.667563,212.999001 L523.509521,212.999001 C523.784943,212.999001 524,213.222859 524,213.499001 C524,213.767068 523.780405,213.999001 523.509521,213.999001 L520.490479,213.999001 C520.354351,213.999001 520.232969,213.944316 520.145011,213.855661 C520.056625,213.763694 520,213.642369 520,213.508523 L520,210.48948 C520,210.214059 520.223858,209.999001 520.5,209.999001 C520.768066,209.999001 521,210.218596 521,210.48948 L521,212.252351 L525.779724,207.472627 C525.975228,207.277123 526.284966,207.283968 526.480228,207.47923 C526.66978,207.668781 526.678447,207.988118 526.486831,208.179734 L521.667563,212.999001 Z" transform="translate(-520, -198) translate(-3.25, 2.75)" /><path style="scale: 0.65;" d="M534.251065,199 L532.488194,199 C532.212773,199 531.997715,198.776142 531.997715,198.5 C531.997715,198.231934 532.21731,198 532.488194,198 L535.507237,198 C535.643364,198 535.764746,198.054685 535.852704,198.14334 C535.94109,198.235308 535.997715,198.356632 535.997715,198.490479 L535.997715,201.509521 C535.997715,201.784943 535.773858,202 535.497715,202 C535.229649,202 534.997715,201.780405 534.997715,201.509521 L534.997715,199.667563 L530.178448,204.486831 C529.982944,204.682335 529.673206,204.67549 529.477943,204.480228 C529.288392,204.290677 529.279725,203.97134 529.471341,203.779724 L534.251065,199 Z" transform="translate(-520, -198) translate(2.5, -3.25)" /></g></svg>`,
+        },
+        { draggableControl: "", controlId: "objectfit" }
+      ),
+      pictureinpicture: tmg.createEl("button", { className: "tmg-video-picture-in-picture-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-enter-picture-in-picture-icon" data-control-title="Picture-in-picture${k["pictureInPicture"]}"><path fill-rule="nonzero" d="M21 3a1 1 0 0 1 1 1v7h-2V5H4v14h6v2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zm0 10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h8zM6.707 6.293l2.25 2.25L11 6.5V12H5.5l2.043-2.043-2.25-2.25 1.414-1.414z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-leave-picture-in-picture-icon" data-control-title="Exit picture-in-picture${k["pictureInPicture"]}"><path fill-rule="nonzero" d="M21 3a1 1 0 0 1 1 1v7h-2V5H4v14h6v2H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h18zm0 10a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h8zm-9.5-6L9.457 9.043l2.25 2.25-1.414 1.414-2.25-2.25L6 12.5V7h5.5z"></path></svg>` }, { draggableControl: "", controlId: "pictureinpicture" }),
+      theater: tmg.createEl("button", { className: "tmg-video-theater-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-enter-theater-icon" data-control-title="Cinema mode${k["theater"]}"><path fill-rule="evenodd" clip-rule="evenodd" d="M23 7C23 5.34315 21.6569 4 20 4H4C2.34315 4 1 5.34315 1 7V17C1 18.6569 2.34315 20 4 20H20C21.6569 20 23 18.6569 23 17V7ZM21 7C21 6.44772 20.5523 6 20 6H4C3.44772 6 3 6.44771 3 7V17C3 17.5523 3.44772 18 4 18H20C20.5523 18 21 17.5523 21 17V7Z"/></svg><svg viewBox="0 0 25 25" class="tmg-video-leave-theater-icon" data-control-title="Default view${k["theater"]}"><path d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"></path></svg>` }, { draggableControl: "", controlId: "theater" }),
+      fullscreen: tmg.createEl(
+        "button",
+        {
+          className: "tmg-video-fullscreen-btn",
+          innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-enter-fullscreen-icon" data-control-title="Full screen${k["fullscreen"]}" style="scale: 0.8;"><path d="M4 1.5C2.61929 1.5 1.5 2.61929 1.5 4V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H3.5C4.05228 9.5 4.5 9.05228 4.5 8.5V4.5H8.5C9.05228 4.5 9.5 4.05228 9.5 3.5V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H4Z" /><path d="M20 1.5C21.3807 1.5 22.5 2.61929 22.5 4V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H20.5C19.9477 9.5 19.5 9.05228 19.5 8.5V4.5H15.5C14.9477 4.5 14.5 4.05228 14.5 3.5V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H20Z" /><path d="M20 22.5C21.3807 22.5 22.5 21.3807 22.5 20V15.5C22.5 14.9477 22.0523 14.5 21.5 14.5H20.5C19.9477 14.5 19.5 14.9477 19.5 15.5V19.5H15.5C14.9477 19.5 14.5 19.9477 14.5 20.5V21.5C14.5 22.0523 14.9477 22.5 15.5 22.5H20Z" /><path d="M1.5 20C1.5 21.3807 2.61929 22.5 4 22.5H8.5C9.05228 22.5 9.5 22.0523 9.5 21.5V20.5C9.5 19.9477 9.05228 19.5 8.5 19.5H4.5V15.5C4.5 14.9477 4.05228 14.5 3.5 14.5H2.5C1.94772 14.5 1.5 14.9477 1.5 15.5V20Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-leave-fullscreen-icon" data-control-title="Exit full screen${k["fullscreen"]}" style="scale: 0.8;"><path d="M7 9.5C8.38071 9.5 9.5 8.38071 9.5 7V2.5C9.5 1.94772 9.05228 1.5 8.5 1.5H7.5C6.94772 1.5 6.5 1.94772 6.5 2.5V6.5H2.5C1.94772 6.5 1.5 6.94772 1.5 7.5V8.5C1.5 9.05228 1.94772 9.5 2.5 9.5H7Z" /><path d="M17 9.5C15.6193 9.5 14.5 8.38071 14.5 7V2.5C14.5 1.94772 14.9477 1.5 15.5 1.5H16.5C17.0523 1.5 17.5 1.94772 17.5 2.5V6.5H21.5C22.0523 6.5 22.5 6.94772 22.5 7.5V8.5C22.5 9.05228 22.0523 9.5 21.5 9.5H17Z" /><path d="M17 14.5C15.6193 14.5 14.5 15.6193 14.5 17V21.5C14.5 22.0523 14.9477 22.5 15.5 22.5H16.5C17.0523 22.5 17.5 22.0523 17.5 21.5V17.5H21.5C22.0523 17.5 22.5 17.0523 22.5 16.5V15.5C22.5 14.9477 22.0523 14.5 21.5 14.5H17Z" /><path d="M9.5 17C9.5 15.6193 8.38071 14.5 7 14.5H2.5C1.94772 14.5 1.5 14.9477 1.5 15.5V16.5C1.5 17.0523 1.94772 17.5 2.5 17.5H6.5V21.5C6.5 22.0523 6.94772 22.5 7.5 22.5H8.5C9.05228 22.5 9.5 22.0523 9.5 21.5V17Z" /></svg>`,
+        },
+        { draggableControl: "", controlId: "fullscreen" }
+      ),
     };
   }
   plugControlPanelSettings() {
-    this.config.set("settings.controlPanel.bottom", tmg.parseControlPanelBottomObj);
+    this.config.set("settings.controlPanel.bottom", tmg.parsePanelBottomObj);
     const HTML = this.getPlayerElements(),
-      getSplitControls = (section, spacer = "spacer", sI) => {
-        const row = "number" === typeof sI ? section?.[sI] : section,
-          sIndex = row?.indexOf?.(spacer);
-        return sIndex > -1 ? { left: row.slice(0, sIndex), right: row.slice(sIndex + 1) } : { left: row, right: [] };
+      getSplitControls = (row, spacer = "spacer") => {
+        if (!row) return { left: [], center: [], right: [] };
+        const s1 = row.indexOf(spacer),
+          s2 = row.indexOf(spacer, s1 + 1);
+        return s1 === -1 ? { left: row, center: [], right: [] } : s2 === -1 ? { left: row.slice(0, s1), center: [], right: row.slice(s1 + 1) } : { left: row.slice(0, s1), center: row.slice(s1 + 1, s2), right: row.slice(s2 + 1) };
       },
-      fillZone = (zone, controls) => ((zone.innerHTML = ""), (controls || []).forEach((id) => HTML[id] && (tmg.isArr(HTML[id]) ? zone.append(...HTML[id]) : zone.append(HTML[id])))),
-      buildSideSkeleton = (sideClass, isReverse) => {
-        const zone = tmg.createEl("div", { className: `tmg-video-side-controls-wrapper ${sideClass}` }, { dropZone: this.settings.status.ui.draggable, scroller: isReverse ? "reverse" : "" }),
-          cover = tmg.createEl("div", { className: `tmg-video-side-controls-wrapper-cover ${sideClass}-cover` });
+      getZoneW = (value, fb) => (value.length === 1 ? (value.includes("meta") ? HTML.meta : value.includes("timeline") ? HTML.timeline : fb) : fb),
+      fillSWrapper = (wrapper, zoneWs) => ((wrapper.innerHTML = ""), wrapper.append(...zoneWs.map((zoneW) => zoneW.cover ?? zoneW))),
+      fillZone = (zoneW, controls) => zoneW.zone && ((zoneW.zone.innerHTML = ""), (controls || []).forEach((id) => HTML[id] && (tmg.isArr(HTML[id]) ? zoneW.zone.append(...HTML[id]) : zoneW.zone.append(HTML[id])))),
+      buildWSkel = (side, isReverse) => {
+        const zone = tmg.createEl("div", { className: `tmg-video-side-controls-wrapper tmg-video-${side}-side-controls-wrapper` }, { dropZone: "", scroller: isReverse ? "reverse" : "" }),
+          cover = tmg.createEl("div", { className: `tmg-video-side-controls-wrapper-cover tmg-video-${side}-side-controls-wrapper-cover` });
         return (cover.append(zone), { cover, zone });
       };
-    const controlsContainer = this.queryDOM(".tmg-video-controls-container");
-    if (this.settings.status.ui.notifiers) {
-      const notifiersContainer = tmg.createEl("div", { className: "tmg-video-notifiers-container" }, { notify: "" });
-      notifiersContainer.append(...[HTML.playpausenotifier, HTML.prevnextnotifier, HTML.captionsnotifier, HTML.capturenotifier, HTML.objectfitnotifier, HTML.playbackratenotifier, HTML.volumenotifier, HTML.brightnessnotifier, HTML.fwdnotifier, HTML.bwdnotifier, HTML.scrubnotifier, HTML.cancelscrubnotifier, HTML.touchtimelinenotifier, HTML.touchvolumenotifier, HTML.touchbrightnessnotifier].flat().filter(Boolean));
-      controlsContainer.prepend(notifiersContainer);
-    }
-    this.zoneRefs = { top: {}, center: null, bottom: { 1: {}, 2: {}, 3: {} } };
-    const topContainer = tmg.createEl("div", { className: "tmg-video-top-controls-wrapper" }),
-      topLeft = buildSideSkeleton("tmg-video-left-side-controls-wrapper", false),
-      topRight = buildSideSkeleton("tmg-video-right-side-controls-wrapper", true);
-    ((this.zoneRefs.top.left = topLeft.zone), (this.zoneRefs.top.right = topRight.zone));
-    topContainer.append(topLeft.cover, HTML.meta || "", topRight.cover);
-    const centerContainer = tmg.createEl("div", { className: "tmg-video-big-controls-wrapper" });
-    this.zoneRefs.center = centerContainer;
-    const bottomContainer = tmg.createEl("div", { className: "tmg-video-bottom-controls-wrapper" });
+    const controlsContainer = this.queryDOM(".tmg-video-controls-container"),
+      notifiersContainer = tmg.createEl("div", { className: "tmg-video-notifiers-container" }, { notify: "" });
+    notifiersContainer?.append(...[HTML.playpausenotifier, HTML.prevnextnotifier, HTML.captionsnotifier, HTML.capturenotifier, HTML.objectfitnotifier, HTML.playbackratenotifier, HTML.volumenotifier, HTML.brightnessnotifier, HTML.fwdnotifier, HTML.bwdnotifier, HTML.scrubnotifier, HTML.cancelscrubnotifier, HTML.touchtimelinenotifier, HTML.touchvolumenotifier, HTML.touchbrightnessnotifier].flat().filter(Boolean));
+    ((this.zoneWs = { top: {}, center: {}, bottom: { 1: {}, 2: {}, 3: {} } }), (this.cZoneWs = { top: {}, center: [], bottom: { 1: {}, 2: {}, 3: {} } }));
+    const topWrapper = tmg.createEl("div", { className: "tmg-video-top-controls-wrapper tmg-video-apt-controls-wrapper" }, { dropZone: "", dragId: "wrapper" });
+    ((this.zoneWs.top.left = buildWSkel("left", false)), (this.zoneWs.top.center = buildWSkel("center", false)), (this.zoneWs.top.right = buildWSkel("right", true)));
+    const centerWrapper = tmg.createEl("div", { className: "tmg-video-big-controls-wrapper" }, { dropZone: "", dragId: "big" });
+    this.zoneWs.center = this.cZoneWs.center = { zone: centerWrapper };
+    const bottomWrapper = tmg.createEl("div", { className: "tmg-video-bottom-controls-wrapper" });
     [1, 2, 3].forEach((i) => {
-      const row = tmg.createEl("div", { className: `tmg-video-sub-controls-wrapper tmg-video-bottom-${i}-sub-controls-wrapper` }),
-        left = buildSideSkeleton("tmg-video-left-side-controls-wrapper", false),
-        right = buildSideSkeleton("tmg-video-right-side-controls-wrapper", true);
-      ((this.zoneRefs.bottom[i].left = left.zone), (this.zoneRefs.bottom[i].right = right.zone));
-      i === 2 ? row.append(left.cover, HTML.timeline || "", right.cover) : row.append(left.cover, right.cover);
-      bottomContainer.append(row);
+      bottomWrapper.append(tmg.createEl("div", { className: `tmg-video-bottom-sub-controls-wrapper tmg-video-bottom-${i}-sub-controls-wrapper tmg-video-apt-controls-wrapper` }, { dropZone: "", dragId: "wrapper" }));
+      ((this.zoneWs.bottom[i].left = buildWSkel("left", false)), (this.zoneWs.bottom[i].center = buildWSkel("center", false)), (this.zoneWs.bottom[i].right = buildWSkel("right", true)));
     });
-    controlsContainer.append(topContainer, centerContainer, bottomContainer);
-    controlsContainer.prepend(...[HTML.pictureinpicturewrapper, HTML.thumbnail, HTML.videobuffer, HTML.captionsContainer].flat().filter(Boolean));
+    controlsContainer.prepend(...[HTML.pictureinpicturewrapper, HTML.thumbnail, HTML.videobuffer, HTML.captionsContainer].flat().filter(Boolean), notifiersContainer, topWrapper, centerWrapper, bottomWrapper);
     this.pseudoVideoContainer.append(HTML.pictureinpicturewrapper?.cloneNode(true) || "");
     ["settings.controlPanel.title", "settings.controlPanel.artist", "settings.controlPanel.profile"].forEach((e) => this.config.on(e, ({ target: { key, value } }) => value !== true && (this.DOM[`video${tmg.capitalize(key)}`][key === "profile" ? "src" : "textContent"] = value || "")));
     this.config.on("settings.controlPanel.top", ({ target: { value } }) => {
-      const t1 = getSplitControls(value, "meta");
-      (fillZone(this.zoneRefs.top.left, t1.left), fillZone(this.zoneRefs.top.right, t1.right));
+      const t1 = getSplitControls(value);
+      fillSWrapper(topWrapper, [(this.cZoneWs.top.left = getZoneW(t1.left, this.zoneWs.top.left)), (this.cZoneWs.top.center = getZoneW(t1.center, this.zoneWs.top.center)), (this.cZoneWs.top.right = getZoneW(t1.right, this.zoneWs.top.right))]);
+      (fillZone(this.cZoneWs.top.left, t1.left), fillZone(this.cZoneWs.top.center, t1.center), fillZone(this.cZoneWs.top.right, t1.right));
     });
-    this.config.on("settings.controlPanel.center", ({ target: { value } }) => fillZone(this.zoneRefs.center, value));
-    this.config.on("settings.controlPanel.bottom", ({ target: { value } }) =>
+    this.config.on("settings.controlPanel.center", ({ target: { value } }) => fillZone(this.cZoneWs.center, value));
+    this.config.on("settings.controlPanel.bottom", ({ target: { value } }) => {
       [1, 2, 3].forEach((i) => {
-        const split = getSplitControls(value, i === 2 ? "timeline" : "spacer", i);
-        (fillZone(this.zoneRefs.bottom[i].left, split.left), fillZone(this.zoneRefs.bottom[i].right, split.right));
-      })
-    );
+        const bn = getSplitControls(value[i]);
+        fillSWrapper(bottomWrapper.children[i - 1], [(this.cZoneWs.bottom[i].left = getZoneW(bn.left, this.zoneWs.bottom[i].left)), (this.cZoneWs.bottom[i].center = getZoneW(bn.center, this.zoneWs.bottom[i].center)), (this.cZoneWs.bottom[i].right = getZoneW(bn.right, this.zoneWs.bottom[i].right))]);
+        (fillZone(this.cZoneWs.bottom[i].left, bn.left), fillZone(this.cZoneWs.bottom[i].center, bn.center), fillZone(this.cZoneWs.bottom[i].right, bn.right));
+      });
+    });
+    this.config.on("settings.controlPanel.buffer", ({ target: { value } }) => (this.videoContainer.dataset.buffer = value));
     this.config.on("settings.controlPanel.timeline.thumbIndicator", ({ target: { value } }) => (this.videoContainer.dataset.thumbIndicator = value));
     this.config.on("settings.controlPanel.progressBar", ({ target: { value } }) => this.videoContainer.classList.toggle("tmg-video-progress-bar", value));
     this.settings.controlPanel = this.settings.controlPanel;
     (this.config.tick("settings.controlPanel"), this.config.tick(["settings.controlPanel.top", "settings.controlPanel.center", "settings.controlPanel.bottom"])); // needed for DOM retrieval
   }
+  getZones = () => [...Object.values(this.zoneWs.top), ...Object.values(this.zoneWs.bottom).map((v) => Object.values(v))].flat().map((w) => w.zone);
+  getUIZoneWCoord(target, zoneW = false) {
+    let key;
+    const pos = { 0: "left", 1: "center", 2: "right" }[[...target.parentElement.children].indexOf(target)],
+      cws = this.queryDOM(".tmg-video-top-controls-wrapper, .tmg-video-bottom-sub-controls-wrapper", false, true);
+    cws.forEach((w, i) => w.contains(target) && (key = { 0: "top.", 1: "bottom.1.", 2: "bottom.2.", 3: "bottom.3." }[i]));
+    return zoneW ? { coord: key + pos, zoneW: tmg.deriveAny(this.zoneWs, key + pos) } : key + pos;
+  }
+  syncControlPanelToUI() {
+    const id = (el) => el.dataset.controlId,
+      derive = (zoneW, center = false) => [center ? "spacer" : "", ...(!zoneW.zone ? [id(zoneW)] : Array.from(zoneW.zone.children || [], id)), center && (zoneW.zone ? zoneW.zone.children.length : true) ? "spacer" : ""].filter(Boolean); // at lease one spacer
+    this.settings.controlPanel.top = [...derive(this.cZoneWs.top.left), ...derive(this.cZoneWs.top.center, true), ...derive(this.cZoneWs.top.right)];
+    this.settings.controlPanel.center = [...derive(this.zoneWs.center)];
+    this.settings.controlPanel.bottom = {
+      1: [...derive(this.cZoneWs.bottom[1].left), ...derive(this.cZoneWs.bottom[1].center, true), ...derive(this.cZoneWs.bottom[1].right)],
+      2: [...derive(this.cZoneWs.bottom[2].left), ...derive(this.cZoneWs.bottom[2].center, true), ...derive(this.cZoneWs.bottom[2].right)],
+      3: [...derive(this.cZoneWs.bottom[3].left), ...derive(this.cZoneWs.bottom[3].center, true), ...derive(this.cZoneWs.bottom[3].right)],
+    };
+  }
   queryDOM = (query, isPseudo = false, all = false) => (isPseudo ? this.pseudoVideoContainer : this.videoContainer)[all ? "querySelectorAll" : "querySelector"](query);
   retrieveDOM() {
-    const { ui } = this.settings.status;
     this.DOM = {
       screenLockedWrapper: this.queryDOM(".tmg-video-screen-locked-wrapper"),
       screenLockedBtn: this.queryDOM(".tmg-video-screen-locked-btn"),
@@ -705,91 +670,93 @@ class tmg_Video_Controller {
       bigControlsWrapper: this.queryDOM(".tmg-video-big-controls-wrapper"),
       topControlsWrapper: this.queryDOM(".tmg-video-top-controls-wrapper"),
       bottomControlsWrapper: this.queryDOM(".tmg-video-bottom-controls-wrapper"),
+      sideControlWrappers: this.videoContainer.getElementsByClassName("tmg-video-side-controls-wrapper"), // has to be dynamic
       pictureInPictureWrapper: this.queryDOM(".tmg-video-picture-in-picture-wrapper"),
       pictureInPictureIconWrapper: this.queryDOM(".tmg-video-picture-in-picture-icon-wrapper"),
       videoProfile: this.queryDOM(".tmg-video-profile"),
       videoTitle: this.queryDOM(".tmg-video-title"),
       videoArtist: this.queryDOM(".tmg-video-artist"),
-      thumbnailImg: this.queryDOM("img.tmg-video-thumbnail"),
+      thumbnailImg: this.queryDOM("div.tmg-video-thumbnail"),
       thumbnailCanvas: this.queryDOM("canvas.tmg-video-thumbnail"),
       videoBuffer: this.queryDOM(".tmg-video-buffer"),
-      notifiersContainer: ui.notifiers ? this.queryDOM(".tmg-video-notifiers-container") : null,
-      playbackRateNotifier: ui.notifiers ? this.queryDOM(".tmg-video-playback-rate-notifier") : null,
-      playbackRateNotifierText: ui.notifiers ? this.queryDOM(".tmg-video-playback-rate-notifier-text") : null,
-      playbackRateNotifierContent: ui.notifiers ? this.queryDOM(".tmg-video-playback-rate-notifier-content") : null,
-      volumeNotifierContent: ui.notifiers ? this.queryDOM(".tmg-video-volume-notifier-content") : null,
-      brightnessNotifierContent: ui.notifiers ? this.queryDOM(".tmg-video-brightness-notifier-content") : null,
-      objectFitNotifierContent: ui.notifiers ? this.queryDOM(".tmg-video-object-fit-notifier-content") : null,
-      scrubNotifier: ui.notifiers ? this.queryDOM(".tmg-video-scrub-notifier") : null,
-      cancelScrubNotifier: ui.notifiers ? this.queryDOM(".tmg-video-cancel-scrub-notifier") : null,
-      fwdNotifier: ui.notifiers ? this.queryDOM(".tmg-video-fwd-notifier") : null,
-      bwdNotifier: ui.notifiers ? this.queryDOM(".tmg-video-bwd-notifier") : null,
-      touchTimelineNotifier: ui.notifiers ? this.queryDOM(".tmg-video-touch-timeline-notifier") : null,
-      touchVolumeContent: ui.notifiers ? this.queryDOM(".tmg-video-touch-volume-content") : null,
-      touchVolumeNotifier: ui.notifiers ? this.queryDOM(".tmg-video-touch-volume-notifier") : null,
-      touchVolumeSlider: ui.notifiers ? this.queryDOM(".tmg-video-touch-volume-slider") : null,
-      touchBrightnessContent: ui.notifiers ? this.queryDOM(".tmg-video-touch-brightness-content") : null,
-      touchBrightnessNotifier: ui.notifiers ? this.queryDOM(".tmg-video-touch-brightness-notifier") : null,
-      touchBrightnessSlider: ui.notifiers ? this.queryDOM(".tmg-video-touch-brightness-slider") : null,
+      notifiersContainer: this.queryDOM(".tmg-video-notifiers-container"),
+      playbackRateNotifier: this.queryDOM(".tmg-video-playback-rate-notifier"),
+      playbackRateNotifierText: this.queryDOM(".tmg-video-playback-rate-notifier-text"),
+      playbackRateNotifierContent: this.queryDOM(".tmg-video-playback-rate-notifier-content"),
+      volumeNotifierContent: this.queryDOM(".tmg-video-volume-notifier-content"),
+      brightnessNotifierContent: this.queryDOM(".tmg-video-brightness-notifier-content"),
+      objectFitNotifierContent: this.queryDOM(".tmg-video-object-fit-notifier-content"),
+      scrubNotifier: this.queryDOM(".tmg-video-scrub-notifier"),
+      cancelScrubNotifier: this.queryDOM(".tmg-video-cancel-scrub-notifier"),
+      fwdNotifier: this.queryDOM(".tmg-video-fwd-notifier"),
+      bwdNotifier: this.queryDOM(".tmg-video-bwd-notifier"),
+      touchTimelineNotifier: this.queryDOM(".tmg-video-touch-timeline-notifier"),
+      touchVolumeContent: this.queryDOM(".tmg-video-touch-volume-content"),
+      touchVolumeNotifier: this.queryDOM(".tmg-video-touch-volume-notifier"),
+      touchVolumeSlider: this.queryDOM(".tmg-video-touch-volume-slider"),
+      touchBrightnessContent: this.queryDOM(".tmg-video-touch-brightness-content"),
+      touchBrightnessNotifier: this.queryDOM(".tmg-video-touch-brightness-notifier"),
+      touchBrightnessSlider: this.queryDOM(".tmg-video-touch-brightness-slider"),
       captionsContainer: this.queryDOM(".tmg-video-captions-container"),
       bigPrevBtn: this.queryDOM(".tmg-video-big-prev-btn"),
       bigPlayPauseBtn: this.queryDOM(".tmg-video-big-play-pause-btn"),
       bigNextBtn: this.queryDOM(".tmg-video-big-next-btn"),
       miniplayerExpandBtn: this.queryDOM(".tmg-video-miniplayer-expand-btn"),
       miniplayerRemoveBtn: this.queryDOM(".tmg-video-miniplayer-remove-btn"),
-      fullscreenOrientationBtn: ui.fullscreenOrientation ? this.queryDOM(".tmg-video-fullscreen-orientation-btn") : null,
-      captureBtn: ui.capture ? this.queryDOM(".tmg-video-capture-btn") : null,
-      fullscreenLockBtn: ui.fullscreenLock ? this.queryDOM(".tmg-video-fullscreen-locked-btn") : null,
-      timelineContainer: ui.timeline ? this.queryDOM(".tmg-video-timeline-container") : null,
-      timeline: ui.timeline ? this.queryDOM(".tmg-video-timeline") : null,
-      previewContainer: ui.timeline ? this.queryDOM(".tmg-video-preview-container") : null,
-      previewImg: ui.timeline ? this.queryDOM("img.tmg-video-preview") : null,
-      previewCanvas: ui.timeline ? this.queryDOM("canvas.tmg-video-preview") : null,
-      prevBtn: ui.prev ? this.queryDOM(".tmg-video-prev-btn") : null,
-      playPauseBtn: ui.playPause ? this.queryDOM(".tmg-video-play-pause-btn") : null,
-      nextBtn: ui.next ? this.queryDOM(".tmg-video-next-btn") : null,
-      objectFitBtn: ui.objectFit ? this.queryDOM(".tmg-video-object-fit-btn") : null,
-      volumeContainer: ui.volume ? this.queryDOM(".tmg-video-volume-container") : null,
-      volumeSlider: ui.volume ? this.queryDOM(".tmg-video-volume-slider") : null,
-      brightnessContainer: ui.brightness ? this.queryDOM(".tmg-video-brightness-container") : null,
-      brightnessSlider: ui.brightness ? this.queryDOM(".tmg-video-brightness-slider") : null,
-      timeAndDurationBtn: ui.timeAndDuration ? this.queryDOM(".tmg-video-time-and-duration-btn") : null,
-      currentTimeElement: ui.timeAndDuration ? this.queryDOM(".tmg-video-current-time") : null,
-      timeBridgeElement: ui.timeAndDuration ? this.queryDOM(".tmg-video-time-bridge") : null,
-      totalTimeElement: ui.timeAndDuration ? this.queryDOM(".tmg-video-total-time") : null,
-      muteBtn: ui.volume ? this.queryDOM(".tmg-video-mute-btn") : null,
-      darkBtn: ui.brightness ? this.queryDOM(".tmg-video-dark-btn") : null,
-      captionsBtn: ui.captions ? this.queryDOM(".tmg-video-captions-btn") : null,
-      settingsBtn: ui.settings ? this.queryDOM(".tmg-video-settings-btn") : null,
-      playbackRateBtn: ui.playbackRate ? this.queryDOM(".tmg-video-playback-rate-btn") : null,
-      pictureInPictureBtn: ui.pictureInPicture ? this.queryDOM(".tmg-video-picture-in-picture-btn") : null,
-      theaterBtn: ui.theater ? this.queryDOM(".tmg-video-theater-btn") : null,
-      fullscreenBtn: ui.fullscreen ? this.queryDOM(".tmg-video-fullscreen-btn") : null,
+      fullscreenOrientationBtn: this.queryDOM(".tmg-video-fullscreen-orientation-btn"),
+      captureBtn: this.queryDOM(".tmg-video-capture-btn"),
+      fullscreenLockBtn: this.queryDOM(".tmg-video-fullscreen-locked-btn"),
+      timelineContainer: this.queryDOM(".tmg-video-timeline-container"),
+      timeline: this.queryDOM(".tmg-video-timeline"),
+      previewContainer: this.queryDOM(".tmg-video-preview-container"),
+      previewImg: this.queryDOM("div.tmg-video-preview"),
+      previewCanvas: this.queryDOM("canvas.tmg-video-preview"),
+      prevBtn: this.queryDOM(".tmg-video-prev-btn"),
+      playPauseBtn: this.queryDOM(".tmg-video-play-pause-btn"),
+      nextBtn: this.queryDOM(".tmg-video-next-btn"),
+      objectFitBtn: this.queryDOM(".tmg-video-object-fit-btn"),
+      volumeContainer: this.queryDOM(".tmg-video-volume-container"),
+      volumeSlider: this.queryDOM(".tmg-video-volume-slider"),
+      brightnessContainer: this.queryDOM(".tmg-video-brightness-container"),
+      brightnessSlider: this.queryDOM(".tmg-video-brightness-slider"),
+      timeAndDurationBtn: this.queryDOM(".tmg-video-time-and-duration-btn"),
+      currentTimeElement: this.queryDOM(".tmg-video-current-time"),
+      timeBridgeElement: this.queryDOM(".tmg-video-time-bridge"),
+      totalTimeElement: this.queryDOM(".tmg-video-total-time"),
+      muteBtn: this.queryDOM(".tmg-video-mute-btn"),
+      darkBtn: this.queryDOM(".tmg-video-dark-btn"),
+      captionsBtn: this.queryDOM(".tmg-video-captions-btn"),
+      settingsBtn: this.queryDOM(".tmg-video-settings-btn"),
+      playbackRateBtn: this.queryDOM(".tmg-video-playback-rate-btn"),
+      pictureInPictureBtn: this.queryDOM(".tmg-video-picture-in-picture-btn"),
+      theaterBtn: this.queryDOM(".tmg-video-theater-btn"),
+      fullscreenBtn: this.queryDOM(".tmg-video-fullscreen-btn"),
       svgs: this.videoContainer.getElementsByTagName("svg"),
-      draggableControls: ui.draggable ? this.queryDOM("[data-draggable-control]", false, true) : null,
-      draggableControlContainers: ui.draggable ? this.queryDOM("[data-drop-zone]", false, true) : null,
+      draggableControls: this.queryDOM("[data-draggable-control]", false, true),
+      dropZones: [...this.queryDOM("[data-drop-zone][data-drag-id]", false, true), ...this.getZones()],
       settingsCloseBtn: this.settings ? this.queryDOM(".tmg-video-settings-close-btn") : null,
     };
   }
   initPlayer() {
     this.retrieveDOM();
     (this.observeResize(), this.observeIntersection());
-    this.svgSetup();
-    (this.plugMedia(), this.plugLightState(), this.plugVolumeSettings(), this.plugBrightnessSettings(), this.plugPlaybackRateSettings(), this.plugCaptionsSettings());
-    (this.plugTimeSettings(), this.plugModesSettings(), this.plugBetaSettings(), this.plugKeysSettings(), this.plugToastsSettings());
-    this.setInitialStates();
+    this.setUpSvgs();
     (this.setVideoEventListeners(), this.setControlsEventListeners());
+    (this.plugMedia(), this.plugLightState(), this.plugVolumeSettings(), this.plugBrightnessSettings(), this.plugPlaybackRateSettings(), this.plugCaptionsSettings());
+    (this.plugTimeSettings(), this.plugModesSettings(), this.plugBetaSettings(), this.plugKeysSettings(), this.plugToastsSettings(), this.plugNoOverrideSettings());
     this[`toggle${tmg.capitalize(this.initialMode)}Mode`]?.(true);
     !this.video.currentSrc && this._handleLoadedError();
+    this._handleLoadStart();
     this.setReadyState(1);
-    !this.config.lightState.disabled && this.video.paused ? this.addLightState() : this.initHeavyControls();
+    !this.inLightState && this.initHeavyControls();
     this.plugDisabled();
   }
   plugLightState() {
     this.config.on("lightState.disabled", ({ target: { value } }) => (value ? this.removeLightState() : this.readyState === 1 && this.addLightState()));
-    this.config.on("lightState.controls", () => this.queryDOM("[data-light-control]", false, true).forEach((c) => (c.dataset.lightControl = this.isLight(c.dataset.controlId) ? "true" : "false")));
+    this.config.on("lightState.controls", () => this.queryDOM("[data-control-id]", false, true).forEach((c) => (c.dataset.lightControl = this.isLight(c.dataset.controlId) ? "true" : "false")));
     this.config.on("lightState.preview.usePoster", ({ target: { value } }) => this.inLightState && (!value || !this.video.poster) && (this.currentTime = this.config.lightState.preview.time));
     this.config.on("lightState.preview.time", ({ target: { value } }) => this.inLightState && !this.video.poster && (this.currentTime = value));
+    this.config.lightState = this.config.lightState;
   }
   addLightState() {
     if (this.config.lightState.disabled) return;
@@ -807,17 +774,12 @@ class tmg_Video_Controller {
     this.videoContainer.classList.remove("tmg-video-light");
     (this.initHeavyControls(), this.togglePlay(true));
   }
-  isLight = (controlId) => this.config.lightState.controls.includes?.(controlId) ?? this.config.lightState.controls;
+  isLight = (controlId) => tmg.inBoolArrOpt(this.config.lightState.controls, controlId);
   _handleLightStateClick = ({ target }) => target === this.DOM.controlsContainer && this.removeLightState();
   stall() {
     this.showOverlay();
     this.DOM.bigPlayPauseBtn && this.videoContainer.classList.add("tmg-video-stall");
     this.DOM.bigPlayPauseBtn?.addEventListener("animationend", () => this.videoContainer.classList.remove("tmg-video-stall"), { once: true });
-  }
-  setInitialStates() {
-    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = this.settings.css.currentBufferedPosition = 0;
-    this.showOverlay();
-    (this.setControlsState(), this.setCaptionsState());
   }
   setControlState = (btn, { hidden = false, disabled = false }) => (btn?.classList?.toggle("tmg-video-control-hidden", hidden), btn?.classList?.toggle("tmg-video-control-disabled", disabled));
   setControlsState(controlId) {
@@ -827,7 +789,7 @@ class tmg_Video_Controller {
       fullscreenlock: () => this.setControlState(this.DOM.fullscreenLockBtn, { hidden: !(tmg.ON_MOBILE && this.isUIActive("fullscreen")) }),
       fullscreenorientation: () => !this.isUIActive("fullscreen") && this.setControlState(this.DOM.fullscreenOrientationBtn, { hidden: true }),
       captions: () => this.setControlState(this.DOM.captionsBtn, { disabled: !this.video.textTracks[this.textTrackIndex] }),
-      playbackrate: () => this.DOM.playbackRateBtn && (this.DOM.playbackRateBtn.textContent = `${this.playbackRate}x`),
+      playbackrate: () => this.DOM.playbackRateBtn && (this.DOM.playbackRateBtn.textContent = `${this.settings.playbackRate.value}x`),
       pictureinpicture: () => this.setControlState(this.DOM.pictureInPictureBtn, { hidden: !this.settings.modes.pictureInPicture }),
       theater: () => this.setControlState(this.DOM.theaterBtn, { hidden: !this.settings.modes.theater }),
       fullscreen: () => this.setControlState(this.DOM.fullscreenBtn, { hidden: this.settings.modes.fullscreen.disabled }),
@@ -879,14 +841,19 @@ class tmg_Video_Controller {
     this.video[`${act}EventListener`]("volumechange", this._handleNativeVolumeChange);
     this.video[`${act}EventListener`]("timeupdate", this._handleTimeUpdate);
     this.video[`${act}EventListener`]("progress", this._handleLoadedProgress);
+    this.video[`${act}EventListener`]("loadstart", this._handleLoadStart);
     this.video[`${act}EventListener`]("loadedmetadata", this._handleLoadedMetadata);
     this.video[`${act}EventListener`]("loadeddata", this._handleLoadedData);
     this.video[`${act}EventListener`]("ended", this._handleEnded);
     this.video[`${act}EventListener`]("enterpictureinpicture", this._handleEnterPictureInPicture);
     this.video[`${act}EventListener`]("leavepictureinpicture", this._handleLeavePictureInPicture);
     this.video[`${act}EventListener`]("webkitendfullscreen", this._handleIOSFullscreenEnd);
+    this.video.textTracks[`${act}EventListener`]("addtrack", this._handleTextTrackChange);
+    this.video.textTracks[`${act}EventListener`]("removetrack", this._handleTextTrackChange);
+    this.video.textTracks[`${act}EventListener`]("change", this._handleTextTrackChange);
   }
   setControlsEventListeners() {
+    this.bindNotifiers(); // notifiers event listeners
     this.DOM.screenLockedBtn?.addEventListener("click", this._handleLockBtnClick);
     this.DOM.miniplayerExpandBtn?.addEventListener("click", this.expandMiniplayer);
     this.DOM.miniplayerRemoveBtn?.addEventListener("click", this.removeMiniplayer);
@@ -921,31 +888,35 @@ class tmg_Video_Controller {
     this.DOM.brightnessSlider?.addEventListener("input", this._handleBrightnessSliderInput);
     this.DOM.brightnessContainer?.addEventListener("mousemove", this._handleBrightnessContainerMouseMove);
     this.DOM.brightnessContainer?.addEventListener("mouseleave", this._handleBrightnessContainerMouseLeave);
-    // drag event listeners
-    this.setDragEventListeners();
     // image event listeners
     ["load", "error"].forEach((e) => this.DOM.videoProfile?.addEventListener(e, this.setImgLoadState));
-    this.settings.status.ui.previews && [this.DOM.previewImg, this.DOM.thumbnailImg].forEach((el) => el?.addEventListener("error", this.setImgFallback));
-    // notifiers event listeners
-    if (this.settings.status.ui.notifiers) this.bindNotifiers();
     // pseudo event listeners
     this.queryDOM(".tmg-video-picture-in-picture-icon-wrapper", true).addEventListener("click", this.togglePictureInPictureMode);
   }
   setDragEventListeners(act = "add") {
-    if (act === "add" && !this.settings.status.ui.draggable) return;
+    if (act === "add" && !this.canOverride("controlPanel")) return;
     this.DOM.draggableControls?.forEach((c) => {
       c.dataset.draggableControl = c.draggable = act === "add";
+      c.dataset.dragId = c.dataset.dragId ?? "";
       c[`${act}EventListener`]("dragstart", this._handleDragStart);
       c[`${act}EventListener`]("drag", this._handleDrag);
       c[`${act}EventListener`]("dragend", this._handleDragEnd);
     });
-    this.DOM.draggableControlContainers?.forEach((c) => {
+    this.DOM.dropZones?.forEach((c) => {
       c.dataset.dropZone = act === "add";
+      c.dataset.dragId = c.dataset.dragId ?? "";
       c[`${act}EventListener`]("dragenter", this._handleDragEnter);
       c[`${act}EventListener`]("dragover", this._handleDragOver);
       c[`${act}EventListener`]("drop", this._handleDrop);
       c[`${act}EventListener`]("dragleave", this._handleDragLeave);
     });
+  }
+  canOverride = (str) => !tmg.inBoolArrOpt(this.settings.noOverride, str);
+  plugNoOverrideSettings() {
+    this.config.on("settings.noOverride", () => {
+      this.setDragEventListeners(this.canOverride("controlPanel") ? "add" : "remove");
+    });
+    this.settings.noOverride = this.settings.noOverride;
   }
   setSettingsViewEventListeners() {
     this.DOM.settingsCloseBtn?.addEventListener("click", this.leaveSettingsView);
@@ -983,8 +954,8 @@ class tmg_Video_Controller {
     this._handleMediaParentResize();
     tmg.initScrollAssist(this.DOM.videoTitle, { pxPerSecond: 60 });
     tmg.initScrollAssist(this.DOM.videoArtist, { pxPerSecond: 30 });
-    [this.zoneRefs.top.left, this.zoneRefs.top.right, this.zoneRefs.bottom[1].left, this.zoneRefs.bottom[1].right, this.zoneRefs.bottom[2].left, this.zoneRefs.bottom[2].right, this.zoneRefs.bottom[3].left, this.zoneRefs.bottom[3].right].forEach((el) => {
-      this._handleSideControlsWrapperResize(el);
+    [...this.DOM.sideControlWrappers].forEach((el) => {
+      this._handleControlsWrapperResize(el);
       tmg.initScrollAssist(el, { pxPerSecond: 60 });
       el && tmg.resizeObserver.observe(el);
       el?.addEventListener("scroll", this._handleDirtyScroll, { passive: true });
@@ -994,7 +965,7 @@ class tmg_Video_Controller {
   unobserveResize() {
     tmg.removeScrollAssist(this.DOM.videoTitle);
     tmg.removeScrollAssist(this.DOM.videoArtist);
-    [this.zoneRefs.top.left, this.zoneRefs.top.right, this.zoneRefs.bottom[1].left, this.zoneRefs.bottom[1].right, this.zoneRefs.bottom[2].left, this.zoneRefs.bottom[2].right, this.zoneRefs.bottom[3].left, this.zoneRefs.bottom[3].right].forEach((el) => {
+    [...this.DOM.sideControlWrappers].forEach((el) => {
       tmg.removeScrollAssist(el);
       el && tmg.resizeObserver.unobserve(el);
     });
@@ -1009,7 +980,7 @@ class tmg_Video_Controller {
     p && tmg.intersectionObserver.unobserve(p);
     tmg.intersectionObserver.unobserve(this.video);
   }
-  _handleResize = (target) => (target.classList.contains("tmg-media-container") ? this._handleMediaParentResize(target.className.includes("pseudo")) : target.classList.contains("tmg-video-side-controls-wrapper") && this._handleSideControlsWrapperResize(target));
+  _handleResize = (target) => (target.classList.contains("tmg-media-container") ? this._handleMediaParentResize(target.className.includes("pseudo")) : target.classList.contains("tmg-video-side-controls-wrapper") && this._handleControlsWrapperResize(target));
   _handleMediaParentResize(isPseudo = false) {
     const getTier = (container) => {
       const { offsetWidth: w, offsetHeight: h } = container;
@@ -1019,16 +990,22 @@ class tmg_Video_Controller {
       const { w, h, tier } = getTier(this.videoContainer);
       ((this.settings.css.currentContainerWidth = `${w}px`), (this.settings.css.currentContainerHeight = `${h}px`));
       this.videoContainer.dataset.sizeTier = tier;
-      this.syncThumbnailDimensions();
-      (this.resetCaptionsCharWidth(), this.previewCaptions(""));
+      this.syncThumbnailSize();
+      (this.syncCaptionsSize(), this.previewCaptions("")); // reconstruct to rewrap text :(
     } else {
       const { tier } = getTier(this.pseudoVideoContainer);
       this.pseudoVideoContainer.dataset.sizeTier = tier;
     }
   }
-  _handleSideControlsWrapperResize = (wrapper) => this._handleSideControlsView({ target: wrapper });
+  _handleControlsWrapperResize = (wrapper) => this._handleControlsView({ target: wrapper });
   _handleWindowResize() {
     if (!this.isUIActive("fullscreen")) this.toggleMiniplayerMode();
+  }
+  _handleOrientationChange() {
+    if (!tmg.ON_MOBILE || !this.settings.modes.fullscreen.onRotate || this.isUIActive("fullscreen")) return;
+    const angle = screen.orientation?.angle,
+      deg = this.settings.modes.fullscreen.onRotate;
+    if (angle === deg || angle === 360 - deg) this.toggleFullscreenMode();
   }
   _handleMediaIntersectionChange(isIntersecting) {
     this.isIntersecting = isIntersecting;
@@ -1047,12 +1024,12 @@ class tmg_Video_Controller {
     if (el.scrollLeft > 0) el.dataset.hasScrolled = true;
     el.dataset.resetScrolled = el.scrollLeft === (el.dataset.scroller === "reverse" ? el.scrollWidth - el.clientWidth : 0);
   }
-  _handleSideControlsView({ target: w }, spacer) {
+  _handleControlsView({ target: w }, spacer) {
     let c = w?.children?.[0];
     do {
-      c?.setAttribute("data-control-displayed", getComputedStyle(c).display !== "none" ? "true" : "false");
+      c?.setAttribute("data-displayed", getComputedStyle(c).display !== "none" ? "true" : "false");
       c?.setAttribute("data-spacer", false);
-      if (c?.dataset.controlDisplayed === "true" && !spacer) spacer = c;
+      if (c?.dataset.displayed === "true" && !spacer) spacer = c;
     } while ((c = c?.nextElementSibling));
     if (w?.dataset.scroller !== "reverse") return;
     spacer?.setAttribute("data-spacer", true);
@@ -1061,7 +1038,7 @@ class tmg_Video_Controller {
     w.addEventListener("scroll", () => (w.dataset.hasScrolled = false), { once: true });
     w.scrollLeft = w.scrollWidth - w.clientWidth;
   }
-  svgSetup() {
+  setUpSvgs() {
     [...this.DOM.svgs].forEach((svg) => {
       svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
       const title = svg.getAttribute("data-control-title");
@@ -1086,6 +1063,7 @@ class tmg_Video_Controller {
         (this.togglePlay(false), this.showOverlay());
         this.DOM.videoContainerContent.setAttribute("inert", "");
         this.setKeyEventListeners("remove");
+        this.toast.warn("You cannot access the custom controls when disabled");
         this.log("You cannot access the custom controls when disabled", "warn");
       } else {
         this.videoContainer.classList.remove("tmg-video-disabled");
@@ -1098,7 +1076,7 @@ class tmg_Video_Controller {
   lock() {
     this.leaveSettingsView();
     setTimeout(this.showLockedOverlay);
-    this.videoContainer.classList.add("tmg-video-locked");
+    this.videoContainer.classList.add("tmg-video-locked", "tmg-video-progress-bar");
     this.removeOverlay("force");
     this.setKeyEventListeners("remove");
     this.locked = true;
@@ -1108,6 +1086,7 @@ class tmg_Video_Controller {
     this.locked = false;
     this.removeLockedOverlay();
     await tmg.mockAsync(tmg.parseCSSTime(this.settings.css.switchTransitionTime));
+    this.videoContainer.classList.toggle("tmg-video-progress-bar", this.settings.controlPanel.progressBar);
     this.videoContainer.classList.remove("tmg-video-locked");
     this.showOverlay();
     this.setKeyEventListeners("add");
@@ -1218,6 +1197,8 @@ class tmg_Video_Controller {
         return this.videoContainer.classList.contains("tmg-video-settings-view");
       case "captions":
         return this.videoContainer.classList.contains("tmg-video-captions");
+      case "captions-preview":
+        return this.videoContainer.classList.contains("tmg-video-captions-preview");
       case "overlay":
         return this.videoContainer.classList.contains("tmg-video-overlay");
       default:
@@ -1227,57 +1208,59 @@ class tmg_Video_Controller {
   showUIMessage = (message) => message && this.DOM.videoContainerContent.setAttribute("data-message", message);
   removeUIMessage = () => this.DOM.videoContainerContent.removeAttribute("data-message");
   get duration() {
-    return tmg.parseNumber(this.video.duration);
+    return tmg.safeNum(this.video.duration);
   }
   get currentTime() {
-    return tmg.parseNumber(this.video.currentTime);
+    return tmg.safeNum(this.video.currentTime);
   }
   set currentTime(value) {
-    this.video.currentTime = tmg.parseNumber(tmg.clamp(this.settings.time.min, value, this.settings.time.max));
+    this.video.currentTime = tmg.safeNum(tmg.clamp(this.settings.time.min, value, this.settings.time.max));
   }
   _handleLoadedError(error) {
-    this.settings.css.currentBufferedPosition = +(this.loaded = false);
+    this.loaded = false;
+    this.settings.css.currentBufferedPosition = 0;
     this.deactivate(this.settings.errorMessages?.[this.video.error?.code ?? (error && 5)] || (typeof error === "string" && error) || error?.message || this.video.error?.message || (error && "An unknown error occurred with the video :("));
+  }
+  _handleLoadStart() {
+    this.loaded = false;
+    this.stats = { fps: 30 };
+    this.video.paused && this.addLightState();
+    (this.setControlsState(), this.setCaptionsState());
+    this.showOverlay();
+    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = this.settings.css.currentBufferedPosition = 0;
   }
   _handleLoadedMetadata() {
     this.loaded = true;
     if (this.settings.time.start != null && this.config.lightState.disabled) this.actualTimeStart = this.currentTime = this.settings.time.start;
-    this.pseudoVideo.src = this.video.src || this.video.currentSrc;
+    this.pseudoVideo.src = this.video.currentSrc;
     this.pseudoVideo.crossOrigin = this.video.crossOrigin;
-    this.pseudoVideo.addEventListener("timeupdate", ({ target: v }) => (v.ontimeupdate = this.syncCanvasPreviews), { once: true }); // anonymous but low cost
-    this.stats = { fps: 30 };
+    this.pseudoVideo.addEventListener("timeupdate", ({ target: v }) => (v.ontimeupdate = this.syncCanvasPreviews), { once: true }); // anonymous low cost
     (this.syncMediaAspectRatio(), this.syncMediaBrandColor());
     this.setCaptionsState();
-    this._handleDurationChange();
     this.reactivate();
-    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = this.currentTime < 1 ? (this.settings.css.currentBufferedPosition = 0) : tmg.parseNumber(this.video.currentTime / this.video.duration);
   }
   _handleLoadedData = this._handleDurationChange;
   _handleDurationChange = () => {
-    if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = this.toTimeText(this.video.duration);
+    this.DOM.totalTimeElement.textContent = this.toTimeText(this.video.duration);
     this.DOM.timelineContainer?.setAttribute("aria-valuemax", Math.floor(this.duration));
   };
   _handleLoadedProgress() {
     for (let i = 0; i < this.video.buffered.length; i++) if (this.video.buffered.start(this.video.buffered.length - 1 - i) < this.currentTime) return (this.settings.css.currentBufferedPosition = this.video.buffered.end(this.video.buffered.length - 1 - i) / this.duration);
   }
   togglePlay = async (bool) => await this.video[("boolean" === typeof bool ? bool : this.video.paused) ? "play" : "pause"]();
-  replay = () => (this.moveVideoTime({ to: "start" }), this.video.play()); // ! - start is 0 and falsy
+  replay = () => ((this.currentTime = 0), this.video.play()); // ! - start is 0 and falsy
   previousVideo = () => (this.currentTime >= 3 ? this.replay() : this.config.playlist && this.currentPlaylistIndex > 0 && this.movePlaylistTo(this.currentPlaylistIndex - 1, true));
   nextVideo = () => this.config.playlist && this.currentPlaylistIndex < this.config.playlist.length - 1 && this.movePlaylistTo(this.currentPlaylistIndex + 1, true);
   movePlaylistTo(index, shouldPlay) {
     if (!this.config.playlist) return this.setControlsState("playlist");
-    this.loaded = false;
     this.currentPlaylistIndex = index;
     const v = this.config.playlist[index];
     this.config.media = v.media;
     ["min", "max", "start", "end", "previews"].forEach((prop) => (this.settings.time[prop] = v.settings.time[prop]));
-    this.settings.status.ui.previews = this.settings.time.previews?.address && this.settings.time.previews?.spf;
     this.config.tracks = v.tracks ?? [];
     this.config.src = v.src || "";
     if ("sources" in v) this.config.sources = v.sources;
-    (this.config.tick(["src", "sources"]), this.setInitialStates());
     "boolean" === typeof shouldPlay && this.togglePlay(shouldPlay);
-    this.video.paused && this.addLightState();
     this.canAutoMovePlaylist = true;
   }
   autonextVideo() {
@@ -1298,7 +1281,7 @@ class tmg_Video_Controller {
         <h2>Next Video in <span class="tmg-video-next-countdown">${count}</span></h2>
         ${v.media.title ? `<p class="tmg-video-next-title">${v.media.title}</p>` : ""}
       </span>`,
-      onTimeUpdate: (time) => this.throttle("nextVideoCountdown", () => (this.queryDOM(".tmg-video-next-countdown").textContent = Math.max(1, Math.round((count * 1000 - time) / 1000))), 250),
+      onTimeUpdate: (time) => this.throttle("nextVideoCountdown", () => (this.queryDOM(".tmg-video-next-countdown").textContent = Math.round((count * 1000 - time) / 1000)) || 1, 250),
       onClose: (timeElapsed) => (removeListeners(), timeElapsed && this.nextVideo()),
       tag: "tmg-anvi",
     });
@@ -1310,8 +1293,8 @@ class tmg_Video_Controller {
     const nVP = (this.nextVideoPreview = this.queryDOM(".tmg-video-next-preview"));
     v.sources?.length && tmg.addSources(v.sources, nVP);
     ["loadedmetadata", "loaded", "durationchange"].forEach((e) => nVP?.addEventListener(e, ({ target: p }) => (p.nextElementSibling.textContent = this.toTimeText(p.duration))));
-    this.settings.toasts.nextVideoPreview.tease ? nVP?.addEventListener("timeupdate", ({ target: p }) => tmg.parseNumber(p.currentTime) >= this.settings.toasts.nextVideoPreview.time && p.pause()) : (nVP.currentTime = tmg.parseNumber(this.settings.toasts.nextVideoPreview.time));
-    nVP?.parentElement?.addEventListener("click", () => (cleanUp(true), this.nextVideo()), true); // all admittedly a terse func, auto next shouldn't be deep
+    this.settings.toasts.nextVideoPreview.tease ? nVP?.addEventListener("timeupdate", ({ target: p }) => tmg.safeNum(p.currentTime) >= this.settings.toasts.nextVideoPreview.time && p.pause()) : (nVP.currentTime = tmg.safeNum(this.settings.toasts.nextVideoPreview.time));
+    nVP?.previousElementSibling?.addEventListener("click", () => (cleanUp(true), this.nextVideo()), true); // all admittedly a terse func, auto next shouldn't be deep
   }
   _handlePlay() {
     for (const media of document.querySelectorAll("video, audio")) media !== this.video && !media.paused && media.pause();
@@ -1321,9 +1304,7 @@ class tmg_Video_Controller {
     this.leaveSettingsView();
     this.toggleMiniplayerMode();
     this.frameCallbackId = this.video.requestVideoFrameCallback?.(this._handleFrameUpdate);
-    if (!this.loaded || !this.video.currentSrc) return;
-    this.loaded = true;
-    !this.video.error && this.reactivate();
+    if (this.loaded || this.video.currentSrc) ((this.loaded = true), !this.video.error && this.reactivate());
   }
   _handlePause() {
     this.showOverlay();
@@ -1349,14 +1330,18 @@ class tmg_Video_Controller {
     this.config.set("settings.time.previews", (value, _, { target: { oldValue } }) => (tmg.isObj(value) && tmg.isObj(oldValue) ? tmg.mergeObjs(oldValue, value) : value));
     this.config.on("settings.time.previews", ({ type, currentTarget: { value } }) => {
       if (type === "update") return;
-      this.settings.status.ui.previews = value?.address && value?.spf;
-      this.settings.css.altImgSrc = `url(${TMG_VIDEO_ALT_IMG_SRC})`;
-      this.videoContainer.classList.toggle("tmg-video-no-previews", !this.settings.time.previews);
-      this.videoContainer.dataset.previewType = this.settings.status.ui.previews ? "image" : "canvas";
-      if (!value || this.settings.status.ui.previews) return;
+      const manual = value && value?.address && (value?.spf || (value?.cols && value?.rows));
+      this.settings.css.altImgUrl = `url(${TMG_VIDEO_ALT_IMG_SRC})`;
+      this.videoContainer.classList.toggle("tmg-video-no-previews", !value);
+      this.videoContainer.dataset.previewType = value ? (manual ? (value?.cols && value?.rows ? "sprite" : "image") : "canvas") : "none";
+      if (value?.cols && value?.rows && value?.address) this.settings.css.currentPreviewUrl = this.settings.css.currentThumbnailUrl = `url(${value.address})`;
+      else this.settings.css.currentPreviewPosition = this.settings.css.currentThumbnailPosition = "center";
+      if (!value || manual) return;
       ((this.previewContext ??= this.DOM.previewCanvas?.getContext("2d")), (this.thumbnailContext ??= this.DOM.thumbnailCanvas?.getContext("2d")));
       !this.loaded && (this.setCanvasFallback(this.DOM.previewCanvas, this.previewContext), this.setCanvasFallback(this.DOM.thumbnailCanvas, this.thumbnailContext), (this.pseudoVideo.ontimeupdate = null));
     });
+    this.config.on("settings.css.currentThumbnailWidth", ({ target: { value } }) => (this.DOM.thumbnailCanvas.width = parseFloat(value)));
+    this.config.on("settings.css.currentThumbnailHeight", ({ target: { value } }) => (this.DOM.thumbnailCanvas.height = parseFloat(value)));
     this.settings.time = this.settings.time;
   }
   guardTimeValues = () => ["lightState.preview.time", "settings.time.min", "settings.time.max", "settings.time.start", "settings.time.end", "settings.toasts.nextVideoPreview.time"].forEach((p) => this.config.get(p, this.toTimeVal));
@@ -1373,7 +1358,7 @@ class tmg_Video_Controller {
       this.videoContainer.classList.add("tmg-video-scrubbing");
       tmg.ON_MOBILE && this.DOM.scrubNotifier?.classList.add("tmg-video-control-active");
     }, 100);
-    this.syncThumbnailDimensions();
+    this.syncThumbnailSize();
     this._handleTimelineInput(e);
     this.DOM.timelineContainer?.addEventListener("pointermove", this._handleTimelineInput);
     this.DOM.timelineContainer?.addEventListener("pointerup", this.stopTimeScrubbing);
@@ -1381,9 +1366,9 @@ class tmg_Video_Controller {
   stopTimeScrubbing() {
     if (!this.isScrubbing) return;
     this.isScrubbing = false;
-    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = this.shouldCancelTimeScrub ? this.lastTimelineThumbPosition : this.settings.css.currentThumbPosition;
-    if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.toTimeText(Number(this.settings.css.currentPlayedPosition) * this.duration, true);
-    if (!this.shouldCancelTimeScrub) this.currentTime = Number(this.settings.css.currentPlayedPosition) * this.duration;
+    const newPos = (this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = this.shouldCancelTimeScrub ? this.lastTimelineThumbPosition : this.settings.css.currentThumbPosition);
+    this.DOM.currentTimeElement.textContent = this.toTimeText(newPos * this.duration, true);
+    if (!this.shouldCancelTimeScrub) this.currentTime = newPos * this.duration;
     clearTimeout(this.scrubbingId);
     this.togglePlay(!this.wasPaused);
     this.videoContainer.classList.remove("tmg-video-scrubbing");
@@ -1413,8 +1398,9 @@ class tmg_Video_Controller {
       () => {
         const rect = this.DOM.timelineContainer?.getBoundingClientRect(),
           currX = tmg.clamp(0, !this.isScrubbing || this.settings.controlPanel.timeline.seek.relative ? clientX - rect.left : this.lastTimelineThumbPosition * rect.width + (clientX - this.lastTimelinePointerX), rect.width),
-          p = currX / rect.width,
-          previewImgMin = this.DOM.previewContainer.offsetWidth / 2 / rect.width;
+          p = tmg.safeNum(currX / rect.width),
+          { offsetLeft: pLeft, offsetWidth: pWidth } = this.DOM.previewContainer,
+          previewImgMin = pWidth / 2 / rect.width;
         this.DOM.previewContainer?.setAttribute("data-preview-time", this.toTimeText(p * this.video.duration, true));
         if (this.isScrubbing) {
           this.settings.css.currentThumbPosition = p;
@@ -1427,10 +1413,21 @@ class tmg_Video_Controller {
         this.settings.css.currentPreviewImgPosition = tmg.clamp(previewImgMin, p, 1 - previewImgMin);
         let arrowBW = tmg.parseCSSUnit(getComputedStyle(this.DOM.previewContainer, "::before").borderWidth),
           arrowPositionMin = Math.max(arrowBW / 5, tmg.parseCSSUnit(getComputedStyle(this.DOM.previewContainer).borderRadius) / 2);
-        this.settings.css.currentPreviewImgArrowPosition = p < previewImgMin ? `${Math.max(p * rect.width, arrowPositionMin + arrowBW / 2 + 1)}px` : p > 1 - previewImgMin ? `${Math.min(this.DOM.previewContainer.offsetWidth / 2 + p * rect.width - this.DOM.previewContainer.offsetLeft, this.DOM.previewContainer.offsetWidth - arrowPositionMin - arrowBW - 1)}px` : "50%";
-        if (this.settings.status.ui.previews) {
-          if (!tmg.ON_MOBILE) this.DOM.previewImg.src = this.settings.time.previews.address.replace("$", Math.max(1, Math.floor((p * this.duration) / this.settings.time.previews.spf)));
-          if (this.isScrubbing) this.DOM.thumbnailImg.src = this.DOM.previewImg.src;
+        this.settings.css.currentPreviewImgArrowPosition = p < previewImgMin ? `${Math.max(p * rect.width, arrowPositionMin + arrowBW / 2 + 1)}px` : p > 1 - previewImgMin ? `${Math.min(pWidth / 2 + p * rect.width - pLeft, pWidth - arrowPositionMin - arrowBW - 1)}px` : "50%";
+        if (["sprite", "image"].includes(this.videoContainer.dataset.previewType)) {
+          const frameI = Math.floor((p * this.duration) / this.settings.time.previews.spf) || 1;
+          if (this.videoContainer.dataset.previewType === "sprite") {
+            const { cols, rows } = this.settings.time.previews,
+              clampedI = Math.min(frameI, cols * rows - 1),
+              xPercent = ((clampedI % cols) * 100) / (cols - 1 || 1),
+              yPercent = (Math.floor(clampedI / cols) * 100) / (rows - 1 || 1);
+            if (!tmg.ON_MOBILE) this.settings.css.currentPreviewPosition = `${xPercent}% ${yPercent}%`;
+            if (this.isScrubbing) this.settings.css.currentThumbnailPosition = `${xPercent}% ${yPercent}%`;
+          } else {
+            const url = `url(${this.settings.time.previews.address.replace("$", frameI)})`;
+            if (!tmg.ON_MOBILE) this.settings.css.currentPreviewUrl = url;
+            if (this.isScrubbing) this.settings.css.currentThumbnailUrl = url;
+          }
         } else if (this.settings.time.previews && !this.frameReadyPromise) this.pseudoVideo.currentTime = p * this.duration;
       },
       30,
@@ -1443,7 +1440,7 @@ class tmg_Video_Controller {
     const time = sign === "+" ? this.currentTime + percent * this.duration : this.currentTime - percent * this.duration;
     this.gestureNextTime = tmg.clamp(0, time, this.duration);
     if (this.overTimeline) this.currentTime = this.gestureNextTime;
-    if (this.DOM.touchTimelineNotifier) this.DOM.touchTimelineNotifier.textContent = `${sign}${this.toTimeText(Math.abs(this.gestureNextTime - this.currentTime))} (${this.toTimeText(this.gestureNextTime, true)}) ${multiplier < 1 ? `x${multiplier}` : ""}`;
+    this.DOM.touchTimelineNotifier.textContent = `${sign}${this.toTimeText(Math.abs(this.gestureNextTime - this.currentTime))} (${this.toTimeText(this.gestureNextTime, true)}) ${multiplier < 1 ? `x${multiplier}` : ""}`;
   }
   _handleTimelineKeyDown(e) {
     switch (e.key?.toLowerCase()) {
@@ -1462,17 +1459,18 @@ class tmg_Video_Controller {
   _handleTimeUpdate() {
     const t = { c: this.currentTime, vc: this.video.currentTime, d: this.duration, s: this.settings };
     if (t.c < t.s.time.min || t.c > t.s.time.max) ((this.currentTime = t.s.time.loop ? t.s.time.min : t.c), !t.s.time.loop && this.togglePlay(false));
-    if (!this.isScrubbing) t.s.css.currentPlayedPosition = t.s.css.currentThumbPosition = tmg.parseNumber(t.vc / tmg.parseNumber(this.video.duration, 60)); // progress fallback, shouldn't take more than a min for duration to be available
-    if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.toTimeText(t.vc, true);
+    if (!this.isScrubbing) t.s.css.currentPlayedPosition = t.s.css.currentThumbPosition = tmg.safeNum(t.vc / tmg.safeNum(this.video.duration, 60)); // progress fallback, shouldn't take more than a min for duration to be available
+    this.DOM.currentTimeElement.textContent = this.toTimeText(t.vc, true);
     if (this.speedCheck && !this.video.paused) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", this.toTimeText(t.vc, true));
     if (Math.floor((t.s.time.end ?? t.d) - t.c) <= t.s.auto.next) this.autonextVideo();
-    if (!t.s.status.noOverride.time) t.s.time.start = t.c > 3 && t.c < (t.s.time.end ?? t.d) - 3 ? t.c : this.actualTimeStart;
+    if (!this.canOverride("time")) t.s.time.start = t.c > 3 && t.c < (t.s.time.end ?? t.d) - 3 ? t.c : this.actualTimeStart;
     (this.DOM.timelineContainer?.setAttribute("aria-valuenow", Math.floor(t.c)), this.DOM.timelineContainer?.setAttribute("aria-valuetext", `${tmg.formatMediaTime({ time: t.c, format: "human-long" })} out of ${tmg.formatMediaTime({ time: t.d, format: "human-long" })}`));
     this.videoContainer.classList.remove("tmg-video-replay");
+    if (!this.settings.captions.disabled) this._handleCaptionsKaraoke();
   }
   toggleTimeMode() {
     this.settings.time.mode = this.settings.time.mode !== "elapsed" ? "elapsed" : "remaining";
-    if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.toTimeText(this.video.currentTime, true);
+    this.DOM.currentTimeElement.textContent = this.toTimeText(this.video.currentTime, true);
     this.DOM.previewContainer?.setAttribute("data-preview-time", this.toTimeText(Number(this.settings.css.currentPreviewPosition) * this.video.duration, true));
   }
   rotateTimeFormat() {
@@ -1481,21 +1479,18 @@ class tmg_Video_Controller {
       i = formats.findIndex(f => f[0] === this.settings.time.format),
       nextFormat = formats[(i + 1) % formats.length]
     this.settings.time.format = nextFormat[0];
-    if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.toTimeText(this.video.currentTime, true);
-    if (this.DOM.timeBridgeElement) this.DOM.timeBridgeElement.textContent = nextFormat[1];
-    if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = this.toTimeText(this.video.duration);
+    this.DOM.currentTimeElement.textContent = this.toTimeText(this.video.currentTime, true);
+    this.DOM.timeBridgeElement.textContent = nextFormat[1];
+    this.DOM.totalTimeElement.textContent = this.toTimeText(this.video.duration);
     this.DOM.previewContainer?.setAttribute("data-preview-time", this.toTimeText(Number(this.settings.css.currentPreviewPosition) * this.video.duration, true));
     if (this.nextVideoPreview) this.nextVideoPreview.nextElementSibling.textContent = this.toTimeText(this.nextVideoPreview.duration);
   }
   skip(duration) {
     const notifier = duration > 0 ? this.DOM.fwdNotifier : this.DOM.bwdNotifier;
     duration = duration > 0 ? (this.duration - this.currentTime > duration ? duration : this.duration - this.currentTime) : duration < 0 ? (this.currentTime > Math.abs(duration) ? duration : -this.currentTime) : 0;
-    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.parseNumber((this.video.currentTime += duration) / this.video.duration);
+    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.safeNum((this.video.currentTime += duration) / this.video.duration);
     if (this.skipPersist) {
-      if (this.currentSkipNotifier && notifier !== this.currentSkipNotifier) {
-        this.skipDuration = 0;
-        this.currentSkipNotifier.classList.remove("tmg-video-control-persist");
-      }
+      if (this.currentSkipNotifier && notifier !== this.currentSkipNotifier) ((this.skipDuration = 0), this.currentSkipNotifier.classList.remove("tmg-video-control-persist"));
       this.showOverlay();
       this.currentSkipNotifier = notifier;
       notifier?.classList.add("tmg-video-control-persist");
@@ -1511,32 +1506,22 @@ class tmg_Video_Controller {
     } else this.currentSkipNotifier?.classList.remove("tmg-video-control-persist");
     notifier?.setAttribute("data-skip", Math.trunc(Math.abs(duration)));
   }
-  moveVideoTime(details) {
-    switch (details.to) {
-      case "start":
-        return (this.currentTime = 0);
-      case "end":
-        return (this.currentTime = this.duration);
-      default:
-        return (this.currentTime = (details.to / details.max) * this.duration);
-    }
-  }
   syncCanvasPreviews() {
     if (!this.loaded || this.frameReadyPromise) return;
     this.throttle(
       "canvasPreviewSync",
       () => {
-        if (this.DOM.previewCanvas) ((this.DOM.previewCanvas.width = this.DOM.previewCanvas.offsetWidth || this.DOM.previewCanvas.width), (this.DOM.previewCanvas.height = this.DOM.previewCanvas.offsetHeight || this.DOM.previewCanvas.height));
+        ((this.DOM.previewCanvas.width = this.DOM.previewCanvas.offsetWidth || this.DOM.previewCanvas.width), (this.DOM.previewCanvas.height = this.DOM.previewCanvas.offsetHeight || this.DOM.previewCanvas.height));
         if (!tmg.ON_MOBILE) this.previewContext?.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height);
         if (this.isScrubbing) this.thumbnailContext?.drawImage(this.pseudoVideo, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height);
       },
       33
     );
   }
-  syncThumbnailDimensions() {
+  syncThumbnailSize() {
     if (!this.DOM.thumbnailCanvas || !this.DOM.thumbnailImg) return;
     const { width = this.videoContainer.offsetWidth, height = this.videoContainer.offsetHeight } = tmg.getRenderedBox(this.video);
-    ((this.DOM.thumbnailCanvas.height = this.DOM.thumbnailImg.height = height + 1), (this.DOM.thumbnailCanvas.width = this.DOM.thumbnailImg.width = width + 1));
+    ((this.settings.css.currentThumbnailHeight = height + 1 + "px"), (this.settings.css.currentThumbnailWidth = width + 1 + "px"));
   }
   _handleFrameUpdate(now, m) {
     const diff = m.presentedFrames - (this.stats?.presentedFrames ?? 0),
@@ -1548,51 +1533,54 @@ class tmg_Video_Controller {
   }
   moveVideoFrame = (dir = "forwards") => this.video.paused && this.throttle("frameStepping", () => (this.currentTime = tmg.clamp(0, Math.round(this.currentTime * this.pfps) + (dir === "backwards" ? -1 : 1), Math.floor(this.duration * this.pfps)) / this.pfps), this.pframeDelay);
   plugPlaybackRateSettings() {
-    this.config.on("settings.playbackRate.value", ({ target: { value } }) => (this.video.playbackRate = this.video.defaultPlaybackRate = this.settings.playbackRate.value = tmg.clamp(this.settings.playbackRate.min, value, this.settings.playbackRate.max)));
+    // currently, playback rate is not completely wired by batched listeners but updates directly on the browser events so watch is used below
+    this.config.watch("settings.playbackRate.value", (value) => (this.video.playbackRate = this.video.defaultPlaybackRate = tmg.clamp(this.settings.playbackRate.min, value, this.settings.playbackRate.max)));
+    this.config.set("settings.playbackRate.min", (min) => this.settings.playbackRate.value < min && (this.settings.playbackRate.value = min));
+    this.config.set("settings.playbackRate.max", (max) => this.settings.playbackRate.value > max && (this.settings.playbackRate.value = max));
     this.settings.playbackRate = { value: this.video.playbackRate, ...this.settings.playbackRate };
     this.config.get("settings.playbackRate.value", () => this.video.playbackRate, true);
   }
   rotatePlaybackRate(dir = "forwards") {
-    const rate = this.playbackRate,
+    const rate = this.settings.playbackRate.value,
       { min, max, skip } = this.settings.playbackRate,
       steps = Array.from({ length: Math.floor((max - min) / skip) + 1 }, (_, i) => min + i * skip),
       i = steps.reduce((cIdx, s, idx) => (Math.abs(s - rate) < Math.abs(steps[cIdx] - rate) ? idx : cIdx), 0);
-    this.playbackRate = steps[dir === "backwards" ? (i - 1 + steps.length) % steps.length : (i + 1) % steps.length];
+    this.settings.playbackRate.value = steps[dir === "backwards" ? (i - 1 + steps.length) % steps.length : (i + 1) % steps.length];
   }
   changePlaybackRate(value) {
     const sign = value >= 0 ? "+" : "-";
     value = Math.abs(value);
-    const rate = this.playbackRate;
+    const rate = this.settings.playbackRate.value;
     switch (sign) {
       case "-":
-        if (rate > this.settings.playbackRate.min) this.playbackRate -= rate % value ? rate % value : value;
+        if (rate > this.settings.playbackRate.min) this.settings.playbackRate.value -= rate % value ? rate % value : value;
         return this.notify("playbackratedown");
       default:
-        if (rate < this.settings.playbackRate.max) this.playbackRate += rate % value ? rate % value : value;
+        if (rate < this.settings.playbackRate.max) this.settings.playbackRate.value += rate % value ? rate % value : value;
         return this.notify("playbackrateup");
     }
   }
   _handlePlaybackRateChange() {
-    if (this.DOM.playbackRateNotifierContent) this.DOM.playbackRateNotifierContent.textContent = `${this.playbackRate}x`;
-    if (this.DOM.playbackRateNotifierText) this.DOM.playbackRateNotifierText.textContent = `${this.playbackRate}x`;
+    this.DOM.playbackRateNotifierContent.textContent = `${this.settings.playbackRate.value}x`;
+    this.DOM.playbackRateNotifierText.textContent = `${this.settings.playbackRate.value}x`;
     this.setControlsState("playbackrate");
   }
   fastPlay(pos) {
     if (this.speedCheck) return;
     this.speedCheck = true;
-    ((this.wasPaused = this.video.paused), (this.lastPlaybackRate = this.playbackRate));
+    ((this.wasPaused = this.video.paused), (this.lastPlaybackRate = this.settings.playbackRate.value));
     this.DOM.playbackRateNotifier?.classList.add("tmg-video-control-active");
     setTimeout(pos === "backwards" && !this.settings.beta.disabled && this.settings.beta.fastPlay.rewind ? this.rewind : this.fastForward, this.settings.fastPlay.playbackRate);
   }
   fastForward(rate = this.settings.fastPlay.playbackRate) {
-    this.playbackRate = rate;
+    this.settings.playbackRate.value = rate;
     this.DOM.playbackRateNotifier?.classList.remove("tmg-video-rewind");
     this.DOM.playbackRateNotifier?.setAttribute("data-current-time", this.toTimeText(this.video.currentTime, true));
     this.togglePlay(true);
   }
   rewind(rate = this.settings.fastPlay.playbackRate) {
-    ((this.playbackRate = 1), (this.rewindPlaybackRate = rate));
-    if (this.DOM.playbackRateNotifierText) this.DOM.playbackRateNotifierText.textContent = `${rate}x`;
+    ((this.settings.playbackRate.value = 1), (this.rewindPlaybackRate = rate));
+    this.DOM.playbackRateNotifierText.textContent = `${rate}x`;
     this.DOM.playbackRateNotifier?.classList.add("tmg-video-rewind");
     this.video.addEventListener("play", this.rewindReset);
     this.speedIntervalId = setInterval(this.rewindVideo, this.pframeDelay - 20); // minus due to browser async lag
@@ -1600,7 +1588,7 @@ class tmg_Video_Controller {
   rewindVideo() {
     !this.video.paused && this.togglePlay(false);
     this.currentTime -= this.rewindPlaybackRate / this.pfps;
-    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.parseNumber(this.video.currentTime / this.video.duration);
+    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.safeNum(this.video.currentTime / this.video.duration);
     this.DOM.playbackRateNotifier?.setAttribute("data-current-time", this.toTimeText(this.video.currentTime, true));
   }
   rewindReset() {
@@ -1615,14 +1603,14 @@ class tmg_Video_Controller {
     if (!this.speedCheck) return;
     ((this.speedCheck = false), clearInterval(this.speedIntervalId));
     this.video.removeEventListener("play", this.rewindReset);
-    ((this.playbackRate = this.lastPlaybackRate), (this.rewindPlaybackRate = 0));
+    ((this.settings.playbackRate.value = this.lastPlaybackRate), (this.rewindPlaybackRate = 0));
     this.togglePlay(this.settings.fastPlay.reset ? !this.wasPaused : true);
     this.removeOverlay();
     this.DOM.playbackRateNotifier?.classList.remove("tmg-video-control-active", "tmg-video-rewind");
   }
   setCaptionsState() {
     [...this.video.textTracks].forEach((track, i) => {
-      track.oncuechange = () => !(!this.isUIActive("captions") && this.videoContainer.classList.contains("tmg-video-captions-preview")) && this._handleCaptionsChange(track.activeCues?.[0]);
+      track.oncuechange = () => i === this.textTrackIndex && !(!this.isUIActive("captions") && this.isUIActive("captions-preview")) && this._handleCueChange(track.activeCues?.[0]);
       if (track.mode === "showing") this.textTrackIndex = i;
       track.mode = "hidden";
     });
@@ -1630,7 +1618,7 @@ class tmg_Video_Controller {
     this.videoContainer.classList.toggle("tmg-video-captions", this.video.textTracks.length && !this.settings.captions.disabled);
     this.videoContainer.dataset.trackKind = this.video.textTracks[this.textTrackIndex]?.kind || "captions";
     this.setControlsState("captions");
-    this._handleCaptionsChange(this.video.textTracks[this.textTrackIndex]?.activeCues?.[0]);
+    this._handleCueChange(this.video.textTracks[this.textTrackIndex]?.activeCues?.[0]);
   }
   plugCaptionsSettings() {
     this.config.get("settings.captions.disabled", (value) => (this.video.textTracks[this.textTrackIndex] ? value : true));
@@ -1642,10 +1630,12 @@ class tmg_Video_Controller {
     this.config.on("settings.captions.disabled", ({ target: { value } }) => {
       ((this.settings.css.currentCaptionsX = this.CSSCache.currentCaptionsX), (this.settings.css.currentCaptionsY = this.CSSCache.currentCaptionsY));
       if (!this.video.textTracks[this.textTrackIndex]) return;
-      value ? this.videoContainer.classList.add("tmg-video-captions") : this.videoContainer.classList.remove("tmg-video-captions", "tmg-video-captions-preview");
+      !value ? this.videoContainer.classList.add("tmg-video-captions") : this.videoContainer.classList.remove("tmg-video-captions", "tmg-video-captions-preview");
       !value && this.previewCaptions(`${this.video.textTracks[this.textTrackIndex].label} ${this.videoContainer.dataset.trackKind} \n Click ⚙ for settings`);
     });
-    ["font.family", "font.size", "font.weight", "font.variant", "background.color", "background.opacity", "window.color", "window.opacity", "characterEdgeStyle", "textAlignment"].forEach((prop) => this.config.on(`settings.captions.${prop}.value`, ({ target: { value } }) => (this.settings.css[tmg.camelize(`captions.${prop}`, /\./)] = value), this.resetCaptionsCharWidth()));
+    ["font.family", "font.size", "font.weight", "font.variant", "background.color", "background.opacity", "window.color", "window.opacity", "characterEdgeStyle", "textAlignment"].forEach((prop) => this.config.watch(`settings.captions.${prop}.value`, (value) => ((this.settings.css[tmg.camelize(`captions.${prop}`, /\./)] = value), this.syncCaptionsSize())));
+    this.config.set("settings.captions.font.size.min", (min) => this.settings.captions.font.size.value < min && (this.settings.captions.font.size.value = min));
+    this.config.set("settings.captions.font.size.max", (max) => this.settings.captions.font.size.value > max && (this.settings.captions.font.size.value = max));
   }
   toggleCaptions = () => {
     if (!this.video.textTracks[this.textTrackIndex]) return this.previewCaptions("No captions available for this video");
@@ -1654,7 +1644,7 @@ class tmg_Video_Controller {
   previewCaptions(preview = `${tmg.capitalize(this.videoContainer.dataset.trackKind)} look like this`, flush = this.DOM.captionsContainer.textContent.replace(/\s/g, "") === this.lastCaptionsPreview?.replace(/\s/g, "")) {
     const shouldPreview = flush || !this.isUIActive("captions") || !this.DOM.captionsContainer.textContent;
     shouldPreview && this.videoContainer.classList.add("tmg-video-captions-preview");
-    this._handleCaptionsChange({ text: shouldPreview ? preview : this.lastCaptionsText });
+    this._handleCueChange(shouldPreview ? { text: preview } : this.lastCue);
     clearTimeout(this.previewCaptionsTimeoutId);
     this.previewCaptionsTimeoutId = setTimeout((flush = this.DOM.captionsContainer.textContent.replace(/\s/g, "") === preview.replace(/\s/g, "")) => {
       this.videoContainer.classList.remove("tmg-video-captions-preview");
@@ -1662,39 +1652,72 @@ class tmg_Video_Controller {
     }, 1500);
     this.lastCaptionsPreview = preview;
   }
-  resetCaptionsCharWidth() {
+  syncCaptionsSize() {
     this.DOM.captionsContainer.style.setProperty("display", "block", "important");
     const measurer = tmg.createEl("span", { className: "tmg-video-captions-text", innerHTML: "abcdefghijklmnopqrstuvwxyz".repeat(2) }, {}, { visibility: "hidden" });
     this.DOM.captionsContainer.append(measurer);
-    this.captionsCharW = measurer.offsetWidth / (26 * 2);
-    measurer.remove();
-    this.DOM.captionsContainer.style.removeProperty("display");
+    this.captionsCharW = measurer.offsetWidth / 52;
+    const { lineHeight, fontSize } = getComputedStyle(measurer);
+    this.captionsLineHPx = !tmg.safeNum(parseFloat(lineHeight), 0) ? tmg.safeNum(parseFloat(fontSize), 16) * 1.2 : parseFloat(lineHeight);
+    (measurer.remove(), this.DOM.captionsContainer.style.removeProperty("display"));
   }
-  _handleCaptionsChange(captions) {
+  _handleTextTrackChange = () => this.setCaptionsState();
+  _handleCueChange(cue) {
     const existing = this.DOM.captionsContainer.querySelector(".tmg-video-captions-wrapper");
-    if (!captions) return existing?.remove();
-    const captionsWrapper = existing ?? tmg.createEl("div", { className: "tmg-video-captions-wrapper" });
-    captionsWrapper.innerHTML = "";
-    const maxChars = Math.floor(this.videoContainer.offsetWidth / this.captionsCharW),
-      paragraphs = captions.text.replace(/(<br\s*\/?>)|\\N/gi, "\n").split(/\n/);
-    paragraphs.forEach((p) => {
-      let line = [],
-        lineLen = 0,
-        parts = [];
-      p.split(" ").forEach((word) => {
-        if (lineLen + word.length + 1 > maxChars) {
-          parts.push(line);
-          ((line = []), (lineLen = 0));
+    if (!cue) return existing?.remove();
+    const container = this.DOM.captionsContainer,
+      wrapper = existing ?? tmg.createEl("div", { className: "tmg-video-captions-wrapper", ariaLive: "off", ariaAtomic: "true" }, { part: "cue-display" }),
+      { offsetWidth: vCWidth, offsetHeight: vCHeight } = this.videoContainer;
+    ["style", "data-active", "data-scroll"].forEach((attr) => container.removeAttribute(attr));
+    ((wrapper.innerHTML = ""), (cue.text ||= ""), (this.lastCue = cue));
+    const lines = cue.text.replace(/(<br\s*\/>)|\\N/gi, "\n").split(/\n/);
+    lines.forEach((p) => tmg.formatVttLine(p, Math.floor(vCWidth / this.captionsCharW)).forEach((l) => wrapper.append(tmg.createEl("div", { className: "tmg-video-captions-line" }, { part: "cue", id: cue.id }, this.settings.captions.allowVideoOverride && cue.align && { style: { textAlign: cue.align } }).appendChild(tmg.createEl("span", { className: "tmg-video-captions-text", innerHTML: tmg.parseVttText(l) })).parentElement)));
+    !existing && this.DOM.captionsContainer.append(wrapper); // the next block is for you, netflix; y'all love cue regions
+    const { offsetWidth: cWidth, offsetHeight: cHeight } = container;
+    ((this.settings.css.currentCaptionsContainerHeight = `${cHeight}px`), (this.settings.css.currentCaptionsContainerWidth = `${cWidth}px`));
+    if (this.settings.captions.allowVideoOverride) {
+      if (cue.region) {
+        container.setAttribute("data-active", "");
+        const { width, lines, viewportAnchorX: vpAnX, viewportAnchorY: vpAnY, scroll } = cue.region;
+        if (tmg.isDef(vpAnX)) container.style.setProperty("--tmg-video-current-captions-x", `${vpAnX}%`); // css default center alignment
+        if (tmg.isDef(vpAnY)) container.style.setProperty("--tmg-video-current-captions-y", `${100 - vpAnY}%`); // css default center alignment
+        if (tmg.isDef(width)) container.style.maxWidth = `${width}%`;
+        if (tmg.isDef(lines)) container.style.maxHeight = `${lines * ((this.captionsLineHPx / vCHeight) * 100)}%`;
+        if (scroll === "up") {
+          container.style.maxHeight = `${lines * ((this.captionsLineHPx / vCHeight) * 100)}%`;
+          container.dataset.scroll = scroll;
+          this.config.stall(() => (container.scrollTop = wrapper.scrollHeight));
         }
-        line.push(word);
-        lineLen += word.length + 1;
-      });
-      if (line.length) parts.push(line);
-      parts.forEach((part) => captionsWrapper.append(tmg.createEl("div", { className: "tmg-video-captions-line" }).appendChild(tmg.createEl("span", { className: "tmg-video-captions-text", innerHTML: part.join(" ") })).parentElement));
+      } else {
+        if (tmg.isDef(cue.position) && cue.position !== "auto") {
+          const elemHalfWPct = ((cWidth / vCWidth) * 100) / 2,
+            posOffset = cue.positionAlign === "line-left" ? 0 : cue.positionAlign === "line-right" ? -2 * elemHalfWPct : -elemHalfWPct; // center default
+          container.style.setProperty("--tmg-video-current-captions-x", `calc(${cue.position}% + ${posOffset}% + ${elemHalfWPct}%)`); // css translate x -50% comeback
+        }
+        if (tmg.isDef(cue.line) && cue.line !== "auto") {
+          const line = tmg.parseIfPercent(cue.line, 100),
+            lhPct = (this.captionsLineHPx / vCHeight) * 100,
+            elemHalfHPct = ((cHeight / vCHeight) * 100) / 2,
+            lAlign = cue.lineAlign && cue.lineAlign !== "auto" ? cue.lineAlign : line < 0 ? "end" : "start", // spec compliant: normal -start, negative index - end
+            lineOffset = lAlign === "start" ? -2 * elemHalfHPct : lAlign === "end" ? 0 : -elemHalfHPct,
+            bottomVal = cue.snapToLines ? (line < 0 ? (Math.abs(line) - 1) * lhPct : 100 - line * lhPct) : 100 - line; // -1 - last line
+          container.style.setProperty("--tmg-video-current-captions-y", `calc(${bottomVal}% + ${lineOffset}% + ${elemHalfHPct}%)`); // css translate y 50% comeback
+        }
+        if (tmg.isDef(cue.size) && cue.size !== 100) container.style.maxWidth = `${cue.size}%`;
+      }
+      if (cue.vertical) container.style.writingMode = cue.vertical === "lr" ? "vertical-lr" : "vertical-rl";
+    } // styling done after for dimension math
+    this.currentKaraokeNodes = Array.from(wrapper.querySelectorAll("[data-part='timed']") ?? [], (el) => {
+      const [, m, s, ms] = el.dataset.time.match(/(\d+):(\d+)\.(\d+)/) || [];
+      return { el, time: m ? +m * 60 + +s + +ms / 1000 : 0 };
     });
-    !existing && this.DOM.captionsContainer.append(captionsWrapper);
-    ((this.settings.css.currentCaptionsContainerWidth = `${this.DOM.captionsContainer.offsetWidth}px`), (this.settings.css.currentCaptionsContainerHeight = `${this.DOM.captionsContainer.offsetHeight}px`));
-    this.lastCaptionsText = captions.text;
+    this._handleCaptionsKaraoke();
+  }
+  _handleCaptionsKaraoke() {
+    this.currentKaraokeNodes?.forEach(({ el, time }) => {
+      const isPast = this.currentTime > time;
+      (el.toggleAttribute("data-past", isPast), el.toggleAttribute("data-future", !isPast));
+    });
   }
   changeCaptionsFontSize(value) {
     const sign = value >= 0 ? "+" : "-";
@@ -1702,18 +1725,18 @@ class tmg_Video_Controller {
     const size = Number(this.settings.css.captionsFontSize);
     switch (sign) {
       case "-":
-        if (size > this.settings.captions.font.size.min) this.settings.css.captionsFontSize = size - (size % value ? size % value : value);
+        if (size > this.settings.captions.font.size.min) this.settings.captions.font.size.value = size - (size % value ? size % value : value);
         break;
       default:
-        if (size < this.settings.captions.font.size.max) this.settings.css.captionsFontSize = size + (size % value ? size % value : value);
+        if (size < this.settings.captions.font.size.max) this.settings.captions.font.size.value = size + (size % value ? size % value : value);
     }
-    this.previewCaptions();
+    this.config.stall(this.previewCaptions);
   }
   rotateCaptionsProp(steps, prop, numeric = true) {
     const curr = this.settings.css[tmg.camelize(prop.replace(".value", ""), /\./)],
       i = Math.max(0, numeric ? steps.reduce((cIdx, s, idx) => (Math.abs(s - curr) < Math.abs(steps[cIdx] - curr) ? idx : cIdx), 0) : steps.indexOf(curr));
     tmg.assignAny(this.settings, prop, steps[(i + 1) % steps.length]);
-    this.previewCaptions();
+    this.config.stall(this.previewCaptions);
   }
   rotateCaptionsFontFamily = () => this.rotateCaptionsProp(tmg.parseUIObj(this.settings.captions).font.family.values, "captions.font.family.value", false);
   rotateCaptionsFontWeight = () => this.rotateCaptionsProp(tmg.parseUIObj(this.settings.captions).font.weight.values, "captions.font.weight.value", false);
@@ -1726,7 +1749,7 @@ class tmg_Video_Controller {
   _handleCaptionsDragStart({ pointerId, clientX, clientY }) {
     this.DOM.captionsContainer?.setPointerCapture(pointerId);
     const { left, bottom } = getComputedStyle(this.DOM.captionsContainer);
-    ((this.lastCaptionsXPos = Number(left.replace("px", ""))), (this.lastCaptionsYPos = Number(bottom.replace("px", ""))));
+    ((this.lastCaptionsXPos = parseFloat(left)), (this.lastCaptionsYPos = parseFloat(bottom)));
     ((this.lastCaptionsPointerX = clientX), (this.lastCaptionsPointerY = clientY));
     this.DOM.captionsContainer?.addEventListener("pointermove", this._handleCaptionsDragging);
     this.DOM.captionsContainer?.addEventListener("pointerup", this._handleCaptionsDragEnd);
@@ -1767,24 +1790,28 @@ class tmg_Video_Controller {
     this.lastVolume = tmg.clamp(this.settings.volume.min, this.settings.volume.value ?? this.video.volume * 100, this.settings.volume.max);
     this.shouldMute = this.shouldSetLastVolume = this.video.muted;
     this.config.on("settings.volume.value", ({ target: { value } }) => {
-      const v = tmg.clamp(this.shouldMute ? 0 : this.settings.volume.min, value, this.settings.volume.max) / 100;
-      if (this._tmgGainNode) this._tmgGainNode.gain.value = v * 2;
+      const v = tmg.clamp(this.shouldMute ? 0 : this.settings.volume.min, value, this.settings.volume.max);
+      if (this._tmgGainNode) this._tmgGainNode.gain.value = (v / 100) * 2;
       this.video.muted = this.video.defaultMuted = this.settings.volume.muted = v === 0;
-      this._handleVolumeChange();
-    });
-    this.config.on("settings.volume.muted", ({ oldValue, value }) => {
-      if (oldValue === value) return;
-      let volume = 0;
-      if (this.settings.volume.value) ((this.lastVolume = this.settings.volume.value), (this.shouldSetLastVolume = true));
-      else ((volume = this.shouldSetLastVolume ? this.lastVolume : this.settings.volume.value), !volume && (volume = this.sliderAptVolume), (this.shouldSetLastVolume = false));
-      this.shouldMute = volume === 0;
-      this.settings.volume.value = volume;
+      this._handleVolumeChange(v);
+    }); // S.I.A not fully implemented ready
+    this.config.on("settings.volume.muted", ({ oldValue, value: muted }) => {
+      if (oldValue === muted) return;
+      if (muted) {
+        if (this.settings.volume.value) ((this.lastVolume = this.settings.volume.value), (this.shouldSetLastVolume = true));
+        this.shouldMute = true;
+        if (this.settings.volume.value) this.settings.volume.value = 0;
+      } else {
+        const restore = this.shouldSetLastVolume ? this.lastVolume : this.settings.volume.value;
+        this.settings.volume.value = restore ? restore : this.sliderAptVolume;
+        this.shouldMute = this.shouldSetLastVolume = false;
+      }
     }); // runs after boolean changes, toggle
     this.config.on("settings.volume.min", ({ target: { value: min } }) => (this.settings.volume.value < min && (this.settings.volume.value = min), this.lastVolume < min && (this.lastVolume = min)));
     this.config.on("settings.volume.max", ({ target: { value: max } }) => {
       (this.settings.volume.value > max && (this.settings.volume.value = max), this.lastVolume > max && (this.lastVolume = max));
       this.videoContainer.classList.toggle("tmg-video-volume-boost", max > 100);
-      if (this.DOM.volumeSlider) this.DOM.volumeSlider.max = max;
+      this.DOM.volumeSlider.max = max;
       this.settings.css.volumeSliderPercent = Math.round((100 / max) * 100);
       this.settings.css.maxVolumeRatio = max / 100;
     });
@@ -1804,15 +1831,15 @@ class tmg_Video_Controller {
     const volume = sign === "+" ? this.settings.volume.value + percent * this.settings.volume.max : this.settings.volume.value - percent * this.settings.volume.max;
     this._handleVolumeSliderInput({ target: { value: tmg.clamp(0, Math.round(volume), this.settings.volume.max) } }, false);
   }
-  _handleVolumeChange() {
-    const v = this.settings.volume.value;
-    if (this.DOM.volumeNotifierContent) this.DOM.volumeNotifierContent.textContent = v + "%";
+  _handleVolumeChange(value) {
+    const v = value ?? this.settings.volume.value;
+    this.DOM.volumeNotifierContent.textContent = v + "%";
     const vLevel = v == 0 ? "muted" : v < 50 ? "low" : v <= 100 ? "high" : v > 100 ? "boost" : "",
       vPercent = (v - 0) / (this.settings.volume.max - 0);
     this.videoContainer.dataset.volumeLevel = vLevel;
-    if (this.DOM.volumeSlider) this.DOM.volumeSlider.value = v;
+    this.DOM.volumeSlider.value = v;
     this.DOM.volumeSlider?.parentElement.setAttribute("data-volume", v);
-    if (this.DOM.touchVolumeContent) this.DOM.touchVolumeContent.textContent = v + "%";
+    this.DOM.touchVolumeContent.textContent = v + "%";
     this.settings.css.currentVolumeTooltipPosition = `${10.5 + vPercent * 79.5}%`;
     if (this.settings.volume.max > 100) {
       if (v <= 100) {
@@ -1845,7 +1872,7 @@ class tmg_Video_Controller {
         this.notify("volumeup");
     }
     if (this.shouldSetLastVolume) {
-      if (this.DOM.volumeNotifierContent) this.DOM.volumeNotifierContent.textContent = volume + "%";
+      this.DOM.volumeNotifierContent.textContent = volume + "%";
       this.lastVolume = volume;
     } else this.settings.volume.value = volume;
   }
@@ -1865,22 +1892,28 @@ class tmg_Video_Controller {
   plugBrightnessSettings() {
     this.lastBrightness = tmg.clamp(this.settings.brightness.min, this.settings.brightness.value ?? this.settings.css.brightness ?? 100, this.settings.brightness.max);
     this.config.on("settings.brightness.value", ({ target: { value } }) => {
-      this.settings.css.brightness = tmg.clamp(this.shouldDark ? 0 : this.settings.brightness.min, value, this.settings.brightness.max);
-      this._handleBrightnessChange();
+      const v = tmg.clamp(this.shouldDark ? 0 : this.settings.brightness.min, value, this.settings.brightness.max);
+      this.settings.css.brightness = v;
+      this.settings.brightness.dark = v === 0;
+      this._handleBrightnessChange(v);
     });
-    this.config.on("settings.brightness.dark", ({ oldValue, value }) => {
-      if (oldValue === value) return;
-      let brightness = 0;
-      if (this.settings.brightness.value) ((this.lastBrightness = this.settings.brightness.value), (this.shouldSetLastBrightness = true));
-      else ((brightness = this.shouldSetLastBrightness ? this.lastBrightness : this.settings.brightness.value), !brightness && (brightness = this.sliderAptBrightness), (this.shouldSetLastBrightness = false));
-      this.shouldDark = brightness === 0;
-      this.settings.brightness.value = brightness;
+    this.config.on("settings.brightness.dark", ({ oldValue, value: dark }) => {
+      if (oldValue === dark) return;
+      if (dark) {
+        if (this.settings.brightness.value) ((this.lastBrightness = this.settings.brightness.value), (this.shouldSetLastBrightness = true));
+        this.shouldDark = true;
+        if (this.settings.brightness.value) this.settings.brightness.value = 0;
+      } else {
+        const restore = this.shouldSetLastBrightness ? this.lastBrightness : this.settings.brightness.value;
+        this.settings.brightness.value = restore ? restore : this.sliderAptBrightness;
+        this.shouldDark = this.shouldSetLastBrightness = false;
+      }
     }); // runs after boolean changes, toggle
     this.config.on("settings.brightness.min", ({ target: { value: min } }) => (this.settings.brightness.value < min && (this.settings.brightness.value = min), this.lastBrightness < min && (this.lastBrightness = min)));
     this.config.on("settings.brightness.max", ({ target: { value: max } }) => {
       (this.settings.brightness.value > max && (this.settings.brightness.value = max), this.lastBrightness > max && (this.lastBrightness = max));
       this.videoContainer.classList.toggle("tmg-video-brightness-boost", max > 100);
-      if (this.DOM.brightnessSlider) this.DOM.brightnessSlider.max = max;
+      this.DOM.brightnessSlider.max = max;
       this.settings.css.brightnessSliderPercent = Math.round((100 / max) * 100);
       this.settings.css.maxBrightnessRatio = max / 100;
     });
@@ -1900,15 +1933,15 @@ class tmg_Video_Controller {
     const brightness = sign === "+" ? this.settings.brightness.value + percent * this.settings.brightness.max : this.settings.brightness.value - percent * this.settings.brightness.max;
     this._handleBrightnessSliderInput({ target: { value: tmg.clamp(0, Math.round(brightness), this.settings.brightness.max) } }, false);
   }
-  _handleBrightnessChange() {
-    const b = this.settings.brightness.value;
-    if (this.DOM.brightnessNotifierContent) this.DOM.brightnessNotifierContent.textContent = b + "%";
+  _handleBrightnessChange(value) {
+    const b = value ?? this.settings.brightness.value;
+    this.DOM.brightnessNotifierContent.textContent = b + "%";
     const bLevel = b == 0 ? "dark" : b < 50 ? "low" : b <= 100 ? "high" : b > 100 ? "boost" : "",
       bPercent = (b - 0) / (this.settings.brightness.max - 0);
     this.videoContainer.dataset.brightnessLevel = bLevel;
-    if (this.DOM.brightnessSlider) this.DOM.brightnessSlider.value = b;
+    this.DOM.brightnessSlider.value = b;
     this.DOM.brightnessSlider?.parentElement.setAttribute("data-brightness", b);
-    if (this.DOM.touchBrightnessContent) this.DOM.touchBrightnessContent.textContent = b + "%";
+    this.DOM.touchBrightnessContent.textContent = b + "%";
     this.settings.css.currentBrightnessTooltipPosition = `${10.5 + bPercent * 79.5}%`;
     if (this.settings.brightness.max > 100) {
       if (b <= 100) {
@@ -1941,7 +1974,7 @@ class tmg_Video_Controller {
         this.notify("brightnessup");
     }
     if (this.shouldSetLastBrightness) {
-      if (this.DOM.brightnessNotifierContent) this.DOM.brightnessNotifierContent.textContent = brightness + "%";
+      this.DOM.brightnessNotifierContent.textContent = brightness + "%";
       this.lastBrightness = brightness;
     } else this.settings.brightness.value = brightness;
   }
@@ -1965,8 +1998,8 @@ class tmg_Video_Controller {
       nextFit = fits[(i + 1) % fits.length];
     this.notify(`objectfit${nextFit[0]}`);
     this.videoContainer.dataset.objectFit = this.settings.css.objectFit = nextFit[0];
-    if (this.DOM.objectFitNotifierContent) this.DOM.objectFitNotifierContent.textContent = nextFit[1];
-    this.syncThumbnailDimensions();
+    this.DOM.objectFitNotifierContent.textContent = nextFit[1];
+    this.syncThumbnailSize();
   }
   plugModesSettings() {
     this.config.on("settings.modes.fullscreen.disabled", () => value && this.isUIActive("fullscreen") && this.toggleFullscreenMode());
@@ -2035,7 +2068,7 @@ class tmg_Video_Controller {
     this.floatingWindow = await documentPictureInPicture.requestWindow(this.settings.beta.pictureInPicture.floatingPlayer);
     this.inFloatingPlayer = true;
     this.activatePseudoMode();
-    this.videoContainer.classList.add("tmg-video-progress-bar", "tmg-video-floating-player");
+    this.videoContainer.classList.add("tmg-video-floating-player", "tmg-video-progress-bar");
     let cssText = "";
     for (const sheet of document.styleSheets) {
       try {
@@ -2080,9 +2113,9 @@ class tmg_Video_Controller {
     }
   }
   _handleMiniplayerDragStart({ target, clientX, clientY, targetTouches }) {
-    if (!this.isUIActive("miniplayer") || this.DOM.topControlsWrapper.contains(target) || this.DOM.bottomControlsWrapper.contains(target) || this.DOM.captionsContainer?.contains(target) || target.closest("[class$='toast-container']")) return;
+    if (!this.isUIActive("miniplayer") || [this.DOM.topControlsWrapper, this.DOM.bigControlsWrapper, this.DOM.bottomControlsWrapper, this.DOM.captionsContainer].some((w) => w?.contains(target)) || target.closest("[class$='toast-container']")) return;
     const { left, bottom } = getComputedStyle(this.videoContainer);
-    ((this.lastMiniplayerXPos = Number(left.replace("px", ""))), (this.lastMiniplayerYPos = Number(bottom.replace("px", ""))));
+    ((this.lastMiniplayerXPos = parseFloat(left)), (this.lastMiniplayerYPos = parseFloat(bottom)));
     ((this.lastMiniplayerDragX = clientX ?? targetTouches[0].clientX), (this.lastMiniplayerDragY = clientY ?? targetTouches[0].clientY));
     document.addEventListener("mousemove", this._handleMiniplayerDragging);
     document.addEventListener("touchmove", this._handleMiniplayerDragging, { passive: false });
@@ -2153,7 +2186,7 @@ class tmg_Video_Controller {
   }
   _handleHoverPointerActive({ target, pointerType }) {
     (!tmg.ON_MOBILE ? true : !pointerType) && this.showOverlay(); // no pointer activation on mobile
-    pointerType && target.closest("[class='tmg-video-side-controls-wrapper']") && clearTimeout(this.overlayDelayId); // better ux
+    pointerType && target.closest(".tmg-video-side-controls-wrapper") && clearTimeout(this.overlayDelayId); // better ux
   }
   _handleHoverPointerOut = () => setTimeout(() => !tmg.ON_MOBILE && !this.videoContainer.matches(":hover") && this.removeOverlay());
   showOverlay() {
@@ -2278,8 +2311,7 @@ class tmg_Video_Controller {
       "gestureTouchMove",
       () => {
         const tc = this.settings.beta.gesture.touch,
-          width = this.videoContainer.offsetWidth,
-          height = this.videoContainer.offsetHeight,
+          { offsetWidth: width, offsetHeight: height } = this.videoContainer,
           x = e.clientX ?? e.targetTouches[0].clientX,
           y = e.clientY ?? e.targetTouches[0].clientY,
           deltaX = x - this.lastGestureTouchX,
@@ -2479,9 +2511,9 @@ class tmg_Video_Controller {
       case "timeFormat":
         return this.rotateTimeFormat();
       case "mute":
-        return (this.toggleMute("auto"), this.settings.volume.value === 0 ? this.notify("volumemuted") : this.notify("volumeup"));
+        return (this.toggleMute("auto"), this.config.stall(() => (this.settings.volume.value === 0 ? this.notify("volumemuted") : this.notify("volumeup"))));
       case "dark":
-        return (this.toggleDark("auto"), this.settings.brightness.value === 0 ? this.notify("brightnessdark") : this.notify("brightnessup"));
+        return (this.toggleDark("auto"), this.config.stall(() => (this.settings.brightness.value === 0 ? this.notify("brightnessdark") : this.notify("brightnessup"))));
       case "captions":
         this.toggleCaptions();
         return this.video.textTracks[this.textTrackIndex] && this.notify("captions");
@@ -2495,7 +2527,7 @@ class tmg_Video_Controller {
         return this.toggleSettingsView();
       case "home": // -w
       case "0": // -w
-        return this.moveVideoTime({ to: "start" });
+        return (this.currentTime = 0);
       case "1": // -w
       case "2": // -w
       case "3": // -w
@@ -2505,9 +2537,9 @@ class tmg_Video_Controller {
       case "7": // -w
       case "8": // -w
       case "9": // -w
-        return this.moveVideoTime({ to: e.key, max: 10 });
+        return (this.currentTime = (action / 10) * this.duration);
       case "end": // -w
-        return this.moveVideoTime({ to: "end" });
+        return (this.currentTime = this.duration);
     }
   }
   _handlePlayTriggerUp(e) {
@@ -2524,44 +2556,52 @@ class tmg_Video_Controller {
     }
     e.currentTarget.removeEventListener("keyup", this._handlePlayTriggerUp);
   }
-  _handleDragStart({ target, dataTransfer }) {
+  _handleDragStart(e) {
+    const { target: t, dataTransfer } = e;
+    if (!t?.tagName) return;
+    if (t.matches(":has(input:is(:hover, :active))")) return e.preventDefault();
     dataTransfer.effectAllowed = "move";
-    target.classList.add("tmg-video-control-dragging");
-    this.dragging = target;
+    this.dragging = t;
+    requestAnimationFrame(() => t.classList.add("tmg-video-control-dragging"));
+    if (t.dataset.dragId !== "wrapper" || t.parentElement?.dataset.dragId !== "wrapper") return;
+    const { coord, zoneW } = this.getUIZoneWCoord(t, true);
+    tmg.assignAny(this.cZoneWs, coord, zoneW);
+    this.dragReplaced = { target: t.parentElement, child: zoneW.cover };
   }
   _handleDrag = () => this.delayOverlay();
-  _handleDragEnd({ target }) {
-    target.classList.remove("tmg-video-control-dragging");
-    this.dragging = null;
-    this.settings.controlPanel.top = [...Array.from(this.zoneRefs.top.left.children ?? [], (el) => el.dataset.controlId), "meta", ...Array.from(this.zoneRefs.top.right.children ?? [], (el) => el.dataset.controlId)];
-    this.settings.controlPanel.bottom = {
-      1: [...Array.from(this.zoneRefs.bottom[1].left.children ?? [], (el) => el.dataset.controlId), "spacer", ...Array.from(this.zoneRefs.bottom[1].right.children ?? [], (el) => el.dataset.controlId)],
-      2: [...Array.from(this.zoneRefs.bottom[2].left.children ?? [], (el) => el.dataset.controlId), "timeline", ...Array.from(this.zoneRefs.bottom[2].right.children ?? [], (el) => el.dataset.controlId)],
-      3: [...Array.from(this.zoneRefs.bottom[3].left.children ?? [], (el) => el.dataset.controlId), "spacer", ...Array.from(this.zoneRefs.bottom[3].right.children ?? [], (el) => el.dataset.controlId)],
-    };
+  _handleDragEnd({ target: t }) {
+    t.classList.remove("tmg-video-control-dragging");
+    this.dragReplaced = this.dragging = null;
+    if (t.dataset.dragId === "wrapper" && t.parentElement?.dataset.dragId === "wrapper") tmg.assignAny(this.cZoneWs, this.getUIZoneWCoord(t), t);
+    this.syncControlPanelToUI();
   }
-  _handleDragEnter = ({ target }) => target.dataset.dropZone && this.dragging && target.classList.add("tmg-video-dragover");
+  noDropOff = (t, drop = this.dragging) => t.dataset.dropZone === "false" || !drop?.tagName || t.dataset.dragId !== drop.dataset.dragId;
+  _handleDragEnter = ({ target: t }) => !this.noDropOff(t) && this.dragging && t.classList.add("tmg-video-dragover");
   _handleDragOver(e) {
-    if (!e.target.dataset.dropZone || !this.dragging) return;
+    const { target: t, clientX: x, dataTransfer } = e;
+    if (this.noDropOff(t)) return;
     e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
+    dataTransfer.dropEffect = "move";
     this.throttle(
       "dragOver",
       () => {
-        const afterControl = tmg.getNearestElSiblingAt(e.clientX, "x", [...e.target.querySelectorAll("[draggable=true]:not(.tmg-video-control-dragging)")]);
-        afterControl ? e.target?.insertBefore(this.dragging, afterControl) : e.target?.append(this.dragging);
-        this._handleSideControlsView(e);
+        if (t.dataset.dragId === "wrapper") {
+          const afterWrapper = tmg.getElSiblingAt(x, "x", [...t.querySelectorAll('.tmg-video-side-controls-wrapper-cover:has([data-drop-zone="true"][data-drag-id=""]:empty)')]);
+          if (!afterWrapper) return;
+          this.dragReplaced?.target.replaceChild(this.dragReplaced.child, this.dragging);
+          this.dragReplaced = { target: t, child: afterWrapper };
+          return t.replaceChild(this.dragging, afterWrapper);
+        }
+        const afterControl = tmg.getElSiblingAt(x, "x", [...t.querySelectorAll("[draggable=true]:not(.tmg-video-control-dragging)")]);
+        afterControl ? t.insertBefore(this.dragging, afterControl) : t.append(this.dragging);
+        !t.dataset.dragId && [...this.DOM.sideControlWrappers].forEach(this._handleControlsWrapperResize);
       },
-      20,
+      500,
       false
     );
   }
-  _handleDrop(e) {
-    if (!e.target?.dataset.dropZone) return;
-    e.preventDefault();
-    e.target.classList.remove("tmg-video-dragover");
-  }
-  _handleDragLeave = ({ target }) => target?.dataset.dropZone && target.classList.remove("tmg-video-dragover");
+  _handleDrop = ({ target: t }) => !this.noDropOff(t) && t.classList.remove("tmg-video-dragover");
+  _handleDragLeave = ({ target: t }) => !this.noDropOff(t) && t.classList.remove("tmg-video-dragover");
 }
 
 class tmg_Media_Player {
@@ -2638,9 +2678,6 @@ class tmg_Media_Player {
     this.#medium.loop = s.time.loop ??= this.#medium.loop;
     this.#medium.volume = 1; // controller takes over, chill browser :)
     Object.entries(s.modes).forEach(([k, v]) => (s.modes[k] = v && (tmg[`supports${tmg.capitalize(k)}`]?.() ?? true) ? v : false));
-    s.status = { noOverride: Object.fromEntries(Object.keys(s).map((k) => [k, s.noOverride.includes?.(k.toLowerCase()) ?? s.noOverride])) };
-    s.status.ui = { notifiers: s.notifiers || !s.status.noOverride.notifiers, timeline: !!s.controlPanel.timeline, previews: s.time.previews?.address && s.time.previews?.spf, draggable: !s.status.noOverride.controlPanel };
-    tmg.ALLOWED_CONTROLS.forEach((c) => (s.status.ui[c] = Object.entries({ top: s.controlPanel.top, center: s.controlPanel.center, bottom: s.controlPanel.bottom }).some(([k, v]) => (k === "bottom" ? tmg.parseControlPanelBottomObj(v) : v).includes?.(c.toLowerCase()) ?? s.controlPanel[k])));
     this.#build.video = this.#medium;
     (await tmg.loadResource(TMG_VIDEO_CSS_SRC), await tmg.loadResource(T007_TOAST_JS_SRC, "script", { module: true })); // users should set crossorigin - document.styleSheets
     tmg.Controllers.push((this.Controller = new tmg.Controller(this.#build)));
@@ -2698,11 +2735,12 @@ var tmg = {
     tmg.mountMedia();
     ["pointerdown", "keydown"].forEach((e) => document.addEventListener(e, () => ((tmg._isDocTransient = true), tmg.startAudioManager()), true));
     for (const medium of document.querySelectorAll("video")) {
-      tmg.VIDMutationObserver.observe(medium, { attributes: true, childList: true, subtree: true });
+      tmg.VIDMutationObserver.observe(medium, { attributes: true });
       medium.tmgcontrols = medium.hasAttribute("tmgcontrols");
     }
     tmg.DOMMutationObserver.observe(document.documentElement, { childList: true, subtree: true });
     window.addEventListener("resize", tmg._handleWindowResize);
+    window.addEventListener("orientationchange", tmg._handleOrientationChange);
     ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "msfullscreenchange"].forEach((e) => document.addEventListener(e, tmg._handleFullscreenChange));
     document.addEventListener("visibilitychange", tmg._handleVisibilityChange);
   },
@@ -2723,16 +2761,10 @@ var tmg = {
     "undefined" !== typeof window &&
     new MutationObserver((mutations) => {
       for (const mutation of mutations) {
-        if (mutation.type === "attributes") {
-          if (mutation.target.tagName === "VIDEO") {
-            if (mutation.attributeName === "tmgcontrols") !tmg._internalMutationSet.has(mutation.target) && (mutation.target.tmgcontrols = mutation.target.hasAttribute("tmgcontrols"));
-            else if (mutation.attributeName?.startsWith("tmg")) mutation.target.hasAttribute(mutation.attributeName) && mutation.target.tmgPlayer?.fetchCustomOptions();
-            else if (mutation.attributeName === "controls") mutation.target.hasAttribute("tmgcontrols") && mutation.target.removeAttribute("controls");
-          }
-        } else if (mutation.type === "childList") {
-          for (const node of mutation.addedNodes) node.nodeName === "TRACK" && mutation.target.tmgPlayer?.Controller?.setCaptionsState?.();
-          for (const node of mutation.removedNodes) node.nodeName === "TRACK" && mutation.target.tmgPlayer?.Controller?.setCaptionsState?.();
-        }
+        if (mutation.type !== "attributes") continue;
+        if (mutation.attributeName === "tmgcontrols") !tmg._internalMutationSet.has(mutation.target) && (mutation.target.tmgcontrols = mutation.target.hasAttribute("tmgcontrols"));
+        else if (mutation.attributeName?.startsWith("tmg")) mutation.target.hasAttribute(mutation.attributeName) && mutation.target.tmgPlayer?.fetchCustomOptions();
+        else if (mutation.attributeName === "controls") mutation.target.hasAttribute("tmgcontrols") && mutation.target.removeAttribute("controls");
       }
     }),
   DOMMutationObserver:
@@ -2742,7 +2774,7 @@ var tmg = {
         for (const node of mutation.addedNodes) {
           if (!node.tagName || !(node.matches("video:not(.tmg-media") || node.querySelector("video:not(.tmg-media)"))) continue;
           for (const el of [...(node.querySelector("video:not(.tmg-media)") ? node.querySelectorAll("video:not(.tmg-media)") : [node])]) {
-            tmg.VIDMutationObserver.observe(el, { attributes: true, childList: true, subtree: true });
+            tmg.VIDMutationObserver.observe(el, { attributes: true });
             el.tmgcontrols = el.hasAttribute("tmgcontrols");
           }
         }
@@ -2753,6 +2785,7 @@ var tmg = {
       }
     }),
   _handleWindowResize: () => tmg.Controllers?.forEach((c) => c._handleWindowResize()),
+  _handleOrientationChange: () => tmg.Controllers?.forEach((c) => c._handleOrientationChange()),
   _handleVisibilityChange: () => tmg.Controllers?.forEach((c) => c._handleVisibilityChange()),
   _handleFullscreenChange: () => tmg._currentFullscreenController?._handleFullscreenChange(),
   startAudioManager() {
@@ -2852,6 +2885,7 @@ var tmg = {
     if (track.id) trackEl.id = track.id;
   },
   removeTracks: (medium) => medium.querySelectorAll("track")?.forEach((track) => (track.kind == "subtitles" || track.kind == "captions") && track.remove()),
+  stripTags: (text) => text.replace(/<(\/)?([a-z0-9.:]+)([^>]*)>/gi, ""),
   srtToVtt(srt, vttLines = ["WEBVTT", ""]) {
     const input = srt.replace(/\r\n?/g, "\n").trim(); // Normalize line endings and trim
     for (const block of input.split(/\n{2,}/)) {
@@ -2866,14 +2900,66 @@ var tmg = {
     }
     return vttLines.join("\n");
   },
+  parseVttText(text) {
+    const state = { tag: /<(\/)?([a-z0-9.:]+)([^>]*)>/gi, o: "", l: 0, p: null, c: "" }, // state: o=output, l=last idx, p=pending time, c=content
+      esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]); // escape html
+    let m;
+    while ((m = state.tag.exec(text))) {
+      const chunk = text.slice(state.l, m.index); // text between last match and current
+      if (chunk) state.c += esc(chunk); // add to pending span content
+      const [_, cls, tag_n, rest] = m, // _=full match, cls=close tag, tag_n=name, rest=attributes
+        low = tag_n.toLowerCase();
+      if (/^[0-9]/.test(tag_n)) {
+        state.o += state.p ? `<span data-part="timed" data-time="${state.p}">${state.c}</span>` : state.c; // wrap prev, output
+        state.p = tag_n; // set new timing
+        state.c = ""; // reset content
+      } else {
+        if (cls) state.c += ["c", "v", "lang"].includes(low) ? "</span>" : `</${low}>`;
+        else if (["b", "i", "u", "ruby", "rt"].includes(low)) state.c += `<${low}>`;
+        else if (low === "c") state.c += `<span class="vtt-c ${rest.replace(/\.([a-z0-9_-]+)/gi, "$1 ").trim()}">`;
+        else if (low === "v") state.c += `<span data-part="voice"${rest.trim() ? ` title="${esc(rest.trim())}"` : ""}>`;
+        else if (low === "lang") state.c += `<span lang="${esc(rest.trim())}">`;
+      }
+      state.l = state.tag.lastIndex; // update position
+    }
+    const lChunk = text.slice(state.l); // final chunk after last tag
+    if (lChunk) state.c += esc(lChunk); // add to pending
+    return state.o + (state.p ? `<span data-part="timed" data-time="${state.p}">${state.c}</span>` : state.c); // output + final span
+  },
+  formatVttLine(p, maxChars) {
+    const state = { tokens: p.match(/<[^>]+>|\S+/g) || [], stack: [], parts: [], line: "", len: 0, openStr: "", closeStr: "", timeTag: "", lastWasTag: false }, // pre-built tag strings
+      updateTags = () => ((state.openStr = state.stack.map((n) => `<${n}>`).join("")), (state.closeStr = state.stack.reduceRight((a, n) => a + `</${n}>`, ""))),
+      flush = () => state.line && (state.parts.push(state.line + state.closeStr), (state.line = (state.timeTag || "") + state.openStr), (state.len = 0), (state.lastWasTag = true));
+    state.tokens.forEach((tok) => {
+      const tag = tok[0] === "<",
+        closeTag = tag && tok[1] === "/";
+      if (tag) {
+        if (state.line && !state.lastWasTag && !closeTag) state.line += " ";
+        const m = tok.match(/^<\/?\s*([a-z0-9._:-]+)/i), // extract tag name
+          n = m?.[1] || "",
+          timing = /^\d/.test(n);
+        if (timing) return ((state.timeTag = tok), (state.line += tok), (state.lastWasTag = true));
+        if (!closeTag && !tok.endsWith("/>") && n) (state.stack.push(n), updateTags()); // update on open
+        if (closeTag && state.stack.length) (state.stack.pop(), updateTags()); // update on close
+        return ((state.lastWasTag = true), (state.line += tok));
+      }
+      const len = tmg.stripTags(tok).length,
+        needSpace = state.line && !state.lastWasTag;
+      if (state.len + (needSpace ? 1 : 0) + len > maxChars) flush();
+      if (needSpace) ((state.line += " "), (state.len += 1));
+      ((state.line += tok), (state.len += len), (state.lastWasTag = false));
+    });
+    return (flush(), state.parts);
+  },
   uid: (prefix = "tmg-") => `${prefix}${Date.now().toString(36)}_${performance.now().toString(36).replace(".", "")}_${Math.random().toString(36).slice(2)}`,
-  clamp: (min = 0, amount, max = Infinity) => Math.min(Math.max(amount, min), max),
+  clamp: (min = 0, amount, max) => Math.min(Math.max(amount, min), max ?? Infinity),
   remToPx: (val) => parseFloat(getComputedStyle(document.documentElement).fontSize * val),
   isDef: (val) => val !== undefined,
   isIter: (obj) => obj != null && "function" === typeof obj[Symbol.iterator],
   isObj: (obj) => "object" === typeof obj && obj != null && !tmg.isArr(obj) && "function" !== typeof obj,
   isArr: (arr) => Array.isArray(arr),
-  isValidNumber: (number) => !isNaN(number ?? NaN) && number !== Infinity,
+  isValidNum: (number) => !isNaN(number ?? NaN) && number !== Infinity,
+  inBoolArrOpt: (opt, str) => opt?.includes?.(str) ?? opt,
   inWindowView(el, axis = "y") {
     const rect = el.getBoundingClientRect(),
       inX = rect.right >= 0 && rect.left <= (window.innerWidth || document.documentElement.clientWidth),
@@ -2921,8 +3007,8 @@ var tmg = {
       proto = Object.getPrototypeOf(proto);
     }
   },
-  parseNumber: (number, fallback = 0) => (tmg.isValidNumber(number) ? number : fallback),
-  parseIfPercent: (percent, amount = 100) => (percent?.endsWith?.("%") ? tmg.parseNumber((percent.slice(0, -1) / 100) * amount) : percent),
+  safeNum: (number, fallback = 0) => (tmg.isValidNum(number) ? number : fallback),
+  parseIfPercent: (percent, amount = 100) => (percent?.endsWith?.("%") ? tmg.safeNum((parseFloat(percent) / 100) * amount) : percent),
   parseCSSTime: (time) => (time.endsWith("ms") ? parseFloat(time) : parseFloat(time) * 1000),
   parseCSSUnit: (val) => (val.endsWith("px") ? parseFloat(val) : tmg.remToPx(parseFloat(val))),
   parseUIObj(obj) {
@@ -2945,10 +3031,10 @@ var tmg = {
     const result = {};
     return (Object.entries(obj).forEach(([k, v]) => (k.includes(separator) ? tmg.assignAny(result, k, tmg.parseAnyObj(v, separator, keyFunc), separator, keyFunc, visited) : (result[k] = v))), result);
   },
-  parseControlPanelBottomObj(obj = []) {
+  parsePanelBottomObj(obj = [], arr = false) {
     if (!tmg.isObj(obj) && !tmg.isArr(obj)) return false;
     const [third = [], second = [], first = []] = tmg.isObj(obj) ? Object.values(obj).reverse() : tmg.isArr(obj[0]) ? obj.toReversed() : [obj];
-    return { 1: first, 2: second, 3: third };
+    return !arr ? { 1: first, 2: second, 3: third } : [...third, ...second, ...first];
   },
   mergeObjs(o1 = {}, o2 = {}) {
     const merged = { ...(o1 || {}), ...(o2 || {}) };
@@ -2981,7 +3067,7 @@ var tmg = {
       cs = (str) => (casing === "upper" ? str.toUpperCase() : casing === "title" ? tmg.capitalize(str) : str.toLowerCase()), // casing
       wrd = (n = 0) => ({ h: cs(long ? ` hour${sx(n)} ` : "h"), m: cs(long ? ` minute${sx(n)} ` : "m"), s: cs(long ? ` second${sx(n)} ` : "s"), ms: cs(long ? ` millisecond${sx(n)} ` : "ms") }),
       pad = (v, n = 2, f) => (long && !f ? v : String(v).padStart(n, "number" === typeof +n ? "0" : "-"));
-    if (!this.isValidNumber(time)) return format !== "digital" ? `-${wrd().h}${pad("-")}${wrd().m}${!elapsed ? "left" : ""}`.trim() : !elapsed ? "--:--" : "-:--";
+    if (!this.isValidNum(time)) return format !== "digital" ? `-${wrd().h}${pad("-")}${wrd().m}${!elapsed ? "left" : ""}`.trim() : !elapsed ? "--:--" : "-:--";
     const s = Math.floor(Math.abs(time) % 60),
       m = Math.floor(Math.abs(time) / 60) % 60,
       h = Math.floor(Math.abs(time) / 3600),
@@ -3077,7 +3163,7 @@ var tmg = {
     if (!v.paused && newV.isConnected) newV.play();
     return newV;
   },
-  getNearestElSiblingAt: (p, dir, els) =>
+  getElSiblingAt: (p, dir, els) =>
     els?.reduce(
       (closest, child) => {
         const { top: cT, left: cL, width: cW, height: cH } = child.getBoundingClientRect(),
@@ -3293,13 +3379,13 @@ if (typeof window !== "undefined") {
     mediaType: "video",
     media: { title: "", artist: "", profile: "", album: "", artwork: [], chapterInfo: [], links: { title: "", artist: "", profile: "" } },
     disabled: false,
-    lightState: { disabled: false, controls: ["bigplaypause", "fullscreenorientation"], preview: { usePoster: true, time: 2 } },
+    lightState: { disabled: false, controls: ["meta", "bigplaypause", "fullscreenorientation"], preview: { usePoster: true, time: 2 } },
     debug: true,
     settings: {
       auto: { next: 2000000 },
       beta: {
         disabled: false,
-        rewind: true,
+        fastPlay: { rewind: true },
         gesture: {
           touch: { volume: true, brightness: true, timeline: true, threshold: 200, axesRatio: 3, inset: 20, sliderTimeout: 1000, xRatio: 1, yRatio: 1 },
         },
@@ -3317,6 +3403,7 @@ if (typeof window !== "undefined") {
       brightness: { min: 0, max: 150, value: 100, skip: 5 },
       captions: {
         disabled: false,
+        allowVideoOverride: true,
         font: {
           family: {
             value: "inherit",
@@ -3470,9 +3557,10 @@ if (typeof window !== "undefined") {
         profile: true,
         title: true,
         artist: true,
-        top: ["expandminiplayer", "meta", "capture", "fullscreenlock", "fullscreenorientation", "removeminiplayer"],
+        top: ["expandminiplayer", "spacer", "meta", "spacer", "capture", "fullscreenlock", "fullscreenorientation", "removeminiplayer"],
         center: ["bigprev", "bigplaypause", "bignext"],
-        bottom: { 1: [], 2: ["timeline"], 3: ["prev", "playpause", "next", "brightness", "volume", "timeandduration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] },
+        bottom: { 1: [], 2: ["spacer", "timeline", "spacer"], 3: ["prev", "playpause", "next", "brightness", "volume", "timeandduration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] },
+        buffer: "spinner",
         timeline: { thumbIndicator: true, seek: { relative: !tmg.ON_MOBILE, cancel: { delta: 15, timeout: 2000 } } },
         progressBar: tmg.ON_MOBILE,
       },
@@ -3492,7 +3580,7 @@ if (typeof window !== "undefined") {
         // prettier-ignore
         blocks: ["Ctrl+Tab", "Ctrl+Shift+Tab", "Ctrl+PageUp", "Ctrl+PageDown", "Cmd+Option+ArrowRight", "Cmd+Option+ArrowLeft", "Ctrl+1", "Ctrl+2", "Ctrl+3", "Ctrl+4", "Ctrl+5", "Ctrl+6", "Ctrl+7", "Ctrl+8", "Ctrl+9", "Cmd+1", "Cmd+2", "Cmd+3", "Cmd+4", "Cmd+5", "Cmd+6", "Cmd+7", "Cmd+8", "Cmd+9", "Alt+ArrowLeft", "Alt+ArrowRight", "Cmd+ArrowLeft", "Cmd+ArrowRight", "Ctrl+r", "Ctrl+Shift+r", "F5", "Shift+F5", "Cmd+r", "Cmd+Shift+r", "Ctrl+h", "Ctrl+j", "Ctrl+d", "Ctrl+f", "Cmd+y", "Cmd+Option+b", "Cmd+d", "Cmd+f", "Ctrl+Shift+i", "Ctrl+Shift+j", "Ctrl+Shift+c", "Ctrl+u", "F12", "Cmd+Option+i", "Cmd+Option+j", "Cmd+Option+c", "Cmd+Option+u", "Ctrl+=", "Ctrl+-", "Ctrl+0", "Cmd+=", "Cmd+-", "Cmd+0", "Ctrl+p", "Ctrl+s", "Ctrl+o", "Cmd+p", "Cmd+s", "Cmd+o"],
       },
-      modes: { fullscreen: { disabled: false, orientationLock: "auto" }, theater: !tmg.ON_MOBILE, pictureInPicture: true, miniplayer: { disabled: false, minWindowWidth: 240 } },
+      modes: { fullscreen: { disabled: false, orientationLock: "auto", onRotate: 90 }, theater: !tmg.ON_MOBILE, pictureInPicture: true, miniplayer: { disabled: false, minWindowWidth: 240 } },
       notifiers: true,
       noOverride: false,
       overlay: { delay: 3000, behavior: "strict" },

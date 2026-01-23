@@ -8,12 +8,12 @@ export function isValidNumber(val: any): boolean {
   return !isNaN(val ?? NaN) && val !== Infinity;
 }
 
-export function parseNumber(number: any, fallback = 0): number {
+export function safeNum(number: any, fallback = 0): number {
   return isValidNumber(number) ? number : fallback;
 }
 
 export function parseIfPercent(percent: any, amount = 100): number {
-  return percent?.endsWith?.("%") ? parseNumber((percent.slice(0, -1) / 100) * amount) : percent;
+  return percent?.endsWith?.("%") ? safeNum((percent.slice(0, -1) / 100) * amount) : percent;
 }
 
 export function parseCSSTime(time: string): number {

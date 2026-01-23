@@ -47,6 +47,7 @@ export interface Track {
 
 export interface Captions {
   disabled: boolean;
+  allowVideoOverride: boolean;
   font: {
     family: UISettings<string>;
     size: Range & { options: UIOption<number>[] };
@@ -128,15 +129,14 @@ export interface Settings {
       | Control[] // Case: Flat Array ['play', 'pause'] (Logic puts this in Row 3)
       | Control[][] // Case: Array of Rows [['time'], ['play'], ['vol']]
       | Partial<ControlPanelBottomTuple>; // Case: Explicit Object { 1: [...], 2: [...] }
-    timeline:
-      | {
-          thumbIndicator: boolean;
-          seek: {
-            relative: boolean;
-            cancel: { delta: number; timeout: number };
-          };
-        }
-      | boolean;
+    buffer: "eclipse" | "accent" | boolean;
+    timeline: {
+      thumbIndicator: boolean;
+      seek: {
+        relative: boolean;
+        cancel: { delta: number; timeout: number };
+      };
+    };
     progressBar: boolean;
   };
   errorMessages: Record<ErrorCode, string>;
@@ -194,6 +194,7 @@ export interface Settings {
         | "portrait-secondary"
         | "landscape-primary"
         | "landscape-secondary";
+      onRotate: boolean | number; // 0-portrait, 90-landscape, 180, 270
     };
     theater: boolean;
     pictureInPicture: boolean;
@@ -212,6 +213,8 @@ export interface Settings {
       | {
           address: string; // folder/image$.jpg
           spf: number; // 10
+          cols: number;
+          rows: number;
         }
       | boolean;
     mode: "remaining" | "elapsed";

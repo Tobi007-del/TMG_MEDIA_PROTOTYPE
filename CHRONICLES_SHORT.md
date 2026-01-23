@@ -1,4 +1,4 @@
-# TVP CHRONICLES: State Vs. Intent
+# TVP CHRONICLES: State Vs. Intent Architecture (S.I.A)
 
 This is AI polished for brevity, read longer version to relive my thoughts or stay for a summary if you're in a rush. Mind you, the latter is constantly updated.
 

@@ -5,11 +5,14 @@ var tmg = (() => {
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
   var __export = (target, all) => {
-    for (var name in all) __defProp(target, name, { get: all[name], enumerable: true });
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
   };
   var __copyProps = (to, from, except, desc) => {
-    if ((from && typeof from === "object") || typeof from === "function") {
-      for (let key of __getOwnPropNames(from)) if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
     }
     return to;
   };
@@ -23,7 +26,7 @@ var tmg = (() => {
     num: () => num_exports,
     obj: () => obj_exports,
     reactor: () => reactor_exports,
-    str: () => str_exports,
+    str: () => str_exports
   });
 
   // prototype-3/src/ts/core/reactor.ts
@@ -31,18 +34,16 @@ var tmg = (() => {
   __export(reactor_exports, {
     Event: () => Event,
     TERMINATOR: () => TERMINATOR,
-    default: () => Reactor,
+    default: () => Reactor
   });
 
   // prototype-3/src/ts/utils/dom.ts
   var dom_exports = {};
   __export(dom_exports, {
-    inDocView: () => inDocView,
+    inDocView: () => inDocView
   });
   function inDocView(el, axis = "y") {
-    const rect = el.getBoundingClientRect(),
-      inX = rect.left + window.scrollX >= 0 && rect.right + window.scrollX <= window.scrollX + (window.innerWidth || document.documentElement.clientWidth),
-      inY = rect.top + window.scrollY >= 0 && rect.bottom + window.scrollY <= window.scrollY + (window.innerHeight || document.documentElement.clientHeight);
+    const rect = el.getBoundingClientRect(), inX = rect.left + window.scrollX >= 0 && rect.right + window.scrollX <= window.scrollX + (window.innerWidth || document.documentElement.clientWidth), inY = rect.top + window.scrollY >= 0 && rect.bottom + window.scrollY <= window.scrollY + (window.innerHeight || document.documentElement.clientHeight);
     return axis === "x" ? inY : axis === "y" ? inX : inY && inX;
   }
 
@@ -58,7 +59,10 @@ var tmg = (() => {
     isArr: () => isArr,
     isIter: () => isIter,
     isObj: () => isObj,
-    parseUIObj: () => parseUIObj,
+    isUISetting: () => isUISetting,
+    mergeObjs: () => mergeObjs,
+    parseAnyObj: () => parseAnyObj,
+    parseUIObj: () => parseUIObj
   });
   function isIter(obj) {
     return obj != null && "function" === typeof obj[Symbol.iterator];
@@ -69,21 +73,20 @@ var tmg = (() => {
   function isArr(obj) {
     return Array.isArray(obj);
   }
+  function isUISetting(obj) {
+    return isObj(obj) && "options" in obj && isArr(obj.options);
+  }
   function assignDef(target, key, value) {
     isDef(value) && target != null && assignAny(target, key, value);
   }
   function assignHTMLConfig(target, attr, value) {
-    assignAny(
-      target,
-      attr.replace("tmg--", ""),
-      (() => {
-        if (value.includes(",")) return value.split(",")?.map((v) => v.replace(/\s+/g, ""));
-        if (/^(true|false|null|\d+)$/.test(value)) return JSON.parse(value);
-        return value;
-      })(),
-      "--",
-      (p) => camelize(p)
-    );
+    const path = attr.replace("tmg--", "");
+    const parsedValue = (() => {
+      if (value.includes(",")) return value.split(",")?.map((v) => v.replace(/\s+/g, ""));
+      if (/^(true|false|null|\d+)$/.test(value)) return JSON.parse(value);
+      return value;
+    })();
+    assignAny(target, path, parsedValue, "--", (p) => camelize(p));
   }
   function assignAny(target, key, value, separator = ".", keyFunc = (p) => p) {
     const keys = key.split(separator).map((p) => keyFunc(p));
@@ -95,10 +98,10 @@ var tmg = (() => {
         const [, key3, iStr] = match;
         if (!isArr(currObj[key3])) currObj[key3] = [];
         if (i === keys.length - 1) currObj[key3][Number(iStr)] = value;
-        else ((_a = currObj[key3])[(_b = Number(iStr))] || (_a[_b] = {}), (currObj = currObj[key3][Number(iStr)]));
+        else (_a = currObj[key3])[_b = Number(iStr)] || (_a[_b] = {}), currObj = currObj[key3][Number(iStr)];
       } else {
         if (i === keys.length - 1) currObj[key2] = value;
-        else (currObj[key2] || (currObj[key2] = {}), (currObj = currObj[key2]));
+        else currObj[key2] || (currObj[key2] = {}), currObj = currObj[key2];
       }
     });
   }
@@ -118,9 +121,33 @@ var tmg = (() => {
     }
     return currObj;
   }
+  function parseUIObj(obj) {
+    const result = {};
+    for (const key of Object.keys(obj)) {
+      const entry = obj[key];
+      if (!isObj(entry)) continue;
+      if (isUISetting(entry)) {
+        result[key] = {
+          values: entry.options.map((opt) => "value" in opt ? opt.value : opt),
+          displays: entry.options.map((opt) => "display" in opt ? opt.display : `${opt}`)
+        };
+      } else result[key] = parseUIObj(entry);
+    }
+    return result;
+  }
+  function parseAnyObj(obj, separator = ".", keyFunc = (p) => p, visited = /* @__PURE__ */ new WeakSet()) {
+    if (!isObj(obj) || visited.has(obj)) return obj;
+    visited.add(obj);
+    const result = {};
+    Object.entries(obj).forEach(([k, v]) => k.includes(separator) ? assignAny(result, k, parseAnyObj(v, separator, keyFunc, visited), separator, keyFunc) : result[k] = isObj(v) ? parseAnyObj(v, separator, keyFunc, visited) : v);
+    return result;
+  }
+  function mergeObjs(o1 = {}, o2 = {}) {
+    const merged = { ...o1 || {}, ...o2 || {} };
+    return Object.keys(merged).forEach((k) => isObj(o1?.[k]) && isObj(o2?.[k]) && (merged[k] = mergeObjs(o1[k], o2[k]))), merged;
+  }
   function getTrailPaths(path, reverse = true) {
-    const parts = path.split("."),
-      chain = ["*"];
+    const parts = path.split("."), chain = ["*"];
     let acc = "";
     for (let i = 0; i < parts.length; i++) {
       acc += (i === 0 ? "" : ".") + parts[i];
@@ -129,32 +156,13 @@ var tmg = (() => {
     return reverse ? chain.reverse() : chain;
   }
   function getTrailRecord(obj, path) {
-    const parts = path.split("."),
-      record = [["*", obj, obj]];
-    let acc = "",
-      currObj = obj;
+    const parts = path.split("."), record = [["*", obj, obj]];
+    let acc = "", currObj = obj;
     for (let i = 0; i < parts.length; i++) {
       acc += (i === 0 ? "" : ".") + parts[i];
-      record.push([acc, currObj, (currObj = Reflect.get(currObj, parts[i]))]);
+      record.push([acc, currObj, currObj = Reflect.get(currObj, parts[i])]);
     }
     return record;
-  }
-  function isUISetting(obj) {
-    return isObj(obj) && "options" in obj && isArr(obj.options);
-  }
-  function parseUIObj(obj) {
-    const result = {};
-    for (const key of Object.keys(obj)) {
-      const entry = obj[key];
-      if (!isObj(entry)) continue;
-      if (isUISetting(entry)) {
-        result[key] = {
-          values: entry.options.map((opt) => ("value" in opt ? opt.value : opt)),
-          displays: entry.options.map((opt) => ("display" in opt ? opt.display : `${opt}`)),
-        };
-      } else result[key] = parseUIObj(entry);
-    }
-    return result;
   }
 
   // prototype-3/src/ts/utils/chores.ts
@@ -162,7 +170,7 @@ var tmg = (() => {
   __export(chores_exports, {
     isDef: () => isDef,
     remToPx: () => remToPx,
-    uid: () => uid,
+    uid: () => uid
   });
   function uid(prefix = "tmg-") {
     return `${prefix}${Date.now().toString(36)}_${performance.now().toString(36).replace(".", "")}_${Math.random().toString(36).slice(2)}`;
@@ -182,7 +190,7 @@ var tmg = (() => {
     parseCSSTime: () => parseCSSTime,
     parseCSSUnit: () => parseCSSUnit,
     parseIfPercent: () => parseIfPercent,
-    parseNumber: () => parseNumber,
+    safeNum: () => safeNum
   });
   function clamp(min = 0, val, max = Infinity) {
     return Math.min(Math.max(val, min), max);
@@ -190,11 +198,11 @@ var tmg = (() => {
   function isValidNumber(val) {
     return !isNaN(val ?? NaN) && val !== Infinity;
   }
-  function parseNumber(number, fallback = 0) {
+  function safeNum(number, fallback = 0) {
     return isValidNumber(number) ? number : fallback;
   }
   function parseIfPercent(percent, amount = 100) {
-    return percent?.endsWith?.("%") ? parseNumber((percent.slice(0, -1) / 100) * amount) : percent;
+    return percent?.endsWith?.("%") ? safeNum(percent.slice(0, -1) / 100 * amount) : percent;
   }
   function parseCSSTime(time) {
     return time.endsWith("ms") ? parseFloat(time) : parseFloat(time) * 1e3;
@@ -208,7 +216,7 @@ var tmg = (() => {
   __export(str_exports, {
     camelize: () => camelize,
     capitalize: () => capitalize,
-    uncamelize: () => uncamelize,
+    uncamelize: () => uncamelize
   });
   function capitalize(word = "") {
     return word.replace(/^(\s*)([a-z])/i, (_, s, l) => s + l.toUpperCase());
@@ -257,7 +265,7 @@ var tmg = (() => {
     reject(reason) {
       if (!this.rejectable) return console.warn(`Ignored reject() call on a non-rejectable "${this.type}" at "${this.path}"`);
       if (this.eventPhase !== _Event.CAPTURING_PHASE) console.warn(`Rejecting an intent on "${this.type}" at "${this.path}" outside of the capture phase is unadvised.`);
-      if (this.rejectable) console.log((this._rejected = reason || `Couldn't ${this.type} intended value at "${this.path}"`));
+      if (this.rejectable) console.log(this._rejected = reason || `Couldn't ${this.type} intended value at "${this.path}"`);
     }
     composedPath() {
       return getTrailPaths(this.path);
@@ -268,74 +276,82 @@ var tmg = (() => {
   _Event.AT_TARGET = 2;
   _Event.BUBBLING_PHASE = 3;
   var Event = _Event;
-  var Reactor = class {
-    constructor(obj, options = {}) {
+  var _Reactor = class _Reactor {
+    constructor(obj = {}, options = {}) {
       this.getters = /* @__PURE__ */ new Map();
       this.setters = /* @__PURE__ */ new Map();
+      this.watchers = /* @__PURE__ */ new Map();
       this.listenersRecord = /* @__PURE__ */ new Map();
       this.batch = /* @__PURE__ */ new Map();
       this.isBatching = false;
+      this.queue = /* @__PURE__ */ new Set();
+      // tasks to run after _flush
       this.proxyCache = /* @__PURE__ */ new WeakMap();
-      this.cascade = ({ type, currentTarget: { path, value: sets } }) => {
-        if (!sets || (type !== "set" && type !== "delete")) return;
-        for (const [k, v] of Object.entries(sets)) assignAny(this.root, `${path}.${k}`, v);
+      this._schedule = (path, payload) => (this.batch.set(path, payload), this._initBatching());
+      this.stall = (task) => (this.queue.add(task), this._initBatching());
+      this.nostall = (task) => this.queue.delete(task);
+      this.noget = (path, cb) => this.getters.get(path)?.delete(cb);
+      this.noset = (path, cb) => this.setters.get(path)?.delete(cb);
+      this.nowatch = (path, cb) => this.watchers.get(path)?.delete(cb);
+      this.once = (path, cb, options) => this.on(path, cb, { ...options, once: true });
+      this.cascade = ({ type, currentTarget: { path, value: news, oldValue: olds } }, objSafe = true) => {
+        if (!isObj(news) || !isObj(olds) || type !== "set" && type !== "delete") return;
+        for (const [key, value] of Object.entries(objSafe ? mergeObjs(olds, news) : news)) assignAny(this.core, `${path}.${key}`, value);
       };
-      this.tick = this._flush;
-      this.root = this._proxify(obj);
       this.rejectable = options.rejectable ?? false;
+      this.core = this._proxify(obj);
     }
-    _proxify(target, path = "") {
-      if (target instanceof Element || target instanceof Window || target instanceof EventTarget) return target;
-      if (this.proxyCache.has(target)) return this.proxyCache.get(target);
-      const proxy = new Proxy(target, {
+    _proxify(obj, path = "") {
+      if (!(isObj(obj) || isArr(obj)) || "symbol" === typeof obj || "function" === typeof obj || obj instanceof Map || obj instanceof Set || obj instanceof WeakMap || obj instanceof Promise || obj instanceof Element || obj instanceof EventTarget) return obj;
+      if (this.proxyCache.has(obj)) return this.proxyCache.get(obj);
+      const proxy = new Proxy(obj, {
         get: (object, key, receiver) => {
-          const safeKey = String(key),
-            fullPath = path ? `${path}.${safeKey}` : safeKey,
-            target2 = { path: fullPath, value: Reflect.get(object, key, receiver), key: safeKey, object },
-            payload = { type: "get", target: target2, currentTarget: target2, root: this.root };
+          const safeKey = String(key), fullPath = path ? `${path}.${safeKey}` : safeKey, target = { path: fullPath, value: Reflect.get(object, key, receiver), key: safeKey, object }, payload = { type: "get", target, currentTarget: target, root: this.core };
           if (this.getters.has(fullPath)) return this._mediate(fullPath, payload, false);
-          if (typeof key === "symbol" || !(isObj(target2.value) || isArr(target2.value))) return target2.value;
-          return this._proxify(target2.value, fullPath);
+          return this._proxify(target.value, fullPath);
         },
         set: (object, key, value, receiver) => {
-          const safeKey = String(key),
-            fullPath = path ? `${path}.${safeKey}` : safeKey,
-            target2 = { path: fullPath, value, oldValue: Reflect.get(object, key, receiver), key: safeKey, object },
-            payload = { type: "set", target: target2, currentTarget: target2, root: this.root };
-          if (this.setters.has(fullPath)) target2.value = this._mediate(fullPath, payload, true);
-          if (target2.value === TERMINATOR) return false;
-          if (!Reflect.set(object, key, target2.value, receiver)) return false;
-          return (this._schedule(fullPath, payload), true);
+          const safeKey = String(key), fullPath = path ? `${path}.${safeKey}` : safeKey, target = { path: fullPath, value, oldValue: Reflect.get(object, key, receiver), key: safeKey, object }, payload = { type: "set", target, currentTarget: target, root: this.core };
+          if (this.setters.has(fullPath)) target.value = this._mediate(fullPath, payload, true);
+          return target.value !== TERMINATOR && Reflect.set(object, key, target.value, receiver) && this._notify(fullPath, payload), true;
         },
         deleteProperty: (object, key) => {
-          const safeKey = String(key),
-            fullPath = path ? `${path}.${safeKey}` : safeKey,
-            target2 = { path: fullPath, oldValue: Reflect.get(object, key), key: safeKey, object },
-            payload = { type: "delete", target: target2, currentTarget: target2, root: this.root };
-          if (this.setters.has(fullPath)) target2.value = this._mediate(fullPath, payload, true);
-          if (target2.value === TERMINATOR) return false;
-          if (!Reflect.deleteProperty(object, key)) return false;
-          return (this._schedule(fullPath, payload), true);
-        },
+          const safeKey = String(key), fullPath = path ? `${path}.${safeKey}` : safeKey, target = { path: fullPath, oldValue: Reflect.get(object, key), key: safeKey, object }, payload = { type: "delete", target, currentTarget: target, root: this.core };
+          if (this.setters.has(fullPath)) target.value = this._mediate(fullPath, payload, true);
+          return target.value !== TERMINATOR && Reflect.deleteProperty(object, key) && this._notify(fullPath, payload), true;
+        }
       });
-      this.proxyCache.set(target, proxy);
+      this.proxyCache.set(obj, proxy);
       return proxy;
     }
     _mediate(path, payload, set) {
-      let terminated = false,
-        value = payload.target.value;
+      let terminated = false, value = payload.target.value;
       const fns = (set ? this.setters : this.getters)?.get(path);
       if (!fns?.size) return value;
       const arr = Array.from(fns);
       for (let i = set ? 0 : arr.length - 1; i !== (set ? arr.length : -1); i += set ? 1 : -1) {
         terminated || (terminated = value === TERMINATOR);
-        value = terminated ? TERMINATOR : arr[i](value, terminated, payload);
+        const response = arr[i](value, terminated, payload);
+        if (!terminated) value = response;
       }
       return value;
     }
+    _notify(path, payload) {
+      if (this.watchers.has(path)) for (const fn of this.watchers.get(path)) fn(payload.target.value, payload);
+      this._schedule(path, payload);
+    }
+    _initBatching() {
+      if (!this.isBatching) return;
+      this.isBatching = true;
+      queueMicrotask(() => this._flush());
+    }
+    _flush() {
+      this.tick(this.batch.keys()), this.batch.clear(), this.isBatching = false;
+      for (const task of this.queue) task();
+      this.queue.clear();
+    }
     _wave(path, payload) {
-      const e = new Event({ ...payload, rejectable: this.rejectable }),
-        chain = getTrailRecord(this.root, path);
+      const e = new Event({ ...payload, rejectable: this.rejectable }), chain = getTrailRecord(this.core, path);
       e.eventPhase = Event.CAPTURING_PHASE;
       for (let i = 0; i <= chain.length - 2; i++) {
         if (e.propagationStopped) break;
@@ -358,7 +374,7 @@ var tmg = (() => {
       if (!records?.size) return;
       const originalType = e.type;
       e.type = path !== e.target.path ? "update" : e.type;
-      e.currentTarget = { path, value, key: path.split(".").pop() || "", object };
+      e.currentTarget = { path, value, oldValue: e.type !== "update" ? e.target.oldValue : void 0, key: path.split(".").pop() || "", object };
       for (const record of [...records]) {
         if (e.immediatePropagationStopped) break;
         if (record.capture !== isCapture) continue;
@@ -367,63 +383,55 @@ var tmg = (() => {
       }
       e.type = originalType;
     }
-    _schedule(path, payload) {
-      this.batch.set(path, payload);
-      if (this.isBatching) return;
-      this.isBatching = true;
-      queueMicrotask(() => this._flush());
+    tick(paths) {
+      if (!paths) return this._flush();
+      for (const path of "string" === typeof paths ? [paths] : paths) this.batch.has(path) && (this._wave(path, this.batch.get(path)), this.batch.delete(path));
     }
-    _flush() {
-      for (const [path, payload] of this.batch.entries()) this._wave(path, payload);
-      (this.batch.clear(), (this.isBatching = false));
+    get(path, cb, lazy) {
+      const task = () => (this.getters.get(path) ?? this.getters.set(path, /* @__PURE__ */ new Set()).get(path)).add(cb);
+      lazy ? this.stall(task) : task();
+      return () => (lazy && this.nostall(task), this.noget(path, cb));
     }
-    get(path, cb) {
-      (this.getters.get(path) ?? this.getters.set(path, /* @__PURE__ */ new Set()).get(path)).add(cb);
+    // undefined - no search list, boolean - result
+    set(path, cb, lazy) {
+      const task = () => (this.setters.get(path) ?? this.setters.set(path, /* @__PURE__ */ new Set()).get(path)).add(cb);
+      lazy ? this.stall(task) : task();
+      return () => (lazy && this.nostall(task), this.noset(path, cb));
     }
-    noget(path, cb) {
-      this.getters.get(path)?.delete(cb);
-    }
-    set(path, cb) {
-      (this.setters.get(path) ?? this.setters.set(path, /* @__PURE__ */ new Set()).get(path)).add(cb);
-    }
-    noset(path, cb) {
-      this.setters.get(path)?.delete(cb);
+    watch(path, cb, lazy) {
+      const task = () => (this.watchers.get(path) ?? this.watchers.set(path, /* @__PURE__ */ new Set()).get(path)).add(cb);
+      lazy ? this.stall(task) : task();
+      return () => (lazy && this.nostall(task), this.nowatch(path, cb));
     }
     on(path, cb, options) {
-      const records = this.listenersRecord.get(path),
-        capture = _getOpt(options, "capture");
-      let hasRecord = false;
+      const records = this.listenersRecord.get(path), capture = _Reactor.parseEOpt(options, "capture");
+      let added = false;
       for (const record of records ?? []) {
         if (record.cb === cb && capture === record.capture) {
-          hasRecord = true;
+          added = true;
           break;
         }
       }
-      if (!hasRecord) (records ?? this.listenersRecord.set(path, /* @__PURE__ */ new Set()).get(path)).add({ cb, capture, once: _getOpt(options, "once") });
+      if (!added) (records ?? this.listenersRecord.set(path, /* @__PURE__ */ new Set()).get(path)).add({ cb, capture, once: _Reactor.parseEOpt(options, "once") });
       return () => this.off(path, cb, options);
     }
     off(path, cb, options) {
-      const records = this.listenersRecord.get(path),
-        capture = _getOpt(options, "capture");
-      if (!records) return;
-      let recordToDelete = null;
-      for (const record of records) {
-        if (record.cb === cb && record.capture === capture) {
-          recordToDelete = record;
-          break;
-        }
+      const records = this.listenersRecord.get(path), capture = _Reactor.parseEOpt(options, "capture");
+      if (!records) return void 0;
+      for (const record of [...records]) {
+        if (record.cb === cb && record.capture === capture) return records.delete(record), !records.size && this.listenersRecord.delete(path), true;
       }
-      if (recordToDelete) records.delete(recordToDelete);
-      if (!records.size) this.listenersRecord.delete(path);
+      return false;
     }
     reset() {
-      (this.getters.clear(), this.setters.clear(), this.listenersRecord.clear());
-      (this.batch.clear(), (this.isBatching = false));
+      this.getters.clear(), this.setters.clear(), this.watchers.clear(), this.listenersRecord.clear();
+      this.queue.clear(), this.batch.clear(), this.isBatching = false;
       this.proxyCache = /* @__PURE__ */ new WeakMap();
-      this.root = null;
+      this.core = null;
     }
   };
-  var _getOpt = (options = false, opt) => ("boolean" === typeof options ? options : !!options?.[opt]);
+  _Reactor.parseEOpt = (options = false, opt) => "boolean" === typeof options ? options : !!options?.[opt];
+  var Reactor = _Reactor;
 
   // prototype-3/src/ts/index.ts
   if (typeof window !== "undefined") {
@@ -433,7 +441,7 @@ var tmg = (() => {
     window.T007_TOAST_JS_SRC ?? (window.T007_TOAST_JS_SRC = "/T007_TOOLS/T007_toast_library/T007_toast.js");
   } else {
     console.log("\x1B[38;2;139;69;19mTMG Media Player Unavailable\x1B[0m");
-    (console.error("TMG Media Player cannot run in a terminal!"), console.warn("Consider moving to a browser environment to use the TMG Media Player"));
+    console.error("TMG Media Player cannot run in a terminal!"), console.warn("Consider moving to a browser environment to use the TMG Media Player");
   }
   return __toCommonJS(index_exports);
 })();

@@ -1625,7 +1625,7 @@ class T_M_G_Video_Controller {
     const nextVideoPreview = this.queryDOM(".T_M_G-video-next-preview");
     v.sources?.length && tmg.addSources(v.sources, nextVideoPreview);
     ["loadedmetadata", "durationchange"].forEach((e) => nextVideoPreview?.addEventListener(e, ({ target: p }) => (p.nextElementSibling.textContent = this.toTimeText(p.duration))));
-    this.settings.toasts.nextVideoPreview.tease ? nextVideoPreview?.addEventListener("timeupdate", ({ target: p }) => tmg.parseNumber(p.currentTime) >= this.settings.toasts.nextVideoPreview.time && p.pause()) : (nextVideoPreview.currentTime = tmg.parseNumber(this.settings.toasts.nextVideoPreview.time));
+    this.settings.toasts.nextVideoPreview.tease ? nextVideoPreview?.addEventListener("timeupdate", ({ target: p }) => tmg.safeNum(p.currentTime) >= this.settings.toasts.nextVideoPreview.time && p.pause()) : (nextVideoPreview.currentTime = tmg.safeNum(this.settings.toasts.nextVideoPreview.time));
     nextVideoPreview?.parentElement?.addEventListener("click", () => cleanUp(true) && this.nextVideo(), true);
   }
   setMediaSession() {
@@ -1695,7 +1695,7 @@ class T_M_G_Video_Controller {
     // this.syncMediaBrandColor();
     this.setCaptionsState();
     if (this.DOM.totalTimeElement) this.DOM.totalTimeElement.textContent = this.toTimeText(this.video.duration);
-    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = this.currentTime < 1 ? (this.settings.css.currentBufferedPosition = 0) : tmg.parseNumber(this.video.currentTime / this.video.duration);
+    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = this.currentTime < 1 ? (this.settings.css.currentBufferedPosition = 0) : tmg.safeNum(this.video.currentTime / this.video.duration);
     this.reactivate();
   }
   _handleLoadedData() {
@@ -1749,13 +1749,13 @@ class T_M_G_Video_Controller {
     this.videoContainer.classList.add("T_M_G-video-replay");
   };
   get duration() {
-    return tmg.parseNumber(this.video.duration);
+    return tmg.safeNum(this.video.duration);
   }
   get currentTime() {
-    return tmg.parseNumber(this.video.currentTime);
+    return tmg.safeNum(this.video.currentTime);
   }
   set currentTime(value) {
-    this.video.currentTime = tmg.parseNumber(Math.max(0, value));
+    this.video.currentTime = tmg.safeNum(Math.max(0, value));
   }
   toTimeText = (t = this.video.currentTime, useMode = false, showMs = false) => (!useMode || this.settings.time.mode !== "remaining" ? tmg.formatTime(t, this.settings.time.format, showMs) : `${tmg.formatTime(this.video.duration - t, this.settings.time.format, showMs, true)}`);
   syncCanvasPreviews() {
@@ -1882,7 +1882,7 @@ class T_M_G_Video_Controller {
   _handleTimeUpdate() {
     if (this.isScrubbing) return;
     this.video.volume = 1; // just in case
-    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.parseNumber(this.video.currentTime / tmg.parseNumber(this.video.duration, 60)); // progress fallback, shouldn't take more than a min for duration to be available
+    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.safeNum(this.video.currentTime / tmg.safeNum(this.video.duration, 60)); // progress fallback, shouldn't take more than a min for duration to be available
     if (this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.toTimeText(this.video.currentTime, true);
     if (this.speedCheck && !this.video.paused) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", this.toTimeText(this.video.currentTime, true));
     if (this.playlist && this.currentTime > 3) this.playlistCurrentTime = this.currentTime;
@@ -1905,7 +1905,7 @@ class T_M_G_Video_Controller {
   skip(duration) {
     const notifier = duration > 0 ? this.DOM.fwdNotifier : this.DOM.bwdNotifier;
     duration = duration > 0 ? (this.duration - this.currentTime > duration ? duration : this.duration - this.currentTime) : duration < 0 ? (this.currentTime > Math.abs(duration) ? duration : -this.currentTime) : 0;
-    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.parseNumber((this.video.currentTime += duration) / this.video.duration);
+    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.safeNum((this.video.currentTime += duration) / this.video.duration);
     if (this.skipPersist) {
       if (this.currentSkipNotifier && notifier !== this.currentSkipNotifier) {
         this.skipDuration = 0;
@@ -2009,7 +2009,7 @@ class T_M_G_Video_Controller {
   rewindVideo() {
     !this.video.paused && this.togglePlay(false);
     this.currentTime -= this.rewindPlaybackRate / this.pfps;
-    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.parseNumber(this.video.currentTime / this.video.duration);
+    this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.safeNum(this.video.currentTime / this.video.duration);
     this.DOM.playbackRateNotifier?.setAttribute("data-current-time", this.toTimeText(this.video.currentTime, true));
   }
   rewindReset() {
@@ -3491,7 +3491,7 @@ class T_M_G {
       }
     });
   }
-  static parseNumber = (number, fallback = 0) => (tmg.isValidNumber(number) ? number : fallback);
+  static safeNum = (number, fallback = 0) => (tmg.isValidNumber(number) ? number : fallback);
   static parseCSSTime = (time) => (time.endsWith("ms") ? parseFloat(time) : parseFloat(time) * 1000);
   static parseCSSUnit = (val) => (val.endsWith("px") ? parseFloat(val) : tmg.remToPx(parseFloat(val)));
   static parseUIObj(obj) {

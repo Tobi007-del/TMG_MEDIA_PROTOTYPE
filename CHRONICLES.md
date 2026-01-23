@@ -1,4 +1,4 @@
-# TVP CHRONICLES: State Vs. Intent
+# TVP CHRONICLES: State Vs. Intent Architecture (S.I.A)
 
 ### _The Basis of the New TVP Architecture_
 
@@ -205,3 +205,50 @@ The Heuristics: Factual uses data and is true. Virtual ignores data and lies (de
 If initialization happens across multiple listeners, deferring the "liars" ensures no one reads garbage values before the state settles. That’s the logic for now
 
 I also added `tick()` for synchronous flushes with path based options when needed, incase you need a listener to operate immediately mutation happens maybe for dom construction or initialization.
+
+Now, there's also watchers for setters that need to update state immediately so like the native `Object.set()`, doesn't use the granularity of the event wave but is for immediate synchronous update meaning the flow is Mediator -> Watchers -> Listeners
+
+### The Final API Signature
+
+```javascript
+// 1. MEDIATORS (The Logic)
+// "When someone tries to set volume, force it to be a number."
+config.set("volume", (val) => Number(val));
+// 2. WATCHERS (The Internals/Survival)
+// "Immediately after volume changes, update the audio engine. Do not wait."
+config.watch("volume", (val) => (audioNode.gain.value = val));
+// 3. LISTENERS (The UI)
+// "When you have a free moment, update the slider position."
+config.on("volume", (e) => (slider.value = e.value));
+```
+
+**The "Layman's" Pitch:**
+
+> "Most video players try to paint the UI every time a variable changes. That’s like landing the plane to adjust the volume. TMG keeps the plane flying (logic) and only updates the cabin (UI) when the air is clear (Next Frame). That is why it feels faster than native."
+
+_"I don't care if the volume changes 0.001ms later, as long as the slider animation doesn't stutter."_
+
+### The Distilled Rules of Notificatons 📜
+
+#### Rule 1: The Rule of Survival (Sync) - `Reactor.watch()`
+
+> **"If the next line of code will crash without this value, Watch it or stall if it's just UI."**
+>
+> - _Examples:_ `src`, `tracks`, `playlist`.
+> - These are the **Engines**. They stay on land.
+
+#### Rule 2: The Rule of the Cloud (Async) - `Reactor.on()`
+
+> **"If it is just for human eyes or ears, Batch it."**
+>
+> - _Examples:_ `volume`, `brightness`, `css`, `classes`.
+> - These are the **Cabin Controls**. They live in the sky.
+
+#### Rule 3: The Rule of Stall - `Reactor.stall()`
+
+> **"If the UI needs to report a complex calculation maybe on the next line, wait for the dust to settle."**
+>
+> - _Example:_ Muting/Unmuting (calculating the restore volume).
+> - Don't report the intermediate math. Stall until the final value is ready.
+
+#### Worthy of Note: Use `Reactor.tick()` to force updates to avoid stalling

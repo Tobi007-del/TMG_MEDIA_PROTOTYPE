@@ -1,0 +1,259 @@
+WEBVTT - Ultimate Feature Test
+
+REGION
+id:region1
+width:40%
+lines:3
+regionanchor:0%,100%
+viewportanchor:10%,90%
+scroll:up
+
+REGION
+id:region2
+width:50%
+lines:2
+regionanchor:50%,0%
+viewportanchor:50%,10%
+
+NOTE Test 1: Basic formatting tags
+
+00:00:00.000 --> 00:00:03.000
+This is <b>bold</b>, <i>italic</i>, and <u>underlined</u> text.
+
+00:00:03.500 --> 00:00:06.500
+<b><i><u>Triple nested formatting</u></i></b> works perfectly.
+
+NOTE Test 2: Class tags with VTT styling
+
+00:00:07.000 --> 00:00:10.000
+<c.red>Red text</c> and <c.warning.bold>multiple classes</c> together.
+
+00:00:10.500 --> 00:00:13.500
+<c>Default class</c> with <c.bg-yellow>background styling</c>.
+
+NOTE Test 3: Voice identification
+
+00:00:14.000 --> 00:00:17.000
+<v Alice>Hello, how are you?</v>
+
+00:00:17.500 --> 00:00:20.500
+<v Bob>I'm doing great, thanks!</v>
+
+00:00:21.000 --> 00:00:24.000
+<v>Anonymous speaker here</v>
+
+NOTE Test 4: Language tags
+
+00:00:24.500 --> 00:00:27.500
+<lang en>English</lang> and <lang es>Español</lang> mixed.
+
+00:00:28.000 --> 00:00:31.000
+<lang ja>日本語</lang> <lang ko>한국어</lang> <lang zh>中文</lang>
+
+NOTE Test 5: Ruby annotations (East Asian text)
+
+00:00:31.500 --> 00:00:34.500
+<ruby>漢<rt>kan</rt>字<rt>ji</rt></ruby> pronunciation guide.
+
+00:00:35.000 --> 00:00:38.000
+<ruby>東京<rt>とうきょう</rt></ruby> is the capital.
+
+NOTE Test 6: Karaoke timestamps
+
+00:00:38.500 --> 00:00:43.000
+<00:00:38.500>Never <00:00:39.500>gonna <00:00:40.000>give <00:00:40.500>you <00:00:41.000>up
+
+00:00:43.500 --> 00:00:48.000
+<00:00:43.500>Never <00:00:44.500>gonna <00:00:45.000>let <00:00:45.500>you <00:00:46.000>down
+
+NOTE Test 7: Karaoke with nested formatting
+
+00:00:48.500 --> 00:00:53.000
+<00:00:48.500><b>Bold</b> <00:00:50.000><i>italic</i> <00:00:51.500><u>underline</u> karaoke
+
+00:00:53.500 --> 00:00:58.000
+<00:00:53.500><c.red>Col<00:00:55.000>ored</c> <00:00:56.500>ka<00:00:57.000>ra<00:00:57.500>oke
+
+NOTE Test 8: Complex nested tags
+
+00:00:58.500 --> 00:01:02.000
+<v Speaker><b>Bold <i>and italic</i> combined</b></v> with voice.
+
+00:01:02.500 --> 00:01:06.000
+<c.highlight><b><i>Triple <u>nested</u> styling</i></b></c> test.
+
+NOTE Test 9: Position and alignment (center)
+
+00:01:06.500 --> 00:01:10.000 position:50% align:center
+Centered at 50%
+
+00:01:10.500 --> 00:01:14.000 position:20% align:left
+Left side at 20%
+
+00:01:14.500 --> 00:01:18.000 position:80% align:right
+Right side at 80%
+
+NOTE Test 10: Position with positionAlign
+
+00:01:18.500 --> 00:01:22.000 position:50% positionAlign:line-left
+Left edge at 50%
+
+00:01:22.500 --> 00:01:26.000 position:50% positionAlign:center
+Center at 50%
+
+00:01:26.500 --> 00:01:30.000 position:50% positionAlign:line-right
+Right edge at 50%
+
+NOTE Test 11: Line positioning (positive - from top)
+
+00:01:30.500 --> 00:01:34.000 line:0
+Line 0 (top)
+
+00:01:34.500 --> 00:01:38.000 line:5
+Line 5 (5th line from top)
+
+00:01:38.500 --> 00:01:42.000 line:10
+Line 10 (10th line from top)
+
+NOTE Test 12: Line positioning (negative - from bottom)
+
+00:01:42.500 --> 00:01:46.000 line:-1
+Line -1 (last line, bottom)
+
+00:01:46.500 --> 00:01:50.000 line:-3
+Line -3 (3rd from bottom)
+
+00:01:50.500 --> 00:01:54.000 line:-5
+Line -5 (5th from bottom)
+
+NOTE Test 13: Percentage line positioning
+
+00:01:54.500 --> 00:01:58.000 line:0%,start
+0% from top (start)
+
+00:01:58.500 --> 00:02:02.000 line:50%,center
+50% vertically centered
+
+00:02:02.500 --> 00:02:06.000 line:100%,end
+100% at bottom (end)
+
+NOTE Test 14: Line with lineAlign
+
+00:02:06.500 --> 00:02:10.000 line:50% lineAlign:start
+Top edge at 50%
+
+00:02:10.500 --> 00:02:14.000 line:50% lineAlign:center
+Center at 50%
+
+00:02:14.500 --> 00:02:18.000 line:50% lineAlign:end
+Bottom edge at 50%
+
+NOTE Test 15: Size property
+
+00:02:18.500 --> 00:02:22.000 size:100%
+Full width (100%)
+
+00:02:22.500 --> 00:02:26.000 size:50%
+Half width (50%)
+
+00:02:26.500 --> 00:02:30.000 size:30%
+Narrow width (30%)
+
+NOTE Test 16: Vertical text (writing mode)
+
+00:02:30.500 --> 00:02:34.000 vertical:lr
+Vertical left-to-right
+
+00:02:34.500 --> 00:02:38.000 vertical:rl
+Vertical right-to-left
+
+NOTE Test 17: Combined positioning
+
+00:02:38.500 --> 00:02:42.000 position:50% line:20% size:60% align:center
+All position properties combined
+
+00:02:42.500 --> 00:02:46.000 position:30% positionAlign:line-left line:80% lineAlign:end size:40%
+Complex positioning with align
+
+NOTE Test 18: Region usage (scrolling)
+
+00:02:46.500 --> 00:02:50.000 region:region1
+First line in scrolling region
+
+00:02:50.500 --> 00:02:54.000 region:region1
+Second line in scrolling region
+
+00:02:54.500 --> 00:02:58.000 region:region1
+Third line in scrolling region
+
+00:02:58.500 --> 00:03:02.000 region:region1
+Fourth line (should scroll first out)
+
+NOTE Test 19: Fixed region (top)
+
+00:03:02.500 --> 00:03:06.000 region:region2
+Line 1 in top region
+
+00:03:06.500 --> 00:03:10.000 region:region2
+Line 2 in top region
+
+NOTE Test 20: Long text wrapping test
+
+00:03:10.500 --> 00:03:15.000
+This is a very long caption that should automatically wrap to multiple lines when the viewport width is too narrow to display it all on a single line, demonstrating the tag-aware word wrapping functionality.
+
+NOTE Test 21: Line breaks and formatting
+
+00:03:15.500 --> 00:03:20.000
+First line\NSecond line\NThird line with <b>bold</b> text
+
+NOTE Test 22: Mixed karaoke with voice and classes
+
+00:03:20.500 --> 00:03:26.000
+<v Singer><00:03:20.500><c.blue>Sing</c> <00:03:22.000><c.red>with</c> <00:03:23.500><c.green>colors</c></v>
+
+NOTE Test 23: Empty and edge cases
+
+00:03:26.500 --> 00:03:30.000
+<c></c><b></b>Text after empty tags<i></i>
+
+NOTE Test 24: Special characters and escaping
+
+00:03:30.500 --> 00:03:34.000
+Test & symbols < > " ' with HTML entities
+
+NOTE Test 25: All formatting combined
+
+00:03:34.500 --> 00:03:40.000 position:50% line:-2 size:80% align:center
+<v Narrator><b><i><u><c.highlight><00:03:34.500>Every <00:03:36.000><lang en>feature</lang> <00:03:37.500>at <00:03:38.500>once</u></i></b></c></v>
+
+NOTE Test 26: Stress test - rapid karaoke
+
+00:03:40.500 --> 00:03:45.000
+<00:03:40.500>A <00:03:41.000>B <00:03:41.500>C <00:03:42.000>D <00:03:42.500>E <00:03:43.000>F <00:03:43.500>G <00:03:44.000>H <00:03:44.500>I
+
+NOTE Test 27: Unicode and emoji
+
+00:03:45.500 --> 00:03:49.000
+Unicode test: 你好 مرحبا Привет 🎵 🎤 🎧
+
+NOTE Test 28: Multiple classes and nesting
+
+00:03:49.500 --> 00:03:53.000
+<c.red.bold.shadow>Multiple <b>nested <i>styles</i></b> together</c>
+
+NOTE Test 29: Percentage position with all aligns
+
+00:03:53.500 --> 00:03:57.000 position:25% positionAlign:line-left
+25% line-left
+
+00:03:57.500 --> 00:04:01.000 position:25% positionAlign:center
+25% center
+
+00:04:01.500 --> 00:04:05.000 position:25% positionAlign:line-right
+25% line-right
+
+NOTE Test 30: Final stress test - everything
+
+00:04:05.500 --> 00:04:12.000 position:50% positionAlign:center line:50% lineAlign:center size:70% align:center region:region2
+<v Ultimate Test><b><i><u><c.rainbow><00:04:05.500><lang en>Complete</lang> <00:04:07.000><ruby>機能<rt>きのう</rt></ruby> <00:04:08.500>test <00:04:09.500>with <00:04:10.500>all <00:04:11.000>features 🎉</u></i></b></c></v>

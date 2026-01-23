@@ -1,4 +1,4 @@
-import { Target, Payload, Mediator, Listener, ListenerOptions, ListenerRecord, Terminator, ListenerOptionsTuple, ReactorOptions } from "../types/reactor";
+import { Target, Payload, Mediator, Listener, ListenerOptions, ListenerRecord, Terminator, ListenerOptionsTuple, ReactorOptions, Watcher } from "../types/reactor";
 import type { Paths, WCPaths } from "../types/obj";
 import { isObj, isArr, assignAny, mergeObjs, getTrailPaths, getTrailRecord, isIter } from "../utils";
 
@@ -64,6 +64,7 @@ export default class Reactor<T extends object> {
   private rejectable: boolean;
   private getters = new Map<Paths<T>, Set<Mediator<T>>>();
   private setters = new Map<Paths<T>, Set<Mediator<T>>>();
+  private watchers = new Map<Paths<T>, Set<Watcher<T>>>();
   private listenersRecord = new Map<WCPaths<T>, Set<ListenerRecord<T>>>();
   private batch = new Map<Paths<T>, Payload<T>>();
   private isBatching = false;
@@ -95,7 +96,7 @@ export default class Reactor<T extends object> {
           target: Target<T> = { path: fullPath, value, oldValue: Reflect.get(object, key, receiver), key: safeKey, object },
           payload: Payload<T> = { type: "set", target, currentTarget: target, root: this.core };
         if (this.setters.has(fullPath as Paths<T>)) target.value = this._mediate(fullPath as Paths<T>, payload as Payload<T, Paths<T>>, true);
-        return (target.value !== TERMINATOR && Reflect.set(object, key, target.value, receiver) && this._schedule(fullPath, payload), true);
+        return (target.value !== TERMINATOR && Reflect.set(object, key, target.value, receiver) && this._notify(fullPath, payload as Payload<T, Paths<T>>), true);
       },
       deleteProperty: (object, key) => {
         const safeKey = String(key),
@@ -103,7 +104,7 @@ export default class Reactor<T extends object> {
           target: Target<T> = { path: fullPath, oldValue: Reflect.get(object, key), key: safeKey, object },
           payload: Payload<T> = { type: "delete", target, currentTarget: target, root: this.core };
         if (this.setters.has(fullPath as Paths<T>)) target.value = this._mediate(fullPath as Paths<T>, payload as Payload<T, Paths<T>>, true);
-        return (target.value !== TERMINATOR && Reflect.deleteProperty(object, key) && this._schedule(fullPath, payload), true);
+        return (target.value !== TERMINATOR && Reflect.deleteProperty(object, key) && this._notify(fullPath, payload as Payload<T, Paths<T>>), true);
       },
     });
     this.proxyCache.set(obj, proxy);
@@ -122,6 +123,22 @@ export default class Reactor<T extends object> {
       if (!terminated) value = response;
     }
     return value; // set - FIFO, get - LIFO
+  }
+
+  private _notify<P extends Paths<T>>(path: P, payload: Payload<T, P>) {
+    if (this.watchers.has(path)) for (const fn of this.watchers.get(path)!) fn(payload.target.value, payload); // watchers do not support termination
+    this._schedule(path, payload);
+  }
+  private _schedule = (path: Paths<T>, payload: Payload<T>) => (this.batch.set(path, payload), this._initBatching());
+  private _initBatching(): void {
+    if (!this.isBatching) return;
+    this.isBatching = true;
+    queueMicrotask(() => this._flush());
+  }
+  private _flush(): void {
+    (this.tick(this.batch.keys()), this.batch.clear(), (this.isBatching = false));
+    for (const task of this.queue) task();
+    this.queue.clear();
   }
 
   private _wave(path: Paths<T>, payload: Payload<T>): void {
@@ -147,7 +164,6 @@ export default class Reactor<T extends object> {
     }
     if (e.rejected) return; // 4: DEFAULT phase if ever, whole architecture can be reimagined: `State vs Intent` is my view; reactor is dumb
   }
-
   private _fire([path, object, value]: ReturnType<typeof getTrailRecord<T>>[number], e: Event<T>, isCapture: boolean): void {
     const records = this.listenersRecord.get(path);
     if (!records?.size) return;
@@ -161,17 +177,6 @@ export default class Reactor<T extends object> {
       record.cb(e);
     }
     e.type = originalType;
-  }
-
-  private _schedule = (path: Paths<T>, payload: Payload<T>) => (this.batch.set(path, payload), this._initBatching());
-  private _initBatching(): void {
-    if (this.isBatching) return;
-    ((this.isBatching = true), queueMicrotask(() => this._flush()));
-  }
-  private _flush(): void {
-    (this.tick(this.batch.keys()), this.batch.clear(), (this.isBatching = false));
-    for (const task of this.queue) task();
-    this.queue.clear();
   }
 
   tick(paths?: Paths<T> | Iterable<Paths<T>>): void {
@@ -196,6 +201,13 @@ export default class Reactor<T extends object> {
   }
   noset = <P extends Paths<T>>(path: P, cb: Mediator<T, P>) => this.setters.get(path)?.delete(cb as Mediator<T>);
 
+  watch<P extends Paths<T>>(path: P, cb: Watcher<T, P>, lazy?: boolean): () => void {
+    const task = () => (this.watchers.get(path) ?? this.watchers.set(path, new Set()).get(path)!).add(cb as Watcher<T>);
+    lazy ? this.stall(task) : task();
+    return () => (lazy && this.nostall(task), this.nowatch<P>(path, cb));
+  }
+  nowatch = <P extends Paths<T>>(path: P, cb: Watcher<T, P>) => this.watchers.get(path)?.delete(cb as Watcher<T>);
+
   on<P extends WCPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): (typeof this)["off"] {
     const records = this.listenersRecord.get(path),
       capture = Reactor.parseEOpt(options, "capture");
@@ -209,6 +221,7 @@ export default class Reactor<T extends object> {
     if (!added) (records ?? this.listenersRecord.set(path, new Set()).get(path)!).add({ cb: cb as Listener<T>, capture, once: Reactor.parseEOpt(options, "once") });
     return () => this.off<P>(path, cb, options);
   }
+  once = <P extends WCPaths<T>>(path: P, cb: Listener<T, P>, options?: Omit<ListenerOptions, "once">): (typeof this)["off"] => this.on<P>(path, cb, { ...options, once: true });
   off<P extends WCPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions) {
     const records = this.listenersRecord.get(path),
       capture = Reactor.parseEOpt(options, "capture");
@@ -226,7 +239,7 @@ export default class Reactor<T extends object> {
   };
 
   reset(): void {
-    (this.getters.clear(), this.setters.clear(), this.listenersRecord.clear());
+    (this.getters.clear(), this.setters.clear(), this.watchers.clear(), this.listenersRecord.clear());
     (this.queue.clear(), this.batch.clear(), (this.isBatching = false));
     this.proxyCache = new WeakMap();
     (this.core as any) = null;

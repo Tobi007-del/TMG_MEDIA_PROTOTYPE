@@ -30,6 +30,11 @@ export type Mediator<T, P extends Paths<T> = Paths<T>> = (
   payload: Payload<T, P>,
 ) => PathValue<T, P> | typeof TERMINATOR;
 
+export type Watcher<T, P extends Paths<T> = Paths<T>> = (
+  value?: PathValue<T, P>,
+  payload?: Payload<T, P>,
+) => void;
+
 export type Listener<T, P extends WCPaths<T> = WCPaths<T>> = (
   event: Event<T, P>,
 ) => void;
