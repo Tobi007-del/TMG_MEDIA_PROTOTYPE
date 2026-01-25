@@ -138,6 +138,7 @@ export interface Settings {
       };
     };
     progressBar: boolean;
+    draggable: ("" | "big" | "wrapper")[] | boolean;
   };
   errorMessages: Record<ErrorCode, string>;
   fastPlay: {

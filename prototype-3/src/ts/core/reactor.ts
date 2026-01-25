@@ -9,10 +9,11 @@ export class Event<T, P extends WCPaths<T> = WCPaths<T>> {
   static readonly CAPTURING_PHASE = 1;
   static readonly AT_TARGET = 2;
   static readonly BUBBLING_PHASE = 3;
-  public type: string;
-  public currentTarget: Payload<T, P>["target"];
+  public type: Payload<T, P>["type"];
+  public currentTarget: Payload<T, P>["currentTarget"];
   public eventPhase: number = Event.NONE;
   readonly target: Payload<T, P>["target"];
+  readonly root: Payload<T, P>["root"];
   readonly path: Target<T, P>["path"];
   readonly value: Target<T, P>["value"];
   readonly oldValue: Target<T, P>["oldValue"];
@@ -27,6 +28,7 @@ export class Event<T, P extends WCPaths<T> = WCPaths<T>> {
     this.type = payload.type;
     this.target = payload.target;
     this.currentTarget = payload.currentTarget;
+    this.root = payload.root;
     this.value = payload.target.value;
     this.oldValue = payload.target.oldValue;
     this.path = payload.target.path;
