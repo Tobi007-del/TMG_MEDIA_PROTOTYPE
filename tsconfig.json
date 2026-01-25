@@ -10,6 +10,6 @@
     "incremental": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["prototype-3/src/ts/**/*.ts"],
+  "include": ["src/ts/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

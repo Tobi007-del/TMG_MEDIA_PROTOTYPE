@@ -1,4 +1,4 @@
-import { mergeObjs, parseAnyObj } from "../src/ts/utils/obj";
+import { mergeObjs, parseAnyObj } from "../utils/obj";
 
 // ============================================
 // Example 1: Type-safe mergeObjs

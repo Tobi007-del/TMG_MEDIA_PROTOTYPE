@@ -247,7 +247,7 @@ class tmg_Video_Controller {
     this.initSettingsUIManager();
     this.initPlayer();
   }
-  guardGenericPaths = () => ["media", "media.links", "settings.toasts", "settings.css", "settings.controlPanel", "lightState", "lightState.preview", "settings.time", "settings.playbackRate", "settings.volume", "settings.brightness"].forEach((p) => this.config.on(p, this.config.cascade));
+  guardGenericPaths = () => ["media", "media.links", "settings.toasts", "settings.toasts.nextVideoPreview", "settings.css", "settings.controlPanel", "lightState", "lightState.preview", "settings.time", "settings.playbackRate", "settings.volume", "settings.brightness"].forEach((p) => this.config.on(p, this.config.cascade));
   plugSources() {
     const { src, sources } = this.config;
     this.config.get("src", () => this.video.src);
@@ -260,20 +260,20 @@ class tmg_Video_Controller {
   plugTracks() {
     const { tracks } = this.config;
     this.config.get("tracks", () => tmg.getTracks(this.video));
-    this.config.watch("tracks", (value = []) => this.config.tracks.some((t) => !value?.some((tr) => tmg.isSameURL(tr.src, t.src))) && (tmg.removeTracks(this.video), value?.length && tmg.addTracks(value, this.video)));
+    this.config.watch("tracks", (value = [], { root }) => root.tracks.some((t) => !value?.some((tr) => tmg.isSameURL(tr.src, t.src))) && (tmg.removeTracks(this.video), value?.length && tmg.addTracks(value, this.video)));
     if ("tracks" in this.config) this.config.tracks = tracks;
   }
   plugPlaylist() {
     this.config.get("playlist", (value) => (value?.length ? value : null));
     this.config.set("playlist", (value) => value?.map((v) => tmg.mergeObjs(tmg.DEFAULT_VIDEO_ITEM_BUILD, tmg.parseAnyObj(v))));
-    this.config.on("playlist", () => {
+    this.config.on("playlist", ({ root }) => {
       if (this.readyState < 1) return;
-      const v = this.config.playlist?.find((v) => (v.media.id && v.media.id === this.config.media.id) || tmg.isSameURL(v.src, this.config.src));
-      this.currentPlaylistIndex = v ? this.config.playlist.indexOf(v) : 0;
+      const v = root.playlist?.find((v) => (v.media.id && v.media.id === root.media.id) || tmg.isSameURL(v.src, root.src));
+      this.currentPlaylistIndex = v ? root.playlist.indexOf(v) : 0;
       if (v) {
-        this.config.media = v.media;
+        root.media = v.media;
         ["min", "max", "start", "end", "previews"].forEach((prop) => (this.settings.time[prop] = v.settings.time[prop]));
-        this.config.tracks = v.tracks ?? [];
+        root.tracks = v.tracks ?? [];
         this.setControlsState("playlist");
       } else this.movePlaylistTo(this.currentPlaylistIndex);
     });
@@ -282,7 +282,7 @@ class tmg_Video_Controller {
   setPosterState = (poster = this.config.media.artwork?.[0]?.src) => !tmg.isSameURL(poster, this.video.poster) && (poster ? this.video.setAttribute("poster", poster) : this.video.removeAttribute("poster"));
   plugMedia() {
     this.setImgLoadState({ target: this.DOM.videoProfile });
-    ["media.title", "media.artist", "media.profile"].forEach((e) => this.config.watch(e, (value) => (this.settings.controlPanel[e.replace("media.", "")] = value)));
+    ["media.title", "media.artist", "media.profile"].forEach((e) => this.config.watch(e, (value, { root }) => (root.settings.controlPanel[e.replace("media.", "")] = value)));
     ["media.links.title", "media.links.artist"].forEach((p) =>
       this.config.on(p, ({ target: { key, value } }) => {
         value ? this.DOM[`video${tmg.capitalize(key)}`].setAttribute("href", value) : this.DOM[`video${tmg.capitalize(key)}`].removeAttribute("href");
@@ -316,8 +316,12 @@ class tmg_Video_Controller {
   notify = (event) => this.settings.notifiers && this.fire(event, null, this.DOM.notifiersContainer);
   plugToastsSettings = () => {
     this.config.on("settings.toasts.disabled", ({ target: { value } }) => value && t007.toast.dismissAll(this.id)); // dismissals are mandatory
-    this.config.on("settings.toasts.nextVideoPreview.usePoster", ({ target: { value } }) => this.nextVideoPreview && (!value || !this.nextVideoPreview.poster) && (this.currentTime = this.settings.toasts.nextVideoPreview.time));
-    this.config.on("settings.toasts.nextVideoPreview.time", ({ target: { value } }) => this.nextVideoPreview && !this.nextVideoPreview.poster && (this.nextVideoPreview.currentTime = value));
+    this.config.on("settings.toasts.nextVideoPreview.usePoster", ({ target: { value, object } }) => this.nextVideoPreview && (!value || !this.nextVideoPreview.poster) && (object[object.tease ? "tease" : "time"] = object[object.tease ? "tease" : "time"]));
+    this.config.on("settings.toasts.nextVideoPreview.tease", ({ target: { value, object } }) => {
+      if (this.nextVideoPreview) this.nextVideoPreview.ontimeupdate = ({ target: p }) => tmg.safeNum(p.currentTime) >= object.time && p.pause();
+      value && (!object.usePoster || !this.nextVideoPreview.poster) && this.nextVideoPreview.play();
+    });
+    this.config.on("settings.toasts.nextVideoPreview.time", ({ target: { value, object } }) => this.nextVideoPreview && (!object.usePoster || !this.nextVideoPreview.poster) && (this.nextVideoPreview.currentTime = tmg.safeNum(value)));
     this.config.on("settings.toasts", ({ type, target: { path, key, value } }) => type === "update" && !path.match(/disabled|nextVideoPreview|captureAutoClose/) && t007.toast.doForAll("update", { [key]: value }, this.id));
   };
   get toast() {
@@ -746,7 +750,7 @@ class tmg_Video_Controller {
     (this.setVideoEventListeners(), this.setControlsEventListeners());
     (this.plugMedia(), this.plugLightState(), this.plugVolumeSettings(), this.plugBrightnessSettings(), this.plugPlaybackRateSettings(), this.plugCaptionsSettings());
     (this.plugTimeSettings(), this.plugModesSettings(), this.plugBetaSettings(), this.plugKeysSettings(), this.plugToastsSettings());
-    this[`toggle${tmg.capitalize(this.initialMode)}Mode`]?.(true);
+    this[`toggle${tmg.capitalize(this.config.initialMode)}Mode`]?.(true);
     !this.video.currentSrc && this._handleLoadedError();
     this._handleLoadStart();
     this.setReadyState(1);
@@ -755,7 +759,7 @@ class tmg_Video_Controller {
   }
   plugLightState() {
     this.config.set("lightState.disabled", (value) => (this.readyState !== 1 ? TERMINATOR : value));
-    this.config.on("lightState.disabled", ({ target: { value, object } }) => {
+    this.config.on("lightState.disabled", ({ target: { value, object }, root }) => {
       if (value) {
         if (this.settings.time.start != null) this.actualTimeStart = this.currentTime = this.settings.time.start;
         this.videoContainer.classList.remove("tmg-video-light");
@@ -763,16 +767,16 @@ class tmg_Video_Controller {
         this.DOM.controlsContainer.removeEventListener("click", this._handleLightStateClick);
         this.initHeavyControls();
       } else {
-        this.config.lightState.preview.usePoster = object.preview.usePoster;
-        this.config.lightState.preview.time = object.preview.time;
+        root.lightState.preview.usePoster = object.preview.usePoster;
+        root.lightState.preview.time = object.preview.time;
         this.videoContainer.classList.add("tmg-video-light");
         this.video.addEventListener("play", this.removeLightState);
         this.DOM.controlsContainer.addEventListener("click", this._handleLightStateClick);
       }
     });
     this.config.on("lightState.controls", () => this.queryDOM("[data-control-id]", false, true).forEach((c) => (c.dataset.lightControl = this.isLight(c.dataset.controlId) ? "true" : "false")));
-    this.config.on("lightState.preview.usePoster", ({ target: { value } }) => !this.config.lightState.disabled && (!value || !this.video.poster) && (this.currentTime = this.config.lightState.preview.time));
-    this.config.on("lightState.preview.time", ({ target: { value } }) => !this.config.lightState.disabled && !this.video.poster && (this.currentTime = value));
+    this.config.on("lightState.preview.usePoster", ({ target: { value }, root }) => !root.lightState.disabled && (!value || !this.video.poster) && (this.currentTime = root.lightState.preview.time));
+    this.config.on("lightState.preview.time", ({ target: { value, object }, root }) => !root.lightState.disabled && (!object.usePoster || !this.video.poster) && (this.currentTime = value));
     this.config.lightState = this.config.lightState;
   }
   addLightState = () => (this.config.lightState.disabled = false);
@@ -1273,7 +1277,7 @@ class tmg_Video_Controller {
       position: "bottom-right",
       bodyHTML: `<span title="Play next video" class="tmg-video-next-preview-wrapper">
         <button type="button"><svg viewBox="0 0 25 25"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg></button>
-        <video class="tmg-video-next-preview" poster="${v.media?.artwork?.[0]?.src}" src="${v.src || ""}"${(this.settings.toasts.nextVideoPreview.usePoster ? !v.media?.artwork?.[0]?.src : true) && this.settings.toasts.nextVideoPreview.tease ? " autoplay " : " "}muted playsinline webkit-playsinline preload="metadata"></video>
+        <video class="tmg-video-next-preview" poster="${v.media?.artwork?.[0]?.src}" src="${v.src || ""}" muted playsinline webkit-playsinline preload="metadata"></video>
         <p>${this.toTimeText(NaN)}</p>
       </span>
       <span class="tmg-video-next-info">
@@ -1292,7 +1296,7 @@ class tmg_Video_Controller {
     const nVP = (this.nextVideoPreview = this.queryDOM(".tmg-video-next-preview"));
     v.sources?.length && tmg.addSources(v.sources, nVP);
     ["loadedmetadata", "loaded", "durationchange"].forEach((e) => nVP?.addEventListener(e, ({ target: p }) => (p.nextElementSibling.textContent = this.toTimeText(p.duration))));
-    this.settings.toasts.nextVideoPreview.tease ? nVP?.addEventListener("timeupdate", ({ target: p }) => tmg.safeNum(p.currentTime) >= this.settings.toasts.nextVideoPreview.time && p.pause()) : (nVP.currentTime = tmg.safeNum(this.settings.toasts.nextVideoPreview.time));
+    this.settings.toasts.nextVideoPreview = this.settings.toasts.nextVideoPreview; // force UI update
     nVP?.previousElementSibling?.addEventListener("click", () => (cleanUp(true), this.nextVideo()), true); // all admittedly a terse func, auto next shouldn't be deep
   }
   _handlePlay() {
@@ -1533,9 +1537,9 @@ class tmg_Video_Controller {
   moveVideoFrame = (dir = "forwards") => this.video.paused && this.throttle("frameStepping", () => (this.currentTime = tmg.clamp(0, Math.round(this.currentTime * this.pfps) + (dir === "backwards" ? -1 : 1), Math.floor(this.duration * this.pfps)) / this.pfps), this.pframeDelay);
   plugPlaybackRateSettings() {
     // currently, playback rate is not completely wired by batched listeners but updates directly on the browser events so watch is used below
-    this.config.watch("settings.playbackRate.value", (value) => (this.video.playbackRate = this.video.defaultPlaybackRate = tmg.clamp(this.settings.playbackRate.min, value, this.settings.playbackRate.max)));
-    this.config.watch("settings.playbackRate.min", (min) => this.settings.playbackRate.value < min && (this.settings.playbackRate.value = min));
-    this.config.watch("settings.playbackRate.max", (max) => this.settings.playbackRate.value > max && (this.settings.playbackRate.value = max));
+    this.config.watch("settings.playbackRate.value", (value, { target: { object } }) => (this.video.playbackRate = this.video.defaultPlaybackRate = tmg.clamp(object.min, value, object.max)));
+    this.config.watch("settings.playbackRate.min", (min, { target: { object } }) => object.value < min && (object.value = min));
+    this.config.watch("settings.playbackRate.max", (max, { target: { object } }) => object.value > max && (object.value = max));
     this.settings.playbackRate = { value: this.video.playbackRate, ...this.settings.playbackRate };
     this.config.get("settings.playbackRate.value", () => this.video.playbackRate, true);
   }
@@ -1633,8 +1637,8 @@ class tmg_Video_Controller {
       !value && this.previewCaptions(`${this.video.textTracks[this.textTrackIndex].label} ${this.videoContainer.dataset.trackKind} \n Click ⚙ for settings`);
     });
     ["font.family", "font.size", "font.weight", "font.variant", "background.color", "background.opacity", "window.color", "window.opacity", "characterEdgeStyle", "textAlignment"].forEach((prop) => this.config.watch(`settings.captions.${prop}.value`, (value) => ((this.settings.css[tmg.camelize(`captions.${prop}`, /\./)] = value), this.syncCaptionsSize())));
-    this.config.watch("settings.captions.font.size.min", (min) => this.settings.captions.font.size.value < min && (this.settings.captions.font.size.value = min));
-    this.config.watch("settings.captions.font.size.max", (max) => this.settings.captions.font.size.value > max && (this.settings.captions.font.size.value = max));
+    this.config.watch("settings.captions.font.size.min", (min, { target: { object } }) => object.value < min && (object.value = min));
+    this.config.watch("settings.captions.font.size.max", (max, { target: { object } }) => object.value > max && (object.value = max));
   }
   toggleCaptions = () => {
     if (!this.video.textTracks[this.textTrackIndex]) return this.previewCaptions("No captions available for this video");
@@ -1806,9 +1810,9 @@ class tmg_Video_Controller {
         this.shouldMute = this.shouldSetLastVolume = false;
       }
     }); // runs after boolean changes, toggle
-    this.config.on("settings.volume.min", ({ target: { value: min } }) => (this.settings.volume.value < min && (this.settings.volume.value = min), this.lastVolume < min && (this.lastVolume = min)));
-    this.config.on("settings.volume.max", ({ target: { value: max } }) => {
-      (this.settings.volume.value > max && (this.settings.volume.value = max), this.lastVolume > max && (this.lastVolume = max));
+    this.config.on("settings.volume.min", ({ target: { value: min, object } }) => (object.value < min && (object.value = min), this.lastVolume < min && (this.lastVolume = min)));
+    this.config.on("settings.volume.max", ({ target: { value: max, object } }) => {
+      (object.value > max && (object.value = max), this.lastVolume > max && (this.lastVolume = max));
       this.videoContainer.classList.toggle("tmg-video-volume-boost", max > 100);
       this.DOM.volumeSlider.max = max;
       this.settings.css.volumeSliderPercent = Math.round((100 / max) * 100);
@@ -1908,9 +1912,9 @@ class tmg_Video_Controller {
         this.shouldDark = this.shouldSetLastBrightness = false;
       }
     }); // runs after boolean changes, toggle
-    this.config.on("settings.brightness.min", ({ target: { value: min } }) => (this.settings.brightness.value < min && (this.settings.brightness.value = min), this.lastBrightness < min && (this.lastBrightness = min)));
-    this.config.on("settings.brightness.max", ({ target: { value: max } }) => {
-      (this.settings.brightness.value > max && (this.settings.brightness.value = max), this.lastBrightness > max && (this.lastBrightness = max));
+    this.config.on("settings.brightness.min", ({ target: { value: min, object } }) => (object.value < min && (object.value = min), this.lastBrightness < min && (this.lastBrightness = min)));
+    this.config.on("settings.brightness.max", ({ target: { value: max, object } }) => {
+      (object.value > max && (object.value = max), this.lastBrightness > max && (this.lastBrightness = max));
       this.videoContainer.classList.toggle("tmg-video-brightness-boost", max > 100);
       this.DOM.brightnessSlider.max = max;
       this.settings.css.brightnessSliderPercent = Math.round((100 / max) * 100);
@@ -2001,10 +2005,10 @@ class tmg_Video_Controller {
     this.syncThumbnailSize();
   }
   plugModesSettings() {
-    this.config.on("settings.modes.fullscreen.disabled", () => value && this.isUIActive("fullscreen") && this.toggleFullscreenMode());
+    this.config.on("settings.modes.fullscreen.disabled", ({ target: { value } }) => value && this.isUIActive("fullscreen") && this.toggleFullscreenMode());
     this.config.on("settings.modes.theater", ({ target: { value } }) => !value && this.isUIActive("theater") && this.toggleTheaterMode());
-    this.config.on("settings.modes.pictureInPicture", () => !value && (this.isUIActive("pictureInPicture") || this.isUIActive("floatingPlayer")) && this.togglePictureInPictureMode());
-    this.config.on("settings.modes.miniplayer.disabled", () => value && this.toggleMiniplayerMode(false));
+    this.config.on("settings.modes.pictureInPicture", ({ target: { value } }) => !value && (this.isUIActive("pictureInPicture") || this.isUIActive("floatingPlayer")) && this.togglePictureInPictureMode());
+    this.config.on("settings.modes.miniplayer.disabled", ({ target: { value } }) => value && this.toggleMiniplayerMode(false));
   }
   toggleTheaterMode = () => {
     if (!this.settings.modes.theater && !this.isUIActive("theater")) return;
@@ -2557,7 +2561,7 @@ class tmg_Video_Controller {
   }
   _handleDragStart(e) {
     const { target: t, dataTransfer } = e;
-    if (!t?.tagName) return;
+    if (t.dataset.draggableControl !== "true" || !t?.tagName) return;
     if (t.matches(":has(input:is(:hover, :active))")) return e.preventDefault();
     dataTransfer.effectAllowed = "move";
     this.dragging = t;
@@ -2574,7 +2578,7 @@ class tmg_Video_Controller {
     if (t.dataset.dragId === "wrapper" && t.parentElement?.dataset.dragId === "wrapper") tmg.assignAny(this.cZoneWs, this.getUIZoneWCoord(t), t);
     this.syncControlPanelToUI();
   }
-  noDropOff = (t, drop = this.dragging) => t.dataset.dropZone === "false" || !drop?.tagName || t.dataset.dragId !== drop.dataset.dragId;
+  noDropOff = (t, drop = this.dragging) => t.dataset.dropZone !== "true" || !drop?.tagName || t.dataset.dragId !== drop.dataset.dragId;
   _handleDragEnter = ({ target: t }) => !this.noDropOff(t) && this.dragging && t.classList.add("tmg-video-dragover");
   _handleDragOver(e) {
     const { target: t, clientX: x, dataTransfer } = e;
@@ -2617,11 +2621,7 @@ class tmg_Media_Player {
   set build(customBuild) {
     this.configure(customBuild);
   }
-  queryBuild() {
-    if (!this.#active) return true;
-    (console.error("TMG has already deployed the custom controls of your build configuration"), console.warn("Consider setting your build configuration before attaching your media element"));
-    return false;
-  }
+  queryBuild = () => (!this.#active ? true : (console.error("TMG has already deployed the custom controls of your build configuration"), console.warn("Consider setting your build configuration before attaching your media element"), false));
   configure(customBuild) {
     if (!this.queryBuild() || !tmg.isObj(customBuild)) return;
     this.#build = tmg.mergeObjs(this.#build, tmg.parseAnyObj(customBuild));
@@ -2629,9 +2629,8 @@ class tmg_Media_Player {
     ["blocks", "overrides"].forEach((k) => (this.#build.settings.keys[k] = tmg.cleanKeyCombo(this.#build.settings.keys[k])));
   }
   async attach(medium) {
-    if (tmg.isIter(medium)) {
-      (console.error("An iterable argument cannot be attached to the TMG media player"), console.warn("Consider looping the iterable argument to get a single argument and instantiate a new 'tmg.Player' for each"));
-    } else if (!this.#active) {
+    if (tmg.isIter(medium)) (console.error("An iterable argument cannot be attached to the TMG media player"), console.warn("Consider looping the iterable argument to get a single argument and instantiate a new 'tmg.Player' for each"));
+    else if (!this.#active) {
       medium.tmgPlayer?.detach();
       ((medium.tmgPlayer = this), (this.#medium = medium));
       (await this.fetchCustomOptions(), await this.#deployController());
@@ -2644,7 +2643,7 @@ class tmg_Media_Player {
     tmg.Controllers.splice(tmg.Controllers.indexOf(this.Controller), 1);
     this.#medium.tmgcontrols = this.#active = false;
     this.Controller.fire("tmgdetached", this.Controller.payload);
-    return ((this.Controller = this.#medium = this.#medium.tmgPlayer = null), medium);
+    return ((this.#medium.tmgPlayer = this.Controller = this.#medium = null), medium);
   }
   async fetchCustomOptions() {
     let fetchedControls;
@@ -2666,7 +2665,7 @@ class tmg_Media_Player {
     if (this.#active || !this.#medium.isConnected) return;
     if (this.#build.playlist?.[0]) this.configure(tmg.mergeObjs(tmg.DEFAULT_VIDEO_ITEM_BUILD, tmg.parseAnyObj(this.#build.playlist[0])));
     if (!(this.#medium instanceof HTMLVideoElement)) return (console.error(`TMG could not deploy custom controls on the '${this.#medium.tagName}' element as it is not supported`), console.warn("TMG only supports the 'VIDEO' element currently"));
-    ((this.#medium.controls = false), (this.#medium.tmgcontrols = this.#active = true));
+    this.#medium.tmgcontrols = this.#active = !(this.#medium.controls = false);
     this.#medium.classList.add("tmg-video", "tmg-media");
     const s = this.#build.settings; // doing some cleanup to the settings
     this.#medium.playsInline = s.playsInline ??= this.#medium.playsInline;
