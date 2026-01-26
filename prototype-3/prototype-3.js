@@ -2108,7 +2108,7 @@ class tmg_Video_Controller {
       this.videoContainer.classList.add("tmg-video-miniplayer", "tmg-video-progress-bar");
       ["mousedown", "touchstart"].forEach((e) => this.videoContainer.addEventListener(e, this._handleMiniplayerDragStart));
     } else if ((active && this.parentIntersecting) || (active && window.innerWidth < this.settings.modes.miniplayer.minWindowWidth) || (bool === false && active)) {
-      if (behavior && tmg.inWindowView(this.pseudoVideoContainer)) this.pseudoVideoContainer.scrollIntoView({ behavior, block: "center", inline: "center" });
+      if (behavior && tmg.inDocView(this.pseudoVideoContainer)) this.pseudoVideoContainer.scrollIntoView({ behavior, block: "center", inline: "center" });
       this.deactivatePseudoMode();
       this.videoContainer.classList.remove("tmg-video-miniplayer");
       this.videoContainer.classList.toggle("tmg-video-progress-bar", this.settings.controlPanel.progressBar);
@@ -2951,7 +2951,7 @@ var tmg = {
   isArr: (arr) => Array.isArray(arr),
   isValidNum: (number) => !isNaN(number ?? NaN) && number !== Infinity,
   inBoolArrOpt: (opt, str) => opt?.includes?.(str) ?? opt,
-  inWindowView(el, axis = "y") {
+  inDocView(el, axis = "y") {
     const rect = el.getBoundingClientRect(),
       inX = rect.right >= 0 && rect.left <= (window.innerWidth || document.documentElement.clientWidth),
       inY = rect.bottom >= 0 && rect.top <= (window.innerHeight || document.documentElement.clientHeight);
@@ -3359,6 +3359,30 @@ var tmg = {
     return tmg.isArr(required) ? required.some((req) => match(req, actual)) : match(required, actual);
   },
   formatKeyForDisplay: (combo) => ` ${(tmg.isArr(combo) ? combo : [combo]).map((c) => `(${c})`).join(" or ")}`,
+  AsyncQueue: class T_M_G_Async_Queue {
+    constructor() {
+      ((this.jobs = []), (this.running = false)); // add jobs, performs and reports sequentially; drop job, reports; cancel job, records, reports when about to perform
+    }
+    async _handle() {
+      if (this.running) return;
+      this.running = true;
+      while (this.jobs.length > 0) {
+        const job = this.jobs.shift();
+        if (job) (job.cancelled ? job.resolve({ success: false, cancelled: true, dropped: false }) : job.preTask?.(), job.resolve(await job.task()));
+      }
+      this.running = false;
+    }
+    add = (task, id, cancelled, preTask) => new Promise((resolve) => this.jobs.push({ task, id, preTask, cancelled, resolve }), this._handle());
+    drop(id) {
+      const job = this.jobs.find((j) => j.id === id);
+      job?.resolve({ success: false, cancelled: true, dropped: true });
+      return (job && this.jobs.splice(this.jobs.indexOf(job), 1), !!job); // stops immediately, cant't remove a running job
+    }
+    cancel(id) {
+      const job = this.jobs.find((j) => j.id === id);
+      return (job && (job.cancelled = true), !!job?.cancelled); // stops when it should have for metrics, can't cancel a running job
+    }
+  },
   Controller: tmg_Video_Controller, // THE TMG MEDIA PLAYER CONTROLLER CLASS
   Player: tmg_Media_Player, // THE TMG MEDIA PLAYER BUILDER CLASS
   Controllers: [], // REFERENCES TO ALL THE DEPLOYED TMG MEDIA CONTROLLERS

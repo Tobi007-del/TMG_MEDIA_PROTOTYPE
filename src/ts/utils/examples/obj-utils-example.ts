@@ -1,4 +1,4 @@
-import { mergeObjs, parseAnyObj } from "../utils/obj";
+import { mergeObjs, parseAnyObj } from "../obj";
 
 // ============================================
 // Example 1: Type-safe mergeObjs

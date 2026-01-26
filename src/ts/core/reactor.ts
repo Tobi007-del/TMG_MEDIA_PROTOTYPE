@@ -1,8 +1,9 @@
-import { Target, Payload, Mediator, Listener, ListenerOptions, ListenerRecord, Terminator, ListenerOptionsTuple, ReactorOptions, Watcher } from "../types/reactor";
-import type { Paths, WCPaths } from "../types/obj";
+import { Target, Payload, Mediator, Listener, ListenerOptions, ListenerRecord, ListenerOptionsTuple, ReactorOptions, Watcher } from "../types/reactor";
+import type { Paths, PathValue, WCPaths } from "../types/obj";
 import { isObj, isArr, assignAny, mergeObjs, getTrailPaths, getTrailRecord, isIter } from "../utils";
+import { TERMINATOR } from "../consts/constants";
 
-export const TERMINATOR: Terminator = Symbol("TERMINATOR");
+export { TERMINATOR };
 
 export class Event<T, P extends WCPaths<T> = WCPaths<T>> {
   static readonly NONE = 0;
@@ -79,7 +80,7 @@ export default class Reactor<T extends object> {
     this.core = this._proxify(obj);
   }
 
-  private _proxify(obj: any, path = ""): any {
+  private _proxify<O>(obj: O, path = ""): O {
     if (!(isObj(obj) || isArr(obj)) || "symbol" === typeof obj || "function" === typeof obj || obj instanceof Map || obj instanceof Set || obj instanceof WeakMap || obj instanceof Promise || obj instanceof Element || obj instanceof EventTarget) return obj; // handles direct objects and arrays
     if (this.proxyCache.has(obj)) return this.proxyCache.get(obj);
     // Robust Proxy handler
@@ -87,7 +88,7 @@ export default class Reactor<T extends object> {
       get: (object, key, receiver) => {
         const safeKey = String(key),
           fullPath = (path ? `${path}.${safeKey}` : safeKey) as Paths<T>,
-          target: Target<T> = { path: fullPath, value: Reflect.get(object, key, receiver), key: safeKey, object },
+          target: Target<T> = { path: fullPath, value: Reflect.get(object, key, receiver) as PathValue<T, Paths<T>>, key: safeKey, object },
           payload: Payload<T> = { type: "get", target, currentTarget: target, root: this.core };
         if (this.getters.has(fullPath as Paths<T>)) return this._mediate(fullPath as Paths<T>, payload as Payload<T, Paths<T>>, false);
         return this._proxify(target.value, fullPath);
@@ -95,7 +96,7 @@ export default class Reactor<T extends object> {
       set: (object, key, value, receiver) => {
         const safeKey = String(key),
           fullPath = (path ? `${path}.${safeKey}` : safeKey) as Paths<T>,
-          target: Target<T> = { path: fullPath, value, oldValue: Reflect.get(object, key, receiver), key: safeKey, object },
+          target: Target<T> = { path: fullPath, value, oldValue: Reflect.get(object, key, receiver) as PathValue<T, Paths<T>>, key: safeKey, object },
           payload: Payload<T> = { type: "set", target, currentTarget: target, root: this.core };
         if (this.setters.has(fullPath as Paths<T>)) target.value = this._mediate(fullPath as Paths<T>, payload as Payload<T, Paths<T>>, true);
         return (target.value !== TERMINATOR && Reflect.set(object, key, target.value, receiver) && this._notify(fullPath, payload as Payload<T, Paths<T>>), true);
@@ -103,7 +104,7 @@ export default class Reactor<T extends object> {
       deleteProperty: (object, key) => {
         const safeKey = String(key),
           fullPath = (path ? `${path}.${safeKey}` : safeKey) as Paths<T>,
-          target: Target<T> = { path: fullPath, oldValue: Reflect.get(object, key), key: safeKey, object },
+          target: Target<T> = { path: fullPath, oldValue: Reflect.get(object, key) as PathValue<T, Paths<T>>, key: safeKey, object },
           payload: Payload<T> = { type: "delete", target, currentTarget: target, root: this.core };
         if (this.setters.has(fullPath as Paths<T>)) target.value = this._mediate(fullPath as Paths<T>, payload as Payload<T, Paths<T>>, true);
         return (target.value !== TERMINATOR && Reflect.deleteProperty(object, key) && this._notify(fullPath, payload as Payload<T, Paths<T>>), true);

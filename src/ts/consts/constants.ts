@@ -1,3 +1,10 @@
+import type { Terminator } from "../types/reactor";
+
+// ============ Constants ============
+export const ONCE_KEY = "tmg_once_registry";
+
+export const TERMINATOR: Terminator = Symbol("TERMINATOR");
+
 export const modes = ["fullscreen", "theater", "pictureInPicture", "miniplayer"] as const;
 
 export const controls = ["expandminiplayer", "removeminiplayer", "meta", "capture", "fullscreenorientation", "fullscreenlock", "prev", "playpause", "next", "brightness", "volume", "timeandduration", "spacer", "playbackrate", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const;
@@ -17,3 +24,5 @@ export const errorCodes = [
   4, // MEDIA_ERR_SRC_NOT_SUPPORTED
   5, // MEDIA_ERR_UNKNOWN
 ] as const;
+
+export const whiteListedKeys = [" ", "enter", "escape", "arrowup", "arrowdown", "arrowleft", "arrowright", "home", "end", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;

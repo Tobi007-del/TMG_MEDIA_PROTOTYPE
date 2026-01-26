@@ -1,23 +1,34 @@
+import type { Control, ControlPanelBottomTuple } from "../types/build";
 import type { DeepMerge, Unflatten, WCPaths, Paths, PathValue } from "../types/obj";
 import type { UIObject, UISettings } from "../types/UIOptions";
-import { isDef, camelize } from ".";
+import { camelize } from ".";
 
-export function isIter<T = unknown>(obj: any): obj is Iterable<T> {
-  return obj != null && "function" === typeof obj[Symbol.iterator];
-}
-
-export function isObj<T extends object = object>(obj: any): obj is T {
-  return "object" === typeof obj && obj !== null && !isArr(obj) && "function" !== typeof obj;
+// Type Guards
+export function isDef(val: any): boolean {
+  return val !== undefined;
 }
 
 export function isArr<T = unknown>(obj: any): obj is T[] {
   return Array.isArray(obj);
 }
 
+export function isObj<T extends object = object>(obj: any): obj is T {
+  return "object" === typeof obj && obj !== null && !isArr(obj) && "function" !== typeof obj;
+}
+
+export function isIter<T = unknown>(obj: any): obj is Iterable<T> {
+  return obj != null && "function" === typeof obj[Symbol.iterator];
+}
+
 export function isUISetting<T = unknown>(obj: any): obj is UISettings<T> {
   return isObj(obj) && "options" in obj && isArr(obj.options);
 }
 
+export function inBoolArrOpt(opt: any, str: string): boolean {
+  return opt?.includes?.(str) ?? opt;
+}
+
+// Assignment & Derivation
 export function assignDef<T extends object>(target: T, key: Paths<T>, value: PathValue<T, typeof key>): void {
   isDef(value) && target != null && assignAny(target, key, value);
 }
@@ -89,6 +100,15 @@ export function parseAnyObj<T extends Record<string, any>, const S extends strin
   return result as Unflatten<T, S>;
 }
 
+export function parsePanelBottomObj(obj: Partial<ControlPanelBottomTuple> | Control[][] | Control[] | unknown, arr?: false): ControlPanelBottomTuple | false;
+export function parsePanelBottomObj(obj: Partial<ControlPanelBottomTuple> | Control[][] | Control[] | unknown, arr: true): Control[] | false;
+export function parsePanelBottomObj(obj: Partial<ControlPanelBottomTuple> | Control[][] | Control[] | unknown = [], arr = false): ControlPanelBottomTuple | Control[] | false {
+  if (!isObj(obj) && !isArr(obj)) return false;
+  const [third = [], second = [], first = []] = isObj<Partial<ControlPanelBottomTuple>>(obj) ? (Object.values(obj).reverse() as Control[][]) : isArr((obj as Control[][])[0]) ? [...(obj as Control[][])].reverse() : [obj as Control[]];
+  return arr ? ([...third, ...second, ...first] as Control[]) : ({ 1: first, 2: second, 3: third } as ControlPanelBottomTuple);
+}
+
+// Merging & Traversal
 export function mergeObjs<T1 extends object, T2 extends object>(o1: T1, o2: T2): DeepMerge<T1, T2>;
 export function mergeObjs<T1 extends object>(o1: T1): T1;
 export function mergeObjs<T2 extends object>(o1: undefined | null, o2: T2): T2;

@@ -91,7 +91,7 @@ It is a signal of disapproval, not enforcement.
 
 ### Summary: The Final Piece
 
-I added an event loop for **Intentful State** (declare `cancellable: true`).
+I added an event loop for **Intentful State** (declare `rejectable: true`).
 
 - **State:** Use for immediate things (Settings, Configurations). Updates instantly.
 - **Intent:** Use for requests (Video Play, Seek). Listens and declares when ready, like a wish granted.

@@ -10,7 +10,7 @@ if (typeof window !== "undefined") {
 
 export * as reactor from "./core/reactor";
 // export * as browser from "./utils/browser";
-export * as chores from "./utils/chores";
+export * as chores from "./utils/misc";
 export * as dom from "./utils/dom";
 export * as num from "./utils/num";
 export * as obj from "./utils/obj";

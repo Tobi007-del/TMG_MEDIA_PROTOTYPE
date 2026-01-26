@@ -162,7 +162,7 @@ I also added propagation, but I’m taking it as it’s for those that are doing
 
 So, in summary, I added an event loop to be ready for anything later because when you meet the right people, you have to be ready for anything.
 
-It’s only there for **Intentful State**, which you have to declare when creating the Reactor by passing `cancellable: true` (or rejecting ability). And then to cancel, you have to keep it in mind that you have to go to the front of the line by **Capturing** and then stopping the intent for other people that are not you (even when you’re the owner). They need to know when you disapprove, though you can’t stop a man from wishing.
+It’s only there for **Intentful State**, which you have to declare when creating the Reactor by passing `rejectable: true` (or rejecting ability). And then to cancel, you have to keep it in mind that you have to go to the front of the line by **Capturing** and then stopping the intent for other people that are not you (even when you’re the owner). They need to know when you disapprove, though you can’t stop a man from wishing.
 
 That does it.
 
@@ -228,7 +228,7 @@ config.on("volume", (e) => (slider.value = e.value));
 
 _"I don't care if the volume changes 0.001ms later, as long as the slider animation doesn't stutter."_
 
-### The Distilled Rules of Notificatons 📜
+### The Distilled Rules of Notifications 📜
 
 #### Rule 1: The Rule of Survival (Sync) - `Reactor.watch()`
 
