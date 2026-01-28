@@ -1,4 +1,4 @@
-export default function bindMethods(
+export function bindMethods(
   owner: any,
   callback = (method: string, owner: any) => {
     owner[method] = owner[method].bind(owner);

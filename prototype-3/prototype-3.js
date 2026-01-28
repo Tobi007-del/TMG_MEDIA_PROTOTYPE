@@ -192,7 +192,7 @@ class Reactor {
         break;
       }
     }
-    if (!added) (records ?? this.listenersRecord.set(path, new Set()).get(path)).add({ cb, capture, once: Reactor.parseEOpt(options, "once") });
+    if (!added) (records ?? this.listenersRecord.set(path, new Set()).get(path)).add({ cb, capture, once: Reactor.parseEOpt(options, "once", false) });
     return () => this.off(path, cb, options);
   };
   once = (path, cb, options) => this.on(path, cb, { ...options, once: true });
@@ -205,7 +205,7 @@ class Reactor {
     }
     return false;
   };
-  static parseEOpt = (options = false, opt) => ("boolean" === typeof options ? options : !!options?.[opt]);
+  static parseEOpt = (options = false, opt, isBoolOpt = true) => ("boolean" === typeof options ? isBoolOpt && options : !!options?.[opt]);
   cascade = ({ type, currentTarget: { path, value: news, oldValue: olds } }, objSafe = true) => {
     if ((type !== "set" && type !== "delete") || !tmg.isObj(news) || !tmg.isObj(olds)) return;
     for (const [key, value] of Object.entries(objSafe ? tmg.mergeObjs(olds, news) : news)) tmg.assignAny(this.core, `${path}.${key}`, value); // smart progressive enhancement for objects
@@ -232,7 +232,7 @@ class tmg_Video_Controller {
     (this.guardGenericPaths(), this.guardTimeValues(), this.plugSources(), this.plugTracks(), this.plugPlaylist());
     const { src, sources, tracks } = this.config;
     this.log((this.buildCache = { ...this.buildCache, ...(src ? { src } : null), ...(sources?.length ? { sources } : null), tracks })); // adding some info incase user had them burnt into the html
-    this.audioSetup = this.loaded = this.locked = this.isScrubbing = this.buffering = this.inFullscreen = this.inFloatingPlayer = this.overTimeline = this.overVolume = this.overBrightness = this.gestureTouchXCheck = this.gestureTouchYCheck = this.gestureWheelXCheck = this.gestureWheelYCheck = this.shouldSetLastVolume = this.shouldSetLastBrightness = this.speedPointerCheck = this.speedCheck = this.skipPersist = this.shouldCancelTimeScrub = false;
+    this.audioSetup = this.loaded = this.isScrubbing = this.buffering = this.inFullscreen = this.inFloatingPlayer = this.overTimeline = this.overVolume = this.overBrightness = this.gestureTouchXCheck = this.gestureTouchYCheck = this.gestureWheelXCheck = this.gestureWheelYCheck = this.shouldSetLastVolume = this.shouldSetLastBrightness = this.speedPointerCheck = this.speedCheck = this.skipPersist = this.shouldCancelTimeScrub = false;
     this.parentIntersecting = this.isIntersecting = this.gestureTouchCanCancel = this.canAutoMovePlaylist = this.stallCancelTimeScrub = true;
     this.currentPlaylistIndex = this.skipDuration = this.textTrackIndex = this.rewindPlaybackRate = this.playTriggerCounter = 0;
     this.wasPaused = !this.video.autoplay;
@@ -824,7 +824,7 @@ class tmg_Video_Controller {
     !this.video.paused ? this.setReadyState(3) : this.video.addEventListener("play", () => this.setReadyState(3), { once: true });
   }
   setKeyEventListeners(act = "add", main = !this.isUIActive("settings"), area) {
-    if (this.disabled || this.locked) return;
+    if (this.disabled || this.settings.locked) return;
     main && [this.floatingWindow, area !== "floating" ? window : null].forEach((w) => w?.[`${act}EventListener`]("keydown", this._handleKeyDown));
     [this.floatingWindow, area !== "floating" ? window : null].forEach((w) => w?.[`${act}EventListener`]("keyup", main ? this._handleKeyUp : this._handleSettingsKeyUp));
   }
@@ -1077,24 +1077,26 @@ class tmg_Video_Controller {
     });
     this.disabled = this.disabled;
   }
-  lock() {
-    this.leaveSettingsView();
-    setTimeout(this.showLockedOverlay);
-    this.videoContainer.classList.add("tmg-video-locked", "tmg-video-progress-bar");
-    this.removeOverlay("force");
-    this.setKeyEventListeners("remove");
-    this.locked = true;
+  plugLocked() {
+    this.config.on("settings.locked", async ({ target: { value } }) => {
+      if (value) {
+        this.leaveSettingsView();
+        setTimeout(this.showLockedOverlay);
+        this.videoContainer.classList.add("tmg-video-locked", "tmg-video-progress-bar");
+        this.removeOverlay("force");
+        this.setKeyEventListeners("remove");
+      } else {
+        this.removeLockedOverlay();
+        await tmg.mockAsync(tmg.parseCSSTime(this.settings.css.switchTransitionTime));
+        this.videoContainer.classList.toggle("tmg-video-progress-bar", this.settings.controlPanel.progressBar);
+        this.videoContainer.classList.remove("tmg-video-locked");
+        this.showOverlay();
+        this.setKeyEventListeners("add");
+      }
+    });
   }
-  async unlock() {
-    if (!this.locked) return;
-    this.locked = false;
-    this.removeLockedOverlay();
-    await tmg.mockAsync(tmg.parseCSSTime(this.settings.css.switchTransitionTime));
-    this.videoContainer.classList.toggle("tmg-video-progress-bar", this.settings.controlPanel.progressBar);
-    this.videoContainer.classList.remove("tmg-video-locked");
-    this.showOverlay();
-    this.setKeyEventListeners("add");
-  }
+  lock = () => (this.config.settings.locked = true);
+  unlock = () => (this.config.settings.locked = false);
   _handleLockBtnClick(e) {
     e.stopPropagation();
     this.delayLockedOverlay();
@@ -1182,7 +1184,7 @@ class tmg_Video_Controller {
     set("nexttrack", this.config.playlist && this.currentPlaylistIndex < this.config.playlist.length - 1 ? this.nextVideo : null);
   }
   syncMediaAspectRatio() {
-    this.config.mediaAspectRatio = this.video.videoWidth && this.video.videoHeight ? this.video.videoWidth / this.video.videoHeight : 16 / 9;
+    this.mediaAspectRatio = this.video.videoWidth && this.video.videoHeight ? this.video.videoWidth / this.video.videoHeight : 16 / 9;
     this.settings.css.aspectRatio = this.video.videoWidth && this.video.videoHeight ? `${this.video.videoWidth} / ${this.video.videoHeight}` : "16 / 9";
   }
   isUIActive(mode) {
@@ -2154,7 +2156,7 @@ class tmg_Video_Controller {
     if (!this.isUIActive("miniplayer")) (this[this.settings.gesture.click]?.(), this.settings.gesture.click === "togglePlay" && (this.video.paused ? this.notify("videopause") : this.notify("videoplay")));
   }
   _handleLockScreenClick() {
-    if (!this.locked) return;
+    if (!this.settings.locked) return;
     this.videoContainer.classList.toggle("tmg-video-locked-overlay");
     this.DOM.screenLockedBtn.classList.remove("tmg-video-control-unlock");
     this.delayLockedOverlay();
@@ -2197,7 +2199,7 @@ class tmg_Video_Controller {
     this.videoContainer.classList.add("tmg-video-overlay");
     this.delayOverlay();
   }
-  shouldShowOverlay = () => this.settings.overlay.behavior !== "hidden" && !this.locked && !this.videoContainer.classList.contains("tmg-video-player-dragging");
+  shouldShowOverlay = () => this.settings.overlay.behavior !== "hidden" && !this.settings.locked && !this.videoContainer.classList.contains("tmg-video-player-dragging");
   delayOverlay() {
     clearTimeout(this.overlayDelayId);
     if (this.shouldRemoveOverlay()) this.overlayDelayId = setTimeout(this.removeOverlay, this.settings.overlay.delay);
@@ -2221,7 +2223,7 @@ class tmg_Video_Controller {
     this.config.on("settings.beta.pictureInPicture.floatingPlayer.disabled", ({ target: { value } }) => value && this.floatingWindow?.close());
   }
   _handleGestureWheel(e) {
-    if (!this.locked && !this.disabled && (this.overVolume || this.overBrightness || this.overTimeline || (e.target === this.DOM.controlsContainer && !this.gestureTouchXCheck && !this.gestureTouchYCheck && !this.speedCheck && (this.isUIActive("fullscreen") || this.inFloatingPlayer)))) {
+    if (!this.settings.locked && !this.disabled && (this.overVolume || this.overBrightness || this.overTimeline || (e.target === this.DOM.controlsContainer && !this.gestureTouchXCheck && !this.gestureTouchYCheck && !this.speedCheck && (this.isUIActive("fullscreen") || this.inFloatingPlayer)))) {
       e.preventDefault();
       this.gestureWheelTimeoutId ? clearTimeout(this.gestureWheelTimeoutId) : this._handleGestureWheelInit(e);
       this.gestureWheelTimeoutId = setTimeout(this._handleGestureWheelStop, this.settings.gesture.wheel.timeout);
@@ -2653,7 +2655,7 @@ class tmg_Media_Player {
           if (!res.ok) throw new Error(`TMG could not find provided JSON file!. Status: ${res.status}`);
           return res.json();
         })
-        .catch(({ message }) => console.error(`${message}`), console.warn("TMG requires a valid JSON file for parsing your build configuration"));
+        .catch(({ message }) => (console.error(`${message}`), console.warn("TMG requires a valid JSON file for parsing your build configuration")));
     }
     const customBuild = (await fetchedControls) ?? {},
       attributes = this.#medium.getAttributeNames().filter((attr) => attr.startsWith("tmg--"));
@@ -3597,6 +3599,7 @@ if (typeof window !== "undefined") {
         // prettier-ignore
         blocks: ["Ctrl+Tab", "Ctrl+Shift+Tab", "Ctrl+PageUp", "Ctrl+PageDown", "Cmd+Option+ArrowRight", "Cmd+Option+ArrowLeft", "Ctrl+1", "Ctrl+2", "Ctrl+3", "Ctrl+4", "Ctrl+5", "Ctrl+6", "Ctrl+7", "Ctrl+8", "Ctrl+9", "Cmd+1", "Cmd+2", "Cmd+3", "Cmd+4", "Cmd+5", "Cmd+6", "Cmd+7", "Cmd+8", "Cmd+9", "Alt+ArrowLeft", "Alt+ArrowRight", "Cmd+ArrowLeft", "Cmd+ArrowRight", "Ctrl+r", "Ctrl+Shift+r", "F5", "Shift+F5", "Cmd+r", "Cmd+Shift+r", "Ctrl+h", "Ctrl+j", "Ctrl+d", "Ctrl+f", "Cmd+y", "Cmd+Option+b", "Cmd+d", "Cmd+f", "Ctrl+Shift+i", "Ctrl+Shift+j", "Ctrl+Shift+c", "Ctrl+u", "F12", "Cmd+Option+i", "Cmd+Option+j", "Cmd+Option+c", "Cmd+Option+u", "Ctrl+=", "Ctrl+-", "Ctrl+0", "Cmd+=", "Cmd+-", "Cmd+0", "Ctrl+p", "Ctrl+s", "Ctrl+o", "Cmd+p", "Cmd+s", "Cmd+o"],
       },
+      locked: false,
       modes: { fullscreen: { disabled: false, orientationLock: "auto", onRotate: 90 }, theater: !tmg.ON_MOBILE, pictureInPicture: true, miniplayer: { disabled: false, minWindowWidth: 240 } },
       notifiers: true,
       noOverride: false,

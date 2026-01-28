@@ -1,0 +1,70 @@
+.tmg-video-buffer {
+  width: calc(var(--tmg-video-big-controls-size) + (var(--tmg-video-current-buffer-thickness) * 1.75));
+  height: calc(var(--tmg-video-big-controls-size) + (var(--tmg-video-current-buffer-thickness) * 1.75));
+  transform: scale(var(--tmg-video-large-scale));
+  pointer-events: none;
+}
+.tmg-video-container:is(:not(.tmg-video-buffering), [data-buffer="false"]) .tmg-video-buffer,
+.tmg-video-container:has(.tmg-video-notifier.tmg-video-control-persist, :is(.tmg-video-playback-rate-notifier, .tmg-video-touch-vb-notifier, .tmg-video-touch-timeline-notifier).tmg-video-control-active) .tmg-video-buffer {
+  display: none;
+}
+.tmg-video-buffer-accent {
+  display: none;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border-style: solid;
+  border-width: var(--tmg-video-current-buffer-thickness);
+  border-color: var(--tmg-video-buffer-base-color) var(--tmg-video-buffer-color) var(--tmg-video-buffer-base-color) var(--tmg-video-buffer-base-color);
+  opacity: 0.9;
+  animation: tmg-spin var(--tmg-video-buffer-animation-time) infinite linear;
+}
+.tmg-video-container[data-buffer="accent"] .tmg-video-buffer-accent {
+  display: block;
+}
+.tmg-video-buffer-eclipse {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  animation:
+    tmg-spinner-easespin 5332ms cubic-bezier(0.4, 0, 0.2, 1) infinite both,
+    tmg-spin 1568ms linear infinite;
+}
+.tmg-video-container[data-buffer="accent"] .tmg-video-buffer-eclipse {
+  display: none;
+}
+.tmg-video-buffer-left,
+.tmg-video-buffer-right {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.tmg-video-buffer-left {
+  right: 49%;
+}
+.tmg-video-buffer-right {
+  left: 49%;
+}
+.tmg-video-buffer-circle {
+  position: absolute;
+  width: 200%;
+  height: 100%;
+  border-style: solid;
+  border-color: var(--tmg-video-buffer-color);
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  border-width: var(--tmg-video-current-buffer-thickness);
+}
+.tmg-video-buffer-left .tmg-video-buffer-circle {
+  left: 0;
+  right: -100%;
+  border-inline-end-color: transparent;
+  animation: tmg-left-spin 1333ms cubic-bezier(0.4, 0, 0.2, 1) infinite both;
+}
+.tmg-video-buffer-right .tmg-video-buffer-circle {
+  left: -100%;
+  right: 0;
+  border-inline-start-color: transparent;
+  animation: tmg-right-spin 1333ms cubic-bezier(0.4, 0, 0.2, 0.1) infinite both;
+}

@@ -1,0 +1,153 @@
+@keyframes tmg-beat {
+  from,
+  to {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(var(--tmg-video-large-scale));
+  }
+}
+@keyframes tmg-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+@keyframes tmg-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes tmg-show {
+  from,
+  20% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes tmg-show-alt {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  90%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes tmg-stay-shown {
+  from,
+  to {
+    opacity: 1;
+  }
+}
+@keyframes tmg-scale-up {
+  to {
+    transform: scale(var(--tmg-video-large-scale));
+  }
+}
+@keyframes tmg-arrow-1 {
+  30% {
+    opacity: 0.25;
+  }
+  60% {
+    opacity: 1;
+  }
+}
+@keyframes tmg-arrow-2 {
+  50% {
+    opacity: 0.25;
+  }
+  80% {
+    opacity: 1;
+  }
+}
+@keyframes tmg-arrow-3 {
+  70% {
+    opacity: 0.25;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes tmg-miniplayer-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(15px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.02) translateY(0);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes tmg-ripple-expand {
+  50% {
+    transform: scale(0.5);
+  }
+  to {
+    transform: scale(2);
+  }
+}
+@keyframes tmg-ripple-fade {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes tmg-spinner-easespin {
+  12.5% {
+    transform: rotate(135deg);
+  }
+  25% {
+    transform: rotate(270deg);
+  }
+  37.5% {
+    transform: rotate(405deg);
+  }
+  50% {
+    transform: rotate(540deg);
+  }
+  62.5% {
+    transform: rotate(675deg);
+  }
+  75% {
+    transform: rotate(810deg);
+  }
+  87.5% {
+    transform: rotate(945deg);
+  }
+  100% {
+    transform: rotate(3turn);
+  }
+}
+@keyframes tmg-left-spin {
+  from,
+  to {
+    transform: rotate(130deg);
+  }
+  50% {
+    transform: rotate(-5deg);
+  }
+}
+@keyframes tmg-right-spin {
+  from,
+  to {
+    transform: rotate(-130deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}

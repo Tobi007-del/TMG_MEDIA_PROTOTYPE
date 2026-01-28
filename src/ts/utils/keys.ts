@@ -1,4 +1,4 @@
-import { whiteListedKeys } from "../constants/config";
+import { whiteListedKeys } from "../consts/generics";
 import { isArr } from "./obj";
 
 type KeyStruct = Record<"ctrlKey" | "shiftKey" | "altKey" | "metaKey", boolean> & { key: string };
@@ -18,8 +18,8 @@ export const stringifyKeyCombo = (e: KeyStruct | KeyboardEvent): string => {
   return parts.join("+");
 };
 
-export function cleanKeyCombo(combo: string): string;
-export function cleanKeyCombo(combo: string[]): string[];
+// export function cleanKeyCombo(combo: string): string;
+// export function cleanKeyCombo(combo: string[]): string[];
 export function cleanKeyCombo(combo: string | string[]): string | string[] {
   const clean = (combo: string): string => {
     const m = ["ctrl", "alt", "shift", "meta"],

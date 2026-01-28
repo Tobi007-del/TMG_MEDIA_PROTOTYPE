@@ -1,0 +1,38 @@
+.tmg-video-curtain {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+}
+.tmg-video-top-curtain,
+.tmg-video-bottom-curtain {
+  min-height: calc(var(--tmg-video-current-unit) * 2.25);
+  background: linear-gradient(var(--tmg-video-current-curtain-gradient-dir), var(--tmg-video-current-curtain-color), transparent);
+}
+.tmg-video-top-curtain {
+  --tmg-video-current-curtain-gradient-dir: to bottom;
+  top: 0;
+  aspect-ratio: 10 / 1;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+.tmg-video-bottom-curtain {
+  --tmg-video-current-curtain-gradient-dir: to top;
+  bottom: 0;
+  aspect-ratio: 6 / 1;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+}
+.tmg-video-top-controls-wrapper:not(:has(.tmg-video-title:not(:empty), .tmg-video-artist:not(:empty), [data-displayed="true"])) ~ .tmg-video-top-curtain,
+.tmg-video-bottom-controls-wrapper:not(:has([data-displayed="true"])) ~ .tmg-video-bottom-curtain {
+  display: none;
+}
+.tmg-video-cover-curtain {
+  top: 0;
+  height: 100%;
+  border-radius: inherit;
+}
+.tmg-video-container:is(.tmg-video-miniplayer, .tmg-video-floating-player, .tmg-video-mobile) .tmg-video-cover-curtain {
+  background-color: var(--tmg-video-current-curtain-color);
+  transition: background-color var(--tmg-video-fade-transition-time) ease-in-out;
+}

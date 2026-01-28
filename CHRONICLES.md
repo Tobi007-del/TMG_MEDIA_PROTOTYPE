@@ -252,3 +252,32 @@ _"I don't care if the volume changes 0.001ms later, as long as the slider animat
 > - Don't report the intermediate math. Stall until the final value is ready.
 
 #### Worthy of Note: Use `Reactor.tick()` to force updates to avoid stalling
+
+### The Art of Resolution: The Power Line
+
+I realized that a simple "Prevent Default" wasn't enough. It felt like silencing a subordinate rather than taking command. So, I introduced a political hierarchy to the architecture; a **Chain of Responsibility** that I call **The Power Line** for intents still btw.
+
+In this system, we don't just stop things; we **Resolve** them. And unlike the chaos of the browser, rank is determined simply by **who got there first**.
+
+#### The Hierarchy: Registration is Rank
+
+Everything crucial happens in the **Capture Phase**. This is the active phase where the "Power Line" decisions are made.
+
+1. **The Higher Power (Registered First):**
+If a Plugin wants to be a "Leader" (e.g., Audio Context), it must register *before* the Tech. By capturing first, it gets the first look at the King's wish. It can choose to `resolve` (handle it) or `reject` (fail).
+2. **The Adviser (The Tech):**
+The Tech also listens on **Capture**. It stands in the line just like everyone else.
+* **If it sees `e.resolved`:** It realizes a higher power has already handled the situation. It stands down.
+* **If it sees `e.rejected`:** It sees the Leader failed. It can decide to be stubborn and say, *"I will save this situation,"* ignoring the rejection and executing the native behavior anyway.
+* 2 & 3 can loop if you deem it possible.
+3. **The Observers (The UI):**
+The UI listens on **Bubble**. It doesn't get involved in the politics; it just watches the aftermath. Whether the Leader resolved it or the Adviser saved it, the UI just reflects the final outcome.
+
+#### The Protocol
+
+* **`resolve(message | signature)`**: "I Got This." (Stops lower ranks from acting).
+* **`reject(reason)`**: "I Failed." (Warns lower ranks, but doesn't stop them if they are stubborn).
+
+This architecture allows for **Stubborn Competence**. A Plugin(eg: Volume Audio Context) can try to be fancy at the front of the line only if it listens first. If it fails, the Tech (further down the capture line) picks up the pieces. If the Tech handles it, the UI (bubbling up) never even knows there was a struggle, because it just sees a working player.
+
+That is the Art of Resolution.

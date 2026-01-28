@@ -1,0 +1,26 @@
+.tmg-media-container:where(.tmg-video-mobile:not(.tmg-video-floating-player, .tmg-video-miniplayer)) {
+  --tmg-video-current-controls-column-gap: calc(var(--tmg-video-current-unit) / 1.25);
+}
+@media (max-width: 950px) and (max-height: 480px) and (min-width: 600px) and (orientation: landscape) {
+  .tmg-media-container:where(.tmg-video-mobile:not(.tmg-video-floating-player, .tmg-video-miniplayer)) {
+    --tmg-video-current-controls-column-gap: calc(var(--tmg-video-current-unit) / 1.075);
+  }
+}
+.tmg-media-container:where(.tmg-video-mobile.tmg-video-fullscreen) {
+  --tmg-video-current-controls-row-gap: var(--tmg-video-current-unit);
+}
+
+@media (max-width: 480px) and (min-height: 510px) and (orientation: portrait) {
+  .tmg-video-container.tmg-video-mobile.tmg-video-fullscreen .tmg-video-top-controls-wrapper {
+    flex-direction: column-reverse;
+  }
+  .tmg-video-container.tmg-video-mobile.tmg-video-fullscreen .tmg-video-top-controls-wrapper > * {
+    max-width: calc(100% - (var(--tmg-video-current-safe-inset-x) * 2));
+  }
+  .tmg-video-container.tmg-video-mobile.tmg-video-fullscreen .tmg-video-meta-wrapper-cover {
+    align-self: start;
+  }
+  .tmg-video-container.tmg-video-mobile.tmg-video-fullscreen .tmg-video-top-controls-wrapper .tmg-video-side-controls-wrapper-cover {
+    align-self: end;
+  }
+}

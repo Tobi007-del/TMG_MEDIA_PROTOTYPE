@@ -1,7 +1,7 @@
-import { Target, Payload, Mediator, Listener, ListenerOptions, ListenerRecord, ListenerOptionsTuple, ReactorOptions, Watcher } from "../types/reactor";
+import { Target, Payload, Mediator, Listener, ListenerOptions, ListenerRecord, ReactorOptions, Watcher, MediatorOptions, WatcherOptions } from "../types/reactor";
 import type { Paths, PathValue, WCPaths } from "../types/obj";
-import { isObj, isArr, assignAny, mergeObjs, getTrailPaths, getTrailRecord, isIter } from "../utils";
-import { TERMINATOR } from "../consts/constants";
+import { isObj, isArr, assignAny, mergeObjs, getTrailPaths, getTrailRecord, parseEOpts } from "../utils";
+import { TERMINATOR } from "../consts/generics";
 
 export { TERMINATOR };
 
@@ -23,6 +23,7 @@ export class Event<T, P extends WCPaths<T> = WCPaths<T>> {
   readonly timestamp: number;
   private _propagationStopped = false;
   private _immediatePropagationStopped = false;
+  private _resolved = "";
   private _rejected = "";
 
   constructor(payload: Payload<T, P> & { bubbles?: boolean; rejectable?: boolean }) {
@@ -50,18 +51,30 @@ export class Event<T, P extends WCPaths<T> = WCPaths<T>> {
     this._propagationStopped = true;
     this._immediatePropagationStopped = true;
   }
+  get resolved(): string {
+    return this._resolved;
+  }
+  resolve(message?: string): void {
+    if (!this.rejectable) return console.warn(`Ignored resolve() call on a non-rejectable "${this.type}" at "${this.path}"`);
+    if (this.eventPhase !== Event.CAPTURING_PHASE) console.warn(`Resolving an intent on "${this.type}" at "${this.path}" outside of the capture phase is unadvised.`);
+    if (this.rejectable) this._resolved = message || `Could ${this.type} intended value at "${this.path}"`;
+  }
   get rejected(): string {
     return this._rejected;
   }
   reject(reason?: string): void {
     if (!this.rejectable) return console.warn(`Ignored reject() call on a non-rejectable "${this.type}" at "${this.path}"`);
     if (this.eventPhase !== Event.CAPTURING_PHASE) console.warn(`Rejecting an intent on "${this.type}" at "${this.path}" outside of the capture phase is unadvised.`);
-    if (this.rejectable) console.log((this._rejected = reason || `Couldn't ${this.type} intended value at "${this.path}"`));
+    if (this.rejectable) this._rejected = reason || `Couldn't ${this.type} intended value at "${this.path}"`;
   }
   composedPath(): WCPaths<T>[] {
     return getTrailPaths(this.path);
   }
 }
+
+const mOpts = ["lazy", "signal"],
+  lOpts = ["capture", "once", "signal"];
+
 // uses low level non-stack loops considering this is surgical work on data
 export default class Reactor<T extends object> {
   private rejectable: boolean;
@@ -182,6 +195,8 @@ export default class Reactor<T extends object> {
     e.type = originalType;
   }
 
+  private _bind = <C extends () => any>(signal?: AbortSignal, cleanup: C = (() => {}) as C): C => (signal?.aborted ? cleanup() : signal?.addEventListener("abort", cleanup, { once: true }), cleanup);
+
   tick(paths?: Paths<T> | Iterable<Paths<T>>): void {
     if (!paths) return this._flush();
     for (const path of "string" === typeof paths ? [paths] : paths) this.batch.has(path) && (this._wave(path, this.batch.get(path)!), this.batch.delete(path));
@@ -190,30 +205,33 @@ export default class Reactor<T extends object> {
   stall = (task: () => any) => (this.queue.add(task), this._initBatching());
   nostall = (task: () => any) => this.queue.delete(task);
 
-  get<P extends Paths<T>>(path: P, cb: Mediator<T, P>, lazy?: boolean): () => void {
-    const task = () => (this.getters.get(path) ?? this.getters.set(path, new Set()).get(path)!).add(cb as Mediator<T>);
+  get<P extends Paths<T>>(path: P, cb: Mediator<T, P>, opts?: MediatorOptions): (typeof this)["noget"] {
+    const { lazy, signal } = parseEOpts(opts, lOpts),
+      task = () => (this.getters.get(path) ?? this.getters.set(path, new Set()).get(path)!).add(cb as Mediator<T>);
     lazy ? this.stall(task) : task(); // a progressive enhancment for gets that are virtual and should not affect init
-    return () => (lazy && this.nostall(task), this.noget<P>(path, cb));
+    return this._bind(signal, () => (lazy && this.nostall(task), this.noget<P>(path, cb)));
   }
   noget = <P extends Paths<T>>(path: P, cb: Mediator<T, P>) => this.getters.get(path)?.delete(cb as Mediator<T>); // undefined - no search list, boolean - result
 
-  set<P extends Paths<T>>(path: P, cb: Mediator<T, P>, lazy?: boolean): () => void {
-    const task = () => (this.setters.get(path) ?? this.setters.set(path, new Set()).get(path)!).add(cb as Mediator<T>);
+  set<P extends Paths<T>>(path: P, cb: Mediator<T, P>, opts?: MediatorOptions): (typeof this)["noset"] {
+    const { lazy, signal } = parseEOpts(opts, lOpts),
+      task = () => (this.setters.get(path) ?? this.setters.set(path, new Set()).get(path)!).add(cb as Mediator<T>);
     lazy ? this.stall(task) : task();
-    return () => (lazy && this.nostall(task), this.noset<P>(path, cb));
+    return this._bind(signal, () => (lazy && this.nostall(task), this.noset<P>(path, cb)));
   }
   noset = <P extends Paths<T>>(path: P, cb: Mediator<T, P>) => this.setters.get(path)?.delete(cb as Mediator<T>);
 
-  watch<P extends Paths<T>>(path: P, cb: Watcher<T, P>, lazy?: boolean): () => void {
-    const task = () => (this.watchers.get(path) ?? this.watchers.set(path, new Set()).get(path)!).add(cb as Watcher<T>);
+  watch<P extends Paths<T>>(path: P, cb: Watcher<T, P>, opts?: WatcherOptions): (typeof this)["nowatch"] {
+    const { lazy, signal } = parseEOpts(opts, lOpts),
+      task = () => (this.watchers.get(path) ?? this.watchers.set(path, new Set()).get(path)!).add(cb as Watcher<T>);
     lazy ? this.stall(task) : task();
-    return () => (lazy && this.nostall(task), this.nowatch<P>(path, cb));
+    return this._bind(signal, () => (lazy && this.nostall(task), this.nowatch<P>(path, cb)));
   }
   nowatch = <P extends Paths<T>>(path: P, cb: Watcher<T, P>) => this.watchers.get(path)?.delete(cb as Watcher<T>);
 
   on<P extends WCPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): (typeof this)["off"] {
     const records = this.listenersRecord.get(path),
-      capture = Reactor.parseEOpt(options, "capture");
+      { capture, once, signal } = parseEOpts(options, lOpts);
     let added = false;
     for (const record of records ?? []) {
       if (record.cb === cb && capture === record.capture) {
@@ -221,20 +239,19 @@ export default class Reactor<T extends object> {
         break;
       }
     }
-    if (!added) (records ?? this.listenersRecord.set(path, new Set()).get(path)!).add({ cb: cb as Listener<T>, capture, once: Reactor.parseEOpt(options, "once") });
-    return () => this.off<P>(path, cb, options);
+    if (!added) (records ?? this.listenersRecord.set(path, new Set()).get(path)!).add({ cb: cb as Listener<T>, capture, once });
+    return this._bind(signal, () => this.off<P>(path, cb, options));
   }
-  once = <P extends WCPaths<T>>(path: P, cb: Listener<T, P>, options?: Omit<ListenerOptions, "once">): (typeof this)["off"] => this.on<P>(path, cb, { ...options, once: true });
+  once = <P extends WCPaths<T>>(path: P, cb: Listener<T, P>, options?: Omit<ListenerOptions, "once">): (typeof this)["off"] => this.on<P>(path, cb, { ...parseEOpts(options, lOpts), once: true });
   off<P extends WCPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions) {
     const records = this.listenersRecord.get(path),
-      capture = Reactor.parseEOpt(options, "capture");
+      { capture } = parseEOpts(options, lOpts);
     if (!records) return undefined;
     for (const record of [...records]) {
       if (record.cb === cb && record.capture === capture) return (records.delete(record), !records.size && this.listenersRecord.delete(path), true);
     }
     return false;
   }
-  static parseEOpt = (options: ListenerOptions = false, opt: keyof ListenerOptionsTuple) => ("boolean" === typeof options ? options : !!options?.[opt]);
 
   cascade = ({ type, currentTarget: { path, value: news, oldValue: olds } }: Event<T>, objSafe = true): void => {
     if (!isObj(news) || !isObj(olds) || (type !== "set" && type !== "delete")) return;

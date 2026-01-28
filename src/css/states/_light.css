@@ -1,0 +1,40 @@
+.tmg-video-container.tmg-video-light .tmg-video-container-content {
+  cursor: pointer;
+}
+.tmg-video-container.tmg-video-light :is(.tmg-video-picture-in-picture-wrapper, .tmg-video-apt-controls-wrapper, .tmg-video-big-controls-wrapper),
+.tmg-video-container.tmg-video-stall .tmg-video-big-play-pause-btn {
+  pointer-events: all;
+  opacity: 1;
+}
+.tmg-video-container.tmg-video-light :is(.tmg-video-top-curtain, .tmg-video-bottom-curtain) {
+  --tmg-video-current-curtain-color: var(--tmg-video-curtain-color);
+  opacity: 1;
+}
+.tmg-video-container.tmg-video-light :is([data-control-id]:not([data-light-control="true"]), .tmg-video-settings, .tmg-video-cover-curtain, .tmg-video-captions-container),
+.tmg-video-container:is(.tmg-video-light, .tmg-video-stall) :is(.tmg-video-play-notifier, .tmg-video-pause-notifier, .tmg-video-buffer, .tmg-video-big-play-pause-btn svg) {
+  display: none;
+}
+.tmg-video-container:is(.tmg-video-light, .tmg-video-stall) :is(.tmg-video-big-controls-wrapper, .tmg-video-big-play-pause-btn .tmg-video-play-icon),
+.tmg-video-container.tmg-video-light [data-light-control="true"],
+.tmg-video-container.tmg-video-stall .tmg-video-big-play-pause-btn {
+  display: flex;
+}
+.tmg-video-container:is(.tmg-video-light, .tmg-video-stall) .tmg-video-big-play-pause-btn .tmg-video-play-icon {
+  animation: inherit;
+  transition: inherit;
+}
+.tmg-video-container.tmg-video-light .tmg-video-big-play-pause-btn:is(:hover, :focus-visible),
+.tmg-video-container.tmg-video-stall .tmg-video-big-play-pause-btn {
+  transform: scale(var(--tmg-video-large-scale));
+  transition: all var(--tmg-video-slow-transition-time) ease;
+}
+.tmg-video-container.tmg-video-light .tmg-video-big-play-pause-btn:is(:hover, :focus-visible),
+.tmg-video-container.tmg-video-stall .tmg-video-play-icon {
+  animation: none !important;
+}
+.tmg-video-container.tmg-video-light .tmg-video-big-play-pause-btn {
+  animation: tmg-beat 1s infinite ease-out;
+}
+.tmg-video-container.tmg-video-stall .tmg-video-big-play-pause-btn {
+  animation: tmg-spin 1s ease-out;
+}

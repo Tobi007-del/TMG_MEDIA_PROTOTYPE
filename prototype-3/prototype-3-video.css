@@ -1,3 +1,4 @@
+/* ==================== AI VARIABLES BLOCK ===================== */
 /* #o#o#o#o#o - 5-0-0 is used to raise specificity where required with the power of 5 id's to avoid the use of '!important' style declarations for now  */
 /* font variables */
 :where(:root, .tmg-media-container) {
@@ -221,6 +222,9 @@
 .tmg-media-container:is(.tmg-video-mobile, [data-size-tier^="xxxx"]) {
   --cmptd-ctrl-box-out-nudge: 0;
 }
+/* ==================== AI VARIABLES BLOCK ===================== */
+
+/* ==================== AI ANIMATIONS BLOCK ===================== */
 @keyframes tmg-beat {
   from,
   to {
@@ -374,6 +378,9 @@
     transform: rotate(5deg);
   }
 }
+/* ==================== AI ANIMATIONS BLOCK ===================== */
+
+/* ==================== AI CORE BLOCK ===================== */
 .tmg-media-container *,
 .tmg-media-container *::after,
 .tmg-media-container *::before {
@@ -470,6 +477,9 @@
   max-width: unset;
   max-height: unset;
 }
+/* ==================== AI CORE BLOCK ===================== */
+
+/* ==================== AI CONTROLS BLOCK ===================== */
 :where(.tmg-media-container) button {
   background: none;
   border: none;
@@ -534,6 +544,9 @@
 .tmg-video-container :is(.tmg-video-control-disabled, #o#o#o#o#o) {
   --tmg-video-current-controls-color: var(--tmg-video-disabled-color);
 }
+/* ==================== AI CONTROLS BLOCK ===================== */
+
+/* ==================== AI OVERLAY BLOCK ===================== */
 .tmg-video-big-controls-wrapper,
 .tmg-video-thumbnail,
 .tmg-video-captions-btn::after,
@@ -550,6 +563,9 @@
   inset: 0;
   margin: auto;
 }
+/* ==================== AI OVERLAY BLOCK ===================== */
+
+/* ==================== AI CORE BLOCK ===================== */
 :where(.tmg-media) {
   aspect-ratio: var(--tmg-video-aspect-ratio);
   border-radius: inherit;
@@ -756,6 +772,9 @@ body:where(:has(.tmg-video-floating-player)) {
 .tmg-video-container:has(.tmg-video-notifier.tmg-video-control-persist) {
   --tmg-video-notifiers-animation-time: var(--tmg-video-slow-transition-time);
 }
+/* ==================== AI CORE BLOCK ===================== */
+
+/* ==================== AI STATE BLOCK ===================== */
 /* setting deactivated state */
 .tmg-video-container:is(.tmg-video-inactive, .tmg-video-disabled, #o#o#o#o#o) {
   --tmg-video-icons-color: var(--tmg-video-disabled-color);
@@ -798,6 +817,9 @@ body:where(:has(.tmg-video-floating-player)) {
   pointer-events: none;
 }
 /* setting deactivated state ends */
+/* ==================== AI STATE BLOCK ===================== */
+
+/* ==================== AI SETTINGS BLOCK ===================== */
 .tmg-video-container.tmg-video-settings-view .tmg-video-container-content-wrapper {
   transform: rotateY(180deg);
 }
@@ -805,7 +827,7 @@ body:where(:has(.tmg-video-floating-player)) {
   opacity: 1;
   pointer-events: all;
 }
-.tmg-video-container.tmg-video-settings-view .tmg-video-container-content video {
+.tmg-video-container.tmg-video-settings-view .tmg-video-container-content .tmg-video {
   filter: brightness(var(--cmptd-brightness)) blur(10px);
 }
 .tmg-video-container.tmg-video-settings-view .tmg-video-settings-btn svg {
@@ -936,6 +958,9 @@ body:where(:has(.tmg-video-floating-player)) {
   font-size: calc(var(--tmg-video-current-unit) / 2.2);
   color: rgb(from currentColor r g b / 0.6);
 }
+/* ==================== AI SETTINGS BLOCK ===================== */
+
+/* ==================== AI CONTROLS BLOCK ===================== */
 /* setting controls stack */
 .tmg-video-thumbnail {
   z-index: 1;
@@ -1030,6 +1055,9 @@ body:where(:has(.tmg-video-floating-player)) {
   background-color: transparent;
   border-radius: inherit;
 }
+/* ==================== AI CONTROLS BLOCK ===================== */
+
+/* ==================== AI OVERLAY BLOCK ===================== */
 .tmg-video-picture-in-picture-wrapper {
   display: none;
   align-items: center;
@@ -1080,6 +1108,9 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
   font-size: calc(var(--tmg-video-current-unit) / 1.5);
   font-weight: 500;
 }
+/* ==================== AI OVERLAY BLOCK ===================== */
+
+/* ==================== AI CONTROLS BLOCK ===================== */
 .tmg-video-top-controls-wrapper {
   position: absolute;
   top: 0;
@@ -1178,6 +1209,9 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
 .tmg-video-container.tmg-video-miniplayer :is(.tmg-video-profile-link, .tmg-video-artist-wrapper) {
   display: none;
 }
+/* ==================== AI CONTROLS BLOCK ===================== */
+
+/* ==================== AI OVERLAY BLOCK ===================== */
 .tmg-video-next-preview-wrapper {
   position: relative;
   flex: 0 0 var(--t007-toast-image-width);
@@ -1347,6 +1381,8 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
   border-inline-start-color: transparent;
   animation: tmg-right-spin 1333ms cubic-bezier(0.4, 0, 0.2, 0.1) infinite both;
 }
+/* ==================== AI OVERLAY BLOCK ===================== */
+
 .tmg-video-container:is(.tmg-video-overlay, :has(:focus-visible)) .tmg-video-container-content,
 .tmg-video-container:is(:has(.tmg-video-notifier.tmg-video-control-persist, :is(.tmg-video-playback-rate-notifier, .tmg-video-touch-vb-notifier).tmg-video-control-active)) .tmg-video-container-content {
   cursor: auto;
@@ -1361,6 +1397,8 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
 :is(.tmg-video-timeline-container, .tmg-video-vb-slider, .tmg-video-captions-container):active {
   cursor: grabbing;
 }
+
+/* ==================== AI CONTROLS BLOCK ===================== */
 .tmg-video-bottom-controls-wrapper {
   position: absolute;
   bottom: 0;
@@ -1375,6 +1413,9 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
 :is(#o#o#o#o#o, .tmg-video-bottom-controls-wrapper, .tmg-video-bottom-controls-wrapper > :last-child, .tmg-video-bottom-controls-wrapper > :last-child > :last-child) {
   border-bottom-right-radius: inherit;
 }
+/* ==================== AI CONTROLS BLOCK ===================== */
+
+/* ==================== AI OVERLAY BLOCK ===================== */
 .tmg-video-curtain {
   position: absolute;
   left: 0;
@@ -1413,6 +1454,9 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
   background-color: var(--tmg-video-current-curtain-color);
   transition: background-color var(--tmg-video-fade-transition-time) ease-in-out;
 }
+/* ==================== AI OVERLAY BLOCK ===================== */
+
+/* ==================== AI CONTROLS BLOCK ===================== */
 .tmg-video-apt-controls-wrapper {
   display: flex;
   justify-content: space-between;
@@ -1502,18 +1546,6 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
   height: var(--tmg-video-current-unit);
   width: 100%;
 }
-.scroll-assist.up {
-  --gradient-dir: to bottom;
-  top: 0;
-  height: 2rem;
-  width: 100%;
-}
-.scroll-assist.down {
-  --gradient-dir: to top;
-  bottom: 0;
-  height: 2rem;
-  width: 100%;
-}
 .tmg-video-container-content svg,
 .tmg-video-time-and-duration-btn,
 .tmg-video-playback-rate-btn {
@@ -1531,9 +1563,15 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
 .tmg-video-side-controls-wrapper button:is(:hover, :focus-visible) {
   background: var(--tmg-video-controls-active-background);
 }
+/* ==================== AI CONTROLS BLOCK ===================== */
+
+/* ==================== AI OVERLAY BLOCK ===================== */
 .tmg-video-big-play-pause-btn {
   transform: scale(var(--tmg-video-large-scale));
 }
+/* ==================== AI OVERLAY BLOCK ===================== */
+
+/* ==================== AI CONTROLS BLOCK ===================== */
 .tmg-video-vb-container.tmg-video-control-dragging > *:not(.tmg-video-vb-btn),
 .tmg-video-container:not(.tmg-video-miniplayer) :is(.tmg-video-miniplayer-remove-btn, .tmg-video-miniplayer-expand-btn),
 .tmg-video-container:is(.tmg-video-miniplayer, .tmg-video-floating-player, .tmg-video-fullscreen) .tmg-video-theater-btn,
@@ -1757,6 +1795,9 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
 .tmg-video-container.tmg-video-captions .tmg-video-captions-btn::after {
   transform: scale(1, 1);
 }
+/* ==================== AI CONTROLS BLOCK ===================== */
+
+/* ==================== AI SETTINGS BLOCK ===================== */
 .tmg-video-captions-container {
   --f-f: var(--cmptd-cue-font-factor);
   display: none;
@@ -1828,6 +1869,9 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
 .tmg-video-captions-container [data-part="timed"][data-future] {
   opacity: 0.5;
 }
+/* ==================== AI SETTINGS BLOCK ===================== */
+
+/* ==================== AI CONTROLS BLOCK ===================== */
 .tmg-video-timeline-container {
   width: calc(100% - var(--tmg-video-current-safe-inset-x));
   display: flex;
@@ -2022,6 +2066,9 @@ div.tmg-video-thumbnail {
 .tmg-video-container[data-preview-type="canvas"] div:is(.tmg-video-thumbnail, .tmg-video-preview) {
   display: none;
 }
+/* ==================== AI CONTROLS BLOCK ===================== */
+
+/* ==================== AI OVERLAY BLOCK ===================== */
 .tmg-video-notifiers-container {
   position: absolute;
   width: 100%;
@@ -2045,10 +2092,6 @@ div.tmg-video-thumbnail {
 .tmg-video-notifier svg {
   animation: inherit;
   opacity: 1;
-}
-[data-notify="fwd"] .tmg-video-fwd-notifier,
-[data-notify="bwd"] .tmg-video-bwd-notifier {
-  animation-name: tmg-show;
 }
 [data-notify="videoplay"] .tmg-video-play-notifier,
 [data-notify="videopause"] .tmg-video-pause-notifier,
@@ -2295,6 +2338,9 @@ div.tmg-video-thumbnail {
 .tmg-video-ripple.tmg-video-ripple-fade {
   animation: tmg-ripple-fade var(--tmg-video-motion-transition-time) ease-in forwards;
 }
+/* ==================== AI OVERLAY BLOCK ===================== */
+
+/* ==================== AI CORE BLOCK ===================== */
 /* some mobile perks for viewing pleasure */
 .tmg-media-container:where(.tmg-video-mobile:not(.tmg-video-floating-player, .tmg-video-miniplayer)) {
   --tmg-video-current-controls-column-gap: calc(var(--tmg-video-current-unit) / 1.25);
@@ -2307,6 +2353,9 @@ div.tmg-video-thumbnail {
 .tmg-media-container:where(.tmg-video-mobile.tmg-video-fullscreen) {
   --tmg-video-current-controls-row-gap: var(--tmg-video-current-unit);
 }
+/* ==================== AI CORE BLOCK ===================== */
+
+/* ==================== AI CONTROLS BLOCK ===================== */
 @media (max-width: 480px) and (min-height: 510px) and (orientation: portrait) {
   .tmg-video-container.tmg-video-mobile.tmg-video-fullscreen .tmg-video-top-controls-wrapper {
     flex-direction: column-reverse;
@@ -2346,6 +2395,9 @@ div.tmg-video-thumbnail {
   opacity: 0;
   pointer-events: none;
 }
+/* ==================== AI OVERLAY BLOCK ===================== */
+
+/* ==================== AI STATE BLOCK ===================== */
 /* setting player light state */
 .tmg-video-container.tmg-video-light .tmg-video-container-content {
   cursor: pointer;
@@ -2388,3 +2440,4 @@ div.tmg-video-thumbnail {
   animation: tmg-spin 1s ease-out;
 }
 /* setting player light state ends */
+/* ==================== AI STATE BLOCK ===================== */

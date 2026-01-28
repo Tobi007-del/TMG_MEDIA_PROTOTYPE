@@ -9,7 +9,6 @@ export type Reactor<T> = typeof Reactor<T>;
 export type Terminator = unique symbol;
 
 export type Event<T, P> = typeof Event<T, P>;
-
 export interface Target<T, P extends WCPaths<T> = WCPaths<T>> {
   path: P;
   value?: PathValue<T, P>;
@@ -29,11 +28,18 @@ export type Mediator<T, P extends Paths<T> = Paths<T>> = (
   terminated: boolean,
   payload: Payload<T, P>,
 ) => PathValue<T, P> | typeof TERMINATOR;
+export type MediatorOptionsTuple = {
+  lazy?: boolean;
+  signal?: AbortSignal;
+};
+export type MediatorOptions = boolean | MediatorOptionsTuple;
 
 export type Watcher<T, P extends Paths<T> = Paths<T>> = (
   value?: PathValue<T, P>,
   payload?: Payload<T, P>,
 ) => void;
+export type WatcherOptionsTuple = MediatorOptionsTuple;
+export type WatcherOptions = boolean | WatcherOptionsTuple;
 
 export type Listener<T, P extends WCPaths<T> = WCPaths<T>> = (
   event: Event<T, P>,
@@ -41,6 +47,7 @@ export type Listener<T, P extends WCPaths<T> = WCPaths<T>> = (
 export type ListenerOptionsTuple = {
   capture?: boolean;
   once?: boolean;
+  signal?: AbortSignal;
 };
 export type ListenerOptions = boolean | ListenerOptionsTuple;
 export type ListenerRecord<T, P extends WCPaths<T> = WCPaths<T>> = {

@@ -1,0 +1,53 @@
+.tmg-video-title {
+  font-size: calc(var(--tmg-video-current-unit) / 1.4);
+}
+.tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) .tmg-video-title {
+  font-size: calc(var(--tmg-video-current-unit) / 1.325);
+}
+.tmg-video-artist {
+  font-size: calc(var(--tmg-video-current-unit) / 2);
+}
+.tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) .tmg-video-artist {
+  font-size: calc(var(--tmg-video-current-unit) / 1.925);
+}
+.tmg-video-time-and-duration-btn,
+.tmg-video-preview-container::after {
+  font-size: calc(var(--tmg-video-current-unit) / 1.85);
+}
+.tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) .tmg-video-time-and-duration-btn,
+.tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) .tmg-video-preview-container::after {
+  font-size: calc(var(--tmg-video-current-unit) / 1.7);
+}
+.tmg-video-vb-slider-wrapper::after {
+  font-size: calc(var(--tmg-video-current-unit) / 3);
+}
+.tmg-video-playback-rate-notifier-content,
+.tmg-video-volume-notifier-content,
+.tmg-video-brightness-notifier-content,
+.tmg-video-object-fit-notifier-content,
+.tmg-video-touch-vb-content {
+  font-size: calc(var(--tmg-video-current-unit) / 2);
+}
+.tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) :is(.tmg-video-playback-rate-notifier-content, .tmg-video-volume-notifier-content, .tmg-video-brightness-notifier-content, .tmg-video-object-fit-notifier-content, .tmg-video-touch-vb-content) {
+  font-size: calc(var(--tmg-video-current-unit) / 1.65);
+}
+.tmg-video-playback-rate-notifier,
+.tmg-video-scrub-notifier,
+.tmg-video-cancel-scrub-notifier {
+  font-size: calc(var(--tmg-video-current-unit) / 2.4);
+}
+.tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) :is(.tmg-video-playback-rate-notifier, .tmg-video-scrub-notifier, .tmg-video-cancel-scrub-notifier) {
+  font-size: calc(var(--tmg-video-current-unit) / 1.65);
+}
+.tmg-video-touch-timeline-notifier {
+  font-size: calc(var(--tmg-video-current-unit) / 1.85);
+}
+.tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) .tmg-video-touch-timeline-notifier {
+  font-size: calc(var(--tmg-video-current-unit) / 1.05);
+}
+:is(.tmg-video-fwd-notifier, .tmg-video-bwd-notifier)::after {
+  font-size: calc(var(--tmg-video-current-unit) / 4);
+}
+.tmg-media-container:is(.tmg-video-miniplayer, .tmg-video-floating-player, .tmg-video-mobile, [data-size-tier^="xx"]) :is(.tmg-video-fwd-notifier, .tmg-video-bwd-notifier)::after {
+  font-size: calc(var(--tmg-video-current-unit) / 2.3);
+}

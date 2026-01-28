@@ -1,0 +1,26 @@
+:where(*:has(> .tmg-video-ripple-container)) {
+  position: relative;
+}
+.tmg-video-ripple-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  contain: strict;
+}
+.tmg-video-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background-color: var(--tmg-video-ripple-color);
+  transform: scale(0);
+}
+.tmg-video-notifier:not(.tmg-video-control-persist) .tmg-video-ripple {
+  display: none;
+}
+.tmg-video-ripple.tmg-video-ripple-hold {
+  animation: tmg-ripple-expand var(--tmg-video-motion-transition-time) ease-out forwards;
+}
+.tmg-video-ripple.tmg-video-ripple-fade {
+  animation: tmg-ripple-fade var(--tmg-video-motion-transition-time) ease-in forwards;
+}

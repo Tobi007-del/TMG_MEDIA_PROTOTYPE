@@ -6,36 +6,36 @@ import {
   allControls,
   keyShortcutActions,
   moddedKeyShortcutActions,
-  errorCodes,
-} from "constants/config";
-import type { ToastOptions } from "toasts";
+} from "../consts/config";
+import type { errorCodes } from "../consts/generics";
+import type { ToastOptions } from "./t007";
+
+// NOTE: Use deep partial util where necessary
 
 export type Mode = (typeof modes)[number];
 export type Control = (typeof controls)[number];
+export type SControl = Control | "spacer";
 export type BigControl = (typeof bigControls)[number];
-export type AnyControl = (typeof allControls)[number];
 export type KeyShortcutAction = (typeof keyShortcutActions)[number];
 export type ModdedKeyShortcutAction = (typeof moddedKeyShortcutActions)[number];
 export type ErrorCode = (typeof errorCodes)[number];
 
 export interface ControlPanelBottomTuple {
-  1: Control[];
-  2: Control[];
-  3: Control[];
+  1: SControl[];
+  2: SControl[];
+  3: SControl[];
 }
 export interface PosterPreview {
   usePoster: boolean;
   time: number;
   tease: boolean;
 }
-
 export interface Range {
   min: number;
   max: number;
   value: number | null;
   skip: number;
 }
-
 export interface Track {
   kind: string;
   label: string;
@@ -44,7 +44,6 @@ export interface Track {
   default: boolean;
   id: string;
 }
-
 export interface Captions {
   disabled: boolean;
   allowVideoOverride: boolean;
@@ -85,7 +84,7 @@ export interface Settings {
       | "out-view"
       | "in-view-always"
       | "out-view-always";
-    next: boolean;
+    next: number; // -1 for false
   };
   beta: {
     disabled: boolean;
@@ -122,12 +121,12 @@ export interface Settings {
     profile: string | boolean;
     title: string | boolean;
     artist: string | boolean;
-    top: Control[] | boolean;
+    top: SControl[] | boolean;
     center: BigControl[] | boolean;
     bottom:
       | boolean // Case: true/false
-      | Control[] // Case: Flat Array ['play', 'pause'] (Logic puts this in Row 3)
-      | Control[][] // Case: Array of Rows [['time'], ['play'], ['vol']]
+      | SControl[] // Case: Flat Array ['play', 'pause'] (Logic puts this in Row 3)
+      | SControl[][] // Case: Array of Rows [['time'], ['play'], ['vol']]
       | Partial<ControlPanelBottomTuple>; // Case: Explicit Object { 1: [...], 2: [...] }
     buffer: "eclipse" | "accent" | boolean;
     timeline: {
@@ -183,6 +182,7 @@ export interface Settings {
       Record<"ctrl" | "alt" | "shift", number>
     >;
   };
+  locked: boolean;
   modes: {
     fullscreen: {
       disabled: boolean;
@@ -254,7 +254,16 @@ export type VideoBuild = {
   };
   media: MediaMetadata & {
     id: string;
+    title: string;
+    artist: string;
     profile: string;
+    album: string;
+    artwork: Array<{ src: string; sizes: string; type: string }>;
+    chapterInfo: Array<{
+      title: string;
+      startTime: number;
+      artwork: Array<{ src: string; sizes: string; type: string }>;
+    }>;
     links: Record<"title" | "artist" | "profile", string>;
   };
   mediaPlayer: "TMG";
@@ -265,4 +274,5 @@ export type VideoBuild = {
   src: string;
   tracks: Track[];
   cloneOnDetach: boolean; // stateful issues, src resets - freezing, etc.
+  exclusions: string[];
 };

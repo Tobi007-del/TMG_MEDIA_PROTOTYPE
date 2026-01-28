@@ -1,0 +1,29 @@
+.tmg-video-controls-scroll-assist {
+  position: absolute;
+  top: 0;
+  min-width: calc(var(--tmg-video-current-unit) * 1.05);
+  height: 100%;
+  opacity: 0.5;
+  background: linear-gradient(var(--tmg-video-current-scroll-assist-gradient-dir), transparent 0, var(--tmg-video-scroll-assist-color) 30%, transparent);
+  z-index: 2;
+}
+.tmg-video-controls-scroll-assist[data-scroll-direction="left"] {
+  --tmg-video-current-scroll-assist-gradient-dir: to right;
+  left: calc(var(--tmg-video-current-unit) * -0.25);
+}
+.tmg-video-controls-scroll-assist[data-scroll-direction="right"] {
+  --tmg-video-current-scroll-assist-gradient-dir: to left;
+  right: calc(var(--tmg-video-current-unit) * -0.25);
+}
+.tmg-video-controls-scroll-assist[data-scroll-direction="up"] {
+  --tmg-video-current-scroll-assist-gradient-dir: to bottom;
+  top: 0;
+  height: var(--tmg-video-current-unit);
+  width: 100%;
+}
+.tmg-video-controls-scroll-assist[data-scroll-direction="down"] {
+  --tmg-video-current-scroll-assist-gradient-dir: to top;
+  bottom: 0;
+  height: var(--tmg-video-current-unit);
+  width: 100%;
+}

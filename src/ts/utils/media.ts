@@ -1,16 +1,59 @@
-import { createEl } from "./dom";
-import { isIter } from "./obj";
+import { DEFAULT_MEDIA_INTENT, DEFAULT_MEDIA_SETTINGS, DEFAULT_MEDIA_STATE, DEFAULT_MEDIA_STATUS } from "../consts/media-defaults";
+import { MediaStatus, MediaReport } from "../types/contract";
+import { createEl, isIter } from ".";
 
 // ============ Video Utilities ============
 
 // Types
-interface Dimensions {
-  width: number;
-  height: number;
-}
+export type Dimensions = Record<"width" | "height", number>;
 
 type SourceLike = { src?: string; type?: string; media?: string } | (HTMLSourceElement & Record<string, any>);
 type TrackLike = { kind?: string; label?: string; srclang?: string; src?: string; default?: boolean; id?: string } | (HTMLTrackElement & Record<string, any>);
+
+// Report Generation
+export function getMediaReport(m: HTMLMediaElement): MediaReport {
+  const report = {
+    state: {
+      src: m.src,
+      currentTime: m.currentTime,
+      paused: m.paused,
+      volume: m.volume,
+      muted: m.muted,
+      playbackRate: m.playbackRate,
+    },
+    status: {
+      readyState: m.readyState,
+      networkState: m.networkState,
+      error: m.error,
+      seeking: m.seeking,
+      buffered: m.buffered,
+      played: m.played,
+      seekable: m.seekable,
+      duration: m.duration,
+      ended: m.ended,
+      videoWidth: m instanceof HTMLVideoElement ? m.videoWidth : 0,
+      videoHeight: m instanceof HTMLVideoElement ? m.videoHeight : 0,
+      textTracks: m.textTracks,
+    },
+    settings: {
+      poster: m instanceof HTMLVideoElement ? m.poster : "",
+      autoplay: m.autoplay,
+      loop: m.loop,
+      preload: m.preload,
+      playsInline: m instanceof HTMLVideoElement ? m.playsInline : false,
+      crossOrigin: m.crossOrigin,
+      controls: m.controls,
+      defaultMuted: m.defaultMuted,
+      defaultPlaybackRate: m.defaultPlaybackRate,
+    },
+  };
+  return {
+    intent: { ...DEFAULT_MEDIA_INTENT, ...report.state },
+    state: { ...DEFAULT_MEDIA_STATE, ...report.state },
+    status: { ...DEFAULT_MEDIA_STATUS, ...report.status },
+    settings: { ...DEFAULT_MEDIA_SETTINGS, ...report.settings },
+  };
+}
 
 // Geometry
 export const getRenderedBox = (elem: HTMLElement & { videoWidth?: number; videoHeight?: number }): Partial<Dimensions & { left: number; top: number }> => {
@@ -53,10 +96,10 @@ export const getRenderedBox = (elem: HTMLElement & { videoWidth?: number; videoH
   return {};
 };
 
-// Video Element Cloning
-export const cloneVideo = (v: HTMLVideoElement & { tmgPlayer?: unknown; controlsList?: DOMTokenList }): HTMLVideoElement => {
-  const newV = v.cloneNode(true) as HTMLVideoElement;
-  (newV as HTMLVideoElement & { tmgPlayer?: unknown }).tmgPlayer = v.tmgPlayer;
+// Media Element Cloning
+export const cloneMedia = <M extends HTMLMediaElement>(v: M): M => {
+  const newV = v.cloneNode(true) as M;
+  newV.tmgPlayer = v.tmgPlayer;
   v.parentElement?.replaceChild(newV, v);
   if (v.currentTime) newV.currentTime = v.currentTime;
   if (v.playbackRate !== 1) newV.playbackRate = v.playbackRate;
@@ -70,7 +113,7 @@ export const cloneVideo = (v: HTMLVideoElement & { tmgPlayer?: unknown; controls
   if (v.controls) newV.controls = true;
   if (v.crossOrigin) newV.crossOrigin = v.crossOrigin;
   if (v.playsInline) newV.playsInline = true;
-  if ((v as HTMLVideoElement & { controlsList?: DOMTokenList }).controlsList?.length) (newV as HTMLVideoElement & { controlsList?: DOMTokenList }).controlsList = (v as HTMLVideoElement & { controlsList?: DOMTokenList }).controlsList;
+  if (v.controlsList?.length) newV.controlsList = v.controlsList;
   if (v.disablePictureInPicture) newV.disablePictureInPicture = true;
   if (!v.paused && newV.isConnected) newV.play();
   return newV;
@@ -93,7 +136,7 @@ export function addSources(sources: SourceLike | Iterable<SourceLike>, medium: H
   return isIter(sources) ? Array.from(sources as Iterable<SourceLike>, (source) => addSource(source, medium)) : addSource(sources, medium);
 }
 
-export function getSources(medium: HTMLElement): SourceLike[] {
+export function getSources(medium: HTMLElement): MediaStatus["sources"] {
   const sources = medium.querySelectorAll<HTMLSourceElement>("source"),
     _sources: SourceLike[] = [];
   sources.forEach((source) => {
@@ -101,7 +144,7 @@ export function getSources(medium: HTMLElement): SourceLike[] {
     putSourceDetails(source, obj);
     _sources.push(obj as SourceLike);
   });
-  return _sources;
+  return _sources as MediaStatus["sources"];
 }
 
 export const removeSources = (medium: HTMLElement): void => medium?.querySelectorAll("source")?.forEach((source) => source.remove());

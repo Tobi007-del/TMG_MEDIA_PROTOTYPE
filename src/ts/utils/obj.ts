@@ -139,3 +139,8 @@ export function getTrailRecord<T extends object>(obj: T, path: WCPaths<T>): [WCP
   }
   return record;
 }
+
+export function parseEOpts<T extends object>(options: T | boolean | undefined, opts: (keyof T)[], boolOpt: keyof T = opts[0], result = {} as T): T {
+  for (const opt of opts) (result as any)[opt] = false;
+  return (Object.assign(result, "boolean" === typeof options ? { [boolOpt]: options } : options), result);
+}

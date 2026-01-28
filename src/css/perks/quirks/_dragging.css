@@ -1,0 +1,37 @@
+.tmg-video-container .tmg-video-control-dragging {
+  opacity: 0.7;
+}
+.tmg-video-container:has(.tmg-video-control-dragging[data-drag-id=""]) [data-drop-zone="true"][data-drag-id=""] *,
+.tmg-video-container:has(.tmg-video-control-dragging[data-drag-id="big"]) [data-drop-zone="true"][data-drag-id="big"] *,
+.tmg-video-container:has(.tmg-video-control-dragging[data-drag-id="wrapper"]) [data-drop-zone="true"][data-drag-id="wrapper"] * {
+  pointer-events: none;
+}
+.tmg-video-container:has(.tmg-video-control-dragging[data-drag-id=""]) :has(> [data-drop-zone="true"][data-drag-id=""]),
+.tmg-video-container:has(.tmg-video-control-dragging[data-drag-id="big"]) [data-drop-zone="true"][data-drag-id="big"],
+.tmg-video-container:has(.tmg-video-control-dragging[data-drag-id="wrapper"]) [data-drop-zone="true"][data-drag-id="wrapper"] {
+  background: rgb(from var(--tmg-video-controls-color) r g b / 0.1);
+  outline: 2px dashed var(--tmg-video-brand-complement-color);
+  outline-offset: -1px;
+  border-radius: calc(var(--tmg-video-current-unit) / 5); /* since everyone's doing it */
+}
+.tmg-video-container :has(> [data-drop-zone="true"][data-drag-id=""] .tmg-video-control-dragging[data-drag-id=""]),
+.tmg-video-container [data-drop-zone="true"][data-drag-id="big"]:has(.tmg-video-control-dragging[data-drag-id="big"]),
+.tmg-video-container [data-drop-zone="true"][data-drag-id="wrapper"]:has(.tmg-video-control-dragging[data-drag-id="wrapper"]) {
+  background: linear-gradient(to top, var(--tmg-video-brand-complement-color), transparent);
+  outline: 2px dashed rgb(from var(--tmg-video-controls-color) r g b / 0.4);
+}
+.tmg-video-container:has(.tmg-video-control-dragging) :has(> [data-drop-zone="true"].tmg-video-dragover[data-drag-id=""]),
+.tmg-video-container:has(.tmg-video-control-dragging) [data-drop-zone="true"].tmg-video-dragover:is([data-drag-id="big"], [data-drag-id="wrapper"]) {
+  background: var(--tmg-video-brand-complement-color);
+}
+.tmg-video-container:has(.tmg-video-control-dragging[data-drag-id="wrapper"]) :has(> [data-drop-zone="true"][data-drag-id=""]:empty) {
+  border: 1.7px solid rgb(from var(--tmg-video-controls-color) r g b / 0.1);
+}
+.tmg-video-control-dragging[data-drag-id="wrapper"] {
+  border: 1.7px solid var(--tmg-video-brand-complement-color);
+}
+.tmg-video-container:has(.tmg-video-control-dragging[data-drag-id="wrapper"]) :has(> [data-drop-zone="true"][data-drag-id=""]:empty),
+.tmg-video-container .tmg-video-control-dragging[data-drag-id="wrapper"] {
+  align-self: center;
+  border-inline-start-color: var(--tmg-video-controls-color);
+}

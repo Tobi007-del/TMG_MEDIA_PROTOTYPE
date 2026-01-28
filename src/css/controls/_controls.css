@@ -1,0 +1,101 @@
+.tmg-video-container-content svg,
+.tmg-video-time-and-duration-btn,
+.tmg-video-playback-rate-btn {
+  color: var(--tmg-video-current-controls-color);
+}
+.tmg-video-container-content button:is(:hover, :focus-visible) {
+  --tmg-video-current-controls-color: var(--tmg-video-controls-active-color);
+}
+.tmg-video-side-controls-wrapper button {
+  background: var(--tmg-video-controls-background);
+  border-radius: var(--tmg-video-controls-border-radius);
+  padding: var(--tmg-video-controls-padding);
+  transition: background-color var(--tmg-video-fade-transition-time) ease;
+}
+.tmg-video-side-controls-wrapper button:is(:hover, :focus-visible) {
+  background: var(--tmg-video-controls-active-background);
+}
+.tmg-video-big-play-pause-btn {
+  transform: scale(var(--tmg-video-large-scale));
+}
+.tmg-video-vb-container.tmg-video-control-dragging > *:not(.tmg-video-vb-btn),
+.tmg-video-container:not(.tmg-video-miniplayer) :is(.tmg-video-miniplayer-remove-btn, .tmg-video-miniplayer-expand-btn),
+.tmg-video-container:is(.tmg-video-miniplayer, .tmg-video-floating-player, .tmg-video-fullscreen) .tmg-video-theater-btn,
+.tmg-video-container:is(.tmg-video-miniplayer, .tmg-video-floating-player, .tmg-video-mobile) :is(.tmg-video-prev-btn, .tmg-video-play-pause-btn, .tmg-video-next-btn),
+.tmg-video-container.tmg-video-picture-in-picture :is(.tmg-video-cover-curtain, button:has(.tmg-video-play-icon, .tmg-video-pause-icon, .tmg-video-prev-icon, .tmg-video-next-icon), .tmg-video-brightness-container, .tmg-video-buffer, .tmg-video-object-fit-btn),
+.tmg-media-container[data-size-tier^="xxxxx"] :is(.tmg-video-profile-link, .tmg-video-artist-wrapper, .tmg-video-thumb-indicator, .tmg-video-side-controls-wrapper > *:not(.tmg-video-play-pause-btn, .tmg-video-next-btn, .tmg-video-prev-btn, .tmg-video-captions-btn:not(.tmg-video-control-disabled), .tmg-video-fullscreen-btn, .tmg-video-volume-container, .tmg-video-time-and-duration-btn)),
+.tmg-video-container:has([data-notify^="playbackrate"], [data-notify^="volume"], [data-notify^="brightness"], [data-notify^="objectfit"], [data-notify="capture"]) :is(.tmg-video-big-controls-wrapper, .tmg-video-buffer) {
+  display: none;
+}
+:is(.tmg-video-play-pause-btn, .tmg-video-big-play-pause-btn) svg:not(.tmg-video-replay-icon) {
+  transform: inherit;
+}
+.tmg-video-container.tmg-video-paused .tmg-video-pause-icon,
+.tmg-video-container:not(.tmg-video-paused) .tmg-video-play-icon,
+.tmg-video-container:not(.tmg-video-replay) .tmg-video-replay-icon,
+.tmg-video-container.tmg-video-replay :is(.tmg-video-pause-icon, .tmg-video-play-icon),
+.tmg-video-container.tmg-video-fullscreen .tmg-video-enter-fullscreen-icon,
+.tmg-video-container:not(.tmg-video-fullscreen) .tmg-video-leave-fullscreen-icon,
+.tmg-video-container.tmg-video-theater .tmg-video-enter-theater-icon,
+.tmg-video-container:not(.tmg-video-theater) .tmg-video-leave-theater-icon,
+.tmg-video-container[data-track-kind="subtitles"] .tmg-video-captions-icon,
+.tmg-video-container:not([data-track-kind="subtitles"]) .tmg-video-subtitles-icon,
+.tmg-video-container:is(.tmg-video-picture-in-picture, .tmg-video-floating-player) .tmg-video-enter-picture-in-picture-icon,
+.tmg-video-container:not(.tmg-video-picture-in-picture, .tmg-video-floating-player) .tmg-video-leave-picture-in-picture-icon,
+.tmg-video-object-fit-contain-icon,
+.tmg-video-object-fit-cover-icon,
+.tmg-video-object-fit-fill-icon,
+.tmg-video-volume-high-icon,
+.tmg-video-volume-low-icon,
+.tmg-video-volume-muted-icon,
+.tmg-video-brightness-high-icon,
+.tmg-video-brightness-low-icon,
+.tmg-video-brightness-dark-icon {
+  display: none;
+}
+.tmg-video-container[data-object-fit="contain"] .tmg-video-object-fit-cover-icon,
+.tmg-video-container[data-object-fit="cover"] .tmg-video-object-fit-fill-icon,
+.tmg-video-container[data-object-fit="fill"] .tmg-video-object-fit-contain-icon,
+.tmg-video-container:is([data-volume-level="boost"], [data-volume-level="high"]) .tmg-video-volume-high-icon,
+.tmg-video-container[data-volume-level="low"] .tmg-video-volume-low-icon,
+.tmg-video-container[data-volume-level="muted"] .tmg-video-volume-muted-icon,
+.tmg-video-container:is([data-brightness-level="boost"], [data-brightness-level="high"]) .tmg-video-brightness-high-icon,
+.tmg-video-container[data-brightness-level="low"] .tmg-video-brightness-low-icon,
+.tmg-video-container[data-brightness-level="dark"] .tmg-video-brightness-dark-icon {
+  display: block;
+}
+.tmg-video-time-and-duration-btn,
+.tmg-video-playback-rate-btn {
+  min-height: var(--tmg-video-current-unit);
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.tmg-video-time-and-duration-btn {
+  gap: 0.5ch;
+}
+.tmg-video-playback-rate-btn {
+  max-width: calc(var(--tmg-video-current-unit) * 2);
+}
+.tmg-video-container.tmg-video-scrubbing .tmg-video-current-time,
+.tmg-video-playback-rate-btn {
+  font-weight: 500;
+}
+.tmg-video-captions-btn {
+  position: relative;
+}
+.tmg-video-captions-btn::after {
+  content: "";
+  top: 49%;
+  left: 49%;
+  z-index: -1;
+  height: calc(var(--tmg-video-current-unit) / 1.75);
+  width: calc(var(--tmg-video-current-unit) / 1.275);
+  background-color: var(--tmg-video-brand-color);
+  transform: scale(0, 1);
+  transform-origin: left;
+  transition: transform var(--tmg-video-slow-transition-time) ease;
+}
+.tmg-video-container.tmg-video-captions .tmg-video-captions-btn::after {
+  transform: scale(1, 1);
+}

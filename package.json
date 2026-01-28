@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "typecheck": "tsc --noEmit --watch",
+    "dev": "vite",
     "build": "node build.mjs",
     "build:prod": "node build.mjs --prod",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -22,6 +23,8 @@
   "homepage": "https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE#readme",
   "devDependencies": {
     "esbuild": "^0.27.2",
-    "typescript": "^5.9.3"
+    "sass": "^1.94.1",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.1"
   }
 }

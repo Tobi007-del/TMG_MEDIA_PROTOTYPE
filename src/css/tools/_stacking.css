@@ -1,0 +1,30 @@
+.tmg-video-thumbnail {
+  z-index: 1;
+}
+.tmg-video-picture-in-picture-wrapper {
+  z-index: 2;
+}
+.tmg-video-notifiers-container {
+  z-index: 3;
+}
+.tmg-video-top-curtain,
+.tmg-video-bottom-curtain {
+  z-index: 4;
+}
+.tmg-video-captions-container {
+  z-index: 5;
+}
+.tmg-video-cover-curtain {
+  z-index: 6;
+}
+.tmg-video-big-controls-wrapper,
+.tmg-video-buffer {
+  z-index: 7;
+}
+.tmg-video-top-controls-wrapper,
+.tmg-video-bottom-controls-wrapper {
+  z-index: 9;
+}
+.tmg-video-container.tmg-video-mobile .tmg-video-notifiers-container {
+  z-index: 8;
+}
