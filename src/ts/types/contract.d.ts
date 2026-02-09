@@ -1,32 +1,22 @@
 import type { Controller } from "./controller";
-import {
-  MEDIA_CONTRACT,
-  MEDIA_INTENTS,
-  MEDIA_STATES,
-  MEDIA_INFOS,
-  MEDIA_SETTINGS,
-} from "../consts/contract";
+import { Inert, Intent } from "./reactor";
+import { Sources, Src, SrcObject, Tracks } from "../plugs";
+import { BaseTech } from "../media";
 
-export type MediaContractKey = (typeof MEDIA_CONTRACT)[number];
-export type MediaIntentKey = (typeof MEDIA_INTENTS)[number];
-export type MediaStateKey = MediaIntentKey;
-export type MediaStatusKey = (typeof MEDIA_INFOS)[number];
-export type MediaSettingsKey = (typeof MEDIA_SETTINGS)[number];
-
-export interface MediaContract extends Record<MediaContractKey, any> {
-  // Must Haves to be even considered media
-  src: string;
+export interface MediaContract {
+  // "Must Haves" to be even considered media
+  src: Src;
   currentTime: number;
   duration: number;
   paused: boolean;
   ended: boolean;
 }
 
-export interface MediaIntent extends Record<MediaIntentKey, any> {
+export interface MediaState {
   // --- The Big Three (Promise-based State) ---
-  src: string; // Rejects if network fails or format unsupported
-  currentTime: number; // Rejects if outside seekable range
-  paused: boolean; // Rejects if "Autoplay Policy" denies it
+  src: MediaContract["src"]; // Rejects if network fails or format unsupported
+  currentTime: MediaContract["currentTime"]; // Rejects if outside seekable range
+  paused: MediaContract["paused"]; // Rejects if "Autoplay Policy" denies it
   // --- The Engine Inputs (Interceptable) ---
   volume: number;
   muted: boolean;
@@ -38,21 +28,51 @@ export interface MediaIntent extends Record<MediaIntentKey, any> {
   airplay: boolean; // Apple AirPlay
   chromecast: boolean; // Google Cast
   // --- VR / XR (Spatial Realities) ---
-  vrDisplay: boolean; // Request "Immersive Mode"
-  isStereo: boolean; // Request "Side-by-Side" 3D render
-  fieldOfView: number; // Degrees
-  panningX: number; // Horizontal head orientation
-  panningY: number; // Vertical head orientation
-  // --- Track Switching (Async Buffering) ---
-  currentLevel: number; // Quality (1080p -> 4K)
+  xrSession: boolean; // Request "Immersive Mode" (Handshake)
+  xrMode: "inline" | "immersive-vr" | "immersive-ar"; // Hardware target
+  xrReferenceSpace: "local" | "local-floor" | "bounded-floor" | "unbounded";
+  // --- Projection & Stereo (The "Content" Logic) ---
+  projection: "flat" | "equirectangular" | "cubemap" | "cylindrical";
+  stereoMode: "mono" | "sbs" | "top-bottom" | "vr180" | "none"; // Side-by-Side vs Top-Bottom
+  // --- Camera & Viewport (The "Lens") ---
+  fieldOfView: number; // Degrees (Vertical FOV)
+  aspectRatio: number; // Viewport ratio
+  // --- Orientation (The "Head/Camera" Pose) ---
+  panningX: number; // Yaw (Left/Right)
+  panningY: number; // Pitch (Up/Down)
+  panningZ: number; // Roll (Tilt/Barrel)
+  // --- Interaction (XR Controllers) ---
+  xrInputSource: any; // Reference to active controllers/hand-tracking
+  // --- Track Switching (Async Buffering/Streaming) ---
+  // NOTE: "Disabled" value is "-1"
+  currentTextTrack: number; // Subtitle
   currentAudioTrack: number; // Language (English -> Spanish)
   currentVideoTrack: number; // Angle
-  currentTextTrack: number; // Subtitle
+  autoLevel: boolean; // ABR Algorithm enabled?
+  currentLevel: number; // Quality (1080p -> 4K)
+  // --- HTML Attributes ---
+  poster: string;
+  autoplay: boolean;
+  loop: boolean;
+  preload: "" | "auto" | "metadata" | "none";
+  playsInline: boolean;
+  crossOrigin: string | null;
+  controls: boolean; // Native controls enabled?
+  controlsList: string;
+  disablePictureInPicture: boolean;
+  // ---  HTML Lists ---
+  sources: Sources; // HTML courtesy
+  tracks: Tracks; // HTML courtesy
 }
 
-export type MediaState = MediaIntent;
+export interface MediaIntent extends MediaState {
+  currentLevel: any;
+  currentAudioTrack: any;
+  currentVideoTrack: any;
+  currentTextTrack: any;
+} // Tech's responsibility to receive `any` intent and produce a `number` that can index their status (track/level) lists
 
-export interface MediaStatus extends Record<MediaStatusKey, any> {
+export interface MediaStatus {
   // --- Network & Health ---
   readyState: number;
   networkState: number;
@@ -65,8 +85,8 @@ export interface MediaStatus extends Record<MediaStatusKey, any> {
   buffered: TimeRanges;
   played: TimeRanges;
   seekable: TimeRanges;
-  duration: number; // In seconds
-  ended: boolean; // Playback complete?
+  duration: MediaContract["duration"]; // In seconds
+  ended: MediaContract["ended"]; // Playback complete?
   // --- Dimensions ---
   videoWidth: number;
   videoHeight: number;
@@ -76,42 +96,43 @@ export interface MediaStatus extends Record<MediaStatusKey, any> {
   canPlay: boolean; // Can we start?
   canPlayThrough: boolean; // Can we finish?
   // --- Lists ---
-  sources: Array<{ src: string; type: string; media?: string }>;
-  audioTracks: AudioTrackList | any[];
-  videoTracks: VideoTrackList | any[];
   textTracks: TextTrackList | any[];
+  audioTracks: any[]; // | AudioTrackList
+  videoTracks: any[]; // | VideoTrackList
   levels: any[];
-  // --- VR Info ---
-  vrCapabilities: Record<"hasPosition" | "hasOrientation", boolean> | null; // 6DoF, 3DoF
+  // --- VR / XR Info ---
+  xrCapabilities: Record<
+    "hasPosition" | "hasOrientation" | "isEmulated", // 6DoF- Room-scale, 3DoF- Head rotation, Emulated- Magic Window
+    boolean
+  > | null;
+  // --- Active Content ---
+  activeCue: TextTrackCue | null; // The current subtitle/caption line
 }
 
-export interface MediaSettings extends Record<MediaSettingsKey, any> {
-  // --- HTML Attributes ---
-  poster: string;
-  autoplay: boolean;
-  loop: boolean;
-  preload: "" | "auto" | "metadata" | "none";
-  playsInline: boolean;
-  crossOrigin: string | null;
-  controls: boolean; // Native controls enabled?
+export interface MediaSettings {
   // --- Defaults (Startup values) ---
   defaultMuted: boolean;
   defaultPlaybackRate: number;
-  // --- Streaming Logic ---
-  autoLevel: boolean; // ABR Algorithm enabled?
+  // --- Stream Sources ---
+  srcObject: SrcObject; // HTML courtesy
 }
 
-export type MediaTechFeatures = {
-  [K in Exclude<MediaIntentKey, MediaContractKey>]?: boolean;
+export type MediaFeatures = {
+  [K in Exclude<keyof MediaState, keyof MediaContract>]?: boolean;
 } & {
-  [K in Exclude<MediaStatusKey, MediaContractKey>]?: boolean;
+  [K in Exclude<keyof MediaStatus, keyof MediaContract>]?: boolean;
 } & {
-  [K in Exclude<MediaSettingsKey, MediaContractKey>]?: boolean;
+  [K in Exclude<keyof MediaSettings, keyof MediaContract>]?: boolean;
 };
 
 export interface MediaReport {
-  intent: MediaIntent;
   state: MediaState;
+  intent: Intent<MediaIntent>;
   status: MediaStatus;
   settings: MediaSettings;
 }
+
+export type Media = {
+  tech: Inert<BaseTech>;
+  element: HTMLVideoElement;
+} & MediaReport;

@@ -1,5 +1,5 @@
 import { TMGMediaExtension } from "./contract";
-import { Player } from "../core/player";
+import { Player } from "../tools/player";
 import { ToastInstance, ToastOptions } from "./t007";
 export {};
 

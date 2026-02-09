@@ -34,4 +34,5 @@
 .tmg-video-container .tmg-video-control-dragging[data-drag-id="wrapper"] {
   align-self: center;
   border-inline-start-color: var(--tmg-video-controls-color);
+  border-radius: 0 !important;
 }

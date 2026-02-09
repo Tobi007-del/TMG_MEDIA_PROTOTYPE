@@ -24,7 +24,7 @@ export function clampRGBBri([r, g, b]: RGB, m = 40): RGB {
 export async function getDominantColor(src: string | HTMLImageElement | HTMLCanvasElement | { canvas: HTMLCanvasElement; width: number; height: number }, format: DominantColorFormat = "rgb", raw = false): Promise<string | RGB | null> {
   if (typeof src == "string")
     src = await new Promise<HTMLImageElement>((res, rej) => {
-      const i = createEl("img", { src: `${src}`, crossOrigin: "anonymous", onload: () => res(i), onerror: () => rej(new Error(`Image load error: ${src}`)) });
+      const i = createEl("img", { src: String(src), crossOrigin: "anonymous", onload: () => res(i), onerror: () => rej(new Error(`Image load error: ${src}`)) });
     });
   if ((src as { canvas?: HTMLCanvasElement })?.canvas) src = (src as { canvas: HTMLCanvasElement }).canvas;
   const c = document.createElement("canvas"),
@@ -32,19 +32,19 @@ export async function getDominantColor(src: string | HTMLImageElement | HTMLCanv
     s = Math.min(100, (src as HTMLImageElement | HTMLCanvasElement).width, (src as HTMLImageElement | HTMLCanvasElement).height);
   c.width = c.height = s;
   src && x?.drawImage(src as CanvasImageSource, 0, 0, s, s);
-  const d = src && x?.getImageData(0, 0, s, s).data,
+  const d = src && (x?.getImageData(0, 0, s, s).data as Uint8ClampedArray), // had to fool ts, coallesced to 0 below
     ct: Record<string, number> = {},
     pt: Record<string, RGB> = {} as Record<string, RGB>;
   for (let i = 0; i < (d?.length ?? 0); i += 4) {
-    if ((d as Uint8ClampedArray)[i + 3] < 128) continue;
-    const k = `${(d as Uint8ClampedArray)[i] & 0xf0},${(d as Uint8ClampedArray)[i + 1] & 0xf0},${(d as Uint8ClampedArray)[i + 2] & 0xf0}`;
+    if (d[i + 3] < 128) continue;
+    const k = (d[i] & 0xf0) + "," + (d[i + 1] & 0xf0) + "," + (d[i + 2] & 0xf0);
     ct[k] = (ct[k] || 0) + 1;
-    pt[k] = pt[k] ? [pt[k][0] + (d as Uint8ClampedArray)[i], pt[k][1] + (d as Uint8ClampedArray)[i + 1], pt[k][2] + (d as Uint8ClampedArray)[i + 2]] : [(d as Uint8ClampedArray)[i], (d as Uint8ClampedArray)[i + 1], (d as Uint8ClampedArray)[i + 2]];
+    pt[k] = pt[k] ? [pt[k][0] + d[i], pt[k][1] + d[i + 1], pt[k][2] + d[i + 2]] : [d[i], d[i + 1], d[i + 2]];
   }
-  const clrs = Object.entries(ct)
-    .sort((a, b) => b[1] - a[1])
+  const clrs = Object.keys(ct)
+    .sort((a, b) => ct[b] - ct[a])
     .slice(0, 7)
-    .map(([k]) => ({ key: k, rgb: pt[k].map((v) => Math.round(v / ct[k])) as RGB }));
+    .map((k) => ({ key: k, rgb: pt[k].map((v) => Math.round(v / ct[k])) as RGB }));
   if (!clrs.length) return null;
   const [r, g, b] = clampRGBBri(clrs.reduce((sat, curr) => (getRGBSat(sat.rgb) > getRGBSat(curr.rgb) ? sat : curr), clrs[0]).rgb, 70);
   return format === "hex" ? `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}` : raw == false ? `rgb(${r},${g},${b})` : [r, g, b];

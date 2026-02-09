@@ -88,7 +88,7 @@
   color: rgb(from currentColor r g b / 0.75);
   font-weight: 500;
 }
-.tmg-video-apt-controls-wrapper:has(:first-child [data-displayed="true"]):has(:last-child [data-displayed="true"]) > .tmg-video-meta-wrapper-cover .tmg-video-artist {
+.tmg-video-apt-controls-wrapper:has(> :first-child [data-displayed="true"]):has(> :last-child [data-displayed="true"]) > .tmg-video-meta-wrapper-cover .tmg-video-artist {
   margin-inline: auto;
 }
 .tmg-video-profile-link:has(img[data-loaded="false"]),

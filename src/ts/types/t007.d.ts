@@ -1,4 +1,5 @@
 // === Type definition for T007 Toast Library (Global) ===
+export type ToastType = "success" | "error" | "warning" | "info";
 
 export type ToastOptions = Partial<{
   id: string;
@@ -6,7 +7,7 @@ export type ToastOptions = Partial<{
   render: string;
   type: ToastType;
   image: string | boolean;
-  icon: React.ReactNode | string;
+  icon: string;
   autoClose: boolean | number; //
   position: //
     | "top-right"

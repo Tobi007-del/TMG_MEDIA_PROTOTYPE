@@ -30,24 +30,17 @@ export function assignEl<K extends keyof HTMLElementTagNameMap>(el?: HTMLElement
 export function assignEl(el?: HTMLElement, props?: Partial<HTMLElement>, dataset?: Dataset, styles?: Style): void;
 export function assignEl(el?: HTMLElement, props: Record<string, unknown> = {}, dataset: Dataset = {}, styles: Style = {}): void {
   if (!el) return;
-  Object.entries(props).forEach(([k, v]) => {
-    if (v !== undefined) (el as unknown as Record<string, unknown>)[k] = v;
-  });
-  Object.entries(dataset).forEach(([k, v]) => {
-    if (v !== undefined) (el.dataset as DOMStringMap)[k] = String(v);
-  });
-  Object.entries(styles).forEach(([k, v]) => {
-    if (v !== undefined) (el.style as unknown as Record<string, unknown>)[k] = v;
-  });
+  for (const k of Object.keys(props)) if (props[k] !== undefined) (el as unknown as Record<string, unknown>)[k] = props[k];
+  for (const k of Object.keys(dataset)) if (dataset[k] !== undefined) (el.dataset as DOMStringMap)[k] = String(dataset[k]);
+  for (const k of Object.keys(styles)) if (styles[k as keyof Style] !== undefined) (el.style as unknown as Record<string, unknown>)[k] = styles[k as keyof Style];
 }
 
 // Resource Loading
-const resourceCache: Partial<Record<string, Promise<HTMLElement | void>>> = {};
-
+const _resourceCache: Partial<Record<string, Promise<HTMLElement | void>>> = {};
 export function loadResource(src: string, type: ResourceType = "style", { module, media, crossOrigin, integrity }: LoadResourceOptions = {}): Promise<HTMLElement | void> {
-  if (resourceCache[src]) return resourceCache[src];
-  if (type === "script" ? [...document.scripts].some((s) => isSameURL(s.src, src)) : type === "style" ? [...document.styleSheets].some((s) => isSameURL((s as CSSStyleSheet).href ?? "", src)) : false) return Promise.resolve();
-  resourceCache[src] = new Promise<HTMLElement | void>((resolve, reject) => {
+  if (_resourceCache[src]) return _resourceCache[src];
+  if (type === "script" ? Array.prototype.some.call(document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.some.call(document.styleSheets, (s) => isSameURL((s as CSSStyleSheet).href ?? "", src)) : false) return Promise.resolve();
+  _resourceCache[src] = new Promise<HTMLElement | void>((resolve, reject) => {
     if (type === "script") {
       const script = createEl("script", { src, type: module ? "module" : "text/javascript", crossOrigin, integrity, onload: () => resolve(script as HTMLElement), onerror: () => reject(new Error(`Script load error: ${src}`)) } as Partial<HTMLScriptElement>);
       if (!script) return reject(new Error(`Script load error: ${src}`));
@@ -58,7 +51,7 @@ export function loadResource(src: string, type: ResourceType = "style", { module
       document.head.append(link);
     } else reject(new Error(`Unsupported resource type: ${type}`));
   });
-  return resourceCache[src];
+  return _resourceCache[src];
 }
 
 // Viewport Checks
@@ -83,7 +76,6 @@ export const getElSiblingAt = (p: number, dir: Direction, els: Element[], pos: P
 
 // Fullscreen & Picture-in-Picture
 export const queryFullscreen = (): boolean => Boolean(queryFullscreenEl());
-
 export const queryFullscreenEl = (): Element | null => {
   const d = document as any;
   return d.fullscreenElement || d.webkitFullscreenElement || d.mozFullScreenElement || d.msFullscreenElement || null;
@@ -94,7 +86,6 @@ export const supportsFullscreen = (): boolean => {
     v = HTMLVideoElement.prototype as any;
   return Boolean(d.fullscreenEnabled || d.mozFullscreenEnabled || d.msFullscreenEnabled || d.webkitFullscreenEnabled || d.webkitSupportsFullscreen || v.webkitEnterFullscreen);
 };
-
 export const supportsPictureInPicture = (): boolean => {
   const w = window as any,
     d = document as any,
@@ -106,7 +97,6 @@ export const enterFullscreen = (el: Element): Promise<void> => {
   const e = el as any;
   return e.webkitEnterFullscreen ? e.webkitEnterFullscreen() : e.requestFullscreen ? e.requestFullscreen() : e.mozRequestFullScreen ? e.mozRequestFullScreen() : e.webkitRequestFullscreen ? e.webkitRequestFullscreen() : e.msRequestFullscreen ? e.msRequestFullscreen() : Promise.reject(new Error("Fullscreen API is not supported"));
 };
-
 export const exitFullscreen = (el: Element): Promise<void> => {
   const e = el as any,
     d = document as any;
@@ -114,12 +104,11 @@ export const exitFullscreen = (el: Element): Promise<void> => {
 };
 
 // Safe Click Handling
-export function addSafeClicks(el: SafeClickEl | null | undefined, onClick?: (e: MouseEvent) => void, onDblClick?: (e: MouseEvent) => void, options?: boolean | AddEventListenerOptions): void {
+export function addSafeClicks(el: SafeClickEl | null | undefined, onClick?: (e: MouseEvent) => void | null, onDblClick?: (e: MouseEvent) => void | null, options?: boolean | AddEventListenerOptions): void {
   el && removeSafeClicks(el);
   el?.addEventListener("click", (el._clickHandler = (e: MouseEvent) => (clearTimeout(el._clickTimeoutId), (el._clickTimeoutId = setTimeout(() => onClick?.(e), 300)))), options);
   el?.addEventListener("dblclick", (el._dblClickHandler = (e: MouseEvent) => (clearTimeout(el._clickTimeoutId), onDblClick?.(e))), options);
 }
-
 export const removeSafeClicks = (el: SafeClickEl | null | undefined): void => (el?.removeEventListener("click", el._clickHandler as EventListener), el?.removeEventListener("dblclick", el._dblClickHandler as EventListener));
 
 // DOM Observers

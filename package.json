@@ -2,7 +2,13 @@
   "name": "tmg_media_prototype",
   "version": "1.0.0",
   "description": "> A feature-rich, vanilla JavaScript video player implementation for [THE_MOVIE_GARDEN](https://tobi007-del.github.io/TMG.com/) initiative",
-  "main": "index.js",
+  "type": "module",
+  "main": "dist/tmg-player.js",
+  "module": "dist/tmg-player.mjs",
+  "types": "dist/tmg-player.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit --watch",
     "dev": "vite",
@@ -23,6 +29,7 @@
   "homepage": "https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE#readme",
   "devDependencies": {
     "esbuild": "^0.27.2",
+    "esbuild-sass-plugin": "^3.6.0",
     "sass": "^1.94.1",
     "typescript": "^5.9.3",
     "vite": "^6.4.1"

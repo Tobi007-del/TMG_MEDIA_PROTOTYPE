@@ -188,7 +188,7 @@ export const initArrowFocusNav = (container: HTMLElement, cfg: ArrowNavConfig = 
         el.setAttribute("tabindex", shouldBeTabbable ? "0" : "-1");
       } else el.setAttribute("tabindex", "0");
       if (virtual) {
-        el.setAttribute("aria-selected", `${isActive}`);
+        el.setAttribute("aria-selected", String(isActive));
         el.classList.toggle(activeClass, isActive);
       }
     });

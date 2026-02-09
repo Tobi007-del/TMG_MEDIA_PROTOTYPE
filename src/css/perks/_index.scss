@@ -1,8 +1,8 @@
-@use "./_next-preview.css";
-@use "./_locked.css";
-@use "./_notifiers.css";
-@use "./_notifiers.css";
-@use "./_adjust.css";
-@use "./quirks/_scroll-assist.css";
-@use "./quirks/_ripple.css";
-@use "./quirks/_dragging.css";
+@use "./_next-preview.css" as *;
+@use "./_locked.css" as *;
+@use "./_notifiers.css" as *;
+@use "./_notifiers.css" as *;
+@use "./_adjust.css" as *;
+@use "./quirks/_scroll-assist.css" as *;
+@use "./quirks/_ripple.css" as *;
+@use "./quirks/_dragging.css" as *;

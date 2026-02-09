@@ -1,3 +1,3 @@
-@use "./_disabled.css";
-@use "./_override.css";
-@use "./_light.css";
+@use "./_disabled.css" as *;
+@use "./_override.css" as *;
+@use "./_light.css" as *;

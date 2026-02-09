@@ -21,7 +21,7 @@ class ReactorEvent {
     this.path = payload.target.path;
     this.bubbles = payload.bubbles ?? true;
     this.rejectable = payload.rejectable ?? true;
-    this.timestamp = Date.now();
+    // this.timestamp = Date.now();
     this.eventPhase = ReactorEvent.NONE;
     this._propagationStopped = false;
     this._immediatePropagationStopped = false;
@@ -52,6 +52,7 @@ class ReactorEvent {
     return tmg.getTrailPaths(this.path);
   }
 }
+// Lagging behind ts reactor now
 class Reactor {
   constructor(obj = {}, options = {}) {
     this.getters = new Map();
@@ -71,7 +72,7 @@ class Reactor {
     const proxy = new Proxy(obj, {
       get: (object, key, receiver) => {
         const safeKey = String(key),
-          fullPath = path ? `${path}.${safeKey}` : safeKey,
+          fullPath = path ? path + "." + safeKey : safeKey,
           target = { path: fullPath, value: Reflect.get(object, key, receiver), oldValue: undefined, key: safeKey, object },
           payload = { type: "get", target, currentTarget: target, root: this.core };
         if (this.getters.has(fullPath)) return this._mediate(fullPath, payload, false);
@@ -79,7 +80,7 @@ class Reactor {
       },
       set: (object, key, value, receiver) => {
         const safeKey = String(key),
-          fullPath = path ? `${path}.${safeKey}` : safeKey,
+          fullPath = path ? path + "." + safeKey : safeKey,
           target = { path: fullPath, value, oldValue: Reflect.get(object, key, receiver), key: safeKey, object },
           payload = { type: "set", target, currentTarget: target, root: this.core };
         if (this.setters.has(fullPath)) target.value = this._mediate(fullPath, payload, true);
@@ -87,7 +88,7 @@ class Reactor {
       },
       deleteProperty: (object, key) => {
         const safeKey = String(key),
-          fullPath = path ? `${path}.${safeKey}` : safeKey,
+          fullPath = path ? path + "." + safeKey : safeKey,
           target = { path: fullPath, oldValue: Reflect.get(object, key), key: safeKey, object },
           payload = { type: "delete", target, currentTarget: target, root: this.core };
         if (this.setters.has(fullPath)) target.value = this._mediate(fullPath, payload, true);
@@ -121,7 +122,7 @@ class Reactor {
   }
   _flush() {
     (this.tick(this.batch.keys()), this.batch.clear(), (this.isBatching = false));
-    for (const task of this.queue) task();
+    if (this.queue.size) for (const task of this.queue) task();
     this.queue.clear();
   }
   _wave(path, payload) {
@@ -1203,7 +1204,7 @@ class tmg_Video_Controller {
         return this.videoContainer.classList.contains("tmg-video-settings-view");
       case "captions":
         return this.videoContainer.classList.contains("tmg-video-captions");
-      case "captions-preview":
+      case "captionsPreview":
         return this.videoContainer.classList.contains("tmg-video-captions-preview");
       case "overlay":
         return this.videoContainer.classList.contains("tmg-video-overlay");
@@ -1615,7 +1616,7 @@ class tmg_Video_Controller {
   }
   setCaptionsState() {
     [...this.video.textTracks].forEach((track, i) => {
-      track.oncuechange = () => i === this.textTrackIndex && !(!this.isUIActive("captions") && this.isUIActive("captions-preview")) && this._handleCueChange(track.activeCues?.[0]);
+      track.oncuechange = () => i === this.textTrackIndex && !(!this.isUIActive("captions") && this.isUIActive("captionsPreview")) && this._handleCueChange(track.activeCues?.[0]);
       if (track.mode === "showing") this.textTrackIndex = i;
       track.mode = "hidden";
     });
@@ -2303,10 +2304,10 @@ class tmg_Video_Controller {
       deltaX = Math.abs(this.lastGestureTouchX - x),
       deltaY = Math.abs(this.lastGestureTouchY - y);
     this.gestureTouchZone = { x: x - rect.left > rect.width * 0.5 ? "right" : "left", y: y - rect.top > rect.height * 0.5 ? "bottom" : "top" };
-    const rTop = this.lastGestureTouchX - rect.left,
-      rLeft = this.lastGestureTouchY - rect.top; // relative
-    if (deltaX > deltaY * tc.axesRatio && rTop > tc.inset && rTop < rect.width - tc.inset) tc.timeline && ((this.gestureTouchXCheck = true), this.videoContainer.addEventListener("touchmove", this._handleGestureTouchXMove, { passive: false }));
-    else if (deltaY > deltaX * tc.axesRatio && rLeft > tc.inset && rLeft < rect.height - tc.inset) ((tc.volume && this.gestureTouchZone?.x === "right") || (tc.brightness && this.gestureTouchZone?.x === "left")) && ((this.gestureTouchYCheck = true), this.videoContainer.addEventListener("touchmove", this._handleGestureTouchYMove, { passive: false }));
+    const rLeft = this.lastGestureTouchX - rect.left,
+      rTop = this.lastGestureTouchY - rect.top; // relative
+    if (deltaX > deltaY * tc.axesRatio && rLeft > tc.inset && rLeft < rect.width - tc.inset) tc.timeline && ((this.gestureTouchXCheck = true), this.videoContainer.addEventListener("touchmove", this._handleGestureTouchXMove, { passive: false }));
+    else if (deltaY > deltaX * tc.axesRatio && rTop > tc.inset && rTop < rect.height - tc.inset) ((tc.volume && this.gestureTouchZone?.x === "right") || (tc.brightness && this.gestureTouchZone?.x === "left")) && ((this.gestureTouchYCheck = true), this.videoContainer.addEventListener("touchmove", this._handleGestureTouchYMove, { passive: false }));
   }
   _handleGestureTouchXMove(e) {
     if (this.gestureTouchCanCancel) return this._handleGestureTouchEnd();
@@ -2416,7 +2417,7 @@ class tmg_Video_Controller {
     if (tmg.matchKeys(overrides, combo, s)) terms.override = true;
     if (tmg.matchKeys(blocks, combo, s)) terms.block = true;
     if (tmg.matchKeys(tmg.WHITE_LISTED_KEYS, combo)) terms.allowed = true; // Allow whitelisted system keys - w
-    terms.action = Object.entries(shortcuts).find(([, shortcut]) => tmg.matchKeys(shortcut, combo, s))?.[0] || null; // Find action name for shortcuts
+    terms.action = Object.keys(shortcuts).find((key) => tmg.matchKeys(shortcuts[key], combo, s)) || null; // Find action name for shortcuts
     return terms;
   }
   keyEventAllowed(e) {
@@ -2889,7 +2890,9 @@ var tmg = {
       if (!m) continue; // invalid timing line, skip block
       const [, startHms, startMsRaw = "0", endHms, endMsRaw = "0"] = m,
         to3 = (ms) => ms.padEnd(3, "0").slice(0, 3);
-      vttLines.push(`${startHms}.${to3(startMsRaw)} --> ${endHms}.${to3(endMsRaw)}`, ...lines.slice(idx + 1), ""); // Add timing line, subtitle text lines, and blank line
+      vttLines.push(startHms + "." + to3(startMsRaw) + " --> " + endHms + "." + to3(endMsRaw)); // add timing line
+      for (let i = idx + 1; i < lines.length; i++) vttLines.push(lines[i]); // subtitle text line
+      vttLines.push(""); // blank line
     }
     return vttLines.join("\n");
   },
@@ -3115,14 +3118,14 @@ var tmg = {
       pt = {}; // per total
     for (let i = 0; i < d?.length; i += 4) {
       if (d[i + 3] < 128) continue;
-      const k = `${d[i] & 0xf0},${d[i + 1] & 0xf0},${d[i + 2] & 0xf0}`;
+      const k = (d[i] & 0xf0) + "," + (d[i + 1] & 0xf0) + "," + (d[i + 2] & 0xf0);
       ct[k] = (ct[k] || 0) + 1;
       pt[k] = pt[k] ? [pt[k][0] + d[i], pt[k][1] + d[i + 1], pt[k][2] + d[i + 2]] : [d[i], d[i + 1], d[i + 2]];
     }
-    const clrs = Object.entries(ct)
-      .sort((a, b) => b[1] - a[1]) // sort by count DESC
+    const clrs = Object.keys(ct)
+      .sort((a, b) => ct[b] - ct[a]) // sort by count DESC
       .slice(0, 7) // take top buckets
-      .map(([k]) => ({ key: k, rgb: pt[k].map((v) => Math.round(v / ct[k])) }));
+      .map((k) => ({ key: k, rgb: pt[k].map((v) => Math.round(v / ct[k])) }));
     if (!clrs.length) return null;
     const [r, g, b] = tmg.clampRGBBri(clrs.reduce((sat, curr) => (tmg.getRGBSat(sat.rgb) > tmg.getRGBSat(curr.rgb) ? sat : curr), clrs[0]).rgb, 70); // vibrancy test to avoid muddy colors
     // console.log(clrs.map((c) => [c, tmg.getRGBSat(c.rgb), tmg.getRGBBri(c.rgb)]));

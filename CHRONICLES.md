@@ -1,4 +1,4 @@
-# TVP CHRONICLES: State Vs. Intent Architecture (S.I.A)
+# TVP CHRONICLES: State & Intent Architecture (S.I.A)
 
 ### _The Basis of the New TVP Architecture_
 
@@ -110,7 +110,7 @@ But this is where things get fun. The UI could reflect both your **‘Want’** 
 
 I don’t think I’ve drawn enough lines though. One more thing: a new concept was added to the flow `reject()`, borrowed from web event listeners `preventDefault()`.
 
-Since intents are not mediated, anyone who was reflecting that optimistic wish (let’s say a range slider that wants to move faster than time; if you get my drift, I mean video current time oh) should at least watch for "if rejected." Because, like I said, the internals of magic is surgery.
+Since intents are not mediated, anyone who was reflecting that optimistic wish (let’s say a range slider that wants to move faster than time; if you get my drift, I mean video current time oh) should at least check for "if rejected", that way it doesn't have to snap back if it hits a wrong value while being optimistic cuz it never snapped, it's logical resistance made possible with the event loop; consulting the future in the past. Because, like I said, the internals of magic is surgery.
 
 It’s like the mirror will allow your dream self to reflect, but when it’s maybe too sunny, it will not. The reflector that wants to be optimistic for good user experience must take the responsibility of being **smart** to know: _"When should I just not reflect what is not, even when I am commanded to?"_
 
@@ -221,6 +221,7 @@ config.watch("volume", (val) => (audioNode.gain.value = val));
 // "When you have a free moment, update the slider position."
 config.on("volume", (e) => (slider.value = e.value));
 ```
+NOTE: This signature can be skipped if you just used intents and put everybody in the sky, i'm only making this an options to cover any usecase considering i tested the reactor first on the pre-existing codebase that hasn't adopted SIA. If everyones living in the sky with just `.set()` and `.on()`, no one needs to touch the ground with `.watch()` and everything will be as fast as an airplane without the "jet lag"(UI Stutter). Sky here means outside the synchronous code thread that blocks the UI with potential to layout thrashing. You should really only watch when you need precision and the value is not UI intensive for for forwarding changes so you're not later than a tick.
 
 **The "Layman's" Pitch:**
 
@@ -281,3 +282,5 @@ The UI listens on **Bubble**. It doesn't get involved in the politics; it just w
 This architecture allows for **Stubborn Competence**. A Plugin(eg: Volume Audio Context) can try to be fancy at the front of the line only if it listens first. If it fails, the Tech (further down the capture line) picks up the pieces. If the Tech handles it, the UI (bubbling up) never even knows there was a struggle, because it just sees a working player.
 
 That is the Art of Resolution.
+
+There's `immediate: true` now as an option for all listeners so the same logic can be shared for initialization and subsequent state updates. You can also pass a signal so it's on par with modern JS event listener patterns and for more cleaner code, easier on the garbage collector too; avoiding churn.

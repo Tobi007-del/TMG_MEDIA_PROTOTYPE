@@ -532,6 +532,7 @@
 .tmg-video-container .tmg-video-control-dragging[data-drag-id="wrapper"] {
   align-self: center;
   border-inline-start-color: var(--tmg-video-controls-color);
+  border-radius: 0 !important;
 }
 .tmg-video-container :is(.tmg-video-control-hidden, #o#o#o#o#o) {
   display: none;
@@ -1201,7 +1202,7 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
   color: rgb(from currentColor r g b / 0.75);
   font-weight: 500;
 }
-.tmg-video-apt-controls-wrapper:has(:first-child [data-displayed="true"]):has(:last-child [data-displayed="true"]) > .tmg-video-meta-wrapper-cover .tmg-video-artist {
+.tmg-video-apt-controls-wrapper:has(>:first-child [data-displayed="true"]):has(>:last-child [data-displayed="true"]) > .tmg-video-meta-wrapper-cover .tmg-video-artist {
   margin-inline: auto;
 }
 .tmg-video-profile-link:has(img[data-loaded="false"]),
@@ -1463,7 +1464,7 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
   align-items: center;
 }
 .tmg-video-apt-controls-wrapper:has(.tmg-video-center-side-controls-wrapper [data-displayed="true"]),
-.tmg-video-apt-controls-wrapper:has(:first-child [data-displayed="true"]):has(:last-child [data-displayed="true"]):has(> .tmg-video-meta-wrapper-cover) {
+.tmg-video-apt-controls-wrapper:has(>:first-child [data-displayed="true"]):has(>:last-child [data-displayed="true"]):has(> .tmg-video-meta-wrapper-cover) {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
 }
@@ -1498,14 +1499,14 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
 .tmg-video-side-controls-wrapper {
   padding-block: var(--cmptd-ctrl-box-y-in-pad);
 }
-.tmg-video-container:not(:has(.tmg-video-control-dragging:is([data-drag-id=""], [data-drag-id="wrapper"]))) .tmg-video-bottom-2-sub-controls-wrapper .tmg-video-side-controls-wrapper:not(:has([data-displayed="true"])) {
+.tmg-video-container:not(:has(.tmg-video-control-dragging:is([data-drag-id=""], [data-drag-id="wrapper"]))) .tmg-video-bottom-2-sub-controls-wrapper .tmg-video-side-controls-wrapper {
   padding-block: 0;
 }
 .tmg-video-apt-controls-wrapper > :is(.tmg-video-meta-wrapper-cover, .tmg-video-timeline-container):is(:first-child),
 .tmg-video-left-side-controls-wrapper:has([data-displayed="true"]) {
   padding-inline: var(--tmg-video-current-controls-column-gap) var(--cmptd-ctrl-box-x-in-pad);
 }
-.tmg-video-apt-controls-wrapper:has(:first-child [data-displayed="true"]):has(:last-child [data-displayed="true"]) > .tmg-video-meta-wrapper-cover,
+.tmg-video-apt-controls-wrapper:has(>:first-child [data-displayed="true"]):has(>:last-child [data-displayed="true"]) > .tmg-video-meta-wrapper-cover,
 .tmg-video-center-side-controls-wrapper:has([data-displayed="true"]) {
   justify-content: center;
   padding-inline: var(--cmptd-ctrl-box-x-in-pad);

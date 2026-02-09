@@ -1,10 +1,10 @@
 /* #o#o#o#o#o - 5-0-0 is used to raise specificity where required with the power of 5 id's to avoid the use of '!important' style declarations for now  */
-@use "./core/_variables.css";
-@use "./core/_animations.css";
-@use "./core/_base.css";
-@use "./settings/";
-@use "./zones";
-@use "./tools";
-@use "./controls";
-@use "./perks";
-@use "./states";
+@use "./core/_variables.css" as *;
+@use "./core/_animations.css" as *;
+@use "./core/_base.css" as *;
+@use "./settings/" as *;
+@use "./zones" as *;
+@use "./tools" as *;
+@use "./controls" as *;
+@use "./perks" as *;
+@use "./states" as *;

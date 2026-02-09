@@ -1,8 +1,8 @@
 import { createTimeRanges } from "../utils";
 import type { MediaIntent, MediaState, MediaStatus, MediaSettings } from "../types/contract";
 
-// DEFAULT INTENT (The Wishes)
-export const DEFAULT_MEDIA_INTENT: MediaIntent = {
+// DEFAULT STATE (The Reality)
+export const DEFAULT_MEDIA_STATE: MediaState = {
   // Core
   src: "",
   currentTime: 0,
@@ -18,20 +18,40 @@ export const DEFAULT_MEDIA_INTENT: MediaIntent = {
   airplay: false,
   chromecast: false,
   // VR / XR
-  vrDisplay: false,
-  isStereo: false,
+  xrSession: false,
+  xrMode: "inline",
+  xrReferenceSpace: "local",
+  projection: "flat",
+  stereoMode: "none",
   fieldOfView: 90, // Standard FOV
+  aspectRatio: 16 / 9, // Standard Aspect Ratio
   panningX: 0,
   panningY: 0,
-  // Tracks (0 usually means "Main" or "Auto" depending on logic, -1 is safer for "Auto")
-  currentLevel: -1,
+  panningZ: 0,
+  xrInputSource: null,
+  // Tracks & Streaming
+  currentTextTrack: -1,
   currentAudioTrack: -1,
   currentVideoTrack: -1,
-  currentTextTrack: -1,
+  autoLevel: true, // Adaptive Streaming on by default
+  currentLevel: -1,
+  // HTML Attributes
+  poster: "",
+  autoplay: false,
+  loop: false,
+  preload: "metadata",
+  playsInline: true,
+  crossOrigin: null,
+  controls: false, // We disable native controls
+  controlsList: "",
+  disablePictureInPicture: false,
+  // HTML Lists
+  sources: [],
+  tracks: [],
 };
 
-// DEFAULT STATE (The Reality)
-export const DEFAULT_MEDIA_STATE: MediaState = { ...DEFAULT_MEDIA_INTENT };
+// DEFAULT INTENT (The Wishes)
+export const DEFAULT_MEDIA_INTENT: MediaIntent = DEFAULT_MEDIA_STATE as MediaIntent; // Intent starts as State but can diverge
 
 // DEFAULT INFO (The Facts)
 export const DEFAULT_MEDIA_STATUS: MediaStatus = {
@@ -58,25 +78,19 @@ export const DEFAULT_MEDIA_STATUS: MediaStatus = {
   canPlay: false,
   canPlayThrough: false,
   // Lists (We start with empty lists or nulls)
-  sources: [],
+  textTracks: [],
   audioTracks: [],
   videoTracks: [],
-  textTracks: [],
   levels: [],
   // VR
-  vrCapabilities: null,
+  xrCapabilities: null,
+  // Active
+  activeCue: null,
 };
 
 // DEFAULT SETTINGS (The Config)
 export const DEFAULT_MEDIA_SETTINGS: MediaSettings = {
-  poster: "",
-  autoplay: false,
-  loop: false,
-  preload: "metadata",
-  playsInline: true,
-  crossOrigin: null,
-  controls: false, // We disable native controls
   defaultMuted: false,
   defaultPlaybackRate: 1,
-  autoLevel: true, // Adaptive Streaming on by default
+  srcObject: null,
 };

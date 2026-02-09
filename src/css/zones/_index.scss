@@ -1,5 +1,5 @@
-@use "./_container.css";
-@use "./_video.css";
-@use "./_center-zone.css";
-@use "./_top-zone.css";
-@use "./_bottom-zone.css";
+@use "./_container.css" as *;
+@use "./_video.css" as *;
+@use "./_center-zone.css" as *;
+@use "./_top-zone.css" as *;
+@use "./_bottom-zone.css" as *;

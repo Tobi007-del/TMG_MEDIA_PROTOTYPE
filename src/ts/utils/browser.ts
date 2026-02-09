@@ -1,3 +1,10 @@
+/*
+ * Portions of this code are derived from Video.js
+ * https://github.com/videojs/video.js
+ * Licensed under Apache License 2.0
+ * Copyright (c) Brightcove, Inc. and contributors
+ */
+
 // Types
 type BrandEntry = { brand?: string; version?: string };
 

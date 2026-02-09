@@ -1,10 +1,12 @@
+import { LUID_KEY } from "../consts/generics";
+
 // Case Conversion
 export function capitalize(word = ""): string {
   return word.replace(/^(\s*)([a-z])/i, (_, s, l) => s + l.toUpperCase());
 }
 
 export function camelize(str = "", { source } = /[\s_-]+/, { preserveInnerCase: pIC = true, upperFirst: uF = false } = {}): string {
-  return (pIC ? str : str.toLowerCase()).replace(new RegExp(`${source}(\\w)`, "g"), (_, c) => c.toUpperCase()).replace(/^\w/, (c) => c[uF ? "toUpperCase" : "toLowerCase"]());
+  return (pIC ? str : str.toLowerCase()).replace(new RegExp(source + "(\\w)", "g"), (_, c) => c.toUpperCase()).replace(/^\w/, (c) => c[uF ? "toUpperCase" : "toLowerCase"]());
 }
 
 export function uncamelize(str = "", separator = " "): string {
@@ -12,8 +14,12 @@ export function uncamelize(str = "", separator = " "): string {
 }
 
 // Generation
-export function uid(prefix = "tmg-"): string {
-  return `${prefix}${Date.now().toString(36)}_${performance.now().toString(36).replace(".", "")}_${Math.random().toString(36).slice(2)}`;
+export function uid(prefix = "tmg_"): string {
+  return prefix + Date.now().toString(36) + "_" + performance.now().toString(36).replace(".", "") + "_" + Math.random().toString(36).slice(2);
+}
+export function luid(prefix = "tmg_"): string {
+  let id = localStorage.getItem(LUID_KEY);
+  return (!id && localStorage.setItem(LUID_KEY, (id = uid(prefix))), id || "");
 }
 
 // Checkers

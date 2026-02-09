@@ -1,4 +1,5 @@
 import "./css/index.scss";
+import "./ts/types/global.d.ts";
 
 if (typeof window !== "undefined") {
   window.tmg ||= {};
@@ -11,7 +12,7 @@ if (typeof window !== "undefined") {
 }
 
 export { Controller } from "./ts/core/controller";
-export { Player } from "./ts/core/player";
+export { Player } from "./ts/tools/player";
 
-export * from "./ts/core/runtime";
+export * from "./ts/tools/runtime";
 export * as utils from "./ts/utils";

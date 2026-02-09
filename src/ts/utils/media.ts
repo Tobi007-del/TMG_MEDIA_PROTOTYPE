@@ -1,17 +1,19 @@
 import { DEFAULT_MEDIA_INTENT, DEFAULT_MEDIA_SETTINGS, DEFAULT_MEDIA_STATE, DEFAULT_MEDIA_STATUS } from "../consts/media-defaults";
-import { MediaStatus, MediaReport } from "../types/contract";
-import { createEl, isIter } from ".";
+import { MediaState, MediaReport } from "../types/contract";
+import type { Source, Sources, Track, Tracks } from "../plugs";
+import { createEl, isIter, isSameURL, loadResource, queryFullscreenEl } from ".";
 
 // ============ Video Utilities ============
 
 // Types
 export type Dimensions = Record<"width" | "height", number>;
 
-type SourceLike = { src?: string; type?: string; media?: string } | (HTMLSourceElement & Record<string, any>);
-type TrackLike = { kind?: string; label?: string; srclang?: string; src?: string; default?: boolean; id?: string } | (HTMLTrackElement & Record<string, any>);
+type SourceLike = Source | (HTMLSourceElement & Record<string, any>);
+type TrackLike = Track | (HTMLTrackElement & Record<string, any>);
 
 // Report Generation
 export function getMediaReport(m: HTMLMediaElement): MediaReport {
+  const txtTrackIdx = getTrackIdx(m, "Text");
   const report = {
     state: {
       src: m.src,
@@ -20,6 +22,22 @@ export function getMediaReport(m: HTMLMediaElement): MediaReport {
       volume: m.volume,
       muted: m.muted,
       playbackRate: m.playbackRate,
+      pictureInPicture: document.pictureInPictureElement === m,
+      fullscreen: queryFullscreenEl() === m,
+      currentTextTrack: txtTrackIdx,
+      currentAudioTrack: getTrackIdx(m, "Audio"),
+      currentVideoTrack: getTrackIdx(m, "Video"),
+      poster: m instanceof HTMLVideoElement ? m.poster : "",
+      autoplay: m.autoplay,
+      loop: m.loop,
+      preload: m.preload,
+      playsInline: m instanceof HTMLVideoElement ? m.playsInline : false,
+      crossOrigin: m.crossOrigin,
+      controls: m.controls,
+      controlsList: m.getAttribute("controlsList") || "",
+      disablePictureInPicture: m instanceof HTMLVideoElement ? m.disablePictureInPicture : false,
+      sources: getSources(m),
+      tracks: getTracks(m),
     },
     status: {
       readyState: m.readyState,
@@ -31,25 +49,25 @@ export function getMediaReport(m: HTMLMediaElement): MediaReport {
       seekable: m.seekable,
       duration: m.duration,
       ended: m.ended,
+      loadedMetadata: m.readyState >= 1,
+      loadedData: m.readyState >= 2,
+      canPlay: m.readyState >= 3,
+      canPlayThrough: m.readyState >= 4,
       videoWidth: m instanceof HTMLVideoElement ? m.videoWidth : 0,
       videoHeight: m instanceof HTMLVideoElement ? m.videoHeight : 0,
       textTracks: m.textTracks,
+      audioTracks: (m as any).audioTracks,
+      videoTracks: (m as any).videoTracks,
+      activeCue: m.textTracks[txtTrackIdx]?.activeCues?.[0] || null,
     },
     settings: {
-      poster: m instanceof HTMLVideoElement ? m.poster : "",
-      autoplay: m.autoplay,
-      loop: m.loop,
-      preload: m.preload,
-      playsInline: m instanceof HTMLVideoElement ? m.playsInline : false,
-      crossOrigin: m.crossOrigin,
-      controls: m.controls,
       defaultMuted: m.defaultMuted,
       defaultPlaybackRate: m.defaultPlaybackRate,
     },
   };
   return {
-    intent: { ...DEFAULT_MEDIA_INTENT, ...report.state },
     state: { ...DEFAULT_MEDIA_STATE, ...report.state },
+    intent: { ...DEFAULT_MEDIA_INTENT, ...report.state },
     status: { ...DEFAULT_MEDIA_STATUS, ...report.status },
     settings: { ...DEFAULT_MEDIA_SETTINGS, ...report.settings },
   };
@@ -96,6 +114,11 @@ export const getRenderedBox = (elem: HTMLElement & { videoWidth?: number; videoH
   return {};
 };
 
+export function getSizeTier(container: HTMLElement) {
+  const { offsetWidth: w, offsetHeight: h } = container;
+  return { width: w, height: h, tier: h <= 130 ? "xxxxx" : w <= 280 ? "xxxx" : w <= 380 ? "xxx" : w <= 480 ? "xx" : w <= 630 ? "x" : "" };
+}
+
 // Media Element Cloning
 export const cloneMedia = <M extends HTMLMediaElement>(v: M): M => {
   const newV = v.cloneNode(true) as M;
@@ -120,23 +143,20 @@ export const cloneMedia = <M extends HTMLMediaElement>(v: M): M => {
 };
 
 // Source Management
-export function putSourceDetails(source: SourceLike, sourceEl: HTMLSourceElement | Record<string, any>): void {
-  if ((source as any).src) (sourceEl as any).src = (source as any).src;
-  if ((source as any).type) (sourceEl as any).type = (source as any).type;
-  if ((source as any).media) (sourceEl as any).media = (source as any).media;
+export function putSourceDetails(source: any, el: HTMLSourceElement | Record<string, any>) {
+  if (source.src) el.src = source.src;
+  if (source.type) el.type = source.type;
+  if (source.media) el.media = source.media;
 }
-
-export function addSources(sources: SourceLike | Iterable<SourceLike>, medium: HTMLElement): HTMLSourceElement | HTMLSourceElement[] {
+export function addSources(sources: SourceLike | Iterable<SourceLike> = [], medium: HTMLElement): HTMLSourceElement | HTMLSourceElement[] {
   const addSource = (source: SourceLike, med: HTMLElement) => {
     const sourceEl = createEl("source");
-    if (!sourceEl) return null as unknown as HTMLSourceElement;
     putSourceDetails(source, sourceEl);
     return med.appendChild(sourceEl);
   };
   return isIter(sources) ? Array.from(sources as Iterable<SourceLike>, (source) => addSource(source, medium)) : addSource(sources, medium);
 }
-
-export function getSources(medium: HTMLElement): MediaStatus["sources"] {
+export function getSources(medium: HTMLElement): MediaState["sources"] {
   const sources = medium.querySelectorAll<HTMLSourceElement>("source"),
     _sources: SourceLike[] = [];
   sources.forEach((source) => {
@@ -144,33 +164,33 @@ export function getSources(medium: HTMLElement): MediaStatus["sources"] {
     putSourceDetails(source, obj);
     _sources.push(obj as SourceLike);
   });
-  return _sources as MediaStatus["sources"];
+  return _sources as MediaState["sources"];
 }
-
 export const removeSources = (medium: HTMLElement): void => medium?.querySelectorAll("source")?.forEach((source) => source.remove());
+export function isSameSources(a?: Sources, b?: Sources): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  return a.every((s1) => b.some((s2) => isSameURL(s1.src, s2.src) && s1.type === s2.type && s1.media === s2.media));
+}
 
 // Track Management
-export function putTrackDetails(track: TrackLike, trackEl: HTMLTrackElement | Record<string, any>): void {
-  if ((track as any).kind) (trackEl as any).kind = (track as any).kind;
-  if ((track as any).label) (trackEl as any).label = (track as any).label;
-  if ((track as any).srclang) (trackEl as any).srclang = (track as any).srclang;
-  if ((track as any).src) (trackEl as any).src = (track as any).src;
-  if ((track as any).default) (trackEl as any).default = (track as any).default;
-  if ((track as any).id) (trackEl as any).id = (track as any).id;
+export type TrackType = "Audio" | "Video" | "Text";
+export function putTrackDetails(track: any, el: HTMLTrackElement | Record<string, any>) {
+  if (track.kind) el.kind = track.kind;
+  if (track.label) el.label = track.label;
+  if (track.srclang) el.srclang = track.srclang;
+  if (track.src) el.src = track.src;
+  if (track.default) el.default = track.default;
 }
-
-export function addTracks(tracks: TrackLike | Iterable<TrackLike>, medium: HTMLElement): HTMLTrackElement | HTMLTrackElement[] {
+export function addTracks(tracks: TrackLike | Iterable<TrackLike> = [], medium: HTMLElement): HTMLTrackElement | HTMLTrackElement[] {
   const addTrack = (track: TrackLike, med: HTMLElement) => {
-    const trackEl = createEl("track") as HTMLTrackElement | null;
-    if (!trackEl) return null as unknown as HTMLTrackElement;
+    const trackEl = createEl("track");
     putTrackDetails(track, trackEl);
     return med.appendChild(trackEl);
   };
   return isIter(tracks) ? Array.from(tracks as Iterable<TrackLike>, (track) => addTrack(track, medium)) : addTrack(tracks, medium);
 }
-
-export function getTracks(medium: HTMLElement): TrackLike[] {
-  const tracks = medium.querySelectorAll<HTMLTrackElement>("track[kind='captions'], track[kind='subtitles']"),
+export function getTracks(medium: HTMLElement, cues = false): TrackLike[] {
+  const tracks = medium.querySelectorAll<HTMLTrackElement>(!cues ? "track" : "track:is([kind='captions'], [kind='subtitles'])"),
     _tracks: TrackLike[] = [];
   tracks.forEach((track) => {
     const obj: Record<string, any> = {};
@@ -179,12 +199,35 @@ export function getTracks(medium: HTMLElement): TrackLike[] {
   });
   return _tracks;
 }
-
 export const removeTracks = (medium: HTMLElement): void => medium.querySelectorAll("track")?.forEach((track) => (track.kind === "subtitles" || track.kind === "captions") && track.remove());
+export function isSameTracks(a?: Tracks, b?: Tracks): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  return a.every((t1) => b.some((t2) => isSameURL(t1.src, t2.src) && t1.kind === t2.kind && t1.label === t2.label && t1.srclang === t2.srclang && t1.default === t2.default));
+}
+const isTrack = (type: TrackType, term: any) => `${type}Track` in window && term instanceof (window as any)[`${type}Track`];
+export function getTrackIdx(medium: HTMLMediaElement, type: TrackType, term: any = "active"): number {
+  if ("number" === typeof term) return term;
+  const list = (medium as any)[`${type.toLowerCase()}Tracks`];
+  if (term === "active") {
+    if (type === "Text") for (let i = 0; i < +list?.length; i++) if (list[i].mode === "showing") return i;
+    if (type === "Audio") for (let i = 0; i < +list?.length; i++) if (list[i].enabled) return i;
+    if (type === "Video") return list.selectedIndex ?? -1;
+  }
+  if (isTrack(type, term)) return Array.prototype.indexOf.call(list, term);
+  if ("string" === typeof term) {
+    term = term.toLowerCase();
+    return !isNaN(+term) ? +term : Array.prototype.findIndex.call(list, (t: any) => t.id.toLowerCase() === term || t.label.toLowerCase() === term || t.srclang.toLowerCase() === term || t.language.toLowerCase() === term || isSameURL(t.src, term));
+  }
+  return -1;
+}
+export function setCurrentTrack(medium: HTMLMediaElement, type: TrackType, term: any, flush = false): void {
+  const list = (medium as any)[`${type.toLowerCase()}Tracks`],
+    idx = getTrackIdx(medium, type, term);
+  if (type !== "Video") for (let i = 0; i < list.length; i++) type === "Text" ? (list[i].mode = i === idx ? "showing" : flush ? "disabled" : "hidden") : (list[i].enabled = i === idx);
+  else list[idx] && (list[idx].selected = true);
+}
 
 // ============ Caption/Subtitle Utilities ============
-
-// Tag Utilities
 export const stripTags = (text: string): string => text.replace(/<(\/)?([a-z0-9.:]+)([^>]*)>/gi, "");
 
 // SRT/VTT Conversion
@@ -198,7 +241,9 @@ export function srtToVtt(srt: string, vttLines: string[] = ["WEBVTT", ""]): stri
     if (!m) continue;
     const [, startHms, startMsRaw = "0", endHms, endMsRaw = "0"] = m,
       to3 = (ms: string) => ms.padEnd(3, "0").slice(0, 3);
-    vttLines.push(`${startHms}.${to3(startMsRaw)} --> ${endHms}.${to3(endMsRaw)}`, ...lines.slice(idx + 1), "");
+    vttLines.push(startHms + "." + to3(startMsRaw) + " --> " + endHms + "." + to3(endMsRaw));
+    for (let i = idx + 1; i < lines.length; i++) vttLines.push(lines[i]);
+    vttLines.push("");
   }
   return vttLines.join("\n");
 }

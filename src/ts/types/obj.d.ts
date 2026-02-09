@@ -1,15 +1,30 @@
-export type Primitive =
-  | string
-  | number
-  | boolean
-  | bigint
-  | symbol
-  | null
-  | undefined;
+import type { Inert } from "./reactor";
+
+type Primitive = string | number | boolean | bigint | symbol | null | undefined;
+
+type NoTraverse =
+  | Primitive
+  | Function
+  | Date
+  | Error
+  | RegExp
+  | Promise<any>
+  | Map<any, any>
+  | WeakMap<any, any>
+  | Set<any>
+  | WeakSet<any>
+  | HTMLElement
+  | Element
+  | Node
+  | EventTarget
+  | Window
+  | Document
+  | AbortSignal
+  | Inert<unknown>;
 
 export type WCPaths<T> = "*" | Paths<T>;
 
-export type Paths<T, S = "."> = T extends Primitive
+export type Paths<T, S extends string = "."> = T extends NoTraverse
   ? never
   : T extends readonly (infer U)[]
     ?
@@ -25,7 +40,7 @@ export type ReadonlyPaths<T> = Paths<{
   readonly [K in keyof T]: T[K] extends Primitive ? T[K] : Readonly<T[K]>;
 }>;
 
-export type PathValue<T, P extends string, S = "."> = P extends "*"
+export type PathValue<T, P extends string = Paths<T>, S extends string = "."> = P extends "*"
   ? T
   : P extends `${infer K}${S}${infer Rest}`
     ? K extends keyof T
@@ -37,14 +52,22 @@ export type PathValue<T, P extends string, S = "."> = P extends "*"
 
 export type PathParentValue<
   T,
-  P extends string,
+  P extends string = Paths<T>,
 > = P extends `${infer Parent}.${infer _Rest}`
   ? Parent extends ""
     ? T
     : PathValue<T, Parent>
   : T;
 
-// Helper types to turn dotted keys into nested objects while preserving value types
+// Turns dotted keys into nested objects while preserving value types
+export type Unflatten<
+  T extends Record<string, any>,
+  S extends string = ".",
+> = UnionToIntersection<
+  {
+    [K in keyof T & string]: UnflattenKey<K, T[K], S>;
+  }[keyof T & string]
+>;
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
   k: infer I,
 ) => void
@@ -57,15 +80,8 @@ type UnflattenKey<
 > = K extends `${infer Head}${S}${infer Tail}`
   ? { [P in Head]: UnflattenKey<Tail, V, S> }
   : { [P in K]: V };
-type Unflatten<
-  T extends Record<string, any>,
-  S extends string = ".",
-> = UnionToIntersection<
-  {
-    [K in keyof T & string]: UnflattenKey<K, T[K], S>;
-  }[keyof T & string]
->;
 
+// "It's not that deep" Warriors
 export type DeepMerge<T1, T2> = T2 extends object
   ? T1 extends object
     ? {
