@@ -164,13 +164,14 @@
   --T_M_G-video-settings-border-color: hsl(from var(--T_M_G-video-theme-inverse-accent-color) h s l / 0.75);
 }
 /* overrides for lib variables */
-.tmg-video-container .t007-toast {
+.T_M_G-video-container .t007-toast {
   --t007-toast-type-color: var(--T_M_G-video-theme-inverse-color);
   --t007-toast-background: rgb(from var(--T_M_G-video-theme-color) r g b / 0.4);
   --t007-toast-no-image-background: var(--T_M_G-video-img-background);
   --t007-toast-image-background: var(--T_M_G-video-background);
   --t007-toast-progress-background: var(--T_M_G-video-played-seek-bar-background);
   --t007-toast-progress-backdrop-background: var(--T_M_G-video-base-seek-bar-background);
+  --t007-toast-action-button-color: var(--tmg-video-theme-inverse-color);
 }
 .T_M_G-video-container .t007-toast-container {
   --t007-toast-container-margin-left: var(--T_M_G-video-current-safe-inset-x);

@@ -1046,7 +1046,7 @@ class tmg_Video_Controller {
     !this.video.paused ? this.setReadyState(3) : this.video.addEventListener("play", () => this.setReadyState(3), { once: true });
   }
   setKeyEventListeners(act = "add", main = !this.isUIActive("settings"), area) {
-    if (this.disabled || this.settings.locked) return;
+    if ((act === "add" && this.readyState < 2) || this.disabled || this.settings.locked) return;
     main && [this.floatingWindow, area !== "floating" ? window : null].forEach((w) => w?.[`${act}EventListener`]("keydown", this._handleKeyDown));
     [this.floatingWindow, area !== "floating" ? window : null].forEach((w) => w?.[`${act}EventListener`]("keyup", main ? this._handleKeyUp : this._handleSettingsKeyUp));
   }
