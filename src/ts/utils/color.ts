@@ -29,7 +29,7 @@ export async function getDominantColor(src: string | HTMLImageElement | HTMLCanv
   if ((src as { canvas?: HTMLCanvasElement })?.canvas) src = (src as { canvas: HTMLCanvasElement }).canvas;
   const c = document.createElement("canvas"),
     x = c.getContext("2d"),
-    s = Math.min(100, (src as HTMLImageElement | HTMLCanvasElement).width, (src as HTMLImageElement | HTMLCanvasElement).height);
+    s = Math.min(64, (src as HTMLImageElement | HTMLCanvasElement).width, (src as HTMLImageElement | HTMLCanvasElement).height);
   c.width = c.height = s;
   src && x?.drawImage(src as CanvasImageSource, 0, 0, s, s);
   const d = src && (x?.getImageData(0, 0, s, s).data as Uint8ClampedArray), // had to fool ts, coallesced to 0 below
@@ -37,7 +37,10 @@ export async function getDominantColor(src: string | HTMLImageElement | HTMLCanv
     pt: Record<string, RGB> = {} as Record<string, RGB>;
   for (let i = 0; i < (d?.length ?? 0); i += 4) {
     if (d[i + 3] < 128) continue;
-    const k = (d[i] & 0xf0) + "," + (d[i + 1] & 0xf0) + "," + (d[i + 2] & 0xf0);
+    const r = d[i] & 0xf0,
+      g = d[i + 1] & 0xf0,
+      b = d[i + 2] & 0xf0; // Optimized bitwise extraction
+    const k = (r << 16) | (g << 8) | b;
     ct[k] = (ct[k] || 0) + 1;
     pt[k] = pt[k] ? [pt[k][0] + d[i], pt[k][1] + d[i + 1], pt[k][2] + d[i + 2]] : [d[i], d[i + 1], d[i + 2]];
   }

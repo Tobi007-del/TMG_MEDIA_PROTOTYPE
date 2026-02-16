@@ -1,6 +1,7 @@
 import { setTimeout, addSafeClicks } from "../../utils";
 import { OverlayPlug, ControlPanelPlug, BaseModule } from "../";
 import { Timeline } from "../../components";
+import type { TimePlug } from "../time";
 
 export interface GeneralConfig {
   click: string;
@@ -9,7 +10,7 @@ export interface GeneralConfig {
 
 export class GeneralModule extends BaseModule<GeneralConfig> {
   public static readonly moduleName: string = "general gesture";
-  protected skipPersist = false;
+  protected focusSubjectId = "";
   protected skipPersistPosition: "left" | "right" | null = null;
 
   public wire(): void {
@@ -35,12 +36,12 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
 
   protected handleFocusIn({ target }: FocusEvent): void {
     const t = target as HTMLElement;
-    this.ctl.state.focusSubjectId = !t.matches(":focus-visible") && (t?.dataset?.controlId ?? t?.parentElement?.dataset?.controlId);
+    this.focusSubjectId = String(!t.matches(":focus-visible") && (t?.dataset?.controlId ?? t?.parentElement?.dataset?.controlId));
   }
 
   protected handleKeyFocusIn({ target }: KeyboardEvent): void {
     const t = target as HTMLElement;
-    if ((t?.dataset?.controlId ?? t?.parentElement?.dataset?.controlId) === this.ctl.state.focusSubjectId) t.blur();
+    if ((t?.dataset?.controlId ?? t?.parentElement?.dataset?.controlId) === this.focusSubjectId) t.blur();
   }
 
   protected handleHoverPointerActive(e: Event): void {
@@ -72,7 +73,7 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
     if (target !== this.ctl.DOM.controlsContainer) return;
     const rect = this.ctl.videoContainer.getBoundingClientRect(),
       pos = x - rect.left > rect.width * 0.65 ? "right" : x - rect.left < rect.width * 0.35 ? "left" : "center";
-    if (this.skipPersist && pos !== this.skipPersistPosition) {
+    if (this.state.skipPersist && pos !== this.skipPersistPosition) {
       this.deactivateSkipPersist();
       if (detail === 1) return;
     }
@@ -86,26 +87,21 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
       //   this.ctl.getPlug<Mode>("mode")?.togglePictureInPicture();
       return;
     }
-    if (this.skipPersist && detail === 2) return;
-    if (!this.skipPersist) this.activateSkipPersist(pos as "left" | "right");
-    this.ctl.media.intent.currentTime = this.ctl.media.state.currentTime + (pos === "right" ? (this.ctl.config.settings.time?.skip ?? 10) : -(this.ctl.config.settings.time?.skip ?? 10));
+    if (this.state.skipPersist && detail === 2) return;
+    if (!this.state.skipPersist) this.activateSkipPersist(pos as "left" | "right");
+    this.ctl.getPlug<TimePlug>("time")?.skip(pos === "right" ? this.ctl.config.settings.time.skip : -this.ctl.config.settings.time.skip);
   }
 
-  protected activateSkipPersist(pos: "left" | "right"): void {
-    this.skipPersist = true;
+  public activateSkipPersist(pos: "left" | "right"): void {
+    this.state.skipPersist = true;
     this.skipPersistPosition = pos;
-    this.ctl.videoContainer.addEventListener("click", this.handlePersistClick, { signal: this.signal });
+    this.ctl.videoContainer.addEventListener("click", this.handleDblClick, { signal: this.signal });
     setTimeout(() => this.deactivateSkipPersist(), 2000);
   }
 
-  protected handlePersistClick(e: MouseEvent): void {
-    e.stopPropagation();
-    this.handleDblClick(e);
-  }
-
-  protected deactivateSkipPersist(): void {
-    this.skipPersist = false;
+  public deactivateSkipPersist(): void {
+    this.state.skipPersist = false;
     this.skipPersistPosition = null;
-    this.ctl.videoContainer.removeEventListener("click", this.handlePersistClick);
+    this.ctl.videoContainer.removeEventListener("click", this.handleDblClick);
   }
 }

@@ -76,18 +76,16 @@ export type ListenerRecord<T, P extends WCPaths<T> = WCPaths<T>> = {
   sclup?: () => void;
 } & ListenerOptionsTuple;
 
-export type SyncOptionsTuple = {
+export interface SyncOptionsTuple {
   lazy?: boolean;
   once?: boolean;
   signal?: AbortSignal;
-  immediate?: boolean;
-};
+  immediate?: boolean | "auto";
+}
 export type SyncOptions = boolean | SyncOptionsTuple;
 
-export type ListenerOptionsTuple = {
+export interface ListenerOptionsTuple extends Omit<SyncOptionsTuple, "lazy"> {
   capture?: boolean;
-  once?: boolean;
-  signal?: AbortSignal;
-  immediate?: boolean;
-};
+  depth?: number;
+}
 export type ListenerOptions = boolean | ListenerOptionsTuple;

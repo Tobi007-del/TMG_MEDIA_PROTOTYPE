@@ -1,7 +1,7 @@
 {
   "name": "tmg_media_prototype",
   "version": "1.0.0",
-  "description": "> A feature-rich, vanilla JavaScript video player implementation for [THE_MOVIE_GARDEN](https://tobi007-del.github.io/TMG.com/) initiative",
+  "description": "> A feature-rich, Web video player implementation for [THE_MOVIE_GARDEN](https://tobi007-del.github.io/TMG.com/) initiative",
   "type": "module",
   "main": "dist/tmg-player.js",
   "module": "dist/tmg-player.mjs",

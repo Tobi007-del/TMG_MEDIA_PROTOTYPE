@@ -175,6 +175,7 @@ export function isSameSources(a?: Sources, b?: Sources): boolean {
 // Track Management
 export type TrackType = "Audio" | "Video" | "Text";
 export function putTrackDetails(track: any, el: HTMLTrackElement | Record<string, any>) {
+  if (track.id) el.id = track.id;
   if (track.kind) el.kind = track.kind;
   if (track.label) el.label = track.label;
   if (track.srclang) el.srclang = track.srclang;

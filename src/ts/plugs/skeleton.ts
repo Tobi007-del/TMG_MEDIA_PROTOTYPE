@@ -33,7 +33,7 @@ export class SkeletonPlug extends BasePlug<Skeleton> {
         trackKind: "captions",
         volumeLevel: "muted",
         brightnessLevel: "dark",
-        objectFit: this.ctl.config.settings.css.objectFit || "contain",
+        objectFit: this.ctl.config.settings.css.objectFit || "contain", // object fit plug'll handle it
       }
     );
     this.ctl.media.element.parentElement?.insertBefore(this.ctl.videoContainer, this.ctl.media.element);

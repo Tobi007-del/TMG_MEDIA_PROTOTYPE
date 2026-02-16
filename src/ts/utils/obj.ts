@@ -35,9 +35,10 @@ export function assignDef<T extends object>(target: T, key: Paths<T>, value: Pat
 }
 
 export function assignHTMLConfig<T extends object>(target: T, attr: `tmg--${Paths<T, "--">}`, value: string): void {
+  value = value.trim();
   const path = attr.replace("tmg--", "") as Paths<T, "--">;
   const parsedValue = (() => {
-    if (value.includes(",")) return value.split(",")?.map((v: string) => v.replace(/\s+/g, ""));
+    if (value.includes(",")) return value.split(",")?.map((v: string) => v.trim());
     if (value === "true") return true;
     if (value === "false") return false;
     if (value === "null") return null;
@@ -52,8 +53,8 @@ export function setAny<T extends object, const S extends string = ".">(target: T
   const keys = key.split(separator);
   let currObj: any = target;
   for (let i = 0; i < keys.length; i++) {
-    let key = keyFunc ? keyFunc(keys[i]) : keys[i];
-    const match = key[0] === "[" && key.match(arrRx);
+    const key = keyFunc ? keyFunc(keys[i]) : keys[i],
+      match = key.includes("[") && key.match(arrRx);
     if (match) {
       const [, key, iStr] = match;
       if (!isArr(currObj[key])) currObj[key] = [];
@@ -71,11 +72,11 @@ export function getAny<T extends object, const S extends string = ".">(source: T
   const keys = key.split(separator);
   let currObj: any = source;
   for (let i = 0; i < keys.length; i++) {
-    let key = keyFunc ? keyFunc(keys[i]) : keys[i];
-    const match = key[0] === "[" && key.match(arrRx);
+    const key = keyFunc ? keyFunc(keys[i]) : keys[i],
+      match = key.includes("[") && key.match(arrRx);
     if (match) {
       const [, key, iStr] = match;
-      if (!isArr(currObj[key])) return undefined;
+      if (!isArr(currObj[key]) || !(key in currObj)) return undefined;
       currObj = currObj[key][Number(iStr)];
     } else {
       if (!isObj<Record<string, any>>(currObj) || !(key in currObj)) return undefined;
@@ -90,11 +91,11 @@ export function deleteAny<T extends object, const S extends string = ".">(target
   const keys = key.split(separator);
   let currObj: any = target;
   for (let i = 0; i < keys.length; i++) {
-    let key = keyFunc ? keyFunc(keys[i]) : keys[i];
-    const match = key[0] === "[" && key.match(arrRx);
+    const key = keyFunc ? keyFunc(keys[i]) : keys[i],
+      match = key.includes("[") && key.match(arrRx);
     if (match) {
       const [, key, iStr] = match;
-      if (!isArr(currObj[key])) return;
+      if (!isArr(currObj[key]) || !(key in currObj)) return;
       if (i === keys.length - 1) delete currObj[key][Number(iStr)];
       else currObj = currObj[key][Number(iStr)];
     } else {
@@ -103,6 +104,27 @@ export function deleteAny<T extends object, const S extends string = ".">(target
       else currObj = currObj[key];
     }
   }
+}
+
+export function inAny<T extends object, const S extends string = ".">(source: T, key: string | Paths<T, S>, separator: S = "." as S, keyFunc?: (p: string) => string): boolean {
+  if (!key.includes(separator)) return key in source;
+  const keys = key.split(separator);
+  let currObj: any = source;
+  for (let i = 0; i < keys.length; i++) {
+    const key = keyFunc ? keyFunc(keys[i]) : keys[i],
+      match = key.includes("[") && key.match(arrRx);
+    if (match) {
+      const [, key, iStr] = match;
+      if (!isArr(currObj[key]) || !(key in currObj)) return false;
+      if (i === keys.length - 1) return true;
+      currObj = currObj[key][Number(iStr)];
+    } else {
+      if (!isObj<Record<string, any>>(currObj) || !(key in currObj)) return false;
+      if (i === keys.length - 1) return true;
+      currObj = currObj[key];
+    }
+  }
+  return true;
 }
 
 export function parseUIObj<T extends Record<string, any>>(obj: T): UIObject<T> {
@@ -138,7 +160,6 @@ export function parsePanelBottomObj(obj: Partial<ControlPanelBottomTuple> | Cont
 }
 
 export function parseEvOpts<T extends object>(options: T | boolean | undefined, opts: (keyof T)[] | readonly (keyof T)[], boolOpt: keyof T = opts[0], result = {} as T): T {
-  for (let i = 0; i < opts.length; i++) (result as any)[opts[i]] = false;
   return (Object.assign(result, "boolean" === typeof options ? { [boolOpt]: options } : options), result);
 }
 

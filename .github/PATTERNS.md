@@ -1,6 +1,6 @@
 # TMG Media Player - Code Patterns & Lifecycle Rules
 
-**Last Updated**: February 5, 2026  
+**Last Updated**: February 10, 2026  
 **Purpose**: Definitive guide for plug/component implementation patterns extracted from working TypeScript codebase
 
 ---
@@ -60,8 +60,8 @@ Called by Controller during boot. **NEVER call this manually.**
 ```typescript
 protected onSetup(): void {
   this.mount?.();  // Create DOM (components only)
-  if (this.ctl.runtime.readyState) this.wire?.();
-  else this.wire && this.ctl.runtime.once("readyState", this.wire, { signal: this.signal });
+  if (this.ctl.state.readyState) this.wire?.();
+  else this.wire && this.ctl.state.once("readyState", this.wire, { signal: this.signal });
 }
 ```
 
@@ -264,8 +264,8 @@ export class WheelModule extends BaseModule<WheelConfig> {
 
   public wire(): void {
     // Wait for heavy features if needed
-    if (this.ctl.runtime.readyState > 1) this.attachListeners();
-    else this.ctl.runtime.once("readyState", () => this.attachListeners(), { signal: this.signal });
+    if (this.ctl.state.readyState > 1) this.attachListeners();
+    else this.ctl.state.once("readyState", () => this.attachListeners(), { signal: this.signal });
   }
 
   protected attachListeners(): void {
@@ -502,7 +502,7 @@ this.ctl.config.on("settings.volume.value", handler, { signal, immediate: true }
 this.ctl.media.intent.on("volume", handler, { capture: true, signal });
 
 // Once (auto-removes after first fire)
-this.ctl.runtime.once("readyState", handler, { signal });
+this.ctl.state.once("readyState", handler, { signal });
 ```
 
 ### **Transform Pattern** (config.get)
@@ -710,6 +710,113 @@ import { createEl, clamp, formatMediaTime } from "../utils";
 ```typescript
 import { VolumePlug, type TimePlug } from ".";
 ```
+
+---
+
+## 📝 CODING STYLE & CONVENTIONS
+
+### **Comma Const Style**
+Declare related constants together using comma separation (matching JS prototype style), **BUT** stop the comma chain when the next assignment is multi-line to prevent unwanted indentation:
+
+```typescript
+// ✅ CORRECT - Comma const for one-liner assignments
+const count = clamp(1, Math.round(duration - currentTime), this.config.next),
+  v = this.ctl.config.playlist[index + 1],
+  toastsPlug = this.ctl.getPlug<ToastsPlug>("toasts"),
+  timePlug = this.ctl.getPlug<TimePlug>("time");
+// Stop comma chain before multi-line expression  
+const nVTId = toastsPlug?.toast?.("", {
+  autoClose: count * 1000,
+  hideProgressBar: false,
+  // ... multi-line object
+});
+// Resume comma const for related one-liners
+const cleanUp = (permanent = false) => (/* ... */),
+  cleanUpWhenNeeded = () => !ended && cleanUp(),
+  removeListeners = () => events.forEach((e) => remove(e));
+
+// ❌ WRONG - Continuing comma into multi-line (causes indent)
+const count = clamp(1, 2, 3),
+  nVTId = toastsPlug?.toast?.("", {
+    autoClose: 1000,
+    // This gets indented awkwardly
+  });
+
+// ❌ WRONG - Separate const for simple related values
+const count = clamp(1, Math.round(duration - currentTime), this.config.next);
+const v = this.ctl.config.playlist[index + 1];
+const toastsPlug = this.ctl.getPlug<ToastsPlug>("toasts");
+```
+
+**Rule of thumb**: Use comma const when all assignments fit comfortably on one line or are simple arrow functions. Break to new `const` for multi-line objects, long function calls, or complex expressions.
+
+### **Media Status Properties**
+Always use `media.status` properties instead of custom flags or readyState checks:
+
+```typescript
+// ✅ CORRECT - Use media.status properties
+const loaded = this.ctl.media.status.loadedMetadata,  // Do we know duration?
+  waiting = this.ctl.media.status.waiting,            // Spinner active?
+  seeking = this.ctl.media.status.seeking;            // Scrubbing?
+
+if (!loaded || waiting) return;
+
+// ❌ WRONG - Custom flags or readyState checks
+const loaded = this.ctl.media.status.readyState > 0;
+const buffering = this.ctl.state.readyState < 3;
+this.loaded = true;  // Don't create custom flags
+```
+
+**Key media.status properties**:
+- `loadedMetadata: boolean` - Duration known
+- `loadedData: boolean` - Frame 1 renderable
+- `waiting: boolean` - Buffering/spinner active
+- `seeking: boolean` - Scrubbing in progress
+- `canPlay: boolean` - Can start playback
+- `canPlayThrough: boolean` - Can play to end
+- `ended: boolean` - Playback complete
+
+### **Time Formatting with TimePlug**
+Never create inline time formatting utilities. Use `TimePlug.toTimeText()`:
+
+```typescript
+// ✅ CORRECT - Use TimePlug for time formatting
+const timePlug = this.ctl.getPlug<TimePlug>("time");
+const formattedTime = timePlug?.toTimeText(duration) ?? "0:00";
+const formattedTimeWithMode = timePlug?.toTimeText(currentTime, true) ?? "0:00";
+
+// ❌ WRONG - Creating own time formatting
+protected formatTime(time: number): string {
+  return formatMediaTime({ time, format: this.ctl.config.settings.time.format });
+}
+```
+
+**TimePlug.toTimeText() signature**:
+```typescript
+public toTimeText(time = currentTime, useMode = false, showMs = false): string
+```
+- Respects `settings.time.format` (digital/human/human-long)
+- Respects `settings.time.mode` (elapsed/remaining) when `useMode = true`
+- Returns properly formatted time string with elapsed/remaining prefix
+
+### **Utility Checks Before Creating**
+Always search `src/ts/utils/` for existing utilities before creating inline helpers:
+
+```typescript
+// ✅ CORRECT - Import from utils
+import { clamp, rotate, addSources, formatMediaTime } from "../utils";
+
+// ❌ WRONG - Creating duplicate utilities
+protected clampValue(val: number, min: number, max: number): number {
+  return Math.min(Math.max(val, min), max);
+}
+```
+
+**Available utilities** (see `src/ts/utils/index.ts`):
+- **Math**: `clamp`, `rotate`, `lerp`, `normalize`
+- **Media**: `addSources`, `removeSources`, `getSources`, `isSameSources`
+- **Time**: `formatMediaTime`, `parseIfPercent`
+- **DOM**: `createEl`, `queryDOM`
 
 ---
 

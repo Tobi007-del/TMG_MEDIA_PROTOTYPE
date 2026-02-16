@@ -174,25 +174,28 @@
   --tmg-video-settings-border-color: hsl(from var(--tmg-video-theme-inverse-accent-color) h s l / 0.75);
 }
 /* overrides for lib variables */
+.tmg-video-container .t007-toast {
+  --t007-toast-type-color: var(--tmg-video-theme-inverse-color);
+  --t007-toast-background: rgb(from var(--tmg-video-theme-color) r g b / 0.4);
+  --t007-toast-no-image-background: var(--tmg-video-img-background);
+  --t007-toast-image-background: var(--tmg-video-background);
+  --t007-toast-progress-background: var(--tmg-video-played-seek-bar-background);
+  --t007-toast-progress-backdrop-background: var(--tmg-video-base-seek-bar-background);
+  --t007-toast-action-button-color: var(--tmg-video-theme-inverse-color);
+}
 .tmg-video-container .t007-toast-container {
   --t007-toast-container-margin-left: var(--tmg-video-current-safe-inset-x);
   --t007-toast-container-margin-right: var(--tmg-video-current-safe-inset-x);
   --t007-toast-unit: calc(var(--tmg-video-current-unit) / 2);
-  --t007-toast-type-color: var(--tmg-video-theme-inverse-color);
-  --t007-toast-background: rgb(from var(--tmg-video-theme-color) r g b / 0.4);
   --t007-toast-width: calc(var(--t007-toast-unit) * 26.5);
   --t007-toast-min-height: calc(var(--t007-toast-unit) * 3.75);
   --t007-toast-padding: calc(var(--t007-toast-unit) / 2);
   --t007-toast-image-width: calc(var(--t007-toast-unit) * 6.45);
   --t007-toast-image-height: calc(var(--t007-toast-unit) * 3.8);
   --t007-toast-image-object-fit: contain;
-  --t007-toast-no-image-background: var(--tmg-video-img-background);
-  --t007-toast-image-background: var(--tmg-video-background);
   --t007-toast-font-size: calc(var(--t007-toast-unit) * 1.08);
   --t007-toast-max-lines: 3;
   --t007-toast-border-radius: calc(var(--t007-toast-unit) / 1.5);
-  --t007-toast-progress-background: var(--tmg-video-played-seek-bar-background);
-  --t007-toast-progress-backdrop-background: var(--tmg-video-base-seek-bar-background);
 }
 .tmg-video-container .t007-toast-container[data-position^="top"] {
   --t007-toast-container-margin-top: var(--tmg-video-current-safe-inset-top);
@@ -206,6 +209,15 @@
 .tmg-media-container.tmg-video-mobile[data-size-tier^="xx"] .t007-toast-container {
   --t007-toast-width: 100%;
   width: 100%;
+}
+.tmg-media-container .t007-input-field {
+  --t007-input-font-size: calc(var(--tmg-video-current-unit) / 1.8);
+  --t007-input-height: calc(var(--tmg-video-current-unit) * 1.5);
+  --t007-input-color: var(--tmg-video-theme-color);
+  --t007-input-border-radius: calc(var(--tmg-video-current-unit) / 2.5);
+}
+.tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) .t007-input-field {
+  --t007-input-font-size: calc(var(--tmg-video-current-unit) / 1.6);
 }
 /* computed variables */
 .tmg-media-container {
@@ -901,11 +913,23 @@ body:where(:has(.tmg-video-floating-player)) {
 }
 .tmg-video-settings-bottom-panel {
   flex-grow: 1;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  padding-block: calc(var(--tmg-video-current-unit));
+  overflow-y: auto;
+}
+.tmg-video-settings-bottom-panel > p {
   color: var(--tmg-video-brand-accent-color);
   font-size: calc(var(--tmg-video-current-unit));
   text-align: center;
+  margin-block: auto calc(var(--tmg-video-current-unit) / 3);
+}
+.tmg-video-settings-bottom-panel .t007-input-field {
+  width: calc(var(--tmg-video-current-unit) * 11);
+  margin-block-end: calc(var(--tmg-video-current-unit) / 6);
+}
+.tmg-video-settings-bottom-panel .t007-input-field:last-child {
+  margin-block-end: auto;
 }
 .tmg-video-screen-locked-wrapper {
   position: absolute;
@@ -1202,7 +1226,7 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
   color: rgb(from currentColor r g b / 0.75);
   font-weight: 500;
 }
-.tmg-video-apt-controls-wrapper:has(>:first-child [data-displayed="true"]):has(>:last-child [data-displayed="true"]) > .tmg-video-meta-wrapper-cover .tmg-video-artist {
+.tmg-video-apt-controls-wrapper:has(> :first-child [data-displayed="true"]):has(> :last-child [data-displayed="true"]) > .tmg-video-meta-wrapper-cover .tmg-video-artist {
   margin-inline: auto;
 }
 .tmg-video-profile-link:has(img[data-loaded="false"]),
@@ -1464,7 +1488,7 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
   align-items: center;
 }
 .tmg-video-apt-controls-wrapper:has(.tmg-video-center-side-controls-wrapper [data-displayed="true"]),
-.tmg-video-apt-controls-wrapper:has(>:first-child [data-displayed="true"]):has(>:last-child [data-displayed="true"]):has(> .tmg-video-meta-wrapper-cover) {
+.tmg-video-apt-controls-wrapper:has(> :first-child [data-displayed="true"]):has(> :last-child [data-displayed="true"]):has(> .tmg-video-meta-wrapper-cover) {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
 }
@@ -1506,7 +1530,7 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
 .tmg-video-left-side-controls-wrapper:has([data-displayed="true"]) {
   padding-inline: var(--tmg-video-current-controls-column-gap) var(--cmptd-ctrl-box-x-in-pad);
 }
-.tmg-video-apt-controls-wrapper:has(>:first-child [data-displayed="true"]):has(>:last-child [data-displayed="true"]) > .tmg-video-meta-wrapper-cover,
+.tmg-video-apt-controls-wrapper:has(> :first-child [data-displayed="true"]):has(> :last-child [data-displayed="true"]) > .tmg-video-meta-wrapper-cover,
 .tmg-video-center-side-controls-wrapper:has([data-displayed="true"]) {
   justify-content: center;
   padding-inline: var(--cmptd-ctrl-box-x-in-pad);
@@ -1840,30 +1864,30 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
   padding: 2.5px;
   background: rgb(from var(--tmg-video-captions-background-color) r g b / var(--tmg-video-captions-background-opacity));
 }
-.tmg-video-captions-text-alignment-left {
+.tmg-video-captions-text-alignment-left .tmg-video-captions-container {
   text-align: left;
 }
-.tmg-video-captions-text-alignment-center {
+.tmg-video-captions-text-alignment-center .tmg-video-captions-container {
   text-align: center;
 }
-.tmg-video-captions-text-alignment-right {
+.tmg-video-captions-text-alignment-right .tmg-video-captions-container {
   text-align: right;
 }
-.tmg-video-captions-character-edge-style-drop-shadow {
+.tmg-video-captions-character-edge-style-drop-shadow .tmg-video-captions-container {
   text-shadow:
     calc(1px * var(--f-f)) calc(1px * var(--f-f)) calc(1.5px * var(--f-f)) rgb(34, 34, 34),
     calc(1px * var(--f-f)) calc(1px * var(--f-f)) calc(2px * var(--f-f)) rgb(34, 34, 34),
     calc(1px * var(--f-f)) calc(1px * var(--f-f)) calc(2.5px * var(--f-f)) rgb(34, 34, 34);
 }
-.tmg-video-captions-character-edge-style-raised {
+.tmg-video-captions-character-edge-style-raised .tmg-video-captions-container {
   text-shadow: calc(1px * var(--f-f)) calc(1px * var(--f-f)) rgb(34, 34, 34);
 }
-.tmg-video-captions-character-edge-style-depressed {
+.tmg-video-captions-character-edge-style-depressed .tmg-video-captions-container {
   text-shadow:
     calc(1px * var(--f-f)) calc(1px * var(--f-f)) rgb(204, 204, 204),
     calc(-1px * var(--f-f)) calc(-1px * var(--f-f)) rgb(34, 34, 34);
 }
-.tmg-video-captions-character-edge-style-outline {
+.tmg-video-captions-character-edge-style-outline .tmg-video-captions-container {
   --s-s: 0 0 calc(1px * var(--f-f)) rgb(34, 34, 34); /* shadow-step */
   text-shadow: var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s), var(--s-s); /* just had to, 21! :) */
 }
@@ -2442,3 +2466,96 @@ div.tmg-video-thumbnail {
 }
 /* setting player light state ends */
 /* ==================== AI STATE BLOCK ===================== */
+
+/* overrides for the native select */
+@supports (appearance: base-select) {
+  html {
+    select,
+    select::picker(select) {
+      appearance: base-select;
+    }
+  }
+}
+:is(#o, select) {
+  white-space: nowrap;
+  @supports (appearance: base-select) {
+    position: relative;
+    align-items: center;
+    &::picker-icon {
+      content: "";
+      position: relative;
+      width: 1rem;
+      height: 1rem;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%23000' %3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E%0A");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%23FFF' %3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E%0A");
+      background-position: center;
+      background-repeat: no-repeat;
+      transition: all 200ms ease-out;
+      transition-timing-function: var(--bounce-timing);
+    }
+    &:open::picker-icon {
+      rotate: 180deg;
+    }
+    &:active::picker-icon {
+      translate: 0 0.1rem;
+    }
+    &::picker(select) {
+      background: transparent;
+      margin: 0.75rem 2px 0.75rem 1px;
+      border: none;
+      transition-property: display, overlay;
+      transition-duration: 500ms;
+      transition-behavior: allow-discrete;
+    }
+    option {
+      position: relative;
+      backdrop-filter: blur(5px);
+      border-radius: 4px;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 0.25rem;
+      padding: 0.33rem 0.25rem;
+      background-color: var(--tmg-video-theme-color);
+      color: var(--tmg-video-theme-inverse-accent-color);
+      border: 1px solid var(--tmg-video-settings-border-color);
+      transition-property: opacity, scale;
+      transition-duration: 200ms;
+      transition-delay: calc((sibling-count() - sibling-index()) * 20ms);
+      scale: 0.25;
+      opacity: 0;
+      &:is(:checked, :focus) {
+        color: var(--tmg-video-theme-inverse-color);
+      }
+      &:checked {
+        background-color: rgb(from var(--tmg-video-brand-color) r g b/ 0.666);
+        border: 1px solid rgb(from var(--tmg-video-theme-inverse-color) r g b/ 0.15);
+      }
+      &:focus {
+        border: 1px solid var(--tmg-video-theme-inverse-color);
+      }
+      &:hover {
+        background-color: var(--tmg-video-theme-accent-color);
+      }
+      &:checked:hover {
+        background-color: rgb(from var(--tmg-video-brand-color) r g b/ 0.8);
+      }
+      &:focus-visible {
+        outline: none !important;
+      }
+      &::checkmark {
+        display: none;
+      }
+    }
+    &:open {
+      option {
+        scale: 1;
+        opacity: 1;
+        transition-delay: calc(sibling-index() * 20ms);
+        @starting-style {
+          scale: 0.25;
+          opacity: 0;
+        }
+      }
+    }
+  }
+}

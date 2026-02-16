@@ -4,7 +4,7 @@ import type { Event } from "../types/reactor";
 import { controls, bigControls } from "../consts/generics";
 import { BaseComponent } from "../components/base";
 import { ComponentRegistry } from "../core/registry";
-import { createEl, parsePanelBottomObj, inBoolArrOpt, getElSiblingAt, setAny, getAny } from "../utils";
+import { createEl, parsePanelBottomObj, inBoolArrOpt, getElSiblingAt, setAny, getAny, setTimeout } from "../utils";
 import { Timeline } from "../components";
 
 export type Control = (typeof controls)[number];
@@ -42,6 +42,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   protected cZoneWs!: { top: Record<"left" | "center" | "right", ZoneW>; center: ZoneW; bottom: Record<Row, Record<"left" | "center" | "right", ZoneW>> };
   protected dragging: HTMLElement | null = null;
   protected dragReplaced: { target: HTMLElement; child: HTMLElement } | null = null;
+  protected dragSafeTimeoutId: number = -1;
 
   public mount(): void {
     this.ctl.config.set("settings.controlPanel.bottom", (value) => parsePanelBottomObj(value));
@@ -196,6 +197,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     e.dataTransfer!.effectAllowed = "move";
     this.dragging = t;
     requestAnimationFrame(() => t.classList.add("tmg-video-control-dragging"));
+    this.dragSafeTimeoutId = setTimeout(() => t.classList.remove("tmg-video-control-dragging"), 1000, this.signal); // for mobile browsers supporting the API but not living up
     if (t.dataset.dragId !== "wrapper" || t.parentElement?.dataset.dragId !== "wrapper") return;
     const { coord, zoneW } = this.getUIZoneWCoord(t, true) as { coord: string; zoneW: ZoneW };
     setAny(this.cZoneWs as any, coord as any, zoneW);
@@ -204,6 +206,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
 
   protected handleDrag(): void {
     this.ctl.getPlug<OverlayPlug>("overlay")?.delay();
+    clearTimeout(this.dragSafeTimeoutId);
   }
 
   protected handleDragEnd(e: DragEvent): void {
@@ -228,13 +231,13 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
       "dragOver",
       () => {
         if (t.dataset.dragId === "wrapper") {
-          const atWrapper = getElSiblingAt(x, "x", [...t.querySelectorAll<HTMLElement>('.tmg-video-side-controls-wrapper-cover:has([data-drop-zone="true"][data-drag-id=""]:empty)')], "at") as HTMLElement | undefined;
+          const atWrapper = getElSiblingAt(x, "x", t.querySelectorAll<HTMLElement>('.tmg-video-side-controls-wrapper-cover:has([data-drop-zone="true"][data-drag-id=""]:empty)'), "at") as HTMLElement | undefined;
           if (!atWrapper) return;
           this.dragReplaced?.target.replaceChild(this.dragReplaced.child, this.dragging!);
           this.dragReplaced = { target: t, child: atWrapper };
           return t.replaceChild(this.dragging!, atWrapper);
         }
-        const afterControl = getElSiblingAt(x, "x", [...t.querySelectorAll<HTMLElement>("[draggable=true]:not(.tmg-video-control-dragging)")]);
+        const afterControl = getElSiblingAt(x, "x", t.querySelectorAll<HTMLElement>("[draggable=true]:not(.tmg-video-control-dragging)"));
         afterControl ? t.insertBefore(this.dragging!, afterControl) : t.append(this.dragging!);
       },
       500,

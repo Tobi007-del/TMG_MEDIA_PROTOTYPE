@@ -36,7 +36,7 @@ Original video element is preserved in memory to restore later. Always use the c
 **Controller** (`src/ts/core/controller.ts`):
 
 - Orchestrator that boots the system, connects plugs, manages tech
-- Stores: `config` (reactified settings), `media` (state/intent/status contracts), `runtime` (shared reactive state)
+- Stores: `config` (reactive VideoBuild settings), `media` (reactive state/intent/status contracts), `state` (reactive RuntimeState - shared runtime state)
 - Access plugs: `this.ctl.getPlug<PlugType>("plugName")`
 - Public properties: `videoContainer`, `pseudoVideo`, `DOM` (major shared elements only)
 
@@ -67,8 +67,8 @@ constructor(ctl: Controller, config: Config, state?: State) {
 protected onSetup(): void {
   // Called automatically by base class after setup()
   this.mount?.();  // Optional: Create DOM (components) or pre-wire setup (plugs)
-  if (this.ctl.runtime.readyState) this.wire?.();
-  else this.wire && this.ctl.runtime.once("readyState", this.wire, { signal: this.signal });
+  if (this.ctl.state.readyState) this.wire?.();
+  else this.wire && this.ctl.state.once("readyState", this.wire, { signal: this.signal });
 }
 
 protected onDestroy(): void {
@@ -132,7 +132,7 @@ handleChange = (): void => {
 - **1**: Light state (minimal listeners, fast startup)
 - **2+**: Heavy controls (all event listeners)
 
-Gesture/heavy features wait: `this.ctl.runtime.on("readyState", ({ value }) => value! > 0 && this.setup())`
+Gesture/heavy features wait: `this.ctl.state.on("readyState", ({ value }) => value! > 0 && this.setup())`
 
 ### Always Use Signal for Cleanup
 
@@ -214,11 +214,11 @@ npm run typecheck      # Type checking watch mode
 
 ## Common Patterns
 
-### State vs Config vs Runtime
+### State vs Config vs Controller.state
 
-- **config**: Reactified settings from user, persisted
-- **state**: Internal reactive state for external observers (output, not input to self)
-- **runtime**: Shared state across plugs (2+ methods need it): `gestureTouchXCheck`, `readyState`
+- **config**: Reactive settings from VideoBuild, persisted user preferences
+- **state**: Internal reactive state for external observers (component/plug output, not input to self)
+- **controller.state**: Shared runtime state across plugs (readyState, dimensions, audioContextReady, currentPlaylistIndex, etc.)
 
 ### Mobile Checks
 
@@ -289,7 +289,7 @@ When porting features from `prototype-3.js`:
 - [ ] What is the plug's **single responsibility**? (state management, logic coordination, cross-cutting concern)
 - [ ] What **config** does it need? (object, primitive, or undefined)
 - [ ] Does it need **internal state** for external observers? (Create `state` interface)
-- [ ] Does it need **shared runtime state**? (Use `this.ctl.runtime`)
+- [ ] Does it need **shared runtime state**? (Use `this.ctl.state`)
 - [ ] Is it **core** (always loaded) or **optional**? (Set `isCore` static property)
 - [ ] Will it have **public methods** for other plugs to call?
 - [ ] Does it need **multi-module** architecture? (Like gesture with wheel/touch/general)
@@ -360,8 +360,8 @@ export class PlugNamePlug extends BasePlug<PlugName> {
     });
 
     // Wait for heavy features until readyState > 1
-    if (this.ctl.runtime.readyState > 1) this.heavySetup();
-    else this.ctl.runtime.once("readyState", () => this.heavySetup(), { signal: this.signal });
+    if (this.ctl.state.readyState > 1) this.heavySetup();
+    else this.ctl.state.once("readyState", () => this.heavySetup(), { signal: this.signal });
   }
 
   // 7. EVENT HANDLERS (protected methods, auto-bound by guardAllMethods)
@@ -461,8 +461,8 @@ export class ModuleA extends BaseModule<ModuleAConfig> {
 
   public wire(): void {
     // Wait for readyState if needed for heavy listeners
-    if (this.ctl.runtime.readyState > 1) this.attachListeners();
-    else this.ctl.runtime.once("readyState", () => this.attachListeners(), { signal: this.signal });
+    if (this.ctl.state.readyState > 1) this.attachListeners();
+    else this.ctl.state.once("readyState", () => this.attachListeners(), { signal: this.signal });
   }
 
   protected attachListeners(): void {

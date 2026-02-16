@@ -200,7 +200,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   // --- Core States ---
   protected handleLoadStartState() {
     const { state: s, status: st } = this.config;
-    st.error = null;
+    st.error = st.activeCue = null;
     st.waiting = true;
     st.ended = st.stalled = st.loadedData = st.loadedMetadata = st.canPlay = st.canPlayThrough = false;
     st.duration = NaN;

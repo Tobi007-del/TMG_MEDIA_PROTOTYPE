@@ -1,5 +1,4 @@
 import type { UIOption, UISettings } from "./UIOptions";
-import type { ToastOptions } from "./t007";
 import type {
   Mode,
   ErrorCode,
@@ -27,6 +26,14 @@ import type {
   TimeTravel,
   Volume,
   Time,
+  Brightness,
+  PlaybackRate,
+  Auto,
+  Toasts,
+  PlaysInline,
+  Media,
+  FastPlay,
+  ErrorMessages,
 } from "../plugs";
 import { LightState } from "../plugs/light-state";
 
@@ -57,35 +64,16 @@ export interface Captions {
   textAlignment: UISettings<"left" | "center" | "right">;
 }
 
-export interface Toasts extends ToastOptions {
-  disabled: boolean;
-  nextVideoPreview: PosterPreview;
-  captureAutoClose: number;
-}
-
 export interface Settings {
   noOverride: keyof Settings | boolean;
-  auto: {
-    play: boolean | AptAutoplayOption;
-    pause: boolean | AptAutoplayOption;
-    next: number; // -1 for false
-  };
+  auto: Auto;
+  toasts: Toasts;
   css: Css;
-  brightness: OptRange;
+  brightness: Brightness;
   captions: Captions;
   controlPanel: ControlPanel;
-  errorMessages: Record<ErrorCode, string>;
-  fastPlay: {
-    playbackRate: number;
-    key: boolean;
-    pointer: {
-      type: string;
-      threshold: number;
-      inset: number;
-    };
-    reset: boolean;
-    rewind: boolean;
-  };
+  errorMessages: ErrorMessages;
+  fastPlay: FastPlay;
   gesture: Gesture;
   keys: {
     disabled: boolean;
@@ -121,8 +109,8 @@ export interface Settings {
   notifiers: boolean;
   overlay: Overlay;
   persist: Persist;
-  playbackRate: OptRange;
-  playsInline: boolean;
+  playbackRate: PlaybackRate;
+  playsInline: PlaysInline;
   techOrder: string[];
   time: Time;
   toasts: Toasts;
@@ -135,20 +123,7 @@ export type VideoBuild = {
   disabled: boolean;
   initialMode: Mode;
   lightState: LightState;
-  media: MediaMetadata & {
-    id: string;
-    title: string;
-    artist: string;
-    profile: string;
-    album: string;
-    artwork: Array<{ src: string; sizes: string; type: string }>;
-    chapterInfo: Array<{
-      title: string;
-      startTime: number;
-      artwork: Array<{ src: string; sizes: string; type: string }>;
-    }>;
-    links: Record<"title" | "artist" | "profile", string>;
-  };
+  media: Media;
   mediaPlayer: "TMG";
   mediaType: "video";
   playlist: Playlist;

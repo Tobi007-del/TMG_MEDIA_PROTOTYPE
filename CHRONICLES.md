@@ -200,7 +200,7 @@ Factual: Reads internal state (maybe processed). It always tells the truth and u
 
 Mixed: Reads external data like Virtual, but acts as the authority even during init. You don't defer it because sometimes checking reality is cheaper than blindly overwriting it (e.g., video.src vs volume). Blindly setting src causes expensive reloads; checking the "Mixed" truth first prevents that.
 
-The Heuristics: Factual uses data and is true. Virtual ignores data and lies (defer it). Mixed ignores data but is true enough to prevent costly errors. Basically, any Virtual you find a reason not to defer; usually due to cost or complexity is Mixed.
+The Heuristics: Factual uses data and is true. Virtual ignores data and lies (defer it). Mixed ignores data but is true enough to prevent costly errors. Basically, any Virtual you find a reason not to defer; usually due to cost or complexity is Mixed. Be careful of Virtual though, they could lie to snapshots which could be good or bad for your state.
 
 If initialization happens across multiple listeners, deferring the "liars" ensures no one reads garbage values before the state settles. That’s the logic for now
 
@@ -284,3 +284,10 @@ This architecture allows for **Stubborn Competence**. A Plugin(eg: Volume Audio 
 That is the Art of Resolution.
 
 There's `immediate: true` now as an option for all listeners so the same logic can be shared for initialization and subsequent state updates. You can also pass a signal so it's on par with modern JS event listener patterns and for more cleaner code, easier on the garbage collector too; avoiding churn.
+
+### The Data-Centric View (Shared Identity)
+**The Logic**: If user_A and user_B point to the same memory address, they are the same thing. If I change the name on one, the other has changed too. 
+
+**Should all listeners fire?** Yes. If you update the object via Path A, Path B is now out of sync if it doesn't notify its listeners.
+
+The reactor now supports this treating data as a first class citizen and avoiding the noise of nested proxies or stale updates using referencial integrity and a tracing algorithm to locate an object in it's state tree like a GPS using a map of the `object` world quite literally.

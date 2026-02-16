@@ -132,8 +132,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
         }
         this.onInput(e, pos);
       },
-      30,
-      false
+      30
     );
   }
   protected onInput(e: MouseEvent | PointerEvent, pos: number): void {} // Subclasses override to add preview logic (timeline preview image, etc.)

@@ -5,26 +5,33 @@ TODO:
   editable settings
   video resolution
 */
-const TERMINATOR = Symbol("TERMINATOR");
-class ReactorEvent {
+
+const RAW = Symbol.for("S.I.A_RAW"); // "Get Original Obj" Marker
+const REJECTABLE = Symbol.for("S.I.A_REJECTABLE"); // "State Vs. Intent" Marker
+const INERTIA = Symbol.for("S.I.A_INERTIA"); // "No Proxy" Marker
+const TERMINATOR = Symbol.for("S.I.A_TERMINATOR"); // "Obj Operation Terminator" Marker
+const REOPTS = { LISTENER: ["capture", "once", "signal", "immediate"], MEDIATOR: ["lazy", "signal", "immediate"] };
+const arrRx = /^([^\[\]]+)\[(\d+)\]$/;
+class Event {
   static NONE = 0;
   static CAPTURING_PHASE = 1;
   static AT_TARGET = 2;
   static BUBBLING_PHASE = 3;
-  constructor(payload) {
-    this.type = payload.type;
+  constructor(payload, bubbles = true) {
+    this.type = this.staticType = payload.type;
     this.target = payload.target;
     this.currentTarget = payload.currentTarget;
     this.root = payload.root;
     this.value = payload.target.value;
     this.oldValue = payload.target.oldValue;
     this.path = payload.target.path;
-    this.bubbles = payload.bubbles ?? true;
-    this.rejectable = payload.rejectable ?? true;
+    this.rejectable = payload.rejectable;
+    this.bubbles = bubbles;
     // this.timestamp = Date.now();
-    this.eventPhase = ReactorEvent.NONE;
+    this.eventPhase = Event.NONE;
     this._propagationStopped = false;
     this._immediatePropagationStopped = false;
+    this._resolved = "";
     this._rejected = "";
   }
   get propagationStopped() {
@@ -40,187 +47,365 @@ class ReactorEvent {
     this._propagationStopped = true;
     this._immediatePropagationStopped = true;
   }
+  get resolved() {
+    return this._resolved;
+  }
+  resolve(message) {
+    if (!this.rejectable) return console.warn(`Ignored resolve() call on a non-rejectable ${this.staticType} at "${this.path}"`);
+    if (this.eventPhase !== Event.CAPTURING_PHASE) console.warn(`Resolving an intent on ${this.staticType} at "${this.path}" outside of the capture phase is unadvised.`);
+    if (this.rejectable) this._resolved = message || `Could ${this.staticType} intended value at "${this.path}"`;
+  }
   get rejected() {
     return this._rejected;
   }
   reject(reason) {
-    if (!this.rejectable) return console.warn(`Ignored reject() call on a non-rejectable "${this.type}" at "${this.path}"`);
-    if (this.eventPhase !== ReactorEvent.CAPTURING_PHASE) console.warn(`Rejecting an intent on "${this.type}" at "${this.path}" outside of the capture phase is unadvised.`);
-    if (this.rejectable((this._rejected = reason || `Couldn't ${this.type} intended value at "${this.path}"`)));
+    if (!this.rejectable) return console.warn(`Ignored reject() call on a non-rejectable ${this.staticType} at "${this.path}"`);
+    if (this.eventPhase !== Event.CAPTURING_PHASE) console.warn(`Rejecting an intent on ${this.staticType} at "${this.path}" outside of the capture phase is unadvised.`);
+    if (this.rejectable) this._rejected = reason || `Couldn't ${this.staticType} intended value at "${this.path}"`;
   }
   composedPath() {
     return tmg.getTrailPaths(this.path);
   }
 }
-// Lagging behind ts reactor now
 class Reactor {
+  getters = new Map();
+  setters = new Map();
+  watchers = new Map();
+  listenersRecord = new Map();
+  batch = new Map();
+  isBatching = false;
+  queue = null; // tasks to run after flush, `null` | pay the empty set 64 byte price for what u might never use
+  proxyCache = new WeakMap();
+  lineage = new WeakMap(); // The Engine Room: Tracks Target -> Array of { parent, key }
+  core;
   constructor(obj = {}, options = {}) {
-    this.getters = new Map();
-    this.setters = new Map();
-    this.watchers = new Map();
-    this.listenersRecord = new Map(); // Changed to records
-    this.batch = new Map();
-    this.isBatching = false;
-    this.queue = new Set();
-    this.proxyCache = new WeakMap();
-    this.rejectable = options.rejectable ?? false;
-    this.core = this._proxify(obj);
+    this.core = this.proxify(obj);
   }
-  _proxify(obj, path = "") {
-    if (!(tmg.isObj(obj) || tmg.isArr(obj)) || "symbol" === typeof obj || "function" === typeof obj || obj instanceof Map || obj instanceof Set || obj instanceof WeakMap || obj instanceof Promise || obj instanceof Element || obj instanceof EventTarget) return obj;
+  unlink(child, p, k) {
+    const target = (child && child[RAW]) || child;
+    if (!target || typeof target !== "object") return;
+    const es = this.lineage.get(target);
+    if (es) for (let i = 0; i < es.length; i++) if (es[i].p === p && es[i].k === k) return void es.splice(i, 1);
+  }
+  proxify(obj, rejectable = false, p, k) {
+    if (!obj || typeof obj !== "object") return obj;
+    const tag = Object.prototype.toString.call(obj);
+    if ((tag !== "[object Object]" && tag !== "[object Array]") || obj[INERTIA]) return obj; // handles direct objects and arrays unless inert
+    obj = obj[RAW] || obj; // prevents nested proxies
+    if (p && k) this.link(obj, p, k);
     if (this.proxyCache.has(obj)) return this.proxyCache.get(obj);
+    rejectable ||= tmg.isIntent(obj);
     const proxy = new Proxy(obj, {
+      // Robust Proxy handler
       get: (object, key, receiver) => {
-        const safeKey = String(key),
-          fullPath = path ? path + "." + safeKey : safeKey,
-          target = { path: fullPath, value: Reflect.get(object, key, receiver), oldValue: undefined, key: safeKey, object },
-          payload = { type: "get", target, currentTarget: target, root: this.core };
-        if (this.getters.has(fullPath)) return this._mediate(fullPath, payload, false);
-        return this._proxify(target.value, fullPath);
+        if (key === RAW) return object;
+        const safeKey = String(key);
+        let value = Reflect.get(object, key, receiver);
+        this.trace(object, safeKey, (fullPath) => {
+          if (!this.getters.has(fullPath)) return;
+          const target = { path: fullPath, value, key: safeKey, object: receiver };
+          value = this.mediate(fullPath, { type: "get", target, currentTarget: target, root: this.core, rejectable }, false);
+        }); // Mediators
+        return this.proxify(value, rejectable, object, safeKey);
       },
       set: (object, key, value, receiver) => {
         const safeKey = String(key),
-          fullPath = path ? path + "." + safeKey : safeKey,
-          target = { path: fullPath, value, oldValue: Reflect.get(object, key, receiver), key: safeKey, object },
-          payload = { type: "set", target, currentTarget: target, root: this.core };
-        if (this.setters.has(fullPath)) target.value = this._mediate(fullPath, payload, true);
-        return (target.value !== TERMINATOR && Reflect.set(object, key, target.value, receiver) && this._notify(fullPath, payload), true);
+          oldValue = Reflect.get(object, key, receiver),
+          rawValue = (value = (value && value[RAW]) || value);
+        this.trace(object, safeKey, (fullPath) => {
+          if (!this.setters.has(fullPath)) return;
+          const target = { path: fullPath, value, oldValue, key: safeKey, object: receiver },
+            result = this.mediate(fullPath, { type: "set", target: target, currentTarget: target, root: this.core, rejectable }, true);
+          if (result !== TERMINATOR) value = result;
+        }); // Mediators
+        if (value === TERMINATOR) return true; // soft rejection if terminated: `true`
+        if (!Reflect.set(object, key, value, receiver)) return false;
+        if (rawValue !== ((oldValue && oldValue[RAW]) || oldValue)) (this.unlink(oldValue, object, safeKey), this.link(value, object, safeKey));
+        this.trace(object, safeKey, (p) => {
+          const target = { path: p, value, oldValue, key: safeKey, object: receiver };
+          this.notify(p, { type: "set", target, currentTarget: target, root: this.core, rejectable });
+        }); // Listeners
+        return true;
       },
       deleteProperty: (object, key) => {
         const safeKey = String(key),
-          fullPath = path ? path + "." + safeKey : safeKey,
-          target = { path: fullPath, oldValue: Reflect.get(object, key), key: safeKey, object },
-          payload = { type: "delete", target, currentTarget: target, root: this.core };
-        if (this.setters.has(fullPath)) target.value = this._mediate(fullPath, payload, true);
-        return (target.value !== TERMINATOR && Reflect.deleteProperty(object, key) && this._notify(fullPath, payload), true);
+          oldValue = Reflect.get(object, key),
+          receiver = this.proxyCache.get(object);
+        let value = undefined;
+        this.trace(object, safeKey, (fullPath) => {
+          if (!this.setters.has(fullPath)) return;
+          const target = { path: fullPath, oldValue, key: safeKey, object: receiver },
+            result = this.mediate(fullPath, { type: "delete", target, currentTarget: target, root: this.core, rejectable }, true);
+          if (result !== TERMINATOR) value = result;
+        }); // Mediators
+        if (value === TERMINATOR) return true; // soft rejection if terminated: `true`
+        if (!Reflect.deleteProperty(object, key)) return false;
+        this.unlink(oldValue, object, safeKey);
+        this.trace(object, safeKey, (p) => {
+          const target = { path: p, oldValue, key: safeKey, object: receiver };
+          this.notify(p, { type: "delete", target, currentTarget: target, root: this.core, rejectable });
+        }); // Listeners
+        return true;
       },
     });
-    this.proxyCache.set(obj, proxy);
-    return proxy;
+    return (this.proxyCache.set(obj, proxy), proxy);
   }
-  _mediate(path, payload, set = true) {
+  trace(target, key, cb, visited = new WeakSet()) {
+    if (target === (this.core[RAW] || this.core)) return cb(key);
+    if (visited.has(target)) return; // Stop infinite loops
+    visited.add(target);
+    const parents = this.lineage.get(target);
+    if (!parents) return;
+    for (let i = 0; i < parents.length; i++) {
+      const { p, k } = parents[i];
+      this.trace(p, k ? k + "." + key : key, cb, visited);
+    }
+  }
+  link(child, p, k, es) {
+    const target = (child && child[RAW]) || child;
+    if (!tmg.isObj(target) && !tmg.isArr(target)) return;
+    es = this.lineage.get(target) ?? (this.lineage.set(target, (es = [])), es);
+    for (let i = 0; i < es.length; i++) if (es[i].p === p && es[i].k === k) return;
+    es.push({ p, k });
+  }
+  mediate(path, payload, set) {
     let terminated = false,
       value = payload.target.value;
-    const fns = (set ? this.setters : this.getters)?.get(path);
-    if (!fns?.size) return value;
-    const arr = Array.from(fns);
-    for (let i = set ? 0 : arr.length - 1; i !== (set ? arr.length : -1); i += set ? 1 : -1) {
-      terminated ||= value === TERMINATOR;
-      const response = arr[i](value, terminated, payload);
+    const cords = (set ? this.setters : this.getters).get(path);
+    if (!cords?.length) return value;
+    for (let i = set ? 0 : cords.length - 1; i !== (set ? cords.length : -1); i += set ? 1 : -1) {
+      if (set) terminated ||= value === TERMINATOR;
+      if (cords[i].once) (cords.splice(i--, 1), !cords.length && (set ? this.setters : this.getters).delete(path));
+      const response = set ? cords[i].cb(value, terminated, payload) : cords[i].cb(value, payload);
       if (!terminated) value = response;
     }
-    return value;
+    return value; // set - FIFO, get - LIFO
   }
-  _notify(path, payload) {
-    if (this.watchers.has(path)) for (const fn of this.watchers.get(path)) fn(payload.target.value, payload);
-    this._schedule(path, payload);
+  notify(path, payload) {
+    const cords = this.watchers.get(path);
+    for (let i = 0; i < (cords?.length ?? 0); i++) {
+      if (cords[i].once) (cords.splice(i--, 1), !cords.length && this.watchers.delete(path));
+      cords[i].cb(payload.target.value, payload);
+    }
+    this.schedule(path, payload);
   }
-  _schedule = (path, payload) => (this.batch.set(path, payload), this._initBatching());
-  _initBatching() {
+  schedule(path, payload) {
+    (this.batch.set(path, payload), this.initBatching());
+  }
+  initBatching() {
     if (this.isBatching) return;
-    ((this.isBatching = true), queueMicrotask(() => this._flush()));
+    this.isBatching = true;
+    queueMicrotask(() => this.flush());
   }
-  _flush() {
+  flush() {
     (this.tick(this.batch.keys()), this.batch.clear(), (this.isBatching = false));
-    if (this.queue.size) for (const task of this.queue) task();
-    this.queue.clear();
+    if (this.queue?.size) for (const task of this.queue) task();
+    this.queue?.clear();
   }
-  _wave(path, payload) {
-    const e = new ReactorEvent({ ...payload, rejectable: this.rejectable }),
-      chain = tmg.getTrailRecord(this.core, path);
-    e.eventPhase = ReactorEvent.CAPTURING_PHASE;
+  wave(path, payload) {
+    const e = new Event(payload),
+      chain = tmg.getTrailRecords(this.core, path);
+    e.eventPhase = Event.CAPTURING_PHASE;
     for (let i = 0; i <= chain.length - 2; i++) {
       if (e.propagationStopped) break;
-      this._fire(chain[i], e, true);
+      this.fire(chain[i], e, true);
     }
     if (e.propagationStopped) return;
-    e.eventPhase = ReactorEvent.AT_TARGET;
-    this._fire(chain[chain.length - 1], e, true); // Capture listeners at target
-    !e.immediatePropagationStopped && this._fire(chain[chain.length - 1], e, false); // Bubble listeners at target
+    e.eventPhase = Event.AT_TARGET;
+    this.fire(chain[chain.length - 1], e, true);
+    !e.immediatePropagationStopped && this.fire(chain[chain.length - 1], e, false);
     if (!e.bubbles) return;
-    e.eventPhase = ReactorEvent.BUBBLING_PHASE;
+    e.eventPhase = Event.BUBBLING_PHASE;
     for (let i = chain.length - 2; i >= 0; i--) {
       if (e.propagationStopped) break;
-      this._fire(chain[i], e, false);
+      this.fire(chain[i], e, false);
     }
-    if (e.rejected) return;
   }
-  _fire([path, object, value], e, isCapture) {
-    const records = this.listenersRecord.get(path);
-    if (!records?.size) return;
-    const originalType = e.type; // Ancestors get 'update', target keeps original type ('set'/'delete')
-    e.type = path !== e.target.path ? "update" : originalType;
-    e.currentTarget = { path, value, oldValue: e.type !== "update" ? e.target.oldValue : undefined, key: path.split(".").pop() || "", object };
-    for (const record of [...records]) {
+  fire([path, object, value], e, isCapture) {
+    const cords = this.listenersRecord.get(path);
+    if (!cords?.length) return;
+    e.type = path !== e.target.path ? "update" : e.staticType;
+    e.currentTarget = { path, value, oldValue: e.type !== "update" ? e.target.oldValue : undefined, key: e.type !== "update" ? path : path.slice(path.lastIndexOf(".") + 1) || "", object };
+    let tDepth, lDepth;
+    for (let i = 0; i < cords.length; i++) {
       if (e.immediatePropagationStopped) break;
-      if (record.capture !== isCapture) continue;
-      if (record.once) records.delete(record);
-      record.cb(e);
+      if (cords[i].capture !== isCapture) continue;
+      if (cords[i].depth !== undefined) {
+        ((tDepth ??= this.getDepth(e.target.path)), (lDepth ??= this.getDepth(path)));
+        if (tDepth > lDepth + cords[i].depth) continue;
+      }
+      if (cords[i].once) (cords.splice(i--, 1), !cords.length && this.listenersRecord.delete(path));
+      cords[i].cb(e);
     }
-    e.type = originalType;
+  }
+  bind(cord, signal) {
+    signal?.aborted ? cord.clup() : signal?.addEventListener?.("abort", cord.clup, { once: true });
+    if (signal && !signal.aborted) cord.sclup = () => signal.removeEventListener?.("abort", cord.clup);
+    return cord.clup;
+  }
+  getContext(path) {
+    const lastDot = path.lastIndexOf("."),
+      value = path === "*" ? this.core : tmg.getAny(this.core, path),
+      object = lastDot === -1 ? this.core : tmg.getAny(this.core, path.slice(0, lastDot));
+    return { path, value, key: path.slice(lastDot + 1) || "", object };
+  }
+  getDepth(p, d = !p ? 0 : 1) {
+    for (let i = 0; i < p.length; i++) if (p.charCodeAt(i) === 46) d++;
+    return d;
   }
   tick(paths) {
-    if (!paths) return this._flush();
-    for (const path of "string" === typeof paths ? [paths] : paths) this.batch.has(path) && (this._wave(path, this.batch.get(path)), this.batch.delete(path));
+    if (!paths) return this.flush();
+    if ("string" === typeof paths) {
+      const task = this.batch.get(paths);
+      task && (this.wave(paths, task), this.batch.delete(paths));
+    } else
+      for (const path of paths) {
+        const task = this.batch.get(path);
+        task && (this.wave(path, task), this.batch.delete(path));
+      }
   }
-  stall = (task) => (this.queue.add(task), this._initBatching());
-  nostall = (task) => this.queue.delete(task);
-  get(path, cb, lazy) {
-    const task = () => (this.getters.get(path) ?? this.getters.set(path, new Set()).get(path)).add(cb);
-    lazy ? this.stall(task) : task(); // a progressive enhancment for gets that are virtual and should not affect init
-    return () => (lazy && this.nostall(task), this.noget < P > (path, cb));
+  stall(task) {
+    ((this.queue ??= new Set()), this.queue.add(task), this.initBatching());
   }
-  noget = (path, cb) => this.getters.get(path)?.delete(cb);
-  set(path, cb, lazy) {
-    const task = () => (this.setters.get(path) ?? this.setters.set(path, new Set()).get(path)).add(cb);
-    lazy ? this.stall(task) : task();
-    return () => (lazy && this.nostall(task), this.noset < P > (path, cb));
+  nostall(task) {
+    return this.queue?.delete(task);
   }
-  noset = (path, cb) => this.setters.get(path)?.delete(cb);
-  watch(path, cb, lazy) {
-    const task = () => (this.watchers.get(path) ?? this.watchers.set(path, new Set()).get(path)).add(cb);
-    lazy ? this.stall(task) : task();
-    return () => (lazy && this.nostall(task), this.nowatch(path, cb));
-  }
-  nowatch = (path, cb) => this.watchers.get(path)?.delete(cb);
-  on = (path, cb, options) => {
-    const records = this.listenersRecord.get(path),
-      capture = Reactor.parseEOpt(options, "capture");
-    let added = false;
-    for (const record of records ?? []) {
-      if (record.cb === cb && record.capture === capture) {
-        added = true;
+  get(path, cb, opts) {
+    const { lazy = false, once = false, signal, immediate = false } = tmg.parseEvOpts(opts, REOPTS.MEDIATOR);
+    let cords = this.getters.get(path),
+      cord = null;
+    for (let i = 0; i < (cords?.length ?? 0); i++)
+      if (cords[i].cb === cb) {
+        cord = cords[i];
         break;
       }
-    }
-    if (!added) (records ?? this.listenersRecord.set(path, new Set()).get(path)).add({ cb, capture, once: Reactor.parseEOpt(options, "once", false) });
-    return () => this.off(path, cb, options);
-  };
-  once = (path, cb, options) => this.on(path, cb, { ...options, once: true });
-  off = (path, cb, options) => {
-    const records = this.listenersRecord.get(path),
-      capture = Reactor.parseEOpt(options, "capture");
-    if (!records) return undefined;
-    for (const record of [...records]) {
-      if (record.cb === cb && record.capture === capture) (records.delete(record), !records.size && this.listenersRecord.delete(path));
-    }
+    if (cord) return cord.clup;
+    cord = { cb, once, clup: () => (lazy && this.nostall(task), this.noget(path, cb)) };
+    if (immediate) (immediate !== "auto" || tmg.inAny(this.core, path)) && tmg.getAny(this.core, path);
+    const task = () => (this.getters.get(path) ?? (this.getters.set(path, (cords = [])), cords)).push(cord);
+    lazy ? this.stall(task) : task();
+    return this.bind(cord, signal);
+  }
+  gonce(path, cb, opts) {
+    return this.get(path, cb, { ...tmg.parseEvOpts(opts, REOPTS.MEDIATOR), once: true });
+  }
+  noget(path, cb) {
+    const cords = this.getters.get(path);
+    if (!cords) return undefined;
+    for (let i = 0; i < cords.length; i++) if (cords[i].cb === cb) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.getters.delete(path), true);
     return false;
-  };
-  static parseEOpt = (options = false, opt, isBoolOpt = true) => ("boolean" === typeof options ? isBoolOpt && options : !!options?.[opt]);
-  cascade = ({ type, currentTarget: { path, value: news, oldValue: olds } }, objSafe = true) => {
-    if ((type !== "set" && type !== "delete") || !tmg.isObj(news) || !tmg.isObj(olds)) return;
-    for (const [key, value] of Object.entries(objSafe ? tmg.mergeObjs(olds, news) : news)) tmg.assignAny(this.core, `${path}.${key}`, value); // smart progressive enhancement for objects
-  };
-  reset = () => {
+  }
+  set(path, cb, opts) {
+    const { lazy = false, once = false, signal, immediate = false } = tmg.parseEvOpts(opts, REOPTS.MEDIATOR);
+    let cords = this.setters.get(path),
+      cord = null;
+    for (let i = 0; i < (cords?.length ?? 0); i++)
+      if (cords[i].cb === cb) {
+        cord = cords[i];
+        break;
+      }
+    if (cord) return cord.clup;
+    cord = { cb, once, clup: () => (lazy && this.nostall(task), this.noset(path, cb)) };
+    if (immediate) (immediate !== "auto" || tmg.inAny(this.core, path)) && tmg.setAny(this.core, path, this.getContext(path).value);
+    const task = () => (this.setters.get(path) ?? (this.setters.set(path, (cords = [])), cords)).push(cord);
+    lazy ? this.stall(task) : task();
+    return this.bind(cord, signal);
+  }
+  sonce(path, cb, opts) {
+    return this.set(path, cb, { ...tmg.parseEvOpts(opts, REOPTS.MEDIATOR), once: true });
+  }
+  noset(path, cb) {
+    const cords = this.setters.get(path);
+    if (!cords) return undefined;
+    for (let i = 0; i < cords.length; i++) if (cords[i].cb === cb) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.setters.delete(path), true);
+    return false;
+  }
+  watch(path, cb, opts) {
+    const { lazy = false, once = false, signal, immediate = false } = tmg.parseEvOpts(opts, REOPTS.MEDIATOR);
+    let cords = this.watchers.get(path),
+      cord = null;
+    for (let i = 0; i < (cords?.length ?? 0); i++)
+      if (cords[i].cb === cb) {
+        cord = cords[i];
+        break;
+      }
+    if (cord) return cord.clup;
+    cord = { cb, once, clup: () => (lazy && this.nostall(task), this.nowatch(path, cb)) };
+    if (immediate && immediate !== "auto" && tmg.inAny(this.core, path)) {
+      const target = this.getContext(path);
+      cb(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false });
+    }
+    const task = () => (cords ?? (this.watchers.set(path, (cords = [])), cords)).push(cord);
+    lazy ? this.stall(task) : task();
+    return this.bind(cord, signal);
+  }
+  wonce(path, cb, opts) {
+    return this.watch(path, cb, { ...tmg.parseEvOpts(opts, REOPTS.MEDIATOR), once: true });
+  }
+  nowatch(path, cb) {
+    const cords = this.watchers.get(path);
+    if (!cords) return undefined;
+    for (let i = 0; i < cords.length; i++) if (cords[i].cb === cb) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.watchers.delete(path), true);
+    return false;
+  }
+  on(path, cb, options) {
+    const { capture = false, once = false, signal, immediate = false, depth } = tmg.parseEvOpts(options, REOPTS.LISTENER);
+    let cords = this.listenersRecord.get(path),
+      cord = null;
+    for (let i = 0; i < (cords?.length ?? 0); i++)
+      if (cords[i].cb === cb && capture === cords[i].capture) {
+        cord = cords[i];
+        break;
+      }
+    if (cord) return cord.clup;
+    cord = { cb, capture, depth, once, clup: () => this.off(path, cb, options) };
+    if (immediate && (immediate !== "auto" || tmg.inAny(this.core, path))) {
+      const target = this.getContext(path);
+      cb(new Event({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, false));
+    }
+    (cords ?? (this.listenersRecord.set(path, (cords = [])), cords)).push(cord);
+    return this.bind(cord, signal);
+  }
+  once(path, cb, options) {
+    return this.on(path, cb, { ...tmg.parseEvOpts(options, REOPTS.LISTENER), once: true });
+  }
+  off(path, cb, options) {
+    const cords = this.listenersRecord.get(path);
+    if (!cords) return undefined;
+    const { capture } = tmg.parseEvOpts(options, REOPTS.LISTENER);
+    for (let i = 0; i < cords.length; i++) if (cords[i].cb === cb && cords[i].capture === capture) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.listenersRecord.delete(path), true);
+    return false;
+  }
+  cascade({ type, currentTarget: { path, value: news, oldValue: olds } }, objSafe = true) {
+    if (!tmg.isObj(news) || !tmg.isObj(olds) || (type !== "set" && type !== "delete")) return;
+    const obj = objSafe ? tmg.mergeObjs(olds, news) : news,
+      keys = Object.keys(obj);
+    for (let i = 0; i < keys.length; i++) tmg.setAny(this.core, path + "." + keys[i], obj[keys[i]]);
+  }
+  snapshot() {
+    return tmg.deepClone(this.core);
+  }
+  reset() {
     (this.getters.clear(), this.setters.clear(), this.watchers.clear(), this.listenersRecord.clear());
-    (this.queue.clear(), this.batch.clear(), (this.isBatching = false));
+    (this.queue?.clear(), this.batch.clear(), (this.isBatching = false));
     this.proxyCache = new WeakMap();
-    this.core = null;
-  };
+  }
+  destroy() {
+    (this.reset(), tmg.nuke(this));
+  }
 }
+const methods = ["tick", "stall", "nostall", "get", "gonce", "noget", "set", "sonce", "noset", "watch", "wonce", "nowatch", "on", "once", "off", "cascade", "snapshot", "reset", "destroy"];
 function reactified(target, options) {
-  const r = target instanceof Reactor ? target : new Reactor(target, options);
-  return (Object.assign(r.core, { tick: r.tick.bind(r), stall: r.stall.bind(r), nostall: r.nostall.bind(r), get: r.get.bind(r), noget: r.noget.bind(r), set: r.set.bind(r), noset: r.noset.bind(r), watch: r.watch.bind(r), nowatch: r.nowatch.bind(r), on: r.on.bind(r), once: r.once.bind(r), off: r.off.bind(r), cascade: r.cascade.bind(r), reset: r.reset.bind(r) }), r.core);
+  const descriptors = {},
+    r = target instanceof Reactor ? target : new Reactor(target, options);
+  for (const m of methods)
+    descriptors[m] = {
+      value: r[m].bind(r),
+      writable: false,
+      enumerable: false,
+      configurable: true,
+    };
+  return (Object.defineProperties(r.core, descriptors), r.core);
 }
 
 class tmg_Video_Controller {
@@ -245,8 +430,8 @@ class tmg_Video_Controller {
     (this.buildContainers(), this.buildPlayerInterface());
     this.plugControlPanelSettings();
     setTimeout(() => (this.mutatingDOMM = false));
-    this.initSettingsUIManager();
     this.initPlayer();
+    this.initSettingsUIManager();
   }
   guardGenericPaths = () => ["media", "media.links", "settings.toasts", "settings.toasts.nextVideoPreview", "settings.css", "settings.controlPanel", "lightState", "lightState.preview", "settings.time", "settings.playbackRate", "settings.volume", "settings.brightness"].forEach((p) => this.config.on(p, this.config.cascade));
   plugSources() {
@@ -254,30 +439,34 @@ class tmg_Video_Controller {
     this.config.get("src", () => this.video.src);
     this.config.get("sources", () => tmg.getSources(this.video));
     this.config.watch("src", (value) => !tmg.isSameURL(this.config.src, value) && (tmg.removeSources(this.video), (this.video.src = value)));
-    this.config.watch("sources", (value = []) => this.config.sources.some((s) => !value?.some((so) => tmg.isSameURL(so.src, s.src))) && (tmg.removeSources(this.video), value?.length && tmg.addSources(value, this.video)));
+    this.config.watch("sources", (value = []) => !tmg.isSameSources(this.config.sources, value) && (tmg.removeSources(this.video), tmg.addSources(value, this.video)));
     if ("src" in this.config) this.config.src = src;
     if ("sources" in this.config) this.config.sources = sources;
   }
   plugTracks() {
     const { tracks } = this.config;
     this.config.get("tracks", () => tmg.getTracks(this.video));
-    this.config.watch("tracks", (value = [], { root }) => root.tracks.some((t) => !value?.some((tr) => tmg.isSameURL(tr.src, t.src))) && (tmg.removeTracks(this.video), value?.length && tmg.addTracks(value, this.video)));
+    this.config.watch("tracks", (value = []) => !tmg.isSameTracks(this.config.tracks, value) && (tmg.removeTracks(this.video), tmg.addTracks(value, this.video)));
     if ("tracks" in this.config) this.config.tracks = tracks;
   }
   plugPlaylist() {
     this.config.get("playlist", (value) => (value?.length ? value : null));
     this.config.set("playlist", (value) => value?.map((v) => tmg.mergeObjs(tmg.DEFAULT_VIDEO_ITEM_BUILD, tmg.parseAnyObj(v))));
-    this.config.on("playlist", ({ root }) => {
-      if (this.readyState < 1) return;
-      const v = root.playlist?.find((v) => (v.media.id && v.media.id === root.media.id) || tmg.isSameURL(v.src, root.src));
-      this.currentPlaylistIndex = v ? root.playlist.indexOf(v) : 0;
-      if (v) {
-        root.media = v.media;
-        ["min", "max", "start", "end", "previews"].forEach((prop) => (this.settings.time[prop] = v.settings.time[prop]));
-        root.tracks = v.tracks ?? [];
-        this.setControlsState("playlist");
-      } else this.movePlaylistTo(this.currentPlaylistIndex);
-    });
+    this.config.on(
+      "playlist",
+      ({ root }) => {
+        if (this.readyState < 1) return;
+        const v = root.playlist?.find((v) => (v.media.id && v.media.id === root.media.id) || tmg.isSameURL(v.src, root.src));
+        this.currentPlaylistIndex = v ? root.playlist.indexOf(v) : 0;
+        if (v) {
+          root.media = v.media;
+          ["min", "max", "start", "end", "previews"].forEach((prop) => (this.settings.time[prop] = v.settings.time[prop]));
+          root.tracks = v.tracks ?? [];
+          this.setControlsState("playlist");
+        } else this.movePlaylistTo(this.currentPlaylistIndex);
+      },
+      { depth: 1 }
+    );
     this.config.playlist = this.config.playlist;
   }
   setPosterState = (poster = this.config.media.artwork?.[0]?.src) => !tmg.isSameURL(poster, this.video.poster) && (poster ? this.video.setAttribute("poster", poster) : this.video.removeAttribute("poster"));
@@ -292,7 +481,7 @@ class tmg_Video_Controller {
     );
     this.config.on("media.profile", ({ target: { value } }) => (value ? this.DOM.videoProfile.parentElement.setAttribute("href", value) : this.DOM.videoProfile.parentElement.removeAttribute("href")));
     this.config.on("media.artwork", ({ currentTarget: { value } }) => this.setPosterState(value?.[0]?.src));
-    this.config.on("media", (e) => !this.video.paused && this.syncMediaSession());
+    this.config.on("media", () => !this.video.paused && this.syncMediaSession());
     this.config.media = this.config.media;
   }
   get payload() {
@@ -346,7 +535,7 @@ class tmg_Video_Controller {
     });
   }
   bindNotifiers() {
-    [...(this.DOM.notifiersContainer?.children ?? [])].forEach((n) => n.addEventListener("animationend", () => this.resetNotifiers("", true)));
+    Array.prototype.forEach.call(this.DOM.notifiersContainer?.children ?? [], (n) => n.addEventListener("animationend", () => this.resetNotifiers("", true)));
     tmg.NOTIFIER_EVENTS.forEach((eN) => this.DOM.notifiersContainer?.addEventListener(eN, this._handleNotifierEvent));
   }
   _handleNotifierEvent = ({ type: eN }) => (this.resetNotifiers(), this.RAFLoop("notifying", () => this.resetNotifiers(eN)));
@@ -389,24 +578,26 @@ class tmg_Video_Controller {
     return (this.video = this.cloneOnDetach ? tmg.cloneVideo(this.video) : this.video); // src resets - freezing, though not with web default `controls` :(
   }
   plugCSSSettings() {
-    this.config.on("settings.css", ({ type, target: { key, value } }) => {
-      if (type !== "update") return;
-      const pre = `tmg-video-${tmg.uncamelize(key, "-")}`,
-        spec = () => (this.DOM.captionsContainer?.classList.forEach((cls) => cls.startsWith(pre) && this.DOM.captionsContainer.classList.remove(cls)), this.DOM.captionsContainer?.classList.add(`${pre}-${value}`), true);
-      ({ captionsCharacterEdgeStyle: spec, captionsTextAlignment: spec })[key]?.() ?? [this.videoContainer, this.pseudoVideoContainer].forEach((el) => el?.style.setProperty(`--${pre}`, value));
-    });
-    this.settings.css = this.settings.css;
+    this.config.on(
+      "settings.css",
+      ({ type, target: { key, value } }) => {
+        if (type !== "update" && type !== "init") return;
+        const apply = (key, value) => {
+          const pre = `tmg-video-${tmg.uncamelize(key, "-")}`,
+            spec = () => (this.videoContainer.classList.forEach((cls) => cls.startsWith(pre) && this.videoContainer.classList.remove(cls)), this.videoContainer.classList.add(`${pre}-${value}`), true);
+          ({ captionsCharacterEdgeStyle: spec, captionsTextAlignment: spec })[key]?.() ?? [this.videoContainer, this.pseudoVideoContainer].forEach((el) => el?.style.setProperty(`--${pre}`, value));
+        };
+        type !== "init" ? apply(key, value) : Object.keys(value).forEach((k) => k !== "syncWithMedia" && apply(k, value[k]));
+      },
+      { depth: 1, immediate: true }
+    );
     this.CSSCache ??= {};
     ["captionsCharacterEdgeStyle", "captionsTextAlignment"].forEach((key) =>
-      this.config.get(
-        `settings.css.${key}`,
-        () => {
-          const pre = `tmg-video-${tmg.uncamelize(key, "-")}`,
-            value = [...(this.DOM.captionsContainer?.classList ?? [])].find((cls) => cls.startsWith(pre))?.replace(`${pre}-`, "");
-          return tmg.parseUIObj(this.settings.captions)[tmg.camelize(key.slice(8))].values.includes(value) ? value : "none";
-        },
-        true
-      )
+      this.config.get(`settings.css.${key}`, () => {
+        const pre = `tmg-video-${tmg.uncamelize(key, "-")}`,
+          value = Array.prototype.find.call(this.videoContainer.classList ?? [], (cls) => cls.startsWith(pre))?.replace(`${pre}-`, "");
+        return tmg.parseUIObj(this.settings.captions)[tmg.camelize(key.slice(8))].values.includes(value) ? value : "none";
+      })
     );
     for (const sheet of document.styleSheets) {
       try {
@@ -416,7 +607,7 @@ class tmg_Video_Controller {
             if (!property.startsWith("--tmg-video-")) continue;
             const field = tmg.camelize(property.replace("--tmg-video-", ""));
             this.CSSCache[field] = cssRule.style.getPropertyValue(property);
-            this.config.get(`settings.css.${field}`, () => getComputedStyle(this.videoContainer).getPropertyValue(property), true);
+            this.config.get(`settings.css.${field}`, () => getComputedStyle(this.videoContainer).getPropertyValue(property));
           }
         }
       } catch {
@@ -424,14 +615,44 @@ class tmg_Video_Controller {
       }
     }
   }
-  initSettingsUIManager() {}
+  initSettingsUIManager() {
+    const options = [
+        { option: "Light Blue", value: "rgb(49, 152, 245)" },
+        { option: "Hot Pink", value: "hotpink" },
+        { option: "Fiery Red", value: "#FF0033" }, // more like, Youtube red :)
+        { option: "Dark Turquoise", value: "darkturquoise" },
+        { option: "Video Derived", value: "auto" },
+      ],
+      brandSelector = createField?.({ type: "select", label: "Brand Color", helperText: { info: "You should just try changing your brand color for now" }, options: [{ option: "Tastey Orange", value: "rgb(226, 110, 2)" }, ...options], value: this.settings.css.syncWithMedia.brandColor ? "auto" : (this.settings.css.brandColor ?? "rgb(226, 110, 2)") }),
+      themeSelector = createField?.({ type: "select", label: "Theme Color", helperText: { info: "You should also try changing your theme color for now" }, options: [{ option: "Pure White", value: "white" }, ...options], value: this.settings.css.syncWithMedia.themeColor ? "auto" : (this.settings.css.themeColor ?? "white") });
+    this.queryDOM(".tmg-video-settings-bottom-panel").append(brandSelector, themeSelector);
+    const id = { theme: "", brand: "" },
+      sync = (req = true, type = "brand") => (this.settings.css.syncWithMedia[`${type}Color`] = req),
+      assert = (opts, type = "brand") => this.toast?.update(id[type], { render: `Still here in case you change your choice about the ${type}`, ...opts });
+    brandSelector.querySelector("select").addEventListener("input", async ({ target: i }) => {
+      this.toast?.dismiss(id.brand);
+      if (i.value !== "auto") this.settings.css.brandColor = i.value;
+      else this.settings.css.brandColor = (this.loaded ? await this.getMediaMainColor(this.currentTime, null) : null) ?? this.CSSCache.brandColor;
+      const No = () => (sync(false), assert({ actions: { Yes } })),
+        Yes = () => (sync(true), assert({ actions: { No } }));
+      (sync(i.value === "auto"), i.value === "auto" && (id.brand = this.toast?.("Should the brand color change anytime a video loads?", { icon: "🎨", autoClose: 15000, hideProgressBar: false, actions: { Yes, No } })));
+    });
+    themeSelector.querySelector("select").addEventListener("input", async ({ target: i }) => {
+      this.toast?.dismiss(id.theme);
+      if (i.value !== "auto") this.settings.css.themeColor = i.value;
+      else this.settings.css.themeColor = (this.loaded ? await this.getMediaMainColor(this.currentTime, null) : null) ?? this.CSSCache.themeColor;
+      const No = () => (sync(false, "theme"), assert({ actions: { Yes } }, "theme")),
+        Yes = () => (sync(true, "theme"), assert({ actions: { No } }, "theme"));
+      (sync(i.value === "auto", "theme"), i.value === "auto" && (id.theme = this.toast?.("Should the theme color change anytime a video loads?", { icon: "🎨", autoClose: 15000, hideProgressBar: false, actions: { Yes, No } })));
+    });
+  }
   buildContainers() {
     this.setPosterState(); // had to do this early for the UI
     this.video.parentElement?.insertBefore((this.videoContainer = tmg.createEl("div", { role: "region", ariaLabel: "Video Player", className: `tmg-video-container tmg-media-container${tmg.ON_MOBILE ? " tmg-video-mobile" : ""}${this.video.paused ? " tmg-video-paused" : ""}` }, { trackKind: "captions", volumeLevel: "muted", brightnessLevel: "dark" })), this.video);
     (this.pseudoVideoContainer = tmg.createEl("div", { role: "status", ariaLabel: "Video Player Placeholder", ariaLive: "polite", className: "tmg-pseudo-video-container tmg-media-container" })).append((this.pseudoVideo = tmg.createEl("video", { tmgPlayer: this.video.tmgPlayer, ariaHidden: true, className: "tmg-pseudo-video tmg-media", muted: true, autoplay: false })));
     this.plugCSSSettings(); // as soon as container is ready
     this.videoContainer.dataset.objectFit = this.settings.css.objectFit || "contain";
-    (this.syncMediaAspectRatio(), this.syncMediaBrandColor());
+    (this.syncMediaAspectRatio(), this.syncWithMediaColor());
   }
   buildPlayerInterface() {
     this.videoContainer.insertAdjacentHTML(
@@ -456,7 +677,7 @@ class tmg_Video_Controller {
                 <span>Close Settings</span>
               </button>                     
             </div>
-            <div class="tmg-video-settings-bottom-panel">No Settings Available Yet!</div>
+            <div class="tmg-video-settings-bottom-panel"><p>No Settings Available Yet!</p></div>
           </div>
         </div>         
       </div>
@@ -569,7 +790,7 @@ class tmg_Video_Controller {
         },
         { draggableControl: "", controlId: "brightness" }
       ),
-      timeandduration: tmg.createEl("button", { className: "tmg-video-time-and-duration-btn", title: `Switch (format${k["timeFormat"]} / DblClick→mode${k["timeMode"]})`, innerHTML: `<div class="tmg-video-current-time">0:00</div><span class="tmg-video-time-bridge">/</span><div class="tmg-video-total-time">-:--</div>` }, { draggableControl: "", controlId: "timeandduration" }),
+      timeandduration: tmg.createEl("button", { className: "tmg-video-time-and-duration-btn", title: `Switch (mode${k["timeMode"]} / DblClick→format${k["timeFormat"]})`, innerHTML: `<div class="tmg-video-current-time">0:00</div><span class="tmg-video-time-bridge">/</span><div class="tmg-video-total-time">-:--</div>` }, { draggableControl: "", controlId: "timeandduration" }),
       playbackrate: tmg.createEl("button", { className: "tmg-video-playback-rate-btn", title: `Playback rate${k["playbackRateUp"]} ↔ DblClick${k["playbackRateDown"]}`, innerText: `${this.settings.playbackRate.value}x` }, { draggableControl: "", controlId: "playbackrate" }),
       captions: tmg.createEl("button", { className: "tmg-video-captions-btn", innerHTML: `<svg viewBox="0 0 25 25" data-control-title="Subtitles${k["captions"]}" class="tmg-video-subtitles-icon"><path style="scale: 0.5;" d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z" /></svg><svg viewBox="0 0 25 25" data-control-title="Closed captions${k["captions"]}" class="tmg-video-captions-icon" style="scale: 1.15;"><path d="M18,11H16.5V10.5H14.5V13.5H16.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10M11,11H9.5V10.5H7.5V13.5H9.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10M19,4H5C3.89,4 3,4.89 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6C21,4.89 20.1,4 19,4Z"></path></svg>` }, { draggableControl: "", controlId: "captions" }),
       settings: tmg.createEl("button", { className: "tmg-video-settings-btn", innerHTML: `<svg class="tmg-video-settings-icon" viewBox="0 -960 960 960" data-control-title="Settings${k["settings"]}"><path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/></svg>` }, { draggableControl: "", controlId: "settings" }),
@@ -652,7 +873,7 @@ class tmg_Video_Controller {
     const pos = { 0: "left", 1: "center", 2: "right" }[[...target.parentElement.children].indexOf(target)],
       cws = this.queryDOM(".tmg-video-top-controls-wrapper, .tmg-video-bottom-sub-controls-wrapper", false, true);
     cws.forEach((w, i) => w.contains(target) && (key = { 0: "top.", 1: "bottom.1.", 2: "bottom.2.", 3: "bottom.3." }[i]));
-    return zoneW ? { coord: key + pos, zoneW: tmg.deriveAny(this.zoneWs, key + pos) } : key + pos;
+    return zoneW ? { coord: key + pos, zoneW: tmg.getAny(this.zoneWs, key + pos) } : key + pos;
   }
   syncControlPanelToUI() {
     const id = (el) => el.dataset.controlId,
@@ -750,7 +971,7 @@ class tmg_Video_Controller {
     this.setUpSvgs();
     (this.setVideoEventListeners(), this.setControlsEventListeners());
     (this.plugMedia(), this.plugLightState(), this.plugVolumeSettings(), this.plugBrightnessSettings(), this.plugPlaybackRateSettings(), this.plugCaptionsSettings());
-    (this.plugTimeSettings(), this.plugModesSettings(), this.plugBetaSettings(), this.plugKeysSettings(), this.plugToastsSettings());
+    (this.plugTimeSettings(), this.plugModesSettings(), this.plugBetaSettings(), this.plugKeysSettings(), this.plugToastsSettings(), this.plugLocked());
     this[`toggle${tmg.capitalize(this.config.initialMode)}Mode`]?.(true);
     !this.video.currentSrc && this._handleLoadedError();
     this._handleLoadStart();
@@ -960,7 +1181,7 @@ class tmg_Video_Controller {
     this._handleMediaParentResize();
     tmg.initScrollAssist(this.DOM.videoTitle, { pxPerSecond: 60 });
     tmg.initScrollAssist(this.DOM.videoArtist, { pxPerSecond: 30 });
-    [...this.DOM.sideControlWrappers].forEach((el) => {
+    Array.prototype.forEach.call(this.DOM.sideControlWrappers, (el) => {
       this._handleControlsWrapperResize(el);
       tmg.initScrollAssist(el, { pxPerSecond: 60 });
       el && tmg.resizeObserver.observe(el);
@@ -971,7 +1192,7 @@ class tmg_Video_Controller {
   unobserveResize() {
     tmg.removeScrollAssist(this.DOM.videoTitle);
     tmg.removeScrollAssist(this.DOM.videoArtist);
-    [...this.DOM.sideControlWrappers].forEach((el) => {
+    Array.prototype.forEach.call(this.DOM.sideControlWrappers, (el) => {
       tmg.removeScrollAssist(el);
       el && tmg.resizeObserver.unobserve(el);
     });
@@ -1044,7 +1265,7 @@ class tmg_Video_Controller {
     w.scrollLeft = w.scrollWidth - w.clientWidth;
   }
   setUpSvgs() {
-    [...this.DOM.svgs].forEach((svg) => {
+    Array.prototype.forEach.call(this.DOM.svgs, (svg) => {
       svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
       const title = svg.getAttribute("data-control-title");
       if (title) svg.addEventListener("mouseover", () => (svg.parentElement.title = title));
@@ -1068,7 +1289,7 @@ class tmg_Video_Controller {
         (this.togglePlay(false), this.showOverlay());
         this.DOM.videoContainerContent.setAttribute("inert", "");
         this.setKeyEventListeners("remove");
-        this.toast.warn("You cannot access the custom controls when disabled");
+        this.toast?.warn("You cannot access the custom controls when disabled");
         this.log("You cannot access the custom controls when disabled", "warn");
       } else {
         this.videoContainer.classList.remove("tmg-video-disabled");
@@ -1076,7 +1297,7 @@ class tmg_Video_Controller {
         this.setKeyEventListeners("add");
       }
     });
-    this.disabled = this.disabled;
+    this.config.disabled = this.config.disabled;
   }
   plugLocked() {
     this.config.on("settings.locked", async ({ target: { value } }) => {
@@ -1095,9 +1316,10 @@ class tmg_Video_Controller {
         this.setKeyEventListeners("add");
       }
     });
+    this.settings.locked = this.settings.locked;
   }
-  lock = () => (this.config.settings.locked = true);
-  unlock = () => (this.config.settings.locked = false);
+  lock = () => (this.settings.locked = true);
+  unlock = () => (this.settings.locked = false);
   _handleLockBtnClick(e) {
     e.stopPropagation();
     this.delayLockedOverlay();
@@ -1173,8 +1395,12 @@ class tmg_Video_Controller {
     }
     return null;
   }
-  getMediaBrandColor = async (time, poster = this.video.poster, config = {}) => await tmg.getDominantColor(poster ? poster : (await this.getVideoFrame("", time ? time : await this.findGoodFrameTime(config), true, 1)).canvas);
-  syncMediaBrandColor = async () => (this.settings.css.brandColor = (this.loaded ? await this.getMediaBrandColor() : null) ?? this.CSSCache.brandColor);
+  getMediaMainColor = async (time, poster = this.video.poster, config = {}) => await tmg.getDominantColor(poster ? poster : (await this.getVideoFrame("", time ? time : await this.findGoodFrameTime(config), true, 1)).canvas);
+  async syncWithMediaColor(...args) {
+    const color = this.loaded && (await this.getMediaMainColor(...args)),
+      keys = Object.keys(this.settings.css.syncWithMedia).filter((k) => this.settings.css.syncWithMedia[k]);
+    keys?.forEach((k) => (this.settings.css[k] = (this.loaded ? color : null) ?? this.CSSCache[k]));
+  }
   syncMediaSession() {
     if (!navigator.mediaSession || (tmg._pictureInPictureActive && !this.isUIActive("pictureInPicture"))) return;
     if (this.config.media) navigator.mediaSession.metadata = new MediaMetadata(this.config.media);
@@ -1237,11 +1463,12 @@ class tmg_Video_Controller {
   }
   _handleLoadedMetadata() {
     this.loaded = true;
-    if (this.settings.time.start != null && this.config.lightState.disabled) this.actualTimeStart = this.currentTime = this.settings.time.start;
+    this.actualTimeStart = this.settings.time.start;
+    if (this.settings.time.start != null && this.config.lightState.disabled) this.currentTime = this.actualTimeStart;
     this.pseudoVideo.src = this.video.currentSrc;
     this.pseudoVideo.crossOrigin = this.video.crossOrigin;
     this.pseudoVideo.addEventListener("timeupdate", ({ target: v }) => (v.ontimeupdate = this.syncCanvasPreviews), { once: true }); // anonymous low cost
-    (this.syncMediaAspectRatio(), this.syncMediaBrandColor());
+    (this.syncMediaAspectRatio(), this.syncWithMediaColor());
     this.setCaptionsState();
     this.reactivate();
   }
@@ -1287,7 +1514,7 @@ class tmg_Video_Controller {
         <h2>Next Video in <span class="tmg-video-next-countdown">${count}</span></h2>
         ${v.media.title ? `<p class="tmg-video-next-title">${v.media.title}</p>` : ""}
       </span>`,
-      onTimeUpdate: (time) => this.throttle("nextVideoCountdown", () => (this.queryDOM(".tmg-video-next-countdown").textContent = Math.round((count * 1000 - time) / 1000)) || 1, 250),
+      onTimeUpdate: (time) => this.throttle("nextVideoCountdown", () => ((this.queryDOM(".tmg-video-next-countdown").textContent = Math.max(Math.round(count - time / 1000), 1)), 250)),
       onClose: (timeElapsed) => (removeListeners(), timeElapsed && this.nextVideo()),
       tag: "tmg-anvi",
     });
@@ -1297,6 +1524,7 @@ class tmg_Video_Controller {
       removeListeners = () => ["timeupdate", "pause", "waiting"].forEach((e, i) => this.video.removeEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
     ["timeupdate", "pause", "waiting"].forEach((e, i) => this.video.addEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
     const nVP = (this.nextVideoPreview = this.queryDOM(".tmg-video-next-preview"));
+    nVP?.toggleAttribute("poster", v.media?.artwork?.[0]?.src);
     v.sources?.length && tmg.addSources(v.sources, nVP);
     ["loadedmetadata", "loaded", "durationchange"].forEach((e) => nVP?.addEventListener(e, ({ target: p }) => (p.nextElementSibling.textContent = this.toTimeText(p.duration))));
     this.settings.toasts.nextVideoPreview = this.settings.toasts.nextVideoPreview; // force UI update
@@ -1309,7 +1537,7 @@ class tmg_Video_Controller {
     this.syncMediaSession();
     this.leaveSettingsView();
     this.toggleMiniplayerMode();
-    this.frameCallbackId = this.video.requestVideoFrameCallback?.(this._handleFrameUpdate);
+    // this.frameCallbackId = this.video.requestVideoFrameCallback?.(this._handleFrameUpdate); // will start dis with S.I.A maybe, there's more efficient ways to log sef
     if (this.loaded || this.video.currentSrc) ((this.loaded = true), !this.video.error && this.reactivate());
   }
   _handlePause() {
@@ -1436,8 +1664,7 @@ class tmg_Video_Controller {
           }
         } else if (this.settings.time.previews && !this.frameReadyPromise) this.pseudoVideo.currentTime = p * this.duration;
       },
-      30,
-      false
+      30
     );
   }
   _handleGestureTimelineInput({ percent, sign, multiplier }) {
@@ -1468,9 +1695,11 @@ class tmg_Video_Controller {
     if (!this.isScrubbing) t.s.css.currentPlayedPosition = t.s.css.currentThumbPosition = tmg.safeNum(t.vc / tmg.safeNum(this.video.duration, 60)); // progress fallback, shouldn't take more than a min for duration to be available
     this.DOM.currentTimeElement.textContent = this.toTimeText(t.vc, true);
     if (this.speedCheck && !this.video.paused) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", this.toTimeText(t.vc, true));
-    if (Math.floor((t.s.time.end ?? t.d) - t.c) <= t.s.auto.next) this.autonextVideo();
-    t.s.time.start = t.c > 3 && t.c < (t.s.time.end ?? t.d) - 3 ? t.c : this.actualTimeStart;
-    (this.DOM.timelineContainer?.setAttribute("aria-valuenow", Math.floor(t.c)), this.DOM.timelineContainer?.setAttribute("aria-valuetext", `${tmg.formatMediaTime({ time: t.c, format: "human-long" })} out of ${tmg.formatMediaTime({ time: t.d, format: "human-long" })}`));
+    if (this.video.readyState && t.c && Math.floor((t.s.time.end ?? t.d) - t.c) <= t.s.auto.next) this.autonextVideo();
+    if (this.video.readyState && t.c) t.s.time.start = t.c > 3 && t.c < (t.s.time.end ?? t.d) - 3 ? t.c : this.actualTimeStart;
+    if (this.video.readyState && t.c && this.config.playlist) this.config.playlist[this.currentPlaylistIndex].settings.time.start = t.s.time.start;
+    this.DOM.timelineContainer?.setAttribute("aria-valuenow", Math.floor(t.c));
+    this.DOM.timelineContainer?.setAttribute("aria-valuetext", `${tmg.formatMediaTime({ time: t.c, format: "human-long" })} out of ${tmg.formatMediaTime({ time: t.d, format: "human-long" })}`);
     this.videoContainer.classList.remove("tmg-video-replay");
     if (!this.settings.captions.disabled) this._handleCaptionsKaraoke();
   }
@@ -1521,7 +1750,7 @@ class tmg_Video_Controller {
         if (!tmg.ON_MOBILE) this.previewContext?.drawImage(this.pseudoVideo, 0, 0, this.DOM.previewCanvas.width, this.DOM.previewCanvas.height);
         if (this.isScrubbing) this.thumbnailContext?.drawImage(this.pseudoVideo, 0, 0, this.DOM.thumbnailCanvas.width, this.DOM.thumbnailCanvas.height);
       },
-      33
+      30
     );
   }
   syncThumbnailSize() {
@@ -1576,7 +1805,7 @@ class tmg_Video_Controller {
     this.speedCheck = true;
     ((this.wasPaused = this.video.paused), (this.lastPlaybackRate = this.settings.playbackRate.value));
     this.DOM.playbackRateNotifier?.classList.add("tmg-video-control-active");
-    setTimeout(pos === "backwards" && !this.settings.beta.disabled && this.settings.beta.fastPlay.rewind ? this.rewind : this.fastForward, this.settings.fastPlay.playbackRate);
+    setTimeout(pos === "backwards" && !this.settings.beta.disabled && this.settings.beta.fastPlay.rewind ? this.rewind : this.fastForward, 0);
   }
   fastForward(rate = this.settings.fastPlay.playbackRate) {
     this.settings.playbackRate.value = rate;
@@ -1615,19 +1844,18 @@ class tmg_Video_Controller {
     this.DOM.playbackRateNotifier?.classList.remove("tmg-video-control-active", "tmg-video-rewind");
   }
   setCaptionsState() {
-    [...this.video.textTracks].forEach((track, i) => {
+    this.textTrackIndex = 0;
+    Array.prototype.forEach.call(this.video.textTracks, (track, i) => {
       track.oncuechange = () => i === this.textTrackIndex && !(!this.isUIActive("captions") && this.isUIActive("captionsPreview")) && this._handleCueChange(track.activeCues?.[0]);
-      if (track.mode === "showing") this.textTrackIndex = i;
+      if (track.mode === "showing" || track.default) this.textTrackIndex = i;
       track.mode = "hidden";
     });
-    if (!this.video.textTracks.length) this.textTrackIndex = 0;
     this.videoContainer.classList.toggle("tmg-video-captions", this.video.textTracks.length && !this.settings.captions.disabled);
     this.videoContainer.dataset.trackKind = this.video.textTracks[this.textTrackIndex]?.kind || "captions";
     this.setControlsState("captions");
     this._handleCueChange(this.video.textTracks[this.textTrackIndex]?.activeCues?.[0]);
   }
   plugCaptionsSettings() {
-    this.config.get("settings.captions.disabled", (value) => (this.video.textTracks[this.textTrackIndex] ? value : true));
     Object.entries(this.settings.captions.font).forEach(([k, { value }]) => (this.settings.css[`captionsFont${tmg.capitalize(k)}`] = value));
     Object.entries(this.settings.captions.background).forEach(([k, { value }]) => (this.settings.css[`captionsBackground${tmg.capitalize(k)}`] = value));
     Object.entries(this.settings.captions.window).forEach(([k, { value }]) => (this.settings.css[`captionsWindow${tmg.capitalize(k)}`] = value));
@@ -1741,7 +1969,7 @@ class tmg_Video_Controller {
   rotateCaptionsProp(steps, prop, numeric = true) {
     const curr = this.settings.css[tmg.camelize(prop.replace(".value", ""), /\./)],
       i = Math.max(0, numeric ? steps.reduce((cIdx, s, idx) => (Math.abs(s - curr) < Math.abs(steps[cIdx] - curr) ? idx : cIdx), 0) : steps.indexOf(curr));
-    tmg.assignAny(this.settings, prop, steps[(i + 1) % steps.length]);
+    tmg.setAny(this.settings, prop, steps[(i + 1) % steps.length]);
     this.config.stall(this.previewCaptions);
   }
   rotateCaptionsFontFamily = () => this.rotateCaptionsProp(tmg.parseUIObj(this.settings.captions).font.family.values, "captions.font.family.value", false);
@@ -1779,7 +2007,7 @@ class tmg_Video_Controller {
   setUpAudio() {
     if (this.audioSetup) return;
     if (tmg.connectMediaToAudioManager(this.video) === "unavailable") return;
-    this.config.mediaElementSourceNode = this.video.mediaElementSourceNode;
+    this._mediaElementSourceNode = this.video.mediaElementSourceNode;
     this._tmgGainNode = this.video._tmgGainNode;
     const DCN = (this._tmgDynamicsCompressorNode = this.video._tmgDynamicsCompressorNode);
     ((DCN.threshold.value = -30), (DCN.knee.value = 20), (DCN.ratio.value = 12), (DCN.attack.value = 0.003), (DCN.release.value = 0.25));
@@ -1787,7 +2015,7 @@ class tmg_Video_Controller {
   }
   cancelAudio() {
     this.video.volume = tmg.clamp(0, (this._tmgGainNode?.gain?.value ?? 2) / 2, 1);
-    this.config.mediaElementSourceNode?.disconnect();
+    this._mediaElementSourceNode?.disconnect();
     this._tmgGainNode?.disconnect();
     this.audioSetup = false;
   }
@@ -2119,7 +2347,7 @@ class tmg_Video_Controller {
     }
   }
   _handleMiniplayerDragStart({ target, clientX, clientY, targetTouches }) {
-    if (!this.isUIActive("miniplayer") || [this.DOM.topControlsWrapper, this.DOM.bigControlsWrapper, this.DOM.bottomControlsWrapper, this.DOM.captionsContainer].some((w) => w?.contains(target)) || target.closest("[class$='toast-container']")) return;
+    if (!this.isUIActive("miniplayer") || target.scrollWidth > target.clientWidth || [this.DOM.topControlsWrapper, tmg.inBoolArrOpt(this.settings.controlPanel.draggable, "big") ? this.DOM.bigControlsWrapper : null, this.DOM.bottomControlsWrapper, this.DOM.captionsContainer].some((w) => w?.contains?.(target)) || target.closest("[class$='toast-container']")) return;
     const { left, bottom } = getComputedStyle(this.videoContainer);
     ((this.lastMiniplayerXPos = parseFloat(left)), (this.lastMiniplayerYPos = parseFloat(bottom)));
     ((this.lastMiniplayerDragX = clientX ?? targetTouches[0].clientX), (this.lastMiniplayerDragY = clientY ?? targetTouches[0].clientY));
@@ -2569,16 +2797,17 @@ class tmg_Video_Controller {
     dataTransfer.effectAllowed = "move";
     this.dragging = t;
     requestAnimationFrame(() => t.classList.add("tmg-video-control-dragging"));
+    this.dragSafeTimeoutId = setTimeout(() => t.classList.remove("tmg-video-control-dragging"), 1000); // for mobile browsers supporting the API but not living up
     if (t.dataset.dragId !== "wrapper" || t.parentElement?.dataset.dragId !== "wrapper") return;
     const { coord, zoneW } = this.getUIZoneWCoord(t, true);
-    tmg.assignAny(this.cZoneWs, coord, zoneW);
+    tmg.setAny(this.cZoneWs, coord, zoneW);
     this.dragReplaced = { target: t.parentElement, child: zoneW.cover };
   }
-  _handleDrag = () => this.delayOverlay();
+  _handleDrag = () => (this.delayOverlay(), clearTimeout(this.dragSafeTimeoutId));
   _handleDragEnd({ target: t }) {
     t.classList.remove("tmg-video-control-dragging");
     this.dragReplaced = this.dragging = null;
-    if (t.dataset.dragId === "wrapper" && t.parentElement?.dataset.dragId === "wrapper") tmg.assignAny(this.cZoneWs, this.getUIZoneWCoord(t), t);
+    if (t.dataset.dragId === "wrapper" && t.parentElement?.dataset.dragId === "wrapper") tmg.setAny(this.cZoneWs, this.getUIZoneWCoord(t), t);
     this.syncControlPanelToUI();
   }
   noDropOff = (t, drop = this.dragging) => t.dataset.dropZone !== "true" || !drop?.tagName || t.dataset.dragId !== drop.dataset.dragId;
@@ -2592,15 +2821,15 @@ class tmg_Video_Controller {
       "dragOver",
       () => {
         if (t.dataset.dragId === "wrapper") {
-          const atWrapper = tmg.getElSiblingAt(x, "x", [...t.querySelectorAll('.tmg-video-side-controls-wrapper-cover:has([data-drop-zone="true"][data-drag-id=""]:empty)')], "at");
+          const atWrapper = tmg.getElSiblingAt(x, "x", t.querySelectorAll('.tmg-video-side-controls-wrapper-cover:has([data-drop-zone="true"][data-drag-id=""]:empty)'), "at");
           if (!atWrapper) return;
           this.dragReplaced?.target.replaceChild(this.dragReplaced.child, this.dragging);
           this.dragReplaced = { target: t, child: atWrapper };
           return t.replaceChild(this.dragging, atWrapper);
         }
-        const afterControl = tmg.getElSiblingAt(x, "x", [...t.querySelectorAll("[draggable=true]:not(.tmg-video-control-dragging)")]);
+        const afterControl = tmg.getElSiblingAt(x, "x", t.querySelectorAll("[draggable=true]:not(.tmg-video-control-dragging)"));
         afterControl ? t.insertBefore(this.dragging, afterControl) : t.append(this.dragging);
-        !t.dataset.dragId && [...this.DOM.sideControlWrappers].forEach(this._handleControlsWrapperResize);
+        !t.dataset.dragId && Array.prototype.forEach.call(this.DOM.sideControlWrappers, this._handleControlsWrapperResize);
       },
       500,
       false
@@ -2679,7 +2908,7 @@ class tmg_Media_Player {
     this.#medium.volume = 1; // controller takes over, chill; browser :)
     Object.entries(s.modes).forEach(([k, v]) => (s.modes[k] = v && (tmg[`supports${tmg.capitalize(k)}`]?.() ?? true) ? v : false));
     this.#build.video = this.#medium;
-    (await tmg.loadResource(TMG_VIDEO_CSS_SRC), await tmg.loadResource(T007_TOAST_JS_SRC, "script", { module: true })); // users should set crossorigin - document.styleSheets
+    await Promise.all([await tmg.loadResource(TMG_VIDEO_CSS_SRC), await tmg.loadResource(T007_TOAST_JS_SRC, "script", { module: true }), await tmg.loadResource(T007_INPUT_JS_SRC, "script")]); // users should set crossorigin - document.styleSheets
     tmg.Controllers.push((this.Controller = new tmg.Controller(this.#build)));
   }
 }
@@ -2806,7 +3035,7 @@ var tmg = {
   supportsPictureInPicture: () => !!(document.pictureInPictureEnabled || HTMLVideoElement.prototype.requestPictureInPicture || window.documentPictureInPicture),
   loadResource(src, type = "style", { module, media, crossOrigin, integrity } = {}) {
     if (tmg._resourceCache[src]) return tmg._resourceCache[src];
-    if (type === "script" ? [...document.scripts].some((s) => tmg.isSameURL(s.src, src)) : type === "style" ? [...document.styleSheets].some((s) => tmg.isSameURL(s.href, src)) : false) return Promise.resolve();
+    if (type === "script" ? Array.prototype.some.call(document.scripts, (s) => tmg.isSameURL(s.src, src)) : type === "style" ? Array.prototype.some.call(document.styleSheets, (s) => tmg.isSameURL(s.href, src)) : false) return Promise.resolve();
     tmg._resourceCache[src] = new Promise((resolve, reject) => {
       if (type === "script") {
         const script = tmg.createEl("script", { src, type: module ? "module" : "text/javascript", crossOrigin, integrity, onload: () => resolve(script), onerror: () => reject(new Error(`Script load error: ${src}`)) });
@@ -2828,13 +3057,18 @@ var tmg = {
       return src1.replace(/\\/g, "/").split("?")[0].trim() === src2.replace(/\\/g, "/").split("?")[0].trim();
     }
   },
-  addSources(sources, medium) {
-    const addSource = (source, medium) => {
+  putSourceDetails(source, el) {
+    if (source.src) el.src = source.src;
+    if (source.type) el.type = source.type;
+    if (source.media) el.media = source.media;
+  },
+  addSources(sources = [], medium) {
+    const addSource = (source, med) => {
       const sourceEl = tmg.createEl("source");
       tmg.putSourceDetails(source, sourceEl);
-      return medium.appendChild(sourceEl);
+      return med.appendChild(sourceEl);
     };
-    return tmg.isIter(sources) ? sources.map((source) => addSource(source, medium)) : addSource(sources, medium);
+    return tmg.isIter(sources) ? Array.from(sources, (source) => addSource(source, medium)) : addSource(sources, medium);
   },
   getSources(medium) {
     const sources = medium.querySelectorAll("source"),
@@ -2846,22 +3080,30 @@ var tmg = {
     });
     return _sources;
   },
-  putSourceDetails(source, sourceEl) {
-    if (source.src) sourceEl.src = source.src;
-    if (source.type) sourceEl.type = source.type;
-    if (source.media) sourceEl.media = source.media;
-  },
   removeSources: (medium) => medium?.querySelectorAll("source")?.forEach((source) => source.remove()),
-  addTracks(tracks, medium) {
-    const addTrack = (track, medium) => {
+  isSameSources(a, b) {
+    if (!a || !b || a.length !== b.length) return false;
+    return a.every((s1) => b.some((s2) => tmg.isSameURL(s1.src, s2.src) && s1.type === s2.type && s1.media === s2.media));
+  },
+  putTrackDetails(track, el) {
+    if (track.id) el.id = track.id;
+    if (track.kind) el.kind = track.kind;
+    if (track.label) el.label = track.label;
+    if (track.srclang) el.srclang = track.srclang;
+    if (track.src) el.src = track.src;
+    if (track.default) el.default = track.default;
+  },
+  addTracks(tracks = [], medium) {
+    const addTrack = (track, med) => {
       const trackEl = tmg.createEl("track");
       tmg.putTrackDetails(track, trackEl);
-      return medium.appendChild(trackEl);
+      return med.appendChild(trackEl);
     };
-    return tmg.isIter(tracks) ? tracks.map((track) => addTrack(track, medium)) : addTrack(tracks, medium);
+    return tmg.isIter(tracks) ? Array.from(tracks, (track) => addTrack(track, medium)) : addTrack(tracks, medium);
   },
-  getTracks(medium) {
-    const tracks = medium.querySelectorAll("track[kind='captions'], track[kind='subtitles']"),
+  getTracks(medium, captionsOnly = false) {
+    const selector = !captionsOnly ? "track" : "track:is([kind='captions'], [kind='subtitles'])",
+      tracks = medium.querySelectorAll(selector),
       _tracks = [];
     tracks.forEach((track) => {
       const obj = {};
@@ -2870,15 +3112,11 @@ var tmg = {
     });
     return _tracks;
   },
-  putTrackDetails(track, trackEl) {
-    if (track.kind) trackEl.kind = track.kind;
-    if (track.label) trackEl.label = track.label;
-    if (track.srclang) trackEl.srclang = track.srclang;
-    if (track.src) trackEl.src = track.src;
-    if (track.default) trackEl.default = track.default;
-    if (track.id) trackEl.id = track.id;
+  removeTracks: (medium) => medium.querySelectorAll("track")?.forEach((track) => (track.kind === "subtitles" || track.kind === "captions") && track.remove()),
+  isSameTracks(a, b) {
+    if (!a || !b || a.length !== b.length) return false;
+    return a.every((t1) => b.some((t2) => tmg.isSameURL(t1.src, t2.src) && t1.kind === t2.kind && t1.label === t2.label && t1.srclang === t2.srclang && t1.default === t2.default));
   },
-  removeTracks: (medium) => medium.querySelectorAll("track")?.forEach((track) => (track.kind == "subtitles" || track.kind == "captions") && track.remove()),
   stripTags: (text) => text.replace(/<(\/)?([a-z0-9.:]+)([^>]*)>/gi, ""),
   srtToVtt(srt, vttLines = ["WEBVTT", ""]) {
     const input = srt.replace(/\r\n?/g, "\n").trim(); // Normalize line endings and trim
@@ -2962,13 +3200,27 @@ var tmg = {
       inY = rect.bottom >= 0 && rect.top <= (window.innerHeight || document.documentElement.clientHeight);
     return axis === "x" ? inY : axis === "y" ? inX : inY && inX;
   },
-  assignDef: (target, key, value) => tmg.isDef(value) && target != null && tmg.assignAny(target, key, value),
-  assignHTMLConfig: (target = {}, attr, value) => tmg.assignAny(target, attr.replace("tmg--", ""), (() => (value.includes(",") ? value.split(",")?.map((v) => v.replace(/\s+/g, "")) : /^(true|false|null|\d+)$/.test(value) ? JSON.parse(value) : value))(), "--", (p) => tmg.camelize(p)),
-  assignAny(target = {}, key, value, separator = ".", keyFunc = (p) => p) {
-    const keys = key.split(separator).map(keyFunc);
+  assignDef: (target, key, value) => tmg.isDef(value) && target != null && tmg.setAny(target, key, value),
+  assignHTMLConfig(target, attr, value) {
+    value = value.trim();
+    const path = attr.replace("tmg--", "");
+    const parsedValue = (() => {
+      if (value.includes(",")) return value.split(",")?.map((v) => v.trim());
+      if (value === "true") return true;
+      if (value === "false") return false;
+      if (value === "null") return null;
+      if (/^\d+$/.test(value)) return Number(value);
+      return value;
+    })();
+    tmg.setAny(target, path, parsedValue, "--", (p) => tmg.camelize(p));
+  },
+  setAny(target, key, value, separator = ".", keyFunc = (p) => p) {
+    if (!key.includes(separator)) return (target[keyFunc ? keyFunc(key) : key] = value);
+    const keys = key.split(separator);
     let currObj = target;
-    keys.forEach((key, i) => {
-      const match = key.match(/^([^\[\]]+)\[(\d+)\]$/);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keyFunc ? keyFunc(keys[i]) : keys[i],
+        match = key.includes("[") && key.match(arrRx);
       if (match) {
         const [, key, iStr] = match;
         if (!tmg.isArr(currObj[key])) currObj[key] = [];
@@ -2978,16 +3230,18 @@ var tmg = {
         if (i === keys.length - 1) currObj[key] = value;
         else ((currObj[key] ||= {}), (currObj = currObj[key]));
       }
-    });
+    }
   },
-  deriveAny: (source = {}, key, separator = ".", keyFunc = (p) => p) => {
-    const keys = key.split(separator).map(keyFunc);
+  getAny(source, key, separator = ".", keyFunc = (p) => p) {
+    if (!key.includes(separator)) return source[keyFunc ? keyFunc(key) : key];
+    const keys = key.split(separator);
     let currObj = source;
-    for (const key of keys) {
-      const match = key.match(/^([^\[\]]+)\[(\d+)\]$/);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keyFunc ? keyFunc(keys[i]) : keys[i],
+        match = key.includes("[") && key.match(arrRx);
       if (match) {
         const [, key, iStr] = match;
-        if (!tmg.isArr(currObj[key])) return undefined;
+        if (!tmg.isArr(currObj[key]) || !(key in currObj)) return undefined;
         currObj = currObj[key][Number(iStr)];
       } else {
         if (!tmg.isObj(currObj) || !(key in currObj)) return undefined;
@@ -2995,6 +3249,45 @@ var tmg = {
       }
     }
     return currObj;
+  },
+  deleteAny(target, key, separator = ".", keyFunc = (p) => p) {
+    if (!key.includes(separator)) return delete target[keyFunc ? keyFunc(key) : key];
+    const keys = key.split(separator);
+    let currObj = target;
+    for (let i = 0; i < keys.length; i++) {
+      const key = keyFunc ? keyFunc(keys[i]) : keys[i],
+        match = key.includes("[") && key.match(arrRx);
+      if (match) {
+        const [, key, iStr] = match;
+        if (!tmg.isArr(currObj[key]) || !(key in currObj)) return;
+        if (i === keys.length - 1) delete currObj[key][Number(iStr)];
+        else currObj = currObj[key][Number(iStr)];
+      } else {
+        if (!tmg.isObj(currObj) || !(key in currObj)) return;
+        if (i === keys.length - 1) delete currObj[key];
+        else currObj = currObj[key];
+      }
+    }
+  },
+  inAny(source, key, separator = ".", keyFunc = (p) => p) {
+    if (!key.includes(separator)) return key in source;
+    const keys = key.split(separator);
+    let currObj = source;
+    for (let i = 0; i < keys.length; i++) {
+      const key = keyFunc ? keyFunc(keys[i]) : keys[i],
+        match = key.includes("[") && key.match(arrRx);
+      if (match) {
+        const [, key, iStr] = match;
+        if (!tmg.isArr(currObj[key]) || !(key in currObj)) return false;
+        if (i === keys.length - 1) return true;
+        currObj = currObj[key][Number(iStr)];
+      } else {
+        if (!tmg.isObj(currObj) || !(key in currObj)) return false;
+        if (i === keys.length - 1) return true;
+        currObj = currObj[key];
+      }
+    }
+    return true;
   },
   bindMethods(owner, callback = (method, owner) => (owner[method] = owner[method].bind(owner))) {
     let proto = owner;
@@ -3005,8 +3298,8 @@ var tmg = {
   },
   safeNum: (number, fallback = 0) => (tmg.isValidNum(number) ? number : fallback),
   parseIfPercent: (percent, amount = 100) => (percent?.endsWith?.("%") ? tmg.safeNum((parseFloat(percent) / 100) * amount) : percent),
-  parseCSSTime: (time) => (time.endsWith("ms") ? parseFloat(time) : parseFloat(time) * 1000),
-  parseCSSUnit: (val) => (val.endsWith("px") ? parseFloat(val) : tmg.remToPx(parseFloat(val))),
+  parseCSSTime: (time) => (time?.endsWith?.("ms") ? parseFloat(time) : parseFloat(time) * 1000),
+  parseCSSUnit: (val) => (val?.endsWith?.("px") ? parseFloat(val) : tmg.remToPx(parseFloat(val))),
   parseUIObj(obj) {
     const result = {};
     for (const key of Object.keys(obj)) {
@@ -3025,7 +3318,11 @@ var tmg = {
     if (!tmg.isObj(obj) || visited.has(obj)) return obj; // no circular references
     visited.add(obj);
     const result = {};
-    return (Object.entries(obj).forEach(([k, v]) => (k.includes(separator) ? tmg.assignAny(result, k, tmg.parseAnyObj(v, separator, keyFunc), separator, keyFunc, visited) : (result[k] = v))), result);
+    return (Object.entries(obj).forEach(([k, v]) => (k.includes(separator) ? tmg.setAny(result, k, tmg.parseAnyObj(v, separator, keyFunc), separator, keyFunc, visited) : (result[k] = v))), result);
+  },
+  parseEvOpts(options, opts, boolOpt = opts[0], result = {}) {
+    for (let i = 0; i < opts.length; i++) result[opts[i]] = false;
+    return (Object.assign(result, "boolean" === typeof options ? { [boolOpt]: options } : options), result);
   },
   parsePanelBottomObj(obj = [], arr = false) {
     if (!tmg.isObj(obj) && !tmg.isArr(obj)) return false;
@@ -3035,6 +3332,18 @@ var tmg = {
   mergeObjs(o1 = {}, o2 = {}) {
     const merged = { ...(o1 || {}), ...(o2 || {}) };
     return (Object.keys(merged).forEach((k) => tmg.isObj(o1[k]) && tmg.isObj(o2[k]) && (merged[k] = tmg.mergeObjs(o1[k], o2[k]))), merged);
+  },
+  deepClone(obj, visited = new WeakMap()) {
+    if ((!tmg.isObj(obj) && !tmg.isArr(obj)) || "symbol" === typeof obj || "function" === typeof obj || obj instanceof Map || obj instanceof Set || obj instanceof WeakMap || obj instanceof Promise || obj instanceof Element || obj instanceof EventTarget) return obj;
+    if (visited.has(obj)) return visited.get(obj);
+    const clone = tmg.isArr(obj) ? [] : {};
+    visited.set(obj, clone);
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        clone[key] = tmg.deepClone(obj[key], visited);
+      }
+    }
+    return clone;
   },
   getTrailPaths(path, reverse = true) {
     const parts = path.split(".");
@@ -3046,7 +3355,7 @@ var tmg = {
     }
     return reverse ? chain.reverse() : chain;
   },
-  getTrailRecord(obj, path) {
+  getTrailRecords(obj, path) {
     const parts = path.split("."),
       record = [["*", obj, obj]];
     let acc = "",
@@ -3056,6 +3365,22 @@ var tmg = {
       record.push([acc, currObj, (currObj = Reflect.get(currObj, parts[i]))]);
     }
     return record;
+  },
+  nuke(target) {
+    let proto = target;
+    while (proto && proto !== Object.prototype) {
+      for (const key of Object.getOwnPropertyNames(proto)) {
+        if (key === "constructor") continue;
+        const desc = Object.getOwnPropertyDescriptor(proto, key);
+        if ("function" === typeof desc?.value) continue;
+        if (desc?.get || desc?.set) continue;
+        proto[key] = null;
+      }
+      proto = Object.getPrototypeOf(proto);
+    }
+  },
+  isIntent(target) {
+    return !!target?.[REJECTABLE];
   },
   formatMediaTime({ time, format = "digital", elapsed = true, showMs = false, casing = "normal" } = {}) {
     const long = format.endsWith("long"),
@@ -3110,15 +3435,18 @@ var tmg = {
     if (src?.canvas) src = src.canvas;
     const c = document.createElement("canvas"),
       x = c.getContext("2d"),
-      s = Math.min(100, src.width, src.height);
+      s = Math.min(64, src.width, src.height);
     c.width = c.height = s;
     src && x.drawImage(src, 0, 0, s, s);
     const d = src && x.getImageData(0, 0, s, s).data,
       ct = {}, // count
-      pt = {}; // per total
+      pt = {}; // per totaljust
     for (let i = 0; i < d?.length; i += 4) {
       if (d[i + 3] < 128) continue;
-      const k = (d[i] & 0xf0) + "," + (d[i + 1] & 0xf0) + "," + (d[i + 2] & 0xf0);
+      const r = d[i] & 0xf0,
+        g = d[i + 1] & 0xf0,
+        b = d[i + 2] & 0xf0; // Optimized bitwise extraction
+      const k = (r << 16) | (g << 8) | b;
       ct[k] = (ct[k] || 0) + 1;
       pt[k] = pt[k] ? [pt[k][0] + d[i], pt[k][1] + d[i + 1], pt[k][2] + d[i + 2]] : [d[i], d[i + 1], d[i + 2]];
     }
@@ -3160,7 +3488,9 @@ var tmg = {
     return newV;
   },
   getElSiblingAt: (p, dir, els, pos = "after") =>
-    els?.reduce(
+    els.length &&
+    Array.prototype.reduce.call(
+      els,
       (closest, child) => {
         const { top: cT, left: cL, width: cW, height: cH } = child.getBoundingClientRect(),
           offset = p - (dir === "y" ? cT : cL) - (dir === "y" ? cH : cW) / 2,
@@ -3373,11 +3703,11 @@ var tmg = {
       this.running = true;
       while (this.jobs.length > 0) {
         const job = this.jobs.shift();
-        if (job) (job.cancelled ? job.resolve({ success: false, cancelled: true, dropped: false }) : job.preTask?.(), job.resolve(await job.task()));
+        if (job) job.cancelled ? job.resolve({ success: false, cancelled: true, dropped: false }) : (job.preTask?.(), job.resolve(await job.task()));
       }
       this.running = false;
     }
-    add = (task, id, cancelled, preTask) => new Promise((resolve) => this.jobs.push({ task, id, preTask, cancelled, resolve }), this._handle());
+    add = (task, id, cancelled, preTask) => new Promise((resolve) => (this.jobs.push({ task, id, preTask, cancelled, resolve }), this._handle()));
     drop(id) {
       const job = this.jobs.find((j) => j.id === id);
       job?.resolve({ success: false, cancelled: true, dropped: true });
@@ -3403,7 +3733,7 @@ if (typeof window !== "undefined") {
     lightState: { disabled: false, controls: ["meta", "bigplaypause", "fullscreenorientation"], preview: { usePoster: true, time: 2 } },
     debug: true,
     settings: {
-      auto: { next: 2000000 },
+      auto: { next: 20 },
       beta: {
         disabled: false,
         fastPlay: { rewind: true },
@@ -3420,7 +3750,7 @@ if (typeof window !== "undefined") {
           },
         },
       },
-      css: {},
+      css: { syncWithMedia: {} },
       brightness: { min: 0, max: 150, value: 100, skip: 5 },
       captions: {
         disabled: false,
@@ -3611,7 +3941,7 @@ if (typeof window !== "undefined") {
       playbackRate: { min: 0.25, max: 8, skip: 0.25 },
       playsInline: true,
       time: { min: 0, skip: 10, previews: false, mode: "elapsed", format: "digital", seekSync: false },
-      toasts: { disabled: false, nextVideoPreview: { usePoster: true, time: 2, tease: true }, captureAutoClose: 15000000, maxToasts: 7, position: "bottom-left", hideProgressBar: true, closeButton: !tmg.ON_MOBILE, animation: "slide-up", dragToCloseDir: "x||y" },
+      toasts: { disabled: false, nextVideoPreview: { usePoster: true, time: 2, tease: true }, captureAutoClose: 15000, maxToasts: 7, position: "bottom-left", hideProgressBar: true, closeButton: !tmg.ON_MOBILE, animation: "slide-up", dragToCloseDir: "x||y" },
       volume: { min: 0, max: 300, skip: 5 },
     },
   };
@@ -3624,9 +3954,11 @@ if (typeof window !== "undefined") {
   window.TMG_VIDEO_ALT_IMG_SRC ??= "/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png";
   window.TMG_VIDEO_CSS_SRC ??= "/TMG_MEDIA_PROTOTYPE/prototype-3/prototype-3-video.css";
   window.T007_TOAST_JS_SRC ??= "/T007_TOOLS/T007_toast_library/T007_toast.js";
+  window.T007_INPUT_CSS_SRC ??= "/T007_TOOLS/T007_input_library/T007_input.css";
+  window.T007_INPUT_JS_SRC ??= "/T007_TOOLS/T007_input_library/T007_input.js";
   (tmg.loadResource(TMG_VIDEO_CSS_SRC), tmg.loadResource(T007_TOAST_JS_SRC, "script", { module: true }));
   tmg.init();
-  console.log("%cTMG Media Player Available", "color: green");
+  console.log("%cTMG Media Player Available", "color: darkturquoise");
 } else {
   console.log("\x1b[38;2;139;69;19mTMG Media Player Unavailable\x1b[0m");
   (console.error("TMG Media Player cannot run in a terminal!"), console.warn("Consider moving to a browser environment to use the TMG Media Player"));

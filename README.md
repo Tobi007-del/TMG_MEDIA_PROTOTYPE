@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[Live Demo](https://tmg-video-player.vercel.app) | [Prototype 1](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-1/prototype-1.html) | [Prototype 2](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2.html) | [Prototype 3](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-3/prototype-3.html)
+[Live Demo](https://tmg-video-player.vercel.app) | [Prototype 1](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-1/prototype-1.html) | [Prototype 2](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2.html) 
 
 ---
 
@@ -62,8 +62,7 @@ Try the player in action:
 
 - **[Main Demo](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/)** - Landing page with all prototypes
 - **[Prototype 1](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-1/prototype-1.html)** - Basic initial implementation
-- **[Prototype 2](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2.html)** - Featured player
-- **[Prototype 3](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-3/prototype-3.html)** - Full-featured player
+- **[Prototype 2](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2.html)** - Full Featured player
 - **[Library Comparison](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/video-libs-test/index.html)** - Compare with other players
 
 ### Key Features in Action
@@ -227,7 +226,6 @@ Open any of these URLs to see the player in action or just grab the files you ne
 - **Landing Page**: `http://localhost:8000/`
 - **Prototype 1**: `http://localhost:8000/prototype-1/prototype-1.html`
 - **Prototype 2**: `http://localhost:8000/prototype-2/prototype-2.html`
-- **Prototype 3**: `http://localhost:8000/prototype-3/prototype-3.html`
 - **Library Tests**: `http://localhost:8000/video-libs-test/index.html`
 
 ---
@@ -240,7 +238,7 @@ Open any of these URLs to see the player in action or just grab the files you ne
 <!DOCTYPE html>
 <html>
   <head>
-    <script src="prototype-3/prototype-3.js" defer></script>
+    <script src="prototype-2/prototype-2.js" defer></script>
   </head>
   <body>
     <video tmgcontrols tmg--media--title="My Video Title" tmg--media--artist="Artist Name" tmg--settings--time--previews--address="previews/preview$.jpg" tmg--settings--time--previews--spf="10" muted src="video.mp4" poster="poster.jpg">
@@ -631,7 +629,7 @@ Player files will be hosted on a CDN so you include in your project:
 
 Currently, testing is manual. To test:
 
-1. Open `prototype-3/prototype-3.html` or your html file in browser
+1. Open `prototype-2/prototype-2.html` or your html file in browser
 2. Test all keyboard shortcuts
 3. Test on different browsers
 4. Test on mobile devices
@@ -714,7 +712,7 @@ Found a bug? [Report it here](https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TMG Player Demo</title>
-    <script src="prototype-3/prototype-3.js" defer></script>
+    <script src="prototype-2/prototype-2.js" defer></script>
   </head>
   <body>
     <video tmgcontrols src="video.mp4" poster="poster.jpg"></video>
@@ -853,7 +851,7 @@ Override CSS variables:
 
 ## Stats
 
-- **Lines of Code**: ~4,200 (prototype-3.js)
+- **Lines of Code**: ~4,200 (prototype-2.js)
 - **File Size**: ~150KB (unminified)
 - **Dependencies**: 0
 - **Browser APIs Used**: 14+
@@ -867,9 +865,9 @@ Override CSS variables:
 ### Understanding the Codebase
 
 1. **Start Simple**: Review `prototype-1/prototype-1.js` (751 lines)
-2. **Type Definitions**: Study `prototype-3/build.ts` for structure
-3. **Main Implementation**: Dive into `prototype-3/prototype-3.js`
-4. **Configuration**: Check `prototype-3/test.js` for examples
+2. **Type Definitions**: Study `prototype-2/build.ts` for structure
+3. **Main Implementation**: Dive into `prototype-2/prototype-2.js`
+4. **Configuration**: Check `prototype-2/test.js` for examples
 
 ---
 

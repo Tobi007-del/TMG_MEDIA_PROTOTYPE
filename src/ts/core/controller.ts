@@ -4,7 +4,7 @@ import type { Media } from "../types/contract";
 import { reactive, type Reactive, guardAllMethods, guardMethod, nuke, inert, intent } from "../tools/mixins";
 import { TechRegistry, PlugRegistry } from "./registry";
 import { TechConstructor, BaseTech, HTML5Tech } from "../media";
-import { PlugConstructor, type BasePlug as Plug } from "../plugs";
+import { PlugConstructor, ToastsPlug, type BasePlug as Plug } from "../plugs";
 import { setTimeout, requestAnimationFrame, clamp, uncamelize, cloneMedia, getMediaReport, isSameURL, isSameSources, observeIntersection, observeResize, queryFullscreen, getSizeTier, createEl } from "../utils";
 
 interface LifePayload {
@@ -153,11 +153,7 @@ export class Controller {
   }
 
   public guard = <T extends Function>(fn: T, { silent = false } = {}) => {
-    return guardMethod(
-      fn,
-      (e) => this.log(e, "error", "swallow")
-      // , !silent && this.getPlug<Toasts>("toast")?.toast?.("Something went wrong", { tag: "tmg-stwr" })
-    );
+    return guardMethod(fn, (e) => (this.log(e, "error", "swallow"), !silent && this.getPlug<ToastsPlug>("toasts")?.toast?.("Something went wrong", { tag: "tmg-stwr" })));
   }; // ()=>{}: needs to be bounded even before initialization
   public log(mssg: any, type: "error" | "warn" | "log" = "log", action?: "swallow") {
     if (!this.config.debug) return;
@@ -192,6 +188,7 @@ export class Controller {
   public cancelRAFLoop(key: string) {
     (cancelAnimationFrame(this.rafLoopMap.get(key)!), this.rafLoopFnMap.delete(key), this.rafLoopMap.delete(key));
   }
+  public cancelAllLoops = (): void => this.rafLoopMap.keys().forEach(this.cancelRAFLoop);
 
   public queryDOM<K extends keyof HTMLElementTagNameMap>(query: K, all: true, isPseudo?: boolean): NodeListOf<HTMLElementTagNameMap[K]>;
   public queryDOM<K extends keyof SVGElementTagNameMap>(query: K, all: true, isPseudo?: boolean): NodeListOf<SVGElementTagNameMap[K]>;
@@ -219,7 +216,7 @@ export class Controller {
 
   public destroy() {
     this.setReadyState(-1);
-    this.rafLoopMap.keys().forEach(this.cancelRAFLoop);
+    this.cancelAllLoops();
     this.ac.abort("[TMG Controller] Instance is being destroyed");
     this.mutatingDOMM = true; // plugs will mutate, flag watchers
     [...this.plugs.values()].reverse().forEach((p) => p.destroy());

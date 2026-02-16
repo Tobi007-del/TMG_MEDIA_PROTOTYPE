@@ -62,16 +62,22 @@ export function inDocView(el: Element, axis: "x" | "y" = "y"): boolean {
   return axis === "x" ? inY : axis === "y" ? inX : inY && inX;
 }
 
-export const getElSiblingAt = (p: number, dir: Direction, els: Element[], pos: Position = "after"): Element | undefined => {
-  return els?.reduce(
-    (closest: { offset: number; element: Element | undefined }, child) => {
-      const { top: cT, left: cL, width: cW, height: cH } = child.getBoundingClientRect(),
-        offset = p - (dir === "y" ? cT : cL) - (dir === "y" ? cH : cW) / 2,
-        condition = pos === "after" ? offset < 0 && offset > closest.offset : pos === "before" ? offset > 0 && offset < closest.offset : pos === "at" ? Math.abs(offset) <= (dir === "y" ? cH : cW) / 2 && Math.abs(offset) < Math.abs(closest.offset) : false;
-      return condition ? { offset, element: child } : closest;
-    },
-    { offset: pos === "after" ? -Infinity : Infinity, element: undefined }
-  ).element;
+export const getElSiblingAt = (p: number, dir: Direction, els: HTMLElement[] | NodeListOf<HTMLElement>, pos: Position = "after"): Element | undefined => {
+  return (
+    els.length &&
+    (
+      Array.prototype.reduce.call(
+        els,
+        ((closest: { offset: number; element: Element | undefined }, child: Element) => {
+          const { top: cT, left: cL, width: cW, height: cH } = child.getBoundingClientRect(),
+            offset = p - (dir === "y" ? cT : cL) - (dir === "y" ? cH : cW) / 2,
+            condition = pos === "after" ? offset < 0 && offset > closest.offset : pos === "before" ? offset > 0 && offset < closest.offset : pos === "at" ? Math.abs(offset) <= (dir === "y" ? cH : cW) / 2 && Math.abs(offset) < Math.abs(closest.offset) : false;
+          return condition ? { offset, element: child } : closest;
+        }) as any,
+        { offset: pos === "after" ? -Infinity : Infinity, element: undefined }
+      ) as any
+    ).element
+  );
 };
 
 // Fullscreen & Picture-in-Picture

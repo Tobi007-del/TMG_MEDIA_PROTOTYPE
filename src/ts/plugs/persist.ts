@@ -15,7 +15,7 @@ export class PersistPlug extends BasePlug<Persist> {
   protected adapter!: StorageAdapter;
 
   public wire() {
-    window.addEventListener("beforeunload", this.onDestroy, { signal: this.signal });
+    window.addEventListener("pagehide", this.onDestroy, { signal: this.signal });
     this.ctl.state.on("docVisibilityState", ({ value }) => value === "hidden" && this.onDestroy(), { signal: this.signal });
     // 1. Adapter Lifecycle (Init + Hot Swap)
     this.ctl.config.on("settings.persist.adapter", this.handleAdapterChange, { signal: this.signal, immediate: true });
@@ -33,11 +33,8 @@ export class PersistPlug extends BasePlug<Persist> {
 
   protected handleDisabledChange({ value }: Event<VideoBuild, "settings.persist.disabled">) {
     this.ctl.config.off("settings", this.throttleSave); // Always unbind first to be safe (prevent double-binding)
-    if (value) {
-      this.adapter?.remove("settings"); // Disabled: Clear stored data
-    } else {
-      this.ctl.config.on("settings", this.throttleSave, { signal: this.signal, immediate: true }); // Enabled: Start listening
-    }
+    if (value) this.adapter?.remove("settings");
+    else this.ctl.config.on("settings", this.throttleSave, { signal: this.signal, immediate: true }); // Enabled: Start listening
   }
 
   protected throttleSave({ root: { settings } }: Event<VideoBuild, "settings">) {

@@ -75,6 +75,7 @@ export class TouchModule extends BaseModule<TouchConfig> {
     const te = e as TouchEvent;
     if (this.canCancel) return this.handleEnd();
     te.preventDefault();
+    // JS: this.DOM.touchTimelineNotifier?.classList.add("tmg-video-control-active");
     this.ctl.DOM.touchTimelineNotifier?.classList.add("tmg-video-control-active");
     this.ctl.throttle(
       "gestureTouchMove",
@@ -100,6 +101,7 @@ export class TouchModule extends BaseModule<TouchConfig> {
     const te = e as TouchEvent;
     if (this.canCancel || !this.ctl.isUIActive("fullscreen")) return this.handleEnd();
     te.preventDefault();
+    // JS: (this.zone?.x === "right" ? this.DOM.touchVolumeNotifier : this.DOM.touchBrightnessNotifier)?.classList.add("tmg-video-control-active");
     (this.zone?.x === "right" ? this.ctl.DOM.touchVolumeNotifier : this.ctl.DOM.touchBrightnessNotifier)?.classList.add("tmg-video-control-active");
     this.ctl.throttle(
       "gestureTouchMove",
@@ -122,6 +124,7 @@ export class TouchModule extends BaseModule<TouchConfig> {
     if (this.xCheck) {
       this.ctl.state.gestureTouchXCheck = this.xCheck = false;
       this.ctl.videoContainer.removeEventListener("touchmove", this.handleXMove);
+      // JS: this.DOM.touchTimelineNotifier?.classList.remove("tmg-video-control-active");
       this.ctl.DOM.touchTimelineNotifier?.classList.remove("tmg-video-control-active");
       if (!this.canCancel) this.ctl.media.intent.currentTime = this.nextTime;
     }
@@ -131,7 +134,9 @@ export class TouchModule extends BaseModule<TouchConfig> {
       clearTimeout(this.sliderTimeoutId);
       this.sliderTimeoutId = setTimeout(
         () => {
+          // JS: this.DOM.touchVolumeNotifier?.classList.remove("tmg-video-control-active");
           this.ctl.DOM.touchVolumeNotifier?.classList.remove("tmg-video-control-active");
+          // JS: this.DOM.touchBrightnessNotifier?.classList.remove("tmg-video-control-active");
           this.ctl.DOM.touchBrightnessNotifier?.classList.remove("tmg-video-control-active");
         },
         this.config.sliderTimeout,
