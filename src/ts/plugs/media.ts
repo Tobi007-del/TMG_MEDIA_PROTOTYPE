@@ -55,7 +55,7 @@ export class MediaPlug extends BasePlug<Media> {
     this.ctl.config.watch("media.profile", this.forwardProfile, { immediate: true });
     this.ctl.config.on("media.links.title", this.handleMediaLink, { signal: this.signal });
     this.ctl.config.on("media.links.artist", this.handleMediaLink, { signal: this.signal });
-    this.ctl.config.on("media.profile", this.handleProfileLink, { signal: this.signal });
+    this.ctl.config.on("media.links.profile", this.handleMediaLink, { signal: this.signal });
     this.ctl.config.on("media.artwork", this.handleArtwork, { signal: this.signal });
     this.ctl.config.on("media", this.handleMediaChange, { signal: this.signal });
     this.ctl.config.media = this.ctl.config.media;
@@ -69,17 +69,9 @@ export class MediaPlug extends BasePlug<Media> {
   protected forwardProfile(value?: string): void {
     this.ctl.config.settings.controlPanel.profile = value || "";
   }
-  protected handleMediaLink({ target: { key, value } }: Event<VideoBuild, "media.links.title" | "media.links.artist">): void {
-    const el = this.ctl.DOM[`video${capitalize(key)}`] as HTMLAnchorElement;
-    if (!el) return;
-    value ? el.setAttribute("href", value as string) : el.removeAttribute("href");
-    !value ? el.setAttribute("tabindex", "-1") : el.removeAttribute("tabindex");
-  }
-  protected handleProfileLink({ target: { value } }: Event<VideoBuild, "media.profile">): void {
-    const videoProfile = this.ctl.DOM.videoProfile as HTMLImageElement;
-    if (!videoProfile) return;
-    const parent = videoProfile.parentElement as HTMLAnchorElement;
-    value ? parent?.setAttribute("href", value) : parent?.removeAttribute("href");
+  protected handleMediaLink({ target: { key, value } }: Event<VideoBuild, "media.links.title" | "media.links.artist" | "media.links.profile">): void {
+    const el = key !== "profile" ? (this.ctl.DOM[`video${capitalize(key)}`] as HTMLAnchorElement) : (this.ctl.DOM.videoProfile as HTMLImageElement)?.parentElement;
+    el && Object.entries({ href: value, "tab-index": value ? "0" : null, target: value ? "_blank" : null, rel: value ? "noopener noreferrer" : null }).forEach(([attr, val]) => (val ? el.setAttribute(attr, val) : el.removeAttribute(attr)));
   }
   protected handleArtwork({ currentTarget: { value } }: Event<VideoBuild, "media.artwork">): void {
     this.ctl.media.intent.poster = value?.[0]?.src || "";
@@ -121,7 +113,7 @@ export class SourcesPlug extends BasePlug<Sources> {
   public static readonly isCore: boolean = true;
 
   public wire() {
-    this.ctl.config.watch("sources", this.forwardSources, { signal: this.signal, immediate:"auto" });
+    this.ctl.config.watch("sources", this.forwardSources, { signal: this.signal, immediate: "auto" });
   }
   protected forwardSources(value?: Sources) {
     this.ctl.media.intent.sources = value!;
