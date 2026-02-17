@@ -189,7 +189,7 @@
       justify-content: center;
       margin-bottom: 0.25rem;
       padding: 0.33rem 0.25rem;
-      background-color: rgb(from var(--tmg-video-theme-color) r g b/ 0.666);
+      background-color: rgb(from var(--tmg-video-theme-color) r g b/ 0.777);
       color: var(--tmg-video-theme-inverse-accent-color);
       border: 1px solid var(--tmg-video-settings-border-color);
       transition-property: opacity, scale;
@@ -208,10 +208,10 @@
         border: 1px solid var(--tmg-video-theme-inverse-color);
       }
       &:hover {
-        background-color: rgb(from var(--tmg-video-theme-color) r g b/ 0.8);
+        background-color: rgb(from var(--tmg-video-theme-color) r g b/ 0.999);
       }
       &:checked:hover {
-        background-color: rgb(from var(--tmg-video-brand-color) r g b/ 0.8);
+        background-color: rgb(from var(--tmg-video-brand-color) r g b/ 0.888);
       }
       &:focus-visible {
         outline: none !important;

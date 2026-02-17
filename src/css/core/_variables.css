@@ -34,6 +34,8 @@
   --tmg-video-max-brightness-ratio: 0;
   --tmg-video-current-container-width: 0px;
   --tmg-video-current-container-height: 0px;
+  --tmg-video-current-top-wrapper-height: 0px;
+  --tmg-video-current-bottom-wrapper-height: 0px;
   --tmg-video-current-captions-container-width: 0px;
   --tmg-video-current-captions-container-height: 0px;
   --tmg-video-current-thumbnail-width: 0px;
