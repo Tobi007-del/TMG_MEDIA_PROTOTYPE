@@ -67,7 +67,7 @@ class Boombox {
     // DOM Listeners
     this.media.addEventListener("play", () => this.state.audio.paused && (this.state.audio.paused = false)); // dummy cuz real system handles this elsewhere, S.I.A solved state sync wars after all
     this.media.addEventListener("pause", () => !this.state.audio.paused && (this.state.audio.paused = true)); // dummy
-    document.addEventListener("click", this.setupAudio, { once: true });
+    document.addEventListener("click", this.setupAudio, { once: true, capture: true });
     this.bbEl.addEventListener("pointerdown", this.handlePointerDown);
     this.bbEl.addEventListener("wheel", this.handleWheel, { passive: false });
     this.bbEl.addEventListener("auxclick", (e) => e.preventDefault()); // Prevent middle-click auto-scroll

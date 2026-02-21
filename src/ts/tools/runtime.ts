@@ -115,10 +115,6 @@ export function connectMediaToAudioManager(medium: HTMLMediaElement) {
   AUDIO_LIMITER!.connect(AUDIO_CONTEXT!.destination);
 }
 
-export function getAudioContext() {
-  return AUDIO_CONTEXT;
-}
-
 export function init() {
   mountMedia();
   ["pointerdown", "keydown"].forEach((e) => document?.addEventListener(e, () => ((IS_DOC_TRANSIENT = true), startAudioManager()), true));
