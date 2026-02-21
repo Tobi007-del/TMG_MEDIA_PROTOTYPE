@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TMG Media Player</title>
+    <link rel="icon" type="image/jpeg" sizes="32x32" href="../assets/icons/movie-tape-two.jpeg" />
+    <style>
+      :root {
+        --brand: rgb(226, 110, 2);
+      }
+      html {
+        scroll-behavior: smooth;
+        background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial,
+          sans-serif;
+      }
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      :is(:root, .tmg-media-container) {
+        --tmg-video-relative-unit: clamp(10px, 1.7vw, 37px);
+        --tmg-video-brand-color: var(--brand);
+      }
+      .container.tmg-media-container .t007-input-field {
+        --t007-input-color: var(--brand);
+        --t007-input-font-size: 15px;
+        --t007-input-height: 39px;
+        --t007-input-border-radius: calc(var(--t007-input-height) / 2);
+        max-width: calc(var(--tmg-video-current-unit) * 30.77);
+        margin-bottom: 8px;
+      }
+      .container.tmg-media-container {
+        position: relative;
+        width: 100%;
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: white;
+      }
+      .container.tmg-media-container > h2 {
+        margin-block: 20px 0.7em;
+        text-align: center;
+      }
+      .dual-field-wrapper {
+        width: calc(var(--tmg-video-current-unit) * 30.77);
+        display: flex;
+        gap: 16px;
+      }
+      .dual-field-wrapper > :first-child {
+        flex-grow: 1;
+      }
+      .dual-field-wrapper > :last-child {
+        --t007-input-width: var(--t007-input-height);
+        --t007-input-padding: 0;
+      }
+      .dual-field-wrapper > :last-child .t007-input-wrapper {
+        box-shadow: 0 0 12px var(--brand);
+      }
+    </style>
+    <link rel="stylesheet" href="/TMG_MEDIA_PROTOTYPE/prototype-3/prototype-3-video.css" />
+    <link rel="stylesheet" href="index.css" />
+    <script src="/TMG_MEDIA_PROTOTYPE/prototype-3/prototype-3.js" defer></script>
+    <script src="/T007_TOOLS/T007_input_library/T007_input.js" defer></script>
+    <script type="module" src="/T007_TOOLS/T007_toast_library/T007_toast.js" defer></script>
+    <script src="index.js" defer></script>
+  </head>
+  <body>
+    <div class="container tmg-media-container tmg-video-container">
+      <h2>🎧 NINO's Boombox 🎵</h2>
+      <div class="tmg-boombox paused">
+        <div class="tmg-boombox-body">
+          <!-- <div class="tmg-bb-handle"></div> "No handle for now, no actual use yet needs more nodes than speaker body" -->
+          <div class="tmg-bb-front">
+            <section class="tmg-bbf-master">
+              <div class="tmg-bbfm-stereo">
+                <button type="button" title="Sound from left" class="tmg-bbfm-stereo-left" data-pan="-1">L</button>
+                <button type="button" title="Sound from middle" class="tmg-bbfm-stereo-center" data-pan="0">M</button>
+                <button type="button" title="Sound from right" class="tmg-bbfm-stereo-right" data-pan="1">R</button>
+              </div>
+              <div class="tmg-bbfm-volume">
+                <input type="range" title="Volume" id="tmg-bbfm-volume" class="tmg-bbfm-volume-slider" min="0" max="100" step="1" value="100" />
+                <div class="tmg-bbfm-volume-value">100%</div>
+              </div>
+              <div class="tmg-bbfm-actions">
+                <button type="button" title="Stable Volume" class="tmg-bbfm-mute">MT</button>
+                <button type="button" title="Volume Boost" class="tmg-bbfm-boost">VB</button>
+                <button type="button" title="3d Drag" class="tmg-bbfm-move-mode">3D</button>
+              </div>
+            </section>
+            <section class="tmg-bbf-speaker">
+              <div class="tmg-bbfs-cone"></div>
+              <div class="tmg-bbfs-tape">
+                <button type="button" title="Mute Media" class="tmg-bbfs-play">PLAY</button>
+              </div>
+              <div class="tmg-bbfs-cone"></div>
+            </section>
+          </div>
+          <div class="tmg-bb-back"><button type="button" class="tmg-bbb-reset" title="Reset Boombox Position">RESET POSITION</button></div>
+          <div class="tmg-bb-top"></div>
+          <div class="tmg-bb-bottom"></div>
+          <div class="tmg-bb-right"></div>
+          <div class="tmg-bb-left"></div>
+        </div>
+      </div>
+    </div>
+    <script defer>
+      window.addEventListener("load", () => {
+        const fileInput = createField({
+          type: "file",
+          label: "Load Your Own Audio File",
+          helperText: { info: "Make the experience yours! For best results, use a stereo audio file" },
+          accept: "audio/*",
+          multiple: false,
+        });
+        document.querySelector(".container > h2").insertAdjacentElement("afterend", fileInput);
+        fileInput.addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          if (!file.type.startsWith("audio/")) return Toast.warn("Only audio files are supported!");
+          const bbInst = window.NinoBoombox;
+          if (!bbInst) return;
+          bbInst.media.pause();
+          bbInst.media.src = URL.createObjectURL(file);
+          bbInst.media.play();
+        });
+        const options = [
+            { option: "Tastey Orange", value: "#e26e02" },
+            { option: "Pure White", value: "#ffffff" },
+            { option: "Light Blue", value: "#3198f5" },
+            { option: "Hot Pink", value: "#ff69b4" },
+            { option: "Fiery Red", value: "#ff0033" },
+            { option: "Dark Turquoise", value: "#00ced1" },
+            { option: "Crystal Clear", value: "#ffffff00" }, // Note: Color picker will fail on this
+            { option: "Custom Hue", value: "custom" },
+          ],
+          colors = options.slice(0, -1).map((opt) => opt.value),
+          colorField = createField({ type: "select", label: "Pick Your Own Color", value: "#e26e02", helperText: { info: "Play around with the colors too, might just brighten your mood :)" }, options }),
+          cColorField = createField({ type: "color", value: "#e26e02" }),
+          wrapper = document.createElement("div"),
+          onColorChange = ({ target: { value: val } }) => {
+            if (val === "custom") return cColorField.inputEl.click();
+            document.documentElement.style.setProperty("--brand", val);
+            cColorField.inputEl.value = val;
+            colorField.inputEl.value = colors.includes(val) ? val : "custom";
+          };
+        wrapper.classList.add("dual-field-wrapper");
+        wrapper.append(colorField, cColorField);
+        fileInput.insertAdjacentElement("afterend", wrapper);
+        colorField.inputEl.addEventListener("input", onColorChange);
+        cColorField.inputEl.addEventListener("input", onColorChange);
+      });
+    </script>
+  </body>
+</html>

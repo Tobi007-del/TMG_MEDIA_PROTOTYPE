@@ -395,7 +395,7 @@ class Reactor {
   }
 }
 const methods = ["tick", "stall", "nostall", "get", "gonce", "noget", "set", "sonce", "noset", "watch", "wonce", "nowatch", "on", "once", "off", "cascade", "snapshot", "reset", "destroy"];
-function reactified(target, options) {
+function reactive(target, options) {
   const descriptors = {},
     r = target instanceof Reactor ? target : new Reactor(target, options);
   for (const m of methods)
@@ -413,7 +413,7 @@ class tmg_Video_Controller {
     ((this.video = build.video), (this.buildCache = { ...build }));
     this.setReadyState(0); // had to be done before binding, for user info
     this.bindMethods(); // first thing, same this.cZoneWs throughout life cycle
-    this.config = reactified(build); // merging the video build into the Video Player Instance
+    this.config = reactive(build); // merging the video build into the Video Player Instance
     this.settings = this.config.settings; // alias for devx, for non reassignable common config
     (this.guardGenericPaths(), this.guardTimeValues(), this.plugSources(), this.plugTracks(), this.plugPlaylist());
     const { src, sources, tracks } = this.config;
@@ -616,34 +616,65 @@ class tmg_Video_Controller {
   }
   initSettingsUIManager() {
     const options = [
-        { option: "Light Blue", value: "rgb(49, 152, 245)" },
-        { option: "Hot Pink", value: "hotpink" },
-        { option: "Fiery Red", value: "#FF0033" }, // more like, Youtube red :)
-        { option: "Dark Turquoise", value: "darkturquoise" },
+        { option: "Light Blue", value: "#3198f5" },
+        { option: "Hot Pink", value: "#ff69b4" },
+        { option: "Fiery Red", value: "#ff0033" }, // more like, Youtube red :)
+        { option: "Dark Turquoise", value: "#00ced1" },
+        { option: "Custom Hue", value: "custom" },
         { option: "Video Derived", value: "auto" },
       ],
-      brandSelector = createField?.({ type: "select", label: "Brand Color", helperText: { info: "You should just try changing your brand color for now" }, options: [{ option: "Tastey Orange", value: "rgb(226, 110, 2)" }, ...options], value: this.settings.css.syncWithMedia.brandColor ? "auto" : (this.settings.css.brandColor ?? "rgb(226, 110, 2)") }),
-      themeSelector = createField?.({ type: "select", label: "Theme Color", helperText: { info: "You should also try changing your theme color for now" }, options: [{ option: "Pure White", value: "white" }, ...options], value: this.settings.css.syncWithMedia.themeColor ? "auto" : (this.settings.css.themeColor ?? "white") });
-    this.queryDOM(".tmg-video-settings-bottom-panel").append(brandSelector, themeSelector);
+      gcolors = options.slice(0, -2).map((opt) => opt.value),
+      defs = { brand: this.settings.css.brandColor ?? "#e26e02", theme: this.settings.css.themeColor ?? "#ffffff", bcolors: ["#e26e02", ...gcolors], tcolors: ["#ffffff", ...gcolors] },
+      bField = createField?.({ type: "select", label: "Brand Color", helperText: { info: "You should just try changing your brand color for now" }, options: [{ option: "Tastey Orange", value: "#e26e02" }, ...options], value: !defs.bcolors.includes(defs.brand) ? (!this.settings.css.syncWithMedia.brandColor ? "custom" : "auto") : defs.brand }),
+      cBField = createField?.({ type: "color" }),
+      tField = createField?.({ type: "select", label: "Theme Color", helperText: { info: "You should also try changing your theme color for now" }, options: [{ option: "Pure White", value: "#ffffff" }, ...options], value: !defs.tcolors.includes(defs.theme) ? (!this.settings.css.syncWithMedia.themeColor ? "custom" : "auto") : defs.theme }),
+      cTField = createField?.({ type: "color" }),
+      bWrapper = tmg.createEl("div"),
+      tWrapper = tmg.createEl("div");
+    this.config.on("settings.css.brandColor", ({ target: { value = defs.brand } }) => ((cBField.inputEl.value = value), cBField.style.setProperty("--input-current-color", value)), { immediate: true });
+    this.config.on("settings.css.themeColor", ({ target: { value = defs.theme } }) => ((cTField.inputEl.value = value), cTField.style.setProperty("--input-current-color", value)), { immediate: true });
+    this.queryDOM(".tmg-video-settings-bottom-panel").append((bWrapper.append(bField, cBField), bWrapper), (tWrapper.append(tField, cTField), tWrapper));
     const id = { theme: "", brand: "" },
-      sync = (req = true, type = "brand") => (this.settings.css.syncWithMedia[`${type}Color`] = req),
-      assert = (opts, type = "brand") => this.toast?.update(id[type], { render: `Still here in case you change your choice about the ${type}`, ...opts });
-    brandSelector.querySelector("select").addEventListener("input", async ({ target: i }) => {
-      this.toast?.dismiss(id.brand);
-      if (i.value !== "auto") this.settings.css.brandColor = i.value;
-      else this.settings.css.brandColor = (this.loaded ? await this.getMediaMainColor(this.currentTime, null) : null) ?? this.CSSCache.brandColor;
-      const No = () => (sync(false), assert({ actions: { Yes } })),
-        Yes = () => (sync(true), assert({ actions: { No } }));
-      (sync(i.value === "auto"), i.value === "auto" && (id.brand = this.toast?.("Should the brand color change anytime a video loads?", { icon: "🎨", autoClose: 15000, hideProgressBar: false, actions: { Yes, No } })));
-    });
-    themeSelector.querySelector("select").addEventListener("input", async ({ target: i }) => {
-      this.toast?.dismiss(id.theme);
-      if (i.value !== "auto") this.settings.css.themeColor = i.value;
-      else this.settings.css.themeColor = (this.loaded ? await this.getMediaMainColor(this.currentTime, null) : null) ?? this.CSSCache.themeColor;
-      const No = () => (sync(false, "theme"), assert({ actions: { Yes } }, "theme")),
-        Yes = () => (sync(true, "theme"), assert({ actions: { No } }, "theme"));
-      (sync(i.value === "auto", "theme"), i.value === "auto" && (id.theme = this.toast?.("Should the theme color change anytime a video loads?", { icon: "🎨", autoClose: 15000, hideProgressBar: false, actions: { Yes, No } })));
-    });
+      sync = (cb, req = true, type = "brand") => ((this.settings.css.syncWithMedia[`${type}Color`] = req), cb(req)),
+      assert = (opts, type = "brand") => this.toast?.update(id[type], { render: `Still here in case you change your choice about the ${type}`, ...opts }),
+      onBColorChange = ({ target: { value: val } }) => {
+        this.throttle(
+          "brandColorPicking",
+          async () => {
+            id.brand && this.toast?.dismiss(id.brand);
+            let col;
+            if (val === "custom") return cBField.inputEl.click();
+            if (val !== "auto") col = this.settings.css.brandColor = val;
+            else col = this.settings.css.brandColor = (this.loaded ? await this.getMediaMainColor(this.currentTime, null) : null) ?? this.CSSCache.brandColor;
+            const cb = (sync) => (bField.inputEl.value = defs.bcolors.includes(col) ? col : sync ? "auto" : "custom"),
+              No = () => (sync(cb, false), assert({ actions: { Yes } })),
+              Yes = () => (sync(cb, true), assert({ actions: { No } }));
+            (sync(cb, val === "auto"), val === "auto" && (id.brand = this.toast?.("Should the brand color change anytime a video loads?", { icon: "🎨", autoClose: 15000, hideProgressBar: false, actions: { Yes, No }, onDismis: () => (id.brand = "") })));
+          },
+          30
+        );
+      },
+      onTColorChange = ({ target: { value: val } }) => {
+        this.throttle(
+          "themeColorPicking",
+          async () => {
+            id.theme && this.toast?.dismiss(id.theme);
+            let col;
+            if (val === "custom") return cTField.inputEl.click();
+            if (val !== "auto") col = this.settings.css.themeColor = val;
+            else col = this.settings.css.themeColor = (this.loaded ? await this.getMediaMainColor(this.currentTime, null) : null) ?? this.CSSCache.themeColor;
+            const cb = (sync) => (tField.inputEl.value = defs.tcolors.includes(col) ? col : sync ? "auto" : "custom"),
+              No = () => (sync(cb, false, "theme"), assert({ actions: { Yes } }, "theme")),
+              Yes = () => (sync(cb, true, "theme"), assert({ actions: { No } }, "theme"));
+            (sync(cb, val === "auto", "theme"), val === "auto" && (id.theme = this.toast?.("Should the theme color change anytime a video loads?", { icon: "🎨", autoClose: 15000, hideProgressBar: false, actions: { Yes, No }, onDismiss: () => (id.theme = "") })));
+          },
+          30
+        );
+      };
+    bField.inputEl.addEventListener("input", onBColorChange);
+    cBField.inputEl.addEventListener("input", onBColorChange);
+    tField.inputEl.addEventListener("input", onTColorChange);
+    cTField.inputEl.addEventListener("input", onTColorChange);
   }
   buildContainers() {
     this.setPosterState(); // had to do this early for the UI
@@ -3426,9 +3457,9 @@ var tmg = {
   clampRGBBri([r, g, b], m = 40) {
     const br = tmg.getRGBBri([r, g, b]),
       d = br < m ? m - br : br > 255 - m ? -(br - (255 - m)) : 0;
-    return [r + d, g + d, b + d].map((v) => tmg.clamp(0, v, 255));
+    return [r + d, g + d, b + d].map((v) => tmg.clamp(0, Math.round(v), 255));
   },
-  async getDominantColor(src, format = "rgb", raw = false) {
+  async getDominantColor(src, format = "hex", raw = false) {
     if (typeof src == "string")
       src = await new Promise((res, rej) => {
         const i = tmg.createEl("img", { src, crossOrigin: "anonymous", onload: () => res(i), onerror: () => rej(new Error(`Image load error: ${src}`)) });

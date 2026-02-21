@@ -140,17 +140,16 @@
 :is(.tmg-video-timeline-container, .tmg-video-vb-slider, .tmg-video-captions-container):active {
   cursor: grabbing;
 }
-
 /* overrides for the native select */
 @supports (appearance: base-select) {
-  html {
+  .tmg-media-container {
     select,
     select::picker(select) {
       appearance: base-select;
     }
   }
 }
-:is(#o, select) {
+.tmg-media-container :is(#o, select) {
   white-space: nowrap;
   @supports (appearance: base-select) {
     position: relative;
@@ -231,5 +230,24 @@
         }
       }
     }
+  }
+}
+/* overrides for the native color input */
+.tmg-media-container input[type="color"] {
+  width: var(--t007-input-height);
+  height: var(--t007-input-height);
+  padding: 0;
+  /* Chrome/Edge/Safari: The 'Well' that holds the color */
+  &::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+  /* The actual color circle/square */
+  &::-webkit-color-swatch {
+    border: none;
+    border-radius: 50%;
+  }
+  &::-moz-color-swatch {
+    border: none;
+    border-radius: 50%;
   }
 }

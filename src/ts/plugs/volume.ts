@@ -4,7 +4,7 @@ import { VideoBuild } from "../types/build";
 import { Media } from "../types/contract";
 import type { OptRange } from "../types/generics";
 import { clamp } from "../utils";
-import { connectMediaToAudioManager } from "../tools/runtime";
+import { AUDIO_CONTEXT, connectMediaToAudioManager } from "../tools/runtime";
 
 export interface Volume extends OptRange {
   muted: boolean;
@@ -18,7 +18,9 @@ export class VolumePlug extends BasePlug<Volume> {
   protected shouldSetLastVolume = false;
   protected audioSetup = false;
   protected gainNode?: GainNode;
-
+  get ctime(): number {
+    return AUDIO_CONTEXT?.currentTime ?? 0;
+  }
   public mount(): void {
     if (this.ctl.state.audioContextReady) this.setupAudio();
     else this.ctl.state.once("audioContextReady", this.setupAudio, { signal: this.signal });
@@ -40,8 +42,7 @@ export class VolumePlug extends BasePlug<Volume> {
   }
 
   protected setupAudio(): void {
-    if (this.audioSetup) return;
-    if (connectMediaToAudioManager(this.ctl.media.element) === "unavailable") return;
+    if (this.audioSetup||connectMediaToAudioManager(this.ctl.media.element) === "unavailable") return;
     this.gainNode = (this.ctl.media.element as any)._tmgGainNode;
     const DCN = (this.ctl.media.element as any)._tmgDynamicsCompressorNode;
     if (DCN) ((DCN.threshold.value = -30), (DCN.knee.value = 20), (DCN.ratio.value = 12), (DCN.attack.value = 0.003), (DCN.release.value = 0.25));
@@ -59,7 +60,7 @@ export class VolumePlug extends BasePlug<Volume> {
     const v = clamp(this.shouldMute ? 0 : this.config.min, volume * 100, this.config.max),
       vLevel = v === 0 ? "muted" : v < 50 ? "low" : v <= 100 ? "high" : "boost",
       vPercent = (v - 0) / (this.config.max - 0);
-    if (this.gainNode) this.gainNode.gain.value = (v / 100) * 2;
+    if (this.gainNode) this.gainNode.gain.setTargetAtTime((v / 100) * 2, this.ctime, 0.05); // doubling for dat Android Feel
     this.ctl.media.element.muted = this.ctl.media.element.defaultMuted = this.config.muted = v === 0;
     this.ctl.videoContainer.dataset.volumeLevel = vLevel;
     this.ctl.config.settings.css.currentVolumeTooltipPosition = `${10.5 + vPercent * 79.5}%`;
