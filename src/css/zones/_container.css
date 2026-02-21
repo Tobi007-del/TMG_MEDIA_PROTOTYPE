@@ -11,7 +11,7 @@
   width: 100%;
 }
 .tmg-video-container {
-  perspective: 1000px;
+  perspective: calc(var(--tmg-video-current-unit) * 38.5); /* auto focal-point shift necessary */
   will-change: left, bottom;
 }
 .tmg-pseudo-video-container {

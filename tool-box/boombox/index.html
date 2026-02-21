@@ -3,7 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TMG Media Player</title>
+    <title>Nino's Boombox | TMG 3D Audio Player</title>
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tobi007.del.github.io/TMG_MEDIA_PROTOTYPE/tool-box/boombox" />
+    <meta property="og:title" content="Nino's Boombox | TMG 3D Audio Player" />
+    <meta property="og:description" content="A tactile, fully interactive 3D boombox for the web. Featuring lifelike spatial audio, physical acoustics, and real-time CSS bass vibrations." />
+    <meta property="og:image" content="https://tobi007.del.github.io/TMG_MEDIA_PROTOTYPE/assets/boombox_hero_image.png" />
+    <meta property="og:image:alt" content="A 3D interactive boombox floating in an ambient studio room" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:domain" content="tobi007.del.github.io/TMG_MEDIA_PROTOTYPE" />
+    <meta name="twitter:url" content="https://tobi007.del.github.io/TMG_MEDIA_PROTOTYPE/tool-box/boombox" />
+    <meta name="twitter:title" content="Nino's Boombox | TMG 3D Audio Player" />
+    <meta name="twitter:description" content="A tactile, fully interactive 3D boombox for the web. Featuring lifelike spatial audio, physical acoustics, and real-time CSS bass vibrations." />
+    <meta name="twitter:image" content="https://tobi007.del.github.io/TMG_MEDIA_PROTOTYPE/assets/boombox_hero_image.png" />
+    <meta name="twitter:label1" content="Engine" />
+    <meta name="twitter:data1" content="3D Spatial Audio & Physics" />
+    <meta name="twitter:label2" content="Interact" />
+    <meta name="twitter:data2" content="Drag, Spin, & Vibe" />
     <link rel="icon" type="image/jpeg" sizes="32x32" href="../../assets/icons/movie-tape-two.jpeg" />
     <style>
       :root {
@@ -11,7 +29,20 @@
       }
       html {
         scroll-behavior: smooth;
-        background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
+        --highlight: var(--brand);
+        /* prettier-ignore */
+        background: 
+          /* 1. The Core: Tighter and fainter, just hugging the Boombox */
+          radial-gradient(circle at 50% 50%, rgb(from var(--highlight) r g b / 0.07) 0%, transparent 35%),
+          /* 2. Top-Left Edge Bleed: Pulled back deep into the corner */ 
+          radial-gradient(circle at 0% 0%, rgb(from var(--highlight) r g b / 0.14) 0%, transparent 25%),
+          /* 3. Bottom-Right Edge Bleed: Balances the top-left */ 
+          radial-gradient(circle at 100% 100%, rgb(from var(--highlight) r g b / 0.14) 0%, transparent 25%),
+          /* 4. Top-Right & Bottom-Left: Barely-there ghost accents */ 
+          radial-gradient(circle at 100% 0%, rgb(from var(--highlight) r g b / 0.07) 0%, transparent 20%),
+          radial-gradient(circle at 0% 100%, rgb(from var(--highlight) r g b / 0.07) 0%, transparent 20%),
+          /* 5. The Base: Untouched heavy, dark mechanical vignette */ 
+          radial-gradient(ellipse at center, #151515 0%, #050505 60%, #000000 100%);
         font-family:
           system-ui,
           -apple-system,

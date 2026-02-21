@@ -49,9 +49,7 @@
 .tmg-boombox {
   width: var(--tmg-bb-width);
   height: var(--tmg-bb-height);
-  margin: 0 auto;
-  perspective: calc(var(--bu) * 38.5);
-  perspective-origin: center 60%;
+  perspective: 10000px; /* hard-coded for realism (no auto focal point shifting) */
   transform-style: preserve-3d;
   touch-action: none;
 }
@@ -59,7 +57,8 @@
   position: relative;
   width: var(--tmg-bb-width);
   height: var(--tmg-bb-height);
-  transform: translateX(var(--bb-x, 0px)) translateY(var(--bb-y, 0px)) scale(var(--bb-z, 1)) rotateY(var(--bb-ry, 0deg)) rotateX(var(--bb-rx, 0deg));
+  transform-origin: 50% 50% calc(var(--tmg-bb-depth) / -2); /* Pushes the rotation pivot into the dead physical center of the box */
+  transform: translate(var(--bb-x, 0px), var(--bb-y, 0px)) scale(var(--bb-z, 1)) rotateY(var(--bb-ry, 0deg)) rotateX(var(--bb-rx, 0deg));
   transform-style: preserve-3d;
   will-change: transform;
 }
