@@ -109,6 +109,7 @@ class Boombox {
     this.mediaSetup = true; // Applying initials now
     this.state.audio.pan = this.state.audio.pan;
     this.state.audio.volume.value = this.state.audio.volume.value;
+    this.state.audio.paused = this.state.audio.paused;
     this.state.transform = this.state.transform;
   }
   wireAudioGraph() {
