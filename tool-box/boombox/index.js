@@ -20,6 +20,9 @@ class Boombox {
   get ctime() {
     return this.context?.currentTime ?? 0;
   }
+  get bbOverflow() {
+    return this.bbSens.overflow * this.state.transform.z; // Since OffsetWidth doesn't change with transform, we have to account for it
+  }
   constructor() {
     tmg.bindMethods(this);
     this.state = reactive(structuredClone(bbState));
@@ -58,9 +61,9 @@ class Boombox {
     this.state.on("audio.vibe", this.handleVibeChange, { immediate: true });
     this.state.on("audio.vibeDisabled", this.handleVibeDisabledChange, { immediate: true });
     this.state.on("transform", this.handleTransformChange, { immediate: true });
-    this.state.set("transform.x", this.setTransformX);
-    this.state.set("transform.y", this.setTransformY);
-    this.state.set("transform.z", (v) => tmg.clamp(0.2, v, 3));
+    this.state.set("transform.x", this.setTransformX); // UI Guard: prevents out of bounds behaviour with respect to overflow
+    this.state.set("transform.y", this.setTransformY); // UI Guard: ---------------------------------------------------------
+    this.state.set("transform.z", (v) => tmg.clamp(0.1, v, 2)); // UI Guard: We clamp it at 0.1 so it can never pass through the listener's head.
     // DOM Listeners
     this.media.addEventListener("play", () => this.state.audio.paused && (this.state.audio.paused = false)); // dummy cuz real system handles this elsewhere, S.I.A solved state sync wars after all
     this.media.addEventListener("pause", () => !this.state.audio.paused && (this.state.audio.paused = true)); // dummy
@@ -96,9 +99,9 @@ class Boombox {
     this.panner.refDistance = 1;
     this.panner.maxDistance = 10_000;
     this.panner.rolloffFactor = 1;
-    this.panner.coneInnerAngle = 40;
-    this.panner.coneOuterAngle = 60;
-    this.panner.coneOuterGain = 0.4;
+    this.panner.coneInnerAngle = 90; // 100% volume anywhere in front of it
+    this.panner.coneOuterAngle = 270; // Smooth volume fade as it turns sideways
+    this.panner.coneOuterGain = 0.4; // Drops to 40% ONLY when facing the physical back wall
     this.analyser = this.context.createAnalyser();
     this.analyser.fftSize = 256;
     this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
@@ -198,13 +201,12 @@ class Boombox {
     const { x, y, z, rotateX, rotateY } = this.state.transform,
       // --- POSITION MATH ---
       // WebAudio space is much smaller than screen pixels.
-      // We map your CSS % to a 5-unit grid. CSS Y is down (+), WebAudio Y is up (+), so we invert Y.
-      audioX = (x / 100) * 5,
-      audioY = -(y / 100) * 5,
+      // We map your CSS % to an n-unit grid. CSS Y is down (+), WebAudio Y is up (+), so we invert Y.
+      audioX = ((x / 100) * 1.2) / z,
+      audioY = (-(y / 100) * 0.6) / z,
       // Depth: We start the boombox at Z = -1 (in front of the listener's face).
       // As scale (z) gets smaller, we push it further into negative space.
-      // We clamp it at -0.1 so it can never pass through the listener's head.
-      audioZ = tmg.clamp(-30, -1 - (1 - z) * 10, -0.1),
+      audioZ = -1 / z,
       // --- ROTATION MATH ---
       radX = rotateX * (Math.PI / 180),
       radY = rotateY * (Math.PI / 180),
@@ -228,16 +230,16 @@ class Boombox {
     if (!this.bbEl) return v;
     const { bounds: b = this.boundsEl.getBoundingClientRect(), rect: r = this.bbEl.getBoundingClientRect() } = this.eS,
       growth = (r.width * this.state.transform.z - r.width) / 2,
-      limLeft = Math.max(0, ((r.left - b.left - growth) / r.width) * 100) + this.bbSens.overflow,
-      limRight = Math.max(0, ((b.right - r.right - growth) / r.width) * 100) + this.bbSens.overflow;
+      limLeft = Math.max(0, ((r.left - b.left - growth) / r.width) * 100) + this.bbOverflow,
+      limRight = Math.max(0, ((b.right - r.right - growth) / r.width) * 100) + this.bbOverflow;
     return tmg.clamp(-limLeft, v, limRight);
   }
   setTransformY(v) {
     if (!this.bbEl) return v;
     const { bounds: b = this.boundsEl.getBoundingClientRect(), rect: r = this.bbEl.getBoundingClientRect() } = this.eS,
       growth = (r.height * this.state.transform.z - r.height) / 2,
-      limitUp = Math.max(0, ((r.top - b.top - growth) / r.height) * 100) + this.bbSens.overflow,
-      limitDown = Math.max(0, ((b.bottom - r.bottom - growth) / r.height) * 100) + this.bbSens.overflow;
+      limitUp = Math.max(0, ((r.top - b.top - growth) / r.height) * 100) + this.bbOverflow,
+      limitDown = Math.max(0, ((b.bottom - r.bottom - growth) / r.height) * 100) + this.bbOverflow;
     return tmg.clamp(-limitUp, v, limitDown);
   }
   resetPos(e) {
