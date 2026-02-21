@@ -117,7 +117,7 @@ export function connectMediaToAudioManager(medium: HTMLMediaElement) {
 
 export function init() {
   mountMedia();
-  ["pointerdown", "keydown"].forEach((e) => document?.addEventListener(e, () => ((IS_DOC_TRANSIENT = true), startAudioManager()), true));
+  ["click", "pointerdown", "keydown"].forEach((e) => document?.addEventListener(e, () => ((IS_DOC_TRANSIENT = true), startAudioManager()), true));
   document?.querySelectorAll("video").forEach((medium: any) => {
     observeMutation(medium, handleVidMutation, { attributes: true });
     medium.tmgcontrols = medium.hasAttribute("tmgcontrols");

@@ -109,7 +109,6 @@ class Boombox {
     this.mediaSetup = true; // Applying initials now
     this.state.audio.pan = this.state.audio.pan;
     this.state.audio.volume.value = this.state.audio.volume.value;
-    this.state.audio.paused = this.state.audio.paused;
     this.state.transform = this.state.transform;
   }
   wireAudioGraph() {
@@ -185,7 +184,7 @@ class Boombox {
     this.moveModeBtn.classList.toggle("activated", moveMode === "3d");
   }
   onPaused(paused) {
-    !paused ? this.media.play().catch((e) => console.error("Failed to play audio:", e)) : this.media.pause(); // dummy
+    !paused ? this.media.play().catch((e) => (Toast.error(`Failed to play audio`), console.error("Failed to play audio:", e))) : this.media.pause(); // dummy
     // this.ctl.media.intent.paused = paused; // real
   }
   handlePausedChange({ target: { value: paused } }) {
