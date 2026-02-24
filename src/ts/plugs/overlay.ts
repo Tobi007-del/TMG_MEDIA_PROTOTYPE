@@ -7,6 +7,7 @@ import { setTimeout, IS_MOBILE } from "../utils";
 
 export interface Overlay {
   delay: number;
+  curtain: "cover" | "auto";
   behavior: "persistent" | "auto" | "strict" | "hidden";
 }
 
@@ -23,7 +24,12 @@ export class OverlayPlug extends BasePlug<Overlay, OverlayState> {
   }
 
   public wire(): void {
+    this.ctl.config.on("settings.overlay.curtain", this.handleCurtain, { signal: this.signal, immediate: true });
     this.ctl.config.on("settings.overlay.behavior", this.handleBehavior, { signal: this.signal, immediate: true });
+  }
+
+  protected handleCurtain({ target: { value } }: Event<VideoBuild, "settings.overlay.curtain">): void {
+    this.ctl.videoContainer.dataset.curtain = value;
   }
 
   protected handleBehavior({ target: { value } }: Event<VideoBuild, "settings.overlay.behavior">): void {

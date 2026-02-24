@@ -54,7 +54,6 @@ export class SkeletonPlug extends BasePlug<Skeleton> {
     this.ctl.videoContainer.insertAdjacentHTML(
       "beforeend",
       `
-      <!-- Code injected by TMG -->
       <div class="tmg-video-container-content-wrapper">
         <div class="tmg-video-container-content">
           <div class="tmg-video-controls-container">
@@ -77,7 +76,6 @@ export class SkeletonPlug extends BasePlug<Skeleton> {
           </div>
         </div>
       </div>
-      <!-- Code injected by TMG ends -->
     `
     );
     this.ctl.DOM.containerContentWrapper = this.ctl.queryDOM(".tmg-video-container-content-wrapper");

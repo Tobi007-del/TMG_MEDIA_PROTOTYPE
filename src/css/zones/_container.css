@@ -121,8 +121,8 @@ body:where(:has(.tmg-video-floating-player)) {
 .tmg-video-bottom-curtain {
   --tmg-video-current-curtain-color: var(--tmg-video-curtain-color);
 }
-.tmg-video-container:is(.tmg-video-miniplayer, .tmg-video-floating-player, .tmg-video-mobile):is(.tmg-video-previewing, .tmg-video-scrubbing),
-.tmg-video-container:is(.tmg-video-miniplayer, .tmg-video-floating-player, .tmg-video-mobile) :is(.tmg-video-top-curtain, .tmg-video-bottom-curtain),
+.tmg-video-container[data-curtain="cover"]:is(.tmg-video-previewing, .tmg-video-scrubbing),
+.tmg-video-container[data-curtain="cover"] :is(.tmg-video-top-curtain, .tmg-video-bottom-curtain),
 .tmg-video-container:has(:is(.tmg-video-playback-rate-notifier, .tmg-video-touch-vb-notifier).tmg-video-control-active) {
   --tmg-video-current-curtain-color: transparent;
 }
