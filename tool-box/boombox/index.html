@@ -158,8 +158,8 @@
           const file = e.target.files[0];
           if (!file.type.startsWith("audio/")) return Toast.warn("Only audio files are supported!");
           const bbInst = window.NinoBoombox;
-          if (!bbInst) return;
           bbInst.media.pause();
+          URL.revokeObjectURL(bbInst.media.src);
           bbInst.media.src = URL.createObjectURL(file);
           bbInst.media.play();
         });

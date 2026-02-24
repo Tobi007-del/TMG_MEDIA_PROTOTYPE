@@ -64,8 +64,6 @@ _(The Artist wipes his brush clean and leaves the canvas alone. He paints nothin
 
 # Part II: The UI Playout
 
-Now, let us translate this into your documentation for the **Slider Component**.
-
 **The Scene:** A Video Player. The User tries to drag the seek bar past the "Buffered" zone (which is forbidden logic).
 
 ---
