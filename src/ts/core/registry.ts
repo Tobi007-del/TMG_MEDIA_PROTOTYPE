@@ -127,10 +127,10 @@ export class ComponentRegistry extends BaseRegistry<ComponentConstructor> {
   static register(Comp: ComponentConstructor) {
     this.instance.register(Comp.componentName, Comp);
   }
-  static init<T extends BaseComponent = BaseComponent>(name: string, ctl: any, options = {}): { element: HTMLElement; instance: T } | null {
+  static init<T extends BaseComponent = BaseComponent>(name: string, ctlr: any, options = {}): { element: HTMLElement; instance: T } | null {
     const Comp = this.instance.get(name);
     if (!Comp) return null;
-    const instance = new Comp(ctl, options) as T,
+    const instance = new Comp(ctlr, options) as T,
       element = instance.create();
     instance.setup();
     return { element, instance };

@@ -16,7 +16,7 @@ interface Scrollerator {
   reset: () => void;
 }
 
-export const initVScrollerator = ({ baseSpeed = 3, maxSpeed = 10, stepDelay = 2000, baseRate = 16, lineHeight = 80, margin = 80, car = window }: ScrolleratorOptions = {}): Scrollerator => {
+export function initVScrollerator({ baseSpeed = 3, maxSpeed = 10, stepDelay = 2000, baseRate = 16, lineHeight = 80, margin = 80, car = window }: ScrolleratorOptions = {}): Scrollerator {
   let linesPerSec = baseSpeed,
     accelId: ReturnType<typeof setTimeout> | null = null,
     lastTime: number | null = null;
@@ -32,7 +32,7 @@ export const initVScrollerator = ({ baseSpeed = 3, maxSpeed = 10, stepDelay = 20
   };
   const reset = () => (accelId && clearTimeout(accelId), (accelId = null), (linesPerSec = baseSpeed), (lastTime = null));
   return { drive, reset };
-};
+}
 
 // ============ Scroll Assist ============
 interface ScrollAssistControl {
@@ -61,7 +61,7 @@ const _SCROLLER_M_OBSERVER: MutationObserver | false =
     for (const el of els) _SCROLLERS.get(el)?.update();
   });
 
-export const initScrollAssist = (el: HTMLElement, { pxPerSecond = 80, assistClassName = "tmg-video-controls-scroll-assist", vertical = true, horizontal = true }: ScrollAssistOptions = {}): ScrollAssistControl | void => {
+export function initScrollAssist(el: HTMLElement, { pxPerSecond = 80, assistClassName = "tmg-video-controls-scroll-assist", vertical = true, horizontal = true }: ScrollAssistOptions = {}): ScrollAssistControl | void {
   const parent = el?.parentElement;
   if (!parent || _SCROLLERS.has(el)) return;
   const assist: Record<string, HTMLElement> = {};
@@ -127,6 +127,6 @@ export const initScrollAssist = (el: HTMLElement, { pxPerSecond = 80, assistClas
   });
   update();
   return _SCROLLERS.get(el);
-};
+}
 
 export const removeScrollAssist = (el: HTMLElement) => _SCROLLERS.get(el)?.destroy();

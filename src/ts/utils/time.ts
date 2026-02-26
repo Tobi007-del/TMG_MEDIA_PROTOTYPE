@@ -26,7 +26,7 @@ export interface TimeRange {
   end(index: number): number;
 }
 
-export const createTimeRanges = (ranges?: [number, number][] | TimeRange): TimeRange => {
+export function createTimeRanges(ranges?: [number, number][] | TimeRange): TimeRange {
   if (!ranges || (ranges as TimeRange).length !== undefined) return (ranges as TimeRange) || { length: 0, start: () => 0, end: () => 0 };
   const pairs = (ranges as [number, number][]).sort((a, b) => a[0] - b[0]);
   return {

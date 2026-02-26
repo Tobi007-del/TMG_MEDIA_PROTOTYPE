@@ -20,17 +20,17 @@ export class GesturePlug extends BasePlug<Gesture> {
   public wheel!: WheelModule;
   public touch!: TouchModule;
 
-  constructor(ctl: Controller, config: Gesture, state?: any) {
-    super(ctl, config, state);
-    this.general = new GeneralModule(this.ctl, { click: this.config.click, dblClick: this.config.dblClick });
-    this.wheel = new WheelModule(this.ctl, this.config.wheel);
-    this.touch = new TouchModule(this.ctl, this.config.touch);
+  constructor(ctlr: Controller, config: Gesture, state?: any) {
+    super(ctlr, config, state);
+    this.general = new GeneralModule(this.ctlr, { click: this.config.click, dblClick: this.config.dblClick });
+    this.wheel = new WheelModule(this.ctlr, this.config.wheel);
+    this.touch = new TouchModule(this.ctlr, this.config.touch);
   }
 
   public wire() {
     const wire = () => (this.general.wire(), this.wheel.wire(), this.touch.wire());
-    if (this.ctl.state.readyState > 1) wire();
-    else this.ctl.state.once("readyState", wire, { signal: this.signal }); // waits for light state or first play
+    if (this.ctlr.state.readyState > 1) wire();
+    else this.ctlr.state.once("readyState", wire, { signal: this.signal }); // waits for light state or first play
   }
 
   protected override onDestroy() {

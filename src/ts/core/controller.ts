@@ -1,6 +1,6 @@
 import { AUDIO_CONTEXT, type RuntimeState } from "../tools/runtime";
 import type { VideoBuild } from "../types/build";
-import type { Media } from "../types/contract";
+import type { CMedia } from "../types/contract";
 import { reactive, type Reactive, guardAllMethods, guardMethod, nuke, inert, intent } from "../tools/mixins";
 import { TechRegistry, PlugRegistry } from "./registry";
 import { TechConstructor, BaseTech, HTML5Tech } from "../media";
@@ -27,7 +27,7 @@ export class Controller {
   // --- RUNTIME (Global Controller States) ---
   public config: Reactive<VideoBuild>;
   public state: Reactive<RuntimeState> & Record<string, any>; // runtime state and states to be populated for easy reach
-  public media: Reactive<Media>;
+  public media: Reactive<CMedia>;
   // --- MEMORY ---
   public buildCache: VideoBuild;
   private payloadCache: LifePayload = { instance: this } as any; // must use getter for payload
@@ -46,8 +46,8 @@ export class Controller {
   constructor(medium: HTMLVideoElement, build: VideoBuild) {
     this.setReadyState(0, medium);
     guardAllMethods(this, this.guard, true);
-    this.id = build.id;
     this.buildCache = { ...build };
+    this.id = build.id;
     this.config = reactive(build);
     this.state = reactive<RuntimeState>({
       readyState: 0,
@@ -60,7 +60,7 @@ export class Controller {
       docInFullscreen: queryFullscreen(),
     });
     const defaults = getMediaReport(medium); // returns defaults and initials
-    this.media = reactive<Media>({
+    this.media = reactive<CMedia>({
       tech: {} as BaseTech, // dummy tech to be replaced on boot
       element: medium,
       intent: intent(defaults.intent),

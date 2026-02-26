@@ -17,7 +17,7 @@ export function uncamelize(str = "", separator = " "): string {
 export function uid(prefix = "tmg_"): string {
   return prefix + Date.now().toString(36) + "_" + performance.now().toString(36).replace(".", "") + "_" + Math.random().toString(36).slice(2);
 }
-export function luid(prefix = "tmg_"): string {
+export function luid(prefix = "tmg_local_"): string {
   let id = localStorage.getItem(LUID_KEY);
   return (!id && localStorage.setItem(LUID_KEY, (id = uid(prefix))), id || "");
 }

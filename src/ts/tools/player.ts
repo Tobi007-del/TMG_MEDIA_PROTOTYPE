@@ -1,6 +1,6 @@
 import { Controller } from "../core/controller";
 import { Controllers } from "./runtime";
-import { loadResource, mergeObjs, parseAnyObj, isIter, assignHTMLConfig, cleanKeyCombo, isObj, supportsFullscreen, supportsPictureInPicture, setAny, luid } from "../utils";
+import { loadResource, mergeObjs, parseAnyObj, isIter, setHTMLConfig, cleanKeyCombo, isObj, supportsFullscreen, supportsPictureInPicture, setAny, luid } from "../utils";
 import { DEFAULT_VIDEO_BUILD, DEFAULT_VIDEO_ITEM_BUILD } from "../consts/config-defaults";
 import type { VideoBuild } from "../types/build";
 import { DeepPartial, Paths, PathValue } from "../types/obj";
@@ -17,7 +17,7 @@ export class Player {
   #build: VideoBuild = structuredClone(DEFAULT_VIDEO_BUILD as VideoBuild);
 
   constructor(customBuild: BuildParam = {} as BuildParam) {
-    this.configure({ ...customBuild, id: customBuild.id ?? `${luid("tmg_Controller_")}_${Controllers.length + 1}` });
+    this.configure({ ...customBuild, id: customBuild.id ?? `${luid()}_Controller_${Controllers.length + 1}` });
   }
 
   public get Controller() {
@@ -85,7 +85,7 @@ export class Player {
     }
     const customBuild = {} as BuildParam,
       attributes = this.#medium.getAttributeNames().filter((attr) => attr.startsWith("tmg--"));
-    attributes?.forEach((attr) => assignHTMLConfig<BuildParam>(customBuild, attr as `tmg--${BuildPaths}`, this.#medium!.getAttribute(attr)!));
+    attributes?.forEach((attr) => setHTMLConfig<BuildParam>(customBuild, attr as `tmg--${BuildPaths}`, this.#medium!.getAttribute(attr)!));
     if (this.#medium instanceof HTMLVideoElement && this.#medium.poster) this.configure({ "media.artwork[0].src": this.#medium.poster } as any);
     this.configure(customBuild);
   }
@@ -100,7 +100,7 @@ export class Player {
     const s = this.#build.settings;
     type Mode = keyof typeof s.modes;
     Object.keys(s.modes).forEach((k) => (s.modes[k as Mode] = (s.modes[k as Mode] && (modes[String(k)] ?? true) ? s.modes[k as Mode] : false) as any));
-    await Promise.all([loadResource(window?.TMG_VIDEO_CSS_SRC), loadResource(window?.T007_TOAST_JS_SRC, "script", { module: true })]);
+    await Promise.all([loadResource(window.TMG_VIDEO_CSS_SRC), loadResource(window.T007_TOAST_JS_SRC, "script", { module: true }), loadResource(window.T007_INPUT_JS_SRC, "script")]);
     Controllers.push((this.#controller = new Controller(this.#medium, this.#build)));
   }
 }

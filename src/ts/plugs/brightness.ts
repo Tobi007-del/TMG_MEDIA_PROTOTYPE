@@ -16,37 +16,37 @@ export class BrightnessPlug extends BasePlug<Brightness> {
   protected shouldSetLastBrightness = false;
 
   public wire(): void {
-    this.ctl.config.set("settings.brightness.value", (value) => clamp(this.shouldDark ? 0 : this.config.min, value!, this.config.max), { signal: this.signal });
-    const configBrightness = this.config.value ?? this.ctl.config.settings.css.brightness ?? 100;
+    this.ctlr.config.set("settings.brightness.value", (value) => clamp(this.shouldDark ? 0 : this.config.min, value!, this.config.max), { signal: this.signal });
+    const configBrightness = this.config.value ?? this.ctlr.config.settings.css.brightness ?? 100;
     this.lastBrightness = clamp(this.config.min, configBrightness, this.config.max);
     this.shouldDark = this.shouldSetLastBrightness = this.config.dark ?? false;
     this.config.value = this.shouldDark ? 0 : this.lastBrightness;
-    this.ctl.config.on("settings.brightness.value", this.handleBrightnessChange, { signal: this.signal, immediate: true });
-    this.ctl.config.on("settings.brightness.dark", this.handleDarkChange, { signal: this.signal });
-    this.ctl.config.on("settings.brightness.min", this.handleMinChange, { signal: this.signal });
-    this.ctl.config.on("settings.brightness.max", this.handleMaxChange, { signal: this.signal });
-    this.ctl.config.get("settings.brightness.value", () => Number(this.ctl.config.settings.css.brightness ?? 100), { signal: this.signal, lazy: true });
+    this.ctlr.config.on("settings.brightness.value", this.handleBrightnessChange, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.brightness.dark", this.handleDarkChange, { signal: this.signal });
+    this.ctlr.config.on("settings.brightness.min", this.handleMinChange, { signal: this.signal });
+    this.ctlr.config.on("settings.brightness.max", this.handleMaxChange, { signal: this.signal });
+    this.ctlr.config.get("settings.brightness.value", () => Number(this.ctlr.config.settings.css.brightness ?? 100), { signal: this.signal, lazy: true });
   }
 
   protected handleBrightnessState(value: number): void {
     const b = clamp(this.shouldDark ? 0 : this.config.min, value, this.config.max),
       bLevel = b === 0 ? "dark" : b < 50 ? "low" : b <= 100 ? "high" : "boost",
       bPercent = (b - 0) / (this.config.max - 0);
-    this.ctl.config.settings.css.brightness = b;
+    this.ctlr.config.settings.css.brightness = b;
     this.config.dark = b === 0;
-    this.ctl.videoContainer.dataset.brightnessLevel = bLevel;
-    this.ctl.config.settings.css.currentBrightnessTooltipPosition = `${10.5 + bPercent * 79.5}%`;
+    this.ctlr.videoContainer.dataset.brightnessLevel = bLevel;
+    this.ctlr.config.settings.css.currentBrightnessTooltipPosition = `${10.5 + bPercent * 79.5}%`;
     if (this.config.max > 100) {
       if (b <= 100) {
-        this.ctl.config.settings.css.currentBrightnessSliderPosition = (b - 0) / (100 - 0);
-        this.ctl.config.settings.css.currentBrightnessSliderBoostPosition = 0;
-        this.ctl.config.settings.css.brightnessSliderBoostPercent = 0;
+        this.ctlr.config.settings.css.currentBrightnessSliderPosition = (b - 0) / (100 - 0);
+        this.ctlr.config.settings.css.currentBrightnessSliderBoostPosition = 0;
+        this.ctlr.config.settings.css.brightnessSliderBoostPercent = 0;
       } else {
-        this.ctl.config.settings.css.currentBrightnessSliderPosition = 1;
-        this.ctl.config.settings.css.currentBrightnessSliderBoostPosition = (b - 100) / (this.config.max - 100);
-        this.ctl.config.settings.css.brightnessSliderBoostPercent = this.ctl.config.settings.css.brightnessSliderPercent;
+        this.ctlr.config.settings.css.currentBrightnessSliderPosition = 1;
+        this.ctlr.config.settings.css.currentBrightnessSliderBoostPosition = (b - 100) / (this.config.max - 100);
+        this.ctlr.config.settings.css.brightnessSliderBoostPercent = this.ctlr.config.settings.css.brightnessSliderPercent;
       }
-    } else this.ctl.config.settings.css.currentBrightnessSliderPosition = bPercent;
+    } else this.ctlr.config.settings.css.currentBrightnessSliderPosition = bPercent;
   }
 
   protected handleDarkState(dark: boolean): void {
@@ -83,9 +83,9 @@ export class BrightnessPlug extends BasePlug<Brightness> {
     const max = target.value!;
     if (this.config.value! > max) this.config.value = max;
     if (this.lastBrightness > max) this.lastBrightness = max;
-    this.ctl.videoContainer.classList.toggle("tmg-video-brightness-boost", max > 100);
-    this.ctl.config.settings.css.brightnessSliderPercent = Math.round((100 / max) * 100);
-    this.ctl.config.settings.css.maxBrightnessRatio = max / 100;
+    this.ctlr.videoContainer.classList.toggle("tmg-video-brightness-boost", max > 100);
+    this.ctlr.config.settings.css.brightnessSliderPercent = Math.round((100 / max) * 100);
+    this.ctlr.config.settings.css.maxBrightnessRatio = max / 100;
   }
 
   public toggleDark(option?: "auto"): void {
@@ -99,11 +99,11 @@ export class BrightnessPlug extends BasePlug<Brightness> {
     let brightness = this.shouldSetLastBrightness ? this.lastBrightness : this.config.value!;
     if (sign === "-") {
       if (brightness > this.config.min) brightness -= brightness % value ? brightness % value : value;
-      // if (brightness === 0) return this.ctl.notify("brightnessdark");
-      // this.ctl.notify("brightnessdown");
+      // if (brightness === 0) return this.ctlr.notify("brightnessdark");
+      // this.ctlr.notify("brightnessdown");
     } else {
       if (brightness < this.config.max) brightness += brightness % value ? value - (brightness % value) : value;
-      // this.ctl.notify("brightnessup");
+      // this.ctlr.notify("brightnessup");
     }
     this.shouldSetLastBrightness ? (this.lastBrightness = brightness) : (this.config.value = brightness);
   }

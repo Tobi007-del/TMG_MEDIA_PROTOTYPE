@@ -10,14 +10,14 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
   public static readonly plugName: string = "playbackRate";
 
   public wire(): void {
-    this.ctl.media.set("intent.playbackRate", (value) => clamp(this.config.min, value!, this.config.max), { signal: this.signal });
-    this.ctl.config.watch("settings.playbackRate.value", this.forwardRate, { signal: this.signal, immediate: true });
-    this.ctl.config.on("settings.playbackRate.min", this.handleMinChange, { signal: this.signal });
-    this.ctl.config.on("settings.playbackRate.max", this.handleMaxChange, { signal: this.signal });
+    this.ctlr.media.set("intent.playbackRate", (value) => clamp(this.config.min, value!, this.config.max), { signal: this.signal });
+    this.ctlr.config.watch("settings.playbackRate.value", this.forwardRate, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.playbackRate.min", this.handleMinChange, { signal: this.signal });
+    this.ctlr.config.on("settings.playbackRate.max", this.handleMaxChange, { signal: this.signal });
   }
 
   protected forwardRate(value?: number): void {
-    this.ctl.media.intent.playbackRate = value!;
+    this.ctlr.media.intent.playbackRate = value!;
   }
 
   protected handleMinChange({ target }: Event<VideoBuild, "settings.playbackRate.min">): void {

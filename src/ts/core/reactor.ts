@@ -85,12 +85,12 @@ export default class Reactor<T extends object> {
   private listenersRecord = new Map<WCPaths<T>, Array<ListenerRecord<T>>>();
   private batch = new Map<Paths<T>, Payload<T>>();
   private isBatching = false;
-  private queue: Set<() => void> | null = null; // tasks to run after flush, `null` | pay the empty set 64 byte price for what u might never use
+  private queue: Set<() => void> | null = null; // Tasks to run after flush, `null` | pay the empty set 64 byte price for what u might never use
   private proxyCache = new WeakMap<object, any>();
   private lineage = new WeakMap<object, { p: object; k: string }[]>(); // The Engine Room: Tracks Target -> Array of { parent, key }
   public core: T;
 
-  constructor(obj: T = {} as T, options: ReactorOptions = {}) {
+  constructor(obj: T = {} as T, options?: ReactorOptions) {
     this.core = this.proxify(obj);
   }
 
@@ -271,7 +271,7 @@ export default class Reactor<T extends object> {
     return { path: path as P, value, key: path.slice(lastDot + 1) || "", object: object as PathParentValue<T, P> };
   }
   public getDepth(p: string, d = !p ? 0 : 1): number {
-    for (let i = 0; i < p.length; i++) if (p.charCodeAt(i) === 46) d++; // zero alloc :); so when we say it's optmized, it's not cap
+    for (let i = 0; i < p.length; i++) if (p.charCodeAt(i) === 46) d++; // zero alloc; so when we say it's optmized, it's not cap :)
     return d;
   }
 

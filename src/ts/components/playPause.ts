@@ -13,25 +13,25 @@ export class PlayPause extends BaseComponent<PlayPauseConfig, ComponentState, HT
 
   public wire(): void {
     this.el.addEventListener("click", this.togglePlay, { signal: this.signal });
-    this.ctl.media.on("state.paused", this.updateUI, { signal: this.signal, immediate: true });
-    this.ctl.media.on("status.ended", this.updateUI, { signal: this.signal });
-    this.ctl.config.on("settings.keys.shortcuts.playPause", this.updateARIA, { signal: this.signal });
+    this.ctlr.media.on("state.paused", this.updateUI, { signal: this.signal, immediate: true });
+    this.ctlr.media.on("status.ended", this.updateUI, { signal: this.signal });
+    this.ctlr.config.on("settings.keys.shortcuts.playPause", this.updateARIA, { signal: this.signal });
   }
 
   protected updateUI() {
     this.updateARIA();
   }
   protected updateARIA() {
-    this.state.label = this.ctl.media.status.ended ? "Replay" : this.ctl.media.state.paused ? "Play" : "Pause";
-    this.state.cmd = formatKeyForDisplay(this.ctl.config.settings.keys.shortcuts.playPause);
+    this.state.label = this.ctlr.media.status.ended ? "Replay" : this.ctlr.media.state.paused ? "Play" : "Pause";
+    this.state.cmd = formatKeyForDisplay(this.ctlr.config.settings.keys.shortcuts.playPause);
     this.el.title = this.state.label + this.state.cmd;
     this.setBtnARIA();
   }
 
   protected togglePlay() {
-    if (this.ctl.media.status.ended) {
-      this.ctl.media.intent.currentTime = 0;
-      this.ctl.media.intent.paused = false;
-    } else this.ctl.media.intent.paused = !this.ctl.media.state.paused;
+    if (this.ctlr.media.status.ended) {
+      this.ctlr.media.intent.currentTime = 0;
+      this.ctlr.media.intent.paused = false;
+    } else this.ctlr.media.intent.paused = !this.ctlr.media.state.paused;
   }
 }

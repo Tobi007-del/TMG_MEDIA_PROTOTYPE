@@ -56,9 +56,9 @@ export interface MediaState {
   loop: boolean;
   preload: "" | "auto" | "metadata" | "none";
   playsInline: boolean;
-  crossOrigin: string | null;
+  crossOrigin: "anonymous" | "use-credentials" | string | null;
   controls: boolean; // Native controls enabled?
-  controlsList: string;
+  controlsList: DOMTokenList | string | null; // Native controls disabled (e.g. "nodownload")
   disablePictureInPicture: boolean;
   // ---  HTML Lists ---
   sources: Sources; // HTML courtesy
@@ -132,7 +132,7 @@ export interface MediaReport {
   settings: MediaSettings;
 }
 
-export type Media = {
+export type CMedia = {
   tech: Inert<BaseTech>;
   element: HTMLVideoElement;
-} & MediaReport;
+} & MediaReport; // Controller Media

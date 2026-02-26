@@ -34,13 +34,13 @@ export class TimeTravelPlug extends BasePlug<TimeTravel> {
   protected onSetup() {
     // 1. Genesis: Capture the absolute truth before the first wish.
     // .snapshot() ensures we hold raw data, not reactive proxies.
-    this.initialState = this.ctl.media.snapshot();
+    this.initialState = this.ctlr.media.snapshot();
     const opts = { signal: this.signal, capture: false };
     // We listen to the BUBBLE phase of the ROOT (*)
     // to record the settled outcome of every wave.
-    this.ctl.media.on("intent", (e) => this.record(e), opts);
-    this.ctl.media.on("state", (e) => this.record(e), opts);
-    this.ctl.media.on("settings", (e) => this.record(e), opts);
+    this.ctlr.media.on("intent", (e) => this.record(e), opts);
+    this.ctlr.media.on("state", (e) => this.record(e), opts);
+    this.ctlr.media.on("settings", (e) => this.record(e), opts);
   }
 
   /**
@@ -63,7 +63,7 @@ export class TimeTravelPlug extends BasePlug<TimeTravel> {
       this.initialState = parsed.initial;
       this.jumpTo(-1); // Resync the Tech and UI to the imported Genesis
     } catch (e) {
-      this.ctl.log("Failed to load session", "error");
+      this.ctlr.log("Failed to load session", "error");
     }
   }
 
@@ -117,8 +117,8 @@ export class TimeTravelPlug extends BasePlug<TimeTravel> {
     // 3. Surgical Application: Direct-path injection into Reactors
     snapshot.forEach((entry, path) => {
       const isState = path.startsWith("state");
-      entry.type === "delete" ? deleteAny(this.ctl.media, path as any) : setAny(this.ctl.media, path as any, entry.value);
-      isState && this.ctl.media.tick(path.replace("state.", "") as any); //  Flush state to sync the Tech and UI instantly
+      entry.type === "delete" ? deleteAny(this.ctlr.media, path as any) : setAny(this.ctlr.media, path as any, entry.value);
+      isState && this.ctlr.media.tick(path.replace("state.", "") as any); //  Flush state to sync the Tech and UI instantly
     });
     this.isReplaying = false;
   }
@@ -144,10 +144,10 @@ export class TimeTravelPlug extends BasePlug<TimeTravel> {
    */
   protected applyEntry(e: HistoryEntry) {
     const isState = e.path.startsWith("state");
-    e.type === "delete" ? deleteAny(this.ctl.media, e.path as any) : setAny(this.ctl.media, e.path as any, e.value);
+    e.type === "delete" ? deleteAny(this.ctlr.media, e.path as any) : setAny(this.ctlr.media, e.path as any, e.value);
     // Only "Facts" (State) need immediate flush. Intents and Settings stay in the sky.
-    isState && this.ctl.media.tick(e.path.replace("state.", "") as any);
+    isState && this.ctlr.media.tick(e.path.replace("state.", "") as any);
 
-    if (e.rejected) this.ctl.log(`Replaying REJECTED ${e.path}`, "warn");
+    if (e.rejected) this.ctlr.log(`Replaying REJECTED ${e.path}`, "warn");
   }
 }

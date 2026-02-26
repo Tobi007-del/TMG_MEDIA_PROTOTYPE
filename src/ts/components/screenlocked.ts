@@ -20,7 +20,7 @@ export class ScreenLocked extends BaseComponent<ScreenLockedConfig, ComponentSta
   }
 
   public wire(): void {
-    this.plug = this.ctl.getPlug<LockedPlug>("locked");
+    this.plug = this.ctlr.getPlug<LockedPlug>("locked");
     if (!this.plug) return;
     this.el.addEventListener("click", this.handleClick, { signal: this.signal });
     this.plug.state.on("visible", this.updateUI, { signal: this.signal, immediate: true });
@@ -33,7 +33,7 @@ export class ScreenLocked extends BaseComponent<ScreenLockedConfig, ComponentSta
   protected handleClick(e: MouseEvent): void {
     e.stopPropagation();
     this.plug?.delayOverlay();
-    if (this.el.classList.contains("tmg-video-control-unlock")) this.ctl.config.settings.locked.disabled = true;
+    if (this.el.classList.contains("tmg-video-control-unlock")) this.ctlr.config.settings.locked.disabled = true;
     else this.el.classList.add("tmg-video-control-unlock");
   }
 }

@@ -1,7 +1,7 @@
 import { BasePlug } from ".";
 import type { Event } from "../core/reactor";
 import { VideoBuild } from "../types/build";
-import { Media } from "../types/contract";
+import { CMedia } from "../types/contract";
 import type { AptAutoplayOption, PosterPreview } from "../types/generics";
 import type { PlaylistPlug } from "./playlist";
 import type { ToastsPlug } from "./toasts";
@@ -11,8 +11,10 @@ import { clamp, addSources } from "../utils";
 export interface Auto {
   play: boolean | AptAutoplayOption;
   pause: boolean | AptAutoplayOption;
-  next: number; // -1 for false
-  nextVideoPreview: PosterPreview;
+  next: {
+    value: number; // -1 for false
+    videoPreview: PosterPreview;
+  };
 }
 
 export class AutoPlug extends BasePlug<Auto> {
@@ -21,16 +23,16 @@ export class AutoPlug extends BasePlug<Auto> {
   protected canAutoMovePlaylist = true;
 
   public wire(): void {
-    this.ctl.config.watch("settings.auto.play", this.forwardAutoPlay, { signal: this.signal, immediate: true });
-    this.ctl.state.on("mediaParentIntersecting", this.handleIntersectionChange, { signal: this.signal });
-    this.ctl.media.on("state.currentTime", this.handleTimeUpdate, { signal: this.signal, immediate: true });
-    this.ctl.config.on("settings.auto.nextVideoPreview.usePoster", this.handleUsePoster, { signal: this.signal });
-    this.ctl.config.on("settings.auto.nextVideoPreview.tease", this.handleTease, { signal: this.signal });
-    this.ctl.config.on("settings.auto.nextVideoPreview.time", this.handlePreviewTime, { signal: this.signal });
+    this.ctlr.config.watch("settings.auto.play", this.forwardAutoPlay, { signal: this.signal, immediate: true });
+    this.ctlr.state.on("mediaParentIntersecting", this.handleIntersectionChange, { signal: this.signal });
+    this.ctlr.media.on("state.currentTime", this.handleTimeUpdate, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.auto.next.videoPreview.usePoster", this.handleUsePoster, { signal: this.signal });
+    this.ctlr.config.on("settings.auto.next.videoPreview.tease", this.handleTease, { signal: this.signal });
+    this.ctlr.config.on("settings.auto.next.videoPreview.time", this.handlePreviewTime, { signal: this.signal });
   }
 
   protected forwardAutoPlay(value?: boolean | AptAutoplayOption): void {
-    this.ctl.media.element.autoplay = typeof value === "string" ? false : !!value;
+    this.ctlr.media.element.autoplay = typeof value === "string" ? false : !!value;
   }
 
   protected handleIntersectionChange(): void {
@@ -38,41 +40,41 @@ export class AutoPlug extends BasePlug<Auto> {
     this.handleMediaAptAutoPlay();
   }
 
-  protected handleTimeUpdate({ target }: Event<Media, "state.currentTime">): void {
-    const dur = this.ctl.media.status.duration,
+  protected handleTimeUpdate({ target }: Event<CMedia, "state.currentTime">): void {
+    const dur = this.ctlr.media.status.duration,
       curr = target.value!;
-    if (this.ctl.media.status.readyState && curr && Math.floor((this.ctl.config.settings.time.end ?? dur) - curr) <= this.config.next) this.autonextVideo();
+    if (this.ctlr.media.status.readyState && curr && Math.floor((this.ctlr.config.settings.time.end ?? dur) - curr) <= this.config.next.value) this.autonextVideo();
   }
 
-  protected handleUsePoster({ target: { value } }: Event<VideoBuild, "settings.auto.nextVideoPreview.usePoster">): void {
+  protected handleUsePoster({ target: { value } }: Event<VideoBuild, "settings.auto.next.videoPreview.usePoster">): void {
     if (!this.nextVideoPreview || (value && this.nextVideoPreview.poster)) return;
-    if (this.config.nextVideoPreview.tease) this.ctl.config.settings.auto.nextVideoPreview.tease = this.config.nextVideoPreview.tease;
-    else this.ctl.config.settings.auto.nextVideoPreview.time = this.config.nextVideoPreview.time;
+    if (this.config.next.videoPreview.tease) this.ctlr.config.settings.auto.next.videoPreview.tease = this.config.next.videoPreview.tease;
+    else this.ctlr.config.settings.auto.next.videoPreview.time = this.config.next.videoPreview.time;
   }
 
-  protected handleTease({ target: { value } }: Event<VideoBuild, "settings.auto.nextVideoPreview.tease">): void {
+  protected handleTease({ target: { value } }: Event<VideoBuild, "settings.auto.next.videoPreview.tease">): void {
     if (!this.nextVideoPreview) return;
-    this.nextVideoPreview.ontimeupdate = () => this.nextVideoPreview && Number(this.nextVideoPreview.currentTime) >= this.config.nextVideoPreview.time && this.nextVideoPreview.pause();
-    if (value && (!this.config.nextVideoPreview.usePoster || !this.nextVideoPreview.poster)) this.nextVideoPreview.play();
+    this.nextVideoPreview.ontimeupdate = () => this.nextVideoPreview && Number(this.nextVideoPreview.currentTime) >= this.config.next.videoPreview.time && this.nextVideoPreview.pause();
+    if (value && (!this.config.next.videoPreview.usePoster || !this.nextVideoPreview.poster)) this.nextVideoPreview.play();
   }
 
-  protected handlePreviewTime({ target: { value } }: Event<VideoBuild, "settings.auto.nextVideoPreview.time">): void {
-    if (!this.nextVideoPreview || (this.config.nextVideoPreview.usePoster && this.nextVideoPreview.poster)) return;
+  protected handlePreviewTime({ target: { value } }: Event<VideoBuild, "settings.auto.next.videoPreview.time">): void {
+    if (!this.nextVideoPreview || (this.config.next.videoPreview.usePoster && this.nextVideoPreview.poster)) return;
     this.nextVideoPreview.currentTime = Number(value);
   }
 
-  protected handleMediaAptAutoPlay(auto = this.config.play, bool = true, p = this.ctl.state.mediaParentIntersecting ? "in" : "out"): void {
-    if (auto === `${p}-view-always`) this.ctl.media.intent.paused = !bool;
-    else if (auto === `${p}-view` && this.ctl.state.readyState < 3) this.ctl.media.intent.paused = !bool;
+  protected handleMediaAptAutoPlay(auto = this.config.play, bool = true, p = this.ctlr.state.mediaParentIntersecting ? "in" : "out"): void {
+    if (auto === `${p}-view-always`) this.ctlr.media.intent.paused = !bool;
+    else if (auto === `${p}-view` && this.ctlr.state.readyState < 3) this.ctlr.media.intent.paused = !bool;
   }
 
   protected autonextVideo = (): void => {
-    if (!this.ctl.media.status.loadedMetadata || !this.ctl.config.playlist || this.config.next < 0 || !this.canAutoMovePlaylist || this.ctl.state.currentPlaylistIndex >= this.ctl.config.playlist.length - 1 || this.ctl.media.state.paused || this.ctl.media.status.waiting) return;
+    if (!this.ctlr.media.status.loadedMetadata || !this.ctlr.config.playlist || this.config.next.value < 0 || !this.canAutoMovePlaylist || this.ctlr.state.currentPlaylistIndex >= this.ctlr.config.playlist.length - 1 || this.ctlr.media.state.paused || this.ctlr.media.status.waiting) return;
     this.canAutoMovePlaylist = false;
-    const count = clamp(1, Math.round((this.ctl.config.settings.time.end ?? this.ctl.media.status.duration) - this.ctl.media.state.currentTime), this.config.next),
-      v = this.ctl.config.playlist[this.ctl.state.currentPlaylistIndex + 1],
-      toastsPlug = this.ctl.getPlug<ToastsPlug>("toasts"),
-      timePlug = this.ctl.getPlug<TimePlug>("time");
+    const count = clamp(1, Math.round((this.ctlr.config.settings.time.end ?? this.ctlr.media.status.duration) - this.ctlr.media.state.currentTime), this.config.next.value),
+      v = this.ctlr.config.playlist[this.ctlr.state.currentPlaylistIndex + 1],
+      toastsPlug = this.ctlr.getPlug<ToastsPlug>("toasts"),
+      timePlug = this.ctlr.getPlug<TimePlug>("time");
     const nVTId = toastsPlug?.toast?.("", {
       autoClose: count * 1000,
       hideProgressBar: false,
@@ -87,21 +89,21 @@ export class AutoPlug extends BasePlug<Auto> {
         ${v.media.title ? `<p class="tmg-video-next-title">${v.media.title}</p>` : ""}
       </span>`,
       onTimeUpdate: (time: number) => {
-        const el = this.ctl.queryDOM(".tmg-video-next-countdown");
+        const el = this.ctlr.queryDOM(".tmg-video-next-countdown");
         if (el) el.textContent = String(Math.round((count * 1000 - time) / 1000) || 1);
       },
-      onClose: (timeElapsed: boolean) => (removeListeners(), timeElapsed && this.ctl.getPlug<PlaylistPlug>("playlist")?.nextVideo()),
+      onClose: (timeElapsed: boolean) => (removeListeners(), timeElapsed && this.ctlr.getPlug<PlaylistPlug>("playlist")?.nextVideo()),
       tag: "tmg-anvi",
     });
     const cleanUp = (permanent = false) => (nVTId && window.t007?.toast.dismiss(nVTId, "instant"), (this.nextVideoPreview = null), (this.canAutoMovePlaylist = !permanent)),
-      cleanUpWhenNeeded = () => !this.ctl.media.element.ended && cleanUp(),
-      autoCleanUpToast = () => Math.floor((this.ctl.config.settings.time.end ?? this.ctl.media.status.duration) - this.ctl.media.state.currentTime) > this.config.next && cleanUp(),
-      removeListeners = () => ["timeupdate", "pause", "waiting"].forEach((e, i) => this.ctl.media.element.removeEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
-    ["timeupdate", "pause", "waiting"].forEach((e, i) => this.ctl.media.element.addEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
-    const nVP = (this.nextVideoPreview = this.ctl.queryDOM<HTMLVideoElement>(".tmg-video-next-preview"))!;
+      cleanUpWhenNeeded = () => !this.ctlr.media.element.ended && cleanUp(),
+      autoCleanUpToast = () => Math.floor((this.ctlr.config.settings.time.end ?? this.ctlr.media.status.duration) - this.ctlr.media.state.currentTime) > this.config.next.value && cleanUp(),
+      removeListeners = () => ["timeupdate", "pause", "waiting"].forEach((e, i) => this.ctlr.media.element.removeEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
+    ["timeupdate", "pause", "waiting"].forEach((e, i) => this.ctlr.media.element.addEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
+    const nVP = (this.nextVideoPreview = this.ctlr.queryDOM<HTMLVideoElement>(".tmg-video-next-preview"))!;
     if (v.sources?.length) addSources(v.sources, nVP);
     ["loadedmetadata", "loaded", "durationchange"].forEach((e) => nVP?.addEventListener(e, ({ target: p }) => ((p as HTMLVideoElement).nextElementSibling!.textContent = timePlug?.toTimeText((p as HTMLVideoElement).duration) ?? "0:00")));
-    this.ctl.config.settings.auto.nextVideoPreview = this.config.nextVideoPreview;
-    nVP?.previousElementSibling?.addEventListener("click", () => (cleanUp(true), this.ctl.getPlug<PlaylistPlug>("playlist")?.nextVideo()), { capture: true });
+    this.ctlr.config.settings.auto.next.videoPreview = this.config.next.videoPreview; // force update
+    nVP?.previousElementSibling?.addEventListener("click", () => (cleanUp(true), this.ctlr.getPlug<PlaylistPlug>("playlist")?.nextVideo()), { capture: true });
   };
 }

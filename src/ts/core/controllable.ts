@@ -8,16 +8,16 @@ export abstract class Controllable<Config = any, State = any> {
   protected readonly ac = new AbortController();
   protected readonly signal = this.ac.signal;
 
-  protected readonly ctl: Controller;
+  protected readonly ctlr: Controller;
   protected readonly guard: Controller["guard"];
   public config: Config; // may be a reactive obj node or the obj itself
   public state!: State extends object ? Reactive<State> : State; // for reactivity needs of those who pass it up
 
-  constructor(ctl: Controller, config: Config, state?: State) {
-    guardAllMethods(this, ctl.guard, true);
-    this.signal = AbortSignal.any([this.signal, ctl.signal]);
-    this.ctl = ctl;
-    this.guard = ctl.guard;
+  constructor(ctlr: Controller, config: Config, state?: State) {
+    guardAllMethods(this, ctlr.guard, true);
+    this.signal = AbortSignal.any([this.signal, ctlr.signal]);
+    this.ctlr = ctlr;
+    this.guard = ctlr.guard;
     this.config = config;
     if (state) this.state = (isObj(state) ? reactive(state) : state) as Controllable["state"];
   }

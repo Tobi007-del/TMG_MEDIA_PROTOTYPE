@@ -45,9 +45,9 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   protected dragSafeTimeoutId: number = -1;
 
   public mount(): void {
-    this.ctl.config.set("settings.controlPanel.bottom", (value) => parsePanelBottomObj(value));
-    const cc = this.ctl.DOM.controlsContainer,
-      buffer = ComponentRegistry.init("buffer", this.ctl);
+    this.ctlr.config.set("settings.controlPanel.bottom", (value) => parsePanelBottomObj(value));
+    const cc = this.ctlr.DOM.controlsContainer,
+      buffer = ComponentRegistry.init("buffer", this.ctlr);
     buffer && this.controls.set("buffer", buffer);
     buffer && cc?.prepend(buffer.element);
     this.zoneWs = { top: {}, center: {}, bottom: { 1: {}, 2: {}, 3: {} } } as typeof this.zoneWs;
@@ -64,17 +64,17 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     });
     cc?.append(topW, this.zoneWs.center.zone, bottomW);
     ComponentRegistry.getAll().forEach((Comp) => {
-      Comp.isControl && this.controls.set(Comp.componentName, ComponentRegistry.init(Comp.componentName, this.ctl)!);
+      Comp.isControl && this.controls.set(Comp.componentName, ComponentRegistry.init(Comp.componentName, this.ctlr)!);
     });
   }
 
   public wire(): void {
-    this.ctl.config.on("settings.controlPanel.top", this.handleTopLayout, { signal: this.signal, immediate: true });
-    this.ctl.config.on("settings.controlPanel.center", this.handleCenterLayout, { signal: this.signal, immediate: true });
-    this.ctl.config.on("settings.controlPanel.bottom", this.handleBottomLayout, { signal: this.signal, immediate: true });
-    this.ctl.config.on("settings.controlPanel.buffer", ({ target: { value } }) => (this.ctl.videoContainer.dataset.buffer = String(value)), { signal: this.signal, immediate: true });
-    this.ctl.config.on("settings.controlPanel.timeline.thumbIndicator", ({ target: { value } }) => (this.ctl.videoContainer.dataset.thumbIndicator = String(value)), { signal: this.signal, immediate: true });
-    this.ctl.config.on(
+    this.ctlr.config.on("settings.controlPanel.top", this.handleTopLayout, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.center", this.handleCenterLayout, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.bottom", this.handleBottomLayout, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.buffer", ({ target: { value } }) => (this.ctlr.videoContainer.dataset.buffer = String(value)), { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.timeline.thumbIndicator", ({ target: { value } }) => (this.ctlr.videoContainer.dataset.thumbIndicator = String(value)), { signal: this.signal, immediate: true });
+    this.ctlr.config.on(
       "settings.controlPanel.timeline.seek",
       ({ target: { value } }) => {
         const timeline = this.getControl<Timeline>("timeline");
@@ -84,8 +84,8 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
       },
       { signal: this.signal, immediate: true }
     );
-    this.ctl.config.on("settings.controlPanel.progressBar", ({ target: { value } }) => this.ctl.videoContainer.classList.toggle("tmg-video-progress-bar", !!value), { signal: this.signal, immediate: true });
-    this.ctl.config.on("settings.controlPanel.draggable", ({ target: { value } }) => this.setDragEventListeners(value ? "add" : "remove"), { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.progressBar", ({ target: { value } }) => this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", !!value), { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.draggable", ({ target: { value } }) => this.setDragEventListeners(value ? "add" : "remove"), { signal: this.signal, immediate: true });
   }
 
   protected buildWSkel(side: string): ZoneW {
@@ -135,15 +135,15 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   }
 
   protected getDraggableControls(): NodeListOf<HTMLElement> {
-    return this.ctl.queryDOM("[data-draggable-control]", true);
+    return this.ctlr.queryDOM("[data-draggable-control]", true);
   }
 
   protected getDropZones(): HTMLElement[] {
-    return [...this.ctl.queryDOM("[data-drop-zone][data-drag-id]", true), ...this.getZones()];
+    return [...this.ctlr.queryDOM("[data-drop-zone][data-drag-id]", true), ...this.getZones()];
   }
 
   protected setDragEventListeners(action: "add" | "remove"): void {
-    const draggable = this.ctl.config.settings.controlPanel.draggable;
+    const draggable = this.ctlr.config.settings.controlPanel.draggable;
     this.getDraggableControls().forEach((c) => {
       c.dataset.dragId = c.dataset.dragId ?? "";
       const act = !inBoolArrOpt(draggable, c.dataset.dragId) ? "remove" : action;
@@ -166,7 +166,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   protected getUIZoneWCoord(target: HTMLElement, zoneW = false): string | { coord: string; zoneW: ZoneW } {
     let key = "";
     const pos = ({ 0: "left", 1: "center", 2: "right" } as const)[[...target.parentElement!.children].indexOf(target) as 0 | 1 | 2];
-    const cws = this.ctl.queryDOM(".tmg-video-top-controls-wrapper, .tmg-video-bottom-sub-controls-wrapper", true);
+    const cws = this.ctlr.queryDOM(".tmg-video-top-controls-wrapper, .tmg-video-bottom-sub-controls-wrapper", true);
     cws.forEach((w, i) => w.contains(target) && (key = ({ 0: "top.", 1: "bottom.1.", 2: "bottom.2.", 3: "bottom.3." } as const)[i as 0 | 1 | 2 | 3]));
     return zoneW ? { coord: key + pos, zoneW: getAny(this.zoneWs as any, (key + pos) as any) } : key + pos;
   }
@@ -177,9 +177,9 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
       const zone = "zone" in zoneW ? zoneW.zone : zoneW;
       return [center ? "spacer" : "", ...(zone ? Array.from(zone.children as HTMLCollectionOf<HTMLElement>, id) : [id(zoneW as HTMLElement)]), center && (zone ? zone.children.length : true) ? "spacer" : ""].filter(Boolean) as SControl[];
     };
-    this.ctl.config.settings.controlPanel.top = [...derive(this.cZoneWs.top.left), ...derive(this.cZoneWs.top.center, true), ...derive(this.cZoneWs.top.right)];
-    this.ctl.config.settings.controlPanel.center = derive(this.zoneWs.center) as unknown as BigControl[];
-    this.ctl.config.settings.controlPanel.bottom = {
+    this.ctlr.config.settings.controlPanel.top = [...derive(this.cZoneWs.top.left), ...derive(this.cZoneWs.top.center, true), ...derive(this.cZoneWs.top.right)];
+    this.ctlr.config.settings.controlPanel.center = derive(this.zoneWs.center) as unknown as BigControl[];
+    this.ctlr.config.settings.controlPanel.bottom = {
       1: [...derive(this.cZoneWs.bottom[1].left), ...derive(this.cZoneWs.bottom[1].center, true), ...derive(this.cZoneWs.bottom[1].right)],
       2: [...derive(this.cZoneWs.bottom[2].left), ...derive(this.cZoneWs.bottom[2].center, true), ...derive(this.cZoneWs.bottom[2].right)],
       3: [...derive(this.cZoneWs.bottom[3].left), ...derive(this.cZoneWs.bottom[3].center, true), ...derive(this.cZoneWs.bottom[3].right)],
@@ -205,7 +205,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   }
 
   protected handleDrag(): void {
-    this.ctl.getPlug<OverlayPlug>("overlay")?.delay();
+    this.ctlr.getPlug<OverlayPlug>("overlay")?.delay();
     clearTimeout(this.dragSafeTimeoutId);
   }
 
@@ -227,7 +227,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     if (this.noDropOff(t)) return;
     e.preventDefault();
     e.dataTransfer!.dropEffect = "move";
-    this.ctl.throttle(
+    this.ctlr.throttle(
       "dragOver",
       () => {
         if (t.dataset.dragId === "wrapper") {

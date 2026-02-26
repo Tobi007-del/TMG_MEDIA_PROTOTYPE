@@ -2,7 +2,7 @@ import { Controllable } from "../core/controllable";
 import type { Controller } from "../core/controller";
 
 export interface PlugConstructor<T extends BasePlug = BasePlug> {
-  new (ctl: Controller, config: any): T;
+  new (ctlr: Controller, config: any): T;
   plugName: string;
   isCore: boolean;
 }
@@ -16,8 +16,8 @@ export abstract class BasePlug<Config = any, State = any> extends Controllable<C
 
   protected onSetup(): void {
     this.mount?.();
-    if (this.ctl.state.readyState) this.wire?.();
-    else this.wire && this.ctl.state.wonce("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup
+    if (this.ctlr.state.readyState) this.wire?.();
+    else this.wire && this.ctlr.state.wonce("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup
   }
 
   public mount?(): void {}
@@ -32,8 +32,8 @@ export abstract class BaseModule<Config = any, State = any> extends Controllable
 
   protected onSetup(): void {
     this.mount?.();
-    if (this.ctl.state.readyState) this.wire?.();
-    else this.wire && this.ctl.state.wonce("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup
+    if (this.ctlr.state.readyState) this.wire?.();
+    else this.wire && this.ctlr.state.wonce("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup
   }
 
   public mount?(): void {}

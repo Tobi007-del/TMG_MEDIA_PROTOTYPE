@@ -34,8 +34,8 @@ export function getMediaReport(m: HTMLMediaElement): MediaReport {
       playsInline: m instanceof HTMLVideoElement ? m.playsInline : false,
       crossOrigin: m.crossOrigin,
       controls: m.controls,
-      controlsList: m.getAttribute("controlsList") || "",
-      disablePictureInPicture: m instanceof HTMLVideoElement ? m.disablePictureInPicture : false,
+      controlsList: m.controlsList ?? m.getAttribute("controlsList"),
+      disablePictureInPicture: m instanceof HTMLVideoElement ? m.disablePictureInPicture ?? m.hasAttribute("disablePictureInPicture") : false,
       sources: getSources(m),
       tracks: getTracks(m),
     },
@@ -74,7 +74,7 @@ export function getMediaReport(m: HTMLMediaElement): MediaReport {
 }
 
 // Geometry
-export const getRenderedBox = (elem: HTMLElement & { videoWidth?: number; videoHeight?: number }): Partial<Dimensions & { left: number; top: number }> => {
+export function getRenderedBox(elem: HTMLElement & { videoWidth?: number; videoHeight?: number }): Partial<Dimensions & { left: number; top: number }> {
   const getResourceDimensions = (source: HTMLElement & { videoWidth?: number; videoHeight?: number }): Dimensions | null => (source.videoWidth && source.videoHeight ? { width: source.videoWidth, height: source.videoHeight } : null);
   const parsePositionAsPx = (str: string, bboxSize: number, objectSize: number): number => {
     const num = parseFloat(str);
@@ -120,7 +120,7 @@ export function getSizeTier(container: HTMLElement) {
 }
 
 // Media Element Cloning
-export const cloneMedia = <M extends HTMLMediaElement>(v: M): M => {
+export function cloneMedia<M extends HTMLMediaElement>(v: M): M {
   const newV = v.cloneNode(true) as M;
   newV.tmgPlayer = v.tmgPlayer;
   v.parentElement?.replaceChild(newV, v);
@@ -229,6 +229,7 @@ export function setCurrentTrack(medium: HTMLMediaElement, type: TrackType, term:
 }
 
 // ============ Caption/Subtitle Utilities ============
+
 export const stripTags = (text: string): string => text.replace(/<(\/)?([a-z0-9.:]+)([^>]*)>/gi, "");
 
 // SRT/VTT Conversion

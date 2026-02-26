@@ -11,13 +11,17 @@ type SafeClickEl = HTMLElement & {
   _dblClickHandler?: (e: MouseEvent) => void;
   _clickTimeoutId?: ReturnType<typeof setTimeout>;
 };
-
-interface LoadResourceOptions {
-  module?: boolean;
-  media?: string;
-  crossOrigin?: string;
-  integrity?: string;
-}
+type LoadResourceOptions = Partial<{
+  module: boolean;
+  media: string;
+  crossOrigin: "anonymous" | "use-credentials" | string | null;
+  integrity: string;
+  referrerPolicy: "no-referrer" | "origin" | "strict-origin-when-cross-origin" | string;
+  nonce: string;
+  fetchPriority: "high" | "low" | "auto";
+  attempts: number;
+  retryKey: boolean | string; // retry token
+}>;
 
 // Element Factory
 export function createEl<K extends keyof HTMLElementTagNameMap>(tag: K, props?: Partial<HTMLElementTagNameMap[K]>, dataset?: Dataset, styles?: Style): HTMLElementTagNameMap[K];
@@ -36,22 +40,29 @@ export function assignEl(el?: HTMLElement, props: Record<string, unknown> = {}, 
 }
 
 // Resource Loading
-const _resourceCache: Partial<Record<string, Promise<HTMLElement | void>>> = {};
-export function loadResource(src: string, type: ResourceType = "style", { module, media, crossOrigin, integrity }: LoadResourceOptions = {}): Promise<HTMLElement | void> {
-  if (_resourceCache[src]) return _resourceCache[src];
+export function loadResource(src: string, type: ResourceType = "style", { module, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, attempts = 3, retryKey = false }: LoadResourceOptions = {}): Promise<HTMLElement | void> {
+  ((window.t007 ??= {} as any), (t007._resourceCache ??= {}));
+  if (t007._resourceCache[src]) return t007._resourceCache[src]; // set crossorigin on (links|scripts) if provided due to document.(styleSheets|scripts)
   if (type === "script" ? Array.prototype.some.call(document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.some.call(document.styleSheets, (s) => isSameURL((s as CSSStyleSheet).href ?? "", src)) : false) return Promise.resolve();
-  _resourceCache[src] = new Promise<HTMLElement | void>((resolve, reject) => {
-    if (type === "script") {
-      const script = createEl("script", { src, type: module ? "module" : "text/javascript", crossOrigin, integrity, onload: () => resolve(script as HTMLElement), onerror: () => reject(new Error(`Script load error: ${src}`)) } as Partial<HTMLScriptElement>);
-      if (!script) return reject(new Error(`Script load error: ${src}`));
-      document.body.append(script);
-    } else if (type === "style") {
-      const link = createEl("link", { rel: "stylesheet", href: src, media, onload: () => resolve(link as HTMLElement), onerror: () => reject(new Error(`Stylesheet load error: ${src}`)) } as Partial<HTMLLinkElement>);
-      if (!link) return reject(new Error(`Stylesheet load error: ${src}`));
-      document.head.append(link);
-    } else reject(new Error(`Unsupported resource type: ${type}`));
+  t007._resourceCache[src] = new Promise<HTMLElement | void>((resolve, reject) => {
+    (function tryLoad(remaining: number, el?: HTMLElement) {
+      const onerror = () => {
+        el?.remove(); // Remove failed element before retrying
+        if (remaining > 1) {
+          setTimeout(tryLoad, 1000, remaining - 1);
+          console.warn(`Retrying ${type} load (${attempts - remaining + 1}): ${src}...`);
+        } else {
+          delete t007._resourceCache[src]; // Final fail: clear cache so user can manually retry
+          reject(new Error(`${type} load failed after ${attempts} attempts: ${src}`));
+        }
+      };
+      const url = retryKey && remaining < attempts ? `${src}${src.includes("?") ? "&" : "?"}_${retryKey}=${Date.now()}` : src;
+      if (type === "script") document.body.append((el = createEl("script", { src: url, type: module ? "module" : "text/javascript", crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror })));
+      else if (type === "style") document.head.append((el = createEl("link", { rel: "stylesheet", href: url, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror })));
+      else reject(new Error(`Unsupported resource type: ${type}`));
+    })(attempts);
   });
-  return _resourceCache[src];
+  return t007._resourceCache[src];
 }
 
 // Viewport Checks
@@ -62,7 +73,7 @@ export function inDocView(el: Element, axis: "x" | "y" = "y"): boolean {
   return axis === "x" ? inY : axis === "y" ? inX : inY && inX;
 }
 
-export const getElSiblingAt = (p: number, dir: Direction, els: HTMLElement[] | NodeListOf<HTMLElement>, pos: Position = "after"): Element | undefined => {
+export function getElSiblingAt(p: number, dir: Direction, els: HTMLElement[] | NodeListOf<HTMLElement>, pos: Position = "after"): Element | undefined {
   return (
     els.length &&
     (
@@ -78,36 +89,36 @@ export const getElSiblingAt = (p: number, dir: Direction, els: HTMLElement[] | N
       ) as any
     ).element
   );
-};
+}
 
 // Fullscreen & Picture-in-Picture
 export const queryFullscreen = (): boolean => Boolean(queryFullscreenEl());
-export const queryFullscreenEl = (): Element | null => {
+export function queryFullscreenEl(): Element | null {
   const d = document as any;
   return d.fullscreenElement || d.webkitFullscreenElement || d.mozFullScreenElement || d.msFullscreenElement || null;
-};
+}
 
-export const supportsFullscreen = (): boolean => {
+export function supportsFullscreen(): boolean {
   const d = document as any,
     v = HTMLVideoElement.prototype as any;
   return Boolean(d.fullscreenEnabled || d.mozFullscreenEnabled || d.msFullscreenEnabled || d.webkitFullscreenEnabled || d.webkitSupportsFullscreen || v.webkitEnterFullscreen);
-};
-export const supportsPictureInPicture = (): boolean => {
+}
+export function supportsPictureInPicture(): boolean {
   const w = window as any,
     d = document as any,
     v = HTMLVideoElement.prototype as any;
   return Boolean(d.pictureInPictureEnabled || v.requestPictureInPicture || w.documentPictureInPicture);
-};
+}
 
-export const enterFullscreen = (el: Element): Promise<void> => {
+export function enterFullscreen(el: Element): Promise<void> {
   const e = el as any;
   return e.webkitEnterFullscreen ? e.webkitEnterFullscreen() : e.requestFullscreen ? e.requestFullscreen() : e.mozRequestFullScreen ? e.mozRequestFullScreen() : e.webkitRequestFullscreen ? e.webkitRequestFullscreen() : e.msRequestFullscreen ? e.msRequestFullscreen() : Promise.reject(new Error("Fullscreen API is not supported"));
-};
-export const exitFullscreen = (el: Element): Promise<void> => {
+}
+export function exitFullscreen(el: Element): Promise<void> {
   const e = el as any,
     d = document as any;
   return e.webkitExitFullscreen ? e.webkitExitFullscreen() : d.exitFullscreen ? d.exitFullscreen() : d.mozCancelFullScreen ? d.mozCancelFullScreen() : d.webkitExitFullscreen ? d.webkitExitFullscreen() : d.msExitFullscreen ? d.msExitFullscreen() : Promise.reject(new Error("Fullscreen API is not supported"));
-};
+}
 
 // Safe Click Handling
 export function addSafeClicks(el: SafeClickEl | null | undefined, onClick?: (e: MouseEvent) => void | null, onDblClick?: (e: MouseEvent) => void | null, options?: boolean | AddEventListenerOptions): void {
@@ -115,7 +126,10 @@ export function addSafeClicks(el: SafeClickEl | null | undefined, onClick?: (e: 
   el?.addEventListener("click", (el._clickHandler = (e: MouseEvent) => (clearTimeout(el._clickTimeoutId), (el._clickTimeoutId = setTimeout(() => onClick?.(e), 300)))), options);
   el?.addEventListener("dblclick", (el._dblClickHandler = (e: MouseEvent) => (clearTimeout(el._clickTimeoutId), onDblClick?.(e))), options);
 }
-export const removeSafeClicks = (el: SafeClickEl | null | undefined): void => (el?.removeEventListener("click", el._clickHandler as EventListener), el?.removeEventListener("dblclick", el._dblClickHandler as EventListener));
+export function removeSafeClicks(el: SafeClickEl | null | undefined): void {
+  el?.removeEventListener("click", el._clickHandler as EventListener);
+  el?.removeEventListener("dblclick", el._dblClickHandler as EventListener);
+}
 
 // DOM Observers
 declare global {

@@ -41,9 +41,9 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
   protected isVertical = false;
   protected isRTL = false;
 
-  constructor(ctl: Controller, options: Partial<Config> = {}) {
+  constructor(ctlr: Controller, options: Partial<Config> = {}) {
     const defaults = { label: "Range", min: 0, max: 100, value: 0, previewValue: 50, step: 1, scrub: { sync: false, relative: true, cancel: { delta: 15, timeout: 2000 }, wheel: { disabled: false, axisRatio: 6 } } };
-    super(ctl, reactive({ ...defaults, ...options }) as unknown as Reactive<Config>, { scrubbing: false, shouldCancelScrub: false, stallCancelScrub: false } as State);
+    super(ctlr, reactive({ ...defaults, ...options }) as unknown as Reactive<Config>, { scrubbing: false, shouldCancelScrub: false, stallCancelScrub: false } as State);
   }
 
   public create(): HTMLElement {
@@ -117,7 +117,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
   }
 
   protected handleInput(e: MouseEvent | PointerEvent): void {
-    this.ctl.throttle(
+    this.ctlr.throttle(
       `${this.config.label}RangeInput`,
       () => {
         const dimension = this.isVertical ? this.rect.height : this.rect.width,

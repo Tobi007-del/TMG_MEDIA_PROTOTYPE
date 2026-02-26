@@ -22,11 +22,11 @@ export class WheelModule extends BaseModule<WheelConfig> {
   protected nextTime = 0;
 
   public wire() {
-    this.ctl.videoContainer.addEventListener("wheel", this.handleWheel, { passive: false, signal: this.signal });
+    this.ctlr.videoContainer.addEventListener("wheel", this.handleWheel, { passive: false, signal: this.signal });
   }
 
   protected canHandle(e: WheelEvent): boolean {
-    return !this.ctl.config.settings.locked && !this.ctl.config.disabled && e.target === this.ctl.DOM.controlsContainer && !this.ctl.state.gestureTouchXCheck && !this.ctl.state.gestureTouchYCheck && !this.ctl.state.speedCheck;
+    return !this.ctlr.config.settings.locked && !this.ctlr.config.disabled && e.target === this.ctlr.DOM.controlsContainer && !this.ctlr.state.gestureTouchXCheck && !this.ctlr.state.gestureTouchYCheck && !this.ctlr.state.speedCheck;
   }
 
   protected handleWheel(e: WheelEvent): void {
@@ -38,7 +38,7 @@ export class WheelModule extends BaseModule<WheelConfig> {
   }
 
   protected handleInit({ clientX: x, clientY: y }: WheelEvent): void {
-    const rect = this.ctl.videoContainer.getBoundingClientRect();
+    const rect = this.ctlr.videoContainer.getBoundingClientRect();
     this.zone = { x: x - rect.left > rect.width * 0.5 ? "right" : "left", y: y - rect.top > rect.height * 0.5 ? "bottom" : "top" };
     this.deltaY = this.timePercent = 0;
     this.timeMultiplier = 1;
@@ -47,7 +47,7 @@ export class WheelModule extends BaseModule<WheelConfig> {
   protected handleMove({ clientX: x, deltaX, deltaY, shiftKey }: WheelEvent): void {
     deltaX = shiftKey ? deltaY : deltaX;
     const wc = this.config,
-      rect = this.ctl.videoContainer.getBoundingClientRect(),
+      rect = this.ctlr.videoContainer.getBoundingClientRect(),
       width = shiftKey ? rect.height : rect.width,
       height = shiftKey ? rect.width : rect.height;
     let xPercent = -deltaX / (width * wc.xRatio);
@@ -81,20 +81,20 @@ export class WheelModule extends BaseModule<WheelConfig> {
     if (this.yCheck) this.yCheck = false;
     if (this.xCheck) {
       this.xCheck = false;
-      this.ctl.media.intent.currentTime = this.nextTime;
+      this.ctlr.media.intent.currentTime = this.nextTime;
     }
   }
 
   protected applyTimeline(percent: number, sign: string, multiplier: number): void {
-    const { currentTime } = this.ctl.media.state,
-      { duration } = this.ctl.media.status,
+    const { currentTime } = this.ctlr.media.state,
+      { duration } = this.ctlr.media.status,
       change = percent * duration * +multiplier.toFixed(1);
     this.nextTime = clamp(0, currentTime + (sign === "+" ? change : -change), duration);
   }
 
   protected applyRange(key: "volume" | "brightness", percent: number, sign: string): void {
-    const plug = this.ctl.getPlug<VolumePlug>(key),
-      range = this.ctl.config.settings[key],
+    const plug = this.ctlr.getPlug<VolumePlug>(key),
+      range = this.ctlr.config.settings[key],
       value = range.value! + (sign === "+" ? percent : -percent) * range.max;
     plug?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }

@@ -74,5 +74,5 @@ export interface ToastInstance {
   dismiss(id: string, manner?: "instant" | "animate"): void;
   dismissAll(idPrefix?: string): void;
   doForAll(action: string, payload: any, idPrefix?: string): void;
-  getAll(idPrefix): ToastInstance[];
+  getAll(idPrefix: string): ToastInstance[];
 }

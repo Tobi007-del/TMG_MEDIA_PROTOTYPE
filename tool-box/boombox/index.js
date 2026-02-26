@@ -83,17 +83,17 @@ class Boombox {
   }
   setupAudio() {
     if (this.mediaSetup || tmg.connectMediaToAudioManager(this.media) === "unavailable") return;
-    this.context = tmg._audioContext;
+    this.context = tmg.AUDIO_CONTEXT;
     this.source = this.media.mediaElementSourceNode;
     this.compressor = this.media._tmgDynamicsCompressorNode;
+    this.stereoPanner = this.media._tmgStereoPannerNode = this.context.createStereoPanner();
+    this.panner = this.media._tmgPannerNode = this.context.createPanner();
     this.compressor.threshold.value = -30;
     this.compressor.knee.value = 20;
     this.compressor.ratio.value = 12;
     this.compressor.attack.value = 0.003;
     this.compressor.release.value = 0.25;
     this.gainer = this.media._tmgGainNode;
-    this.stereoPanner = this.context.createStereoPanner();
-    this.panner = this.context.createPanner();
     this.panner.panningModel = "HRTF"; // High-fidelity human ear routing
     this.panner.distanceModel = "inverse";
     this.panner.refDistance = 1;

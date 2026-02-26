@@ -19,17 +19,18 @@ export class OverlayPlug extends BasePlug<Overlay, OverlayState> {
   public static readonly plugName: string = "overlay";
   public overlayDelayId = -1;
 
-  constructor(ctl: Controller, config: Overlay) {
-    super(ctl, config, { visible: false });
+  constructor(ctlr: Controller, config: Overlay) {
+    super(ctlr, config, { visible: false });
   }
 
   public wire(): void {
-    this.ctl.config.on("settings.overlay.curtain", this.handleCurtain, { signal: this.signal, immediate: true });
-    this.ctl.config.on("settings.overlay.behavior", this.handleBehavior, { signal: this.signal, immediate: true });
+    this.ctlr.media.on("state.paused", ({ target: { value } }) => (value ? this.show() : this.delay()), { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.overlay.curtain", this.handleCurtain, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.overlay.behavior", this.handleBehavior, { signal: this.signal, immediate: true });
   }
 
   protected handleCurtain({ target: { value } }: Event<VideoBuild, "settings.overlay.curtain">): void {
-    this.ctl.videoContainer.dataset.curtain = value;
+    this.ctlr.videoContainer.dataset.curtain = value;
   }
 
   protected handleBehavior({ target: { value } }: Event<VideoBuild, "settings.overlay.behavior">): void {
@@ -38,16 +39,16 @@ export class OverlayPlug extends BasePlug<Overlay, OverlayState> {
   }
 
   public shouldShow(): boolean {
-    return this.config.behavior !== "hidden" && !this.ctl.config.settings.locked && !this.ctl.isUIActive("playerDragging");
+    return this.config.behavior !== "hidden" && !this.ctlr.config.settings.locked && !this.ctlr.isUIActive("playerDragging");
   }
 
   public shouldRemove(manner?: "force"): boolean {
-    return this.config.behavior !== "persistent" && (manner === "force" || (!this.ctl.isUIActive("pictureInPicture") && !this.ctl.isUIActive("settings") && (IS_MOBILE ? !this.ctl.media.status.waiting && !this.ctl.media.state.paused : this.config.behavior === "strict" ? true : !this.ctl.media.state.paused)));
+    return this.config.behavior !== "persistent" && (manner === "force" || (!this.ctlr.isUIActive("pictureInPicture") && !this.ctlr.isUIActive("settings") && (IS_MOBILE ? !this.ctlr.media.status.waiting && !this.ctlr.media.state.paused : this.config.behavior === "strict" ? true : !this.ctlr.media.state.paused)));
   }
 
   public show(): void {
     if (!this.shouldShow()) return;
-    this.ctl.videoContainer.classList.add("tmg-video-overlay");
+    this.ctlr.videoContainer.classList.add("tmg-video-overlay");
     this.state.visible = true;
     this.delay();
   }
@@ -59,7 +60,7 @@ export class OverlayPlug extends BasePlug<Overlay, OverlayState> {
 
   public remove(manner?: "force"): void {
     if (this.shouldRemove(manner)) {
-      this.ctl.videoContainer.classList.remove("tmg-video-overlay");
+      this.ctlr.videoContainer.classList.remove("tmg-video-overlay");
       this.state.visible = false;
     }
   }

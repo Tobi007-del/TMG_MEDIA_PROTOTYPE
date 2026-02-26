@@ -171,7 +171,7 @@
   --t007-toast-image-background: var(--T_M_G-video-background);
   --t007-toast-progress-background: var(--T_M_G-video-played-seek-bar-background);
   --t007-toast-progress-backdrop-background: var(--T_M_G-video-base-seek-bar-background);
-  --t007-toast-action-button-color: var(--tmg-video-theme-inverse-color);
+  --t007-toast-action-button-color: var(--T_M_G-video-theme-inverse-color);
 }
 .T_M_G-video-container .t007-toast-container {
   --t007-toast-container-margin-left: var(--T_M_G-video-current-safe-inset-x);

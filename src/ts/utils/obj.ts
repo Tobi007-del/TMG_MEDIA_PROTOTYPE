@@ -30,11 +30,7 @@ export function inBoolArrOpt(opt: any, str: string): boolean {
 }
 
 // Assignment & Derivation
-export function assignDef<T extends object>(target: T, key: Paths<T>, value: PathValue<T, typeof key>): void {
-  isDef(value) && target != null && setAny(target, key, value);
-}
-
-export function assignHTMLConfig<T extends object>(target: T, attr: `tmg--${Paths<T, "--">}`, value: string): void {
+export function setHTMLConfig<T extends object>(target: T, attr: `tmg--${Paths<T, "--">}`, value: string): void {
   value = value.trim();
   const path = attr.replace("tmg--", "") as Paths<T, "--">;
   const parsedValue = (() => {

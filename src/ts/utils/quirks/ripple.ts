@@ -1,6 +1,6 @@
 import { createEl } from "..";
 
-export const rippleHandler = (e: PointerEvent, target?: HTMLElement, forceCenter: boolean = false): void => {
+export function rippleHandler(e: PointerEvent, target?: HTMLElement, forceCenter: boolean = false): void {
   const el = target || (e.currentTarget as HTMLElement);
   if ((e.target !== e.currentTarget && (e.target as unknown as Element)?.matches("button,[href],input,label,select,textarea,[tabindex]:not([tabindex='-1'])")) || el?.hasAttribute("disabled") || (e.pointerType === "mouse" && e.button !== 0)) return;
   e.stopPropagation?.();
@@ -21,4 +21,4 @@ export const rippleHandler = (e: PointerEvent, target?: HTMLElement, forceCenter
     ["pointerup", "pointercancel"].forEach((evt) => el.ownerDocument.defaultView?.removeEventListener(evt, release));
   };
   ["pointerup", "pointercancel"].forEach((evt) => el.ownerDocument.defaultView?.addEventListener(evt, release));
-};
+}

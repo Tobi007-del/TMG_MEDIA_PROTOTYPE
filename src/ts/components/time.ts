@@ -15,22 +15,22 @@ export class Time extends BaseComponent<TimeConfig, ComponentState, HTMLButtonEl
   }
 
   public wire(): void {
-    this.plug = this.ctl.getPlug<TimePlug>("time");
+    this.plug = this.ctlr.getPlug<TimePlug>("time");
     addSafeClicks(this.element, this.plug?.toggleMode, this.plug?.rotateFormat, { signal: this.signal });
-    this.ctl.media.on("state.currentTime", this.updateUI, { signal: this.signal, immediate: true });
-    this.ctl.config.on("settings.time.mode", this.updateUI, { signal: this.signal });
-    this.ctl.config.on("settings.time.format", this.updateUI, { signal: this.signal });
-    this.ctl.config.on("settings.keys.shortcuts.timeMode", this.updateARIA, { signal: this.signal, immediate: true });
-    this.ctl.config.on("settings.keys.shortcuts.timeFormat", this.updateARIA, { signal: this.signal });
+    this.ctlr.media.on("state.currentTime", this.updateUI, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.time.mode", this.updateUI, { signal: this.signal });
+    this.ctlr.config.on("settings.time.format", this.updateUI, { signal: this.signal });
+    this.ctlr.config.on("settings.keys.shortcuts.timeMode", this.updateARIA, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.keys.shortcuts.timeFormat", this.updateARIA, { signal: this.signal });
   }
 
   protected updateUI(): void {
-    this.element.textContent = this.plug?.toTimeText(this.ctl.media.state.currentTime, true) || "-:--";
+    this.element.textContent = this.plug?.toTimeText(this.ctlr.media.state.currentTime, true) || "-:--";
   }
   protected updateARIA() {
     this.state.label = `Show ${this.plug?.nextMode} time`;
-    this.state.cmd = formatKeyForDisplay(this.ctl.config.settings.time.mode);
-    this.el.title = `Switch (mode${this.state.cmd} / DblClick→format${formatKeyForDisplay(this.ctl.config.settings.keys.shortcuts.timeFormat)})`;
+    this.state.cmd = formatKeyForDisplay(this.ctlr.config.settings.time.mode);
+    this.el.title = `Switch (mode${this.state.cmd} / DblClick→format${formatKeyForDisplay(this.ctlr.config.settings.keys.shortcuts.timeFormat)})`;
     this.setBtnARIA("Switch time format");
   }
 }

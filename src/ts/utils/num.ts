@@ -33,7 +33,7 @@ export function remToPx(val: number): number {
 // Helpers
 export function stepNum<T extends AptRange>(v = 0, { min, max, step }: T): number {
   const s = Math.round((safeNum(v) - min) / step) * step + min;
-  return clamp(min, +(s.toFixed(10)), max);
+  return clamp(min, +s.toFixed(10), max);
 }
 
 const _stepsCache = new Map<string, number[]>();

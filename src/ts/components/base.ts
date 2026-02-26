@@ -4,7 +4,7 @@ import { Controller } from "../core/controller";
 import { parseForARIAKS } from "../utils";
 
 export interface ComponentConstructor<T extends BaseComponent = BaseComponent> {
-  new (ctl: Controller, config?: any, state?: any): T;
+  new (ctlr: Controller, config?: any, state?: any): T;
   componentName: string;
   isControl?: boolean;
 }
@@ -27,13 +27,13 @@ export abstract class BaseComponent<Config = any, State extends ComponentState =
     return this.element as El;
   }
 
-  constructor(ctl: Controller, config: Config, state?: State) {
-    super(ctl, config, { disabled: false, hidden: false, ...state } as State);
+  constructor(ctlr: Controller, config: Config, state?: State) {
+    super(ctlr, config, { disabled: false, hidden: false, ...state } as State);
   }
   protected onSetup(): void {
     this.mount?.();
-    if (this.ctl.state.readyState) this.wire?.();
-    else this.wire && this.ctl.state.once("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup
+    if (this.ctlr.state.readyState) this.wire?.();
+    else this.wire && this.ctlr.state.once("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup
   }
   protected onDestroy(): void {
     this.unmount();

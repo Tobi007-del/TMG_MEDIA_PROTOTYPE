@@ -126,7 +126,7 @@ export type ArrowNavHandle = {
   destroy: () => void;
 };
 
-export const initArrowFocusNav = (container: HTMLElement, cfg: ArrowNavConfig = {}): ArrowNavHandle => {
+export function initArrowFocusNav(container: HTMLElement, cfg: ArrowNavConfig = {}): ArrowNavHandle {
   const { enabled: isEnabled, selector, focusOnHover, loop, virtual, typeahead, resetMs, activeClass, inputSelector, defaultTabbableIndex, grid, rtl: isRtl, focusOptions, scrollIntoView, onSelect, onFocusOut, rovingTabIndex } = { ...DEFAULT_CONFIG, ...cfg };
 
   let gridX = grid.x || 1;

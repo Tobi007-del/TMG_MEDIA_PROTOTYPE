@@ -16,7 +16,7 @@ export type State<T> = T extends Intent<infer U> ? U : T;
 export interface ReactorOptions {}
 export type Reactor<T> = Reactor<T>;
 
-export type Event<T, P> = Event<T, P>;
+export type { Event };
 export interface Target<T, P extends WCPaths<T> = WCPaths<T>> {
   path: P;
   value?: PathValue<T, P>;

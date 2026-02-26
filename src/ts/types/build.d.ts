@@ -25,7 +25,7 @@ import type {
   Skeleton,
   TimeTravel,
   Volume,
-  Time,
+  CTime,
   Brightness,
   PlaybackRate,
   Auto,
@@ -67,7 +67,6 @@ export interface Captions {
 export interface Settings {
   noOverride: keyof Settings | boolean;
   auto: Auto;
-  toasts: Toasts;
   css: Css;
   brightness: Brightness;
   captions: Captions;
@@ -112,7 +111,7 @@ export interface Settings {
   playbackRate: PlaybackRate;
   playsInline: PlaysInline;
   techOrder: string[];
-  time: Time;
+  time: CTime;
   toasts: Toasts;
   volume: Volume;
 }

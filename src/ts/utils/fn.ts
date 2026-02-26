@@ -2,10 +2,9 @@ import { FN_KEY } from "../consts/generics";
 import { uid } from ".";
 
 // ============ Timer Utilities ============
-const isSig = (a: any): a is AbortSignal => a instanceof AbortSignal;
 
 export function setTimeout(handler: TimerHandler, timeout?: number, ...args: any[]) {
-  const sig = isSig(args[0]) ? args.shift() : undefined;
+  const sig = args[0] instanceof AbortSignal ? args.shift() : undefined;
   if (sig?.aborted) return -1;
   if (!sig) return window.setTimeout(handler, timeout, ...args);
   const id = window.setTimeout(() => (sig.removeEventListener("abort", kill), typeof handler === "string" ? new Function(handler) : handler(...args)), timeout),
@@ -14,7 +13,7 @@ export function setTimeout(handler: TimerHandler, timeout?: number, ...args: any
 }
 
 export function setInterval(handler: TimerHandler, timeout?: number, ...args: any[]) {
-  const sig = isSig(args[0]) ? args.shift() : undefined;
+  const sig = args[0] instanceof AbortSignal ? args.shift() : undefined;
   if (sig?.aborted) return -1;
   const id = window.setInterval(handler, timeout, ...args);
   return (sig?.addEventListener("abort", () => window.clearInterval(id), { once: true }), id);

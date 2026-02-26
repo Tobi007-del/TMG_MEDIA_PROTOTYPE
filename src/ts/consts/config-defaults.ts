@@ -11,7 +11,7 @@ export const DEFAULT_VIDEO_BUILD: DeepPartial<VideoBuild> = {
   lightState: { disabled: false, controls: ["meta", "bigplaypause", "fullscreenorientation"], preview: { usePoster: true, time: 2 } },
   debug: true,
   settings: {
-    auto: { next: 2000000 },
+    auto: { next: { value: 20, videoPreview: { usePoster: true, time: 2, tease: true } } },
     css: {},
     brightness: { min: 0, max: 150, value: 100, skip: 5 },
     captions: {
@@ -204,7 +204,7 @@ export const DEFAULT_VIDEO_BUILD: DeepPartial<VideoBuild> = {
     playbackRate: { min: 0.25, max: 8, skip: 0.25 },
     playsInline: true,
     time: { min: 0, skip: 10, previews: false, mode: "elapsed", format: "digital", seekSync: false },
-    toasts: { disabled: false, nextVideoPreview: { usePoster: true, time: 2, tease: true }, captureAutoClose: 15000000, maxToasts: 7, position: "bottom-left", hideProgressBar: true, closeButton: !IS_MOBILE, animation: "slide-up", dragToCloseDir: "x||y" },
+    toasts: { disabled: false, captureAutoClose: 15000, maxToasts: 7, position: "bottom-left", hideProgressBar: true, closeButton: !IS_MOBILE, animation: "slide-up", dragToCloseDir: "x||y" },
     volume: { min: 0, max: 300, skip: 5 },
   },
 };

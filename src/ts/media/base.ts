@@ -1,12 +1,12 @@
 import { Controllable } from "../core/controllable";
 import type { Controller } from "../core/controller";
 import { Reactive } from "../tools/mixins/reactive";
-import type { Media, MediaFeatures } from "../types/contract";
+import type { CMedia, MediaFeatures } from "../types/contract";
 
-export type BaseTechConfig = Reactive<Media>; // Must extend to add more
+export type BaseTechConfig = Reactive<CMedia>; // Must extend to add more
 
 export interface TechConstructor<T extends BaseTech = BaseTech> {
-  new (ctl: Controller, config: any): T;
+  new (ctlr: Controller, config: any): T;
   techName: string;
   features: MediaFeatures;
   canPlaySource(src: string): boolean;
@@ -26,14 +26,14 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
     return this.element as El;
   }
 
-  constructor(ctl: Controller, config: Config) {
-    super(ctl, config);
+  constructor(ctlr: Controller, config: Config) {
+    super(ctlr, config);
     this.element = config.element; // must reassign if not using original
   }
   public onSetup() {
     this.mount();
-    if (this.ctl.state.readyState) this.wire();
-    else this.ctl.state.wonce("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup
+    if (this.ctlr.state.readyState) this.wire();
+    else this.ctlr.state.wonce("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup
   }
   public onDestroy() {
     this.unmount();
@@ -59,7 +59,7 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
     this.wireEnded();
     this.wireFeatures();
   }
-  // --- The Core 5 (Media "Must Haves") ---
+  // --- The Core 5 (CMedia "Must Haves") ---
   protected abstract wireSrc(): void;
   protected abstract wireCurrentTime(): void;
   protected abstract wireDuration(): void;
