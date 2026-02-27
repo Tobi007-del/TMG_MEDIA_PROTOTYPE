@@ -53,22 +53,21 @@ export class Player {
     if (isIter(medium)) return this.notice({ error: "An iterable argument cannot be attached to the TMG media player", tip: "Consider looping the iterable argument to instantiate a new 'tmg.Player' for each" });
     if (this.#active) return medium;
     medium.tmgPlayer?.detach();
+    tmg.Controllers.push(this.build.id as any); // dummy for sync
     medium.tmgPlayer = this;
     this.#medium = medium;
-    await this.fetchCustomOptions();
-    await this.deployController();
+    (await this.fetchCustomOptions(), await this.deployController());
     return (this.#controller?.fire("tmgattached", this.#controller.payload), medium);
   }
 
   public detach() {
     if (!this.#active) return;
-    const medium = this.#controller?.destroy() ?? null;
+    const medium = this.#controller?.destroy() ?? ({} as any);
     this.#controller && Controllers.splice(Controllers.indexOf(this.#controller), 1);
-    medium?.classList.remove(`tmg-${medium?.tagName.toLowerCase()}`, "tmg-media");
-    if (medium) ((medium.tmgcontrols = false), (medium.tmgPlayer = null));
-    this.#active = false;
-    this.#controller?.fire("tmgdetached");
-    this.#controller = this.#medium = null;
+    medium?.classList?.remove(`tmg-${medium?.tagName.toLowerCase()}`, "tmg-media");
+    medium.tmgcontrols = this.#active = false;
+    this.#controller?.fire("tmgdetached", this.#controller.payload);
+    medium.tmgPlayer = this.#controller = this.#medium = null;
     return medium;
   }
 
@@ -101,6 +100,6 @@ export class Player {
     type Mode = keyof typeof s.modes;
     Object.keys(s.modes).forEach((k) => (s.modes[k as Mode] = (s.modes[k as Mode] && (modes[String(k)] ?? true) ? s.modes[k as Mode] : false) as any));
     await Promise.all([loadResource(window.TMG_VIDEO_CSS_SRC), loadResource(window.T007_TOAST_JS_SRC, "script", { module: true }), loadResource(window.T007_INPUT_JS_SRC, "script")]);
-    Controllers.push((this.#controller = new Controller(this.#medium, this.#build)));
+    Controllers[Controllers.indexOf(this.build.id as any)] = this.#controller = new Controller(this.#medium, this.#build);
   }
 }
