@@ -13,7 +13,6 @@ export type Live<T> = T extends Inert<infer U> ? U : T;
 export type Intent<T> = T & { [REJECTABLE]?: true };
 export type State<T> = T extends Intent<infer U> ? U : T;
 
-export interface ReactorOptions {}
 export type Reactor<T> = Reactor<T>;
 
 export type { Event };
@@ -89,3 +88,25 @@ export interface ListenerOptionsTuple extends Omit<SyncOptionsTuple, "lazy"> {
   depth?: number;
 }
 export type ListenerOptions = boolean | ListenerOptionsTuple;
+
+export interface ReactorOptions<T> {
+  debug?: boolean;
+  get?: (
+    object: object,
+    key: string | symbol,
+    receiver: any,
+    paths: Paths<T>[],
+  ) => void;
+  set?: (
+    object: object,
+    key: string | symbol,
+    value: any,
+    receiver: any,
+    paths: Paths<T>[],
+  ) => Boolean | void;
+  deleteProperty?: (
+    object: object,
+    key: string | symbol,
+    paths: Paths<T>[],
+  ) => Boolean | void;
+} // set a (mediator|listener) for desired path here or equality checks eg: `object.is()`

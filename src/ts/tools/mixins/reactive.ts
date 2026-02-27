@@ -25,16 +25,12 @@ const methods = [
 ] as const;
 export type Reactive<T extends object> = T & Pick<Reactor<T>, (typeof methods)[number]>;
 
-export function reactive<T extends object>(target: T | Reactor<T>, options?: ReactorOptions): Reactive<T> {
+export function reactive<T extends object>(target: T | Reactor<T>, options?: ReactorOptions<T>): Reactive<T> {
   const descriptors: PropertyDescriptorMap = {},
-    r = target instanceof Reactor ? target : new Reactor(target, options);
-  for (const m of methods)
-    descriptors[m] = {
-      value: r[m].bind(r),
-      writable: false,
-      enumerable: false,
-      configurable: true,
-    };
+    r = target instanceof Reactor ? target : new Reactor(target, options),
+    locks = { enumerable: false, configurable: true, writable: false };
+  for (const m of methods) descriptors[m] = { value: r[m].bind(r), ...locks };
+  descriptors["__Reactor__"] = { value: r, ...locks };
   Object.defineProperties(r.core, descriptors);
   return r.core as Reactive<T>;
 }

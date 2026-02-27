@@ -186,7 +186,7 @@ export function getTrailRecords<T extends object>(obj: T, path: WCPaths<T>): [WC
     currObj: any = obj;
   for (let i = 0; i < parts.length; i++) {
     acc += (i === 0 ? "" : ".") + parts[i];
-    record.push([acc as WCPaths<T>, currObj, (currObj = Reflect.get(currObj, parts[i]))]); // at most one iteration per depth, storage over derivation
+    record.push([acc as WCPaths<T>, currObj, (currObj = currObj?.[parts[i]])]); // at most one iteration per depth, storage over derivation
   }
   return record;
 }
