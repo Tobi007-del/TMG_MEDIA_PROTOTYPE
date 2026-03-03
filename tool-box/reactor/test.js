@@ -17,7 +17,7 @@ const breathe = () => new Promise((resolve) => setTimeout(resolve, 50));
 
 window.runBenchmark = async function runBenchmark() {
   btn.disabled = true;
-  log(`%c🧪 S.I.A. REACTOR PERFORMANCE EVALUATION`, "font-weight: bold; font-size: 18px; color: #4CAF50;");
+  log(`%c🧪 S.I.A. REACTOR PERFORMANCE EVALUATION`, "font-weight: bold; font-size: 17px; color: #4CAF50;");
   log(`Initializing suite: ${TEST_CYCLES} cycles of ${TEST_ITERATIONS.toLocaleString()} operations...\n`);
 
   const rawObj = { val: 0 };
@@ -25,8 +25,7 @@ window.runBenchmark = async function runBenchmark() {
     { val: 0 },
     {
       set(t, k, v, r) {
-        Reflect.set(t, k, v, r);
-        return true;
+        return Reflect.set(t, k, v, r);
       },
     }
   );
@@ -139,7 +138,38 @@ window.runBenchmark = async function runBenchmark() {
 
   log(`%c\n🎯 CONCLUSION:`, "color: #FF9800; font-weight: bold;");
   log(`At ~${newStats.opsSec.toLocaleString()} operations per second, the S.I.A VN Reactor can process ${opsPerFrame.toLocaleString()} deep reactive state changes within a single 16.6ms rendering frame.`);
+  log(`---------------------------------------------------------------------------\n`);
   btn.disabled = false;
 };
 
 window.addEventListener("load", () => setTimeout(runBenchmark, 2000));
+
+// ==========================================
+// REACTOR ARCHITECTURE BRIEFING
+// ==========================================
+log(`%c🧠 WHAT IS THE S.I.A. REACTOR?`, "color: #FF9800; font-size: 16px; font-weight: bold; padding-bottom: 4px;");
+log(`The State Intent Architecture (S.I.A.) Reactor is a high-performance reactivity engine.`);
+log(`At its core, it is a surgical wrapper around a native JavaScript Proxy, designed to`);
+log(`give raw data objects a DOM-like nervous system without destroying the frame budget.\n`);
+
+log(`%c⚙️ CORE PHILOSOPHY`, "color: darkturquoise; font-weight: bold;");
+log(`• Progressive: Zero overhead for unused features. Only scales when listeners are attached.`);
+log(`• Event Routing: Implements Capture, At-Target, and Bubble phases for deep object trees.`);
+log(`• Intent-Based: Mediators can intercept, alter, or completely TERMINATE state changes.\n`);
+
+log(`%c🛠️ THE API SURFACE`, "color: darkturquoise; font-weight: bold;");
+log(`%c➤ MEDIATORS (The Gatekeepers)`, "color: #9C27B0; font-weight: bold;");
+log(`  .get() / .noget()       : Intercept and alter property reads on the fly.`);
+log(`  .set() / .noset()       : Intercept, validate, or reject property writes.`);
+log(`  .delete() / .nodelete() : Intercept and govern property deletions.\n`);
+
+log(`%c➤ OBSERVERS (The Reactivity)`, "color: #9C27B0; font-weight: bold;");
+log(`  .watch() / .nowatch()   : Listen to precise path mutations (Fast, isolated).`);
+log(`  .on() / .off() / .once(): DOM-like event listeners with path propagation and depth limits.\n`);
+
+log(`%c📉 THE BENCHMARK OBJECTIVE`, "color: #E91E63; font-weight: bold;");
+log(`Native Proxies are inherently slower than bare-metal objects. By adding an entire`);
+log(`event routing system, lineage tracking, and batched microtask scheduling on top of a Proxy,`);
+log(`we introduce overhead. This benchmark proves that the S.I.A Reactor handles this weight`);
+log(`gracefully, executing deeply reactive state changes well within the 16.6ms frame budget.\n`);
+log(`---------------------------------------------------------------------------\n`);

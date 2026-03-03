@@ -1,6 +1,6 @@
 function log(msg, ...styles) {
   console.log(msg, ...styles);
-  logger.append(Object.assign(document.createElement("p"), { textContent: msg.replaceAll("%c", ""), style: styles[0] }));
+  logger.append(Object.assign(document.createElement("p"), { textContent: msg.replaceAll("%c", ""), style: `margin-block: 0; ${styles[0]}` }));
 }
 
 const logger = document.createElement("pre");
