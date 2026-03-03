@@ -1,9 +1,11 @@
 :where(.tmg-media) {
+  display: block;
   aspect-ratio: var(--tmg-video-aspect-ratio);
   border-radius: inherit;
   width: 90dvw;
   max-width: 700px;
   max-height: 80lvh;
+  margin: auto;
 }
 :where(.tmg-media-container.tmg-video-mobile .tmg-media) {
   width: 100%;

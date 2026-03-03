@@ -1,34 +1,38 @@
 import { Controllable } from "../core/controllable";
 import type { Controller } from "../core/controller";
-import { Reactive } from "../tools/mixins/reactive";
-import type { CMedia, MediaFeatures } from "../types/contract";
+import type { CtlrMedia, MediaFeatures } from "../types/contract";
+import type { Event } from "../types/reactor";
+import { reactive, Reactive } from "../tools/mixins/reactive";
+import { capitalize } from "../utils";
 
-export type BaseTechConfig = Reactive<CMedia>; // Must extend to add more
+export type BaseTechConfig = Reactive<CtlrMedia>; // Must extend to add more
 
 export interface TechConstructor<T extends BaseTech = BaseTech> {
   new (ctlr: Controller, config: any): T;
   techName: string;
-  features: MediaFeatures;
   canPlaySource(src: string): boolean;
 }
 
 export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, El extends HTMLElement = HTMLElement> extends Controllable<Config> {
   public static readonly techName: string;
+  public static canPlaySource(src: string): boolean {
+    return false;
+  }
   public get name() {
     return (this.constructor as TechConstructor).techName;
-  }
-  public static readonly features: MediaFeatures = {};
-  public get features() {
-    return (this.constructor as TechConstructor).features;
   }
   public element!: HTMLElement;
   protected get el() {
     return this.element as El;
   }
+  public features: Reactive<MediaFeatures>;
+  protected wiredFeatures: MediaFeatures; // Tracking to avoid rewiring
 
-  constructor(ctlr: Controller, config: Config) {
+  constructor(ctlr: Controller, config: Config, features: Partial<MediaFeatures> = {}) {
     super(ctlr, config);
     this.element = config.element; // must reassign if not using original
+    this.features = reactive(features);
+    this.wiredFeatures = {} as MediaFeatures;
   }
   public onSetup() {
     this.mount();
@@ -37,10 +41,6 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
   }
   public onDestroy() {
     this.unmount();
-  }
-
-  public static canPlaySource(src: string): boolean {
-    return false;
   }
 
   public mount() {
@@ -59,7 +59,7 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
     this.wireEnded();
     this.wireFeatures();
   }
-  // --- The Core 5 (CMedia "Must Haves") ---
+  // --- The Core 5 (CtlrMedia "Must Haves") ---
   protected abstract wireSrc(): void;
   protected abstract wireCurrentTime(): void;
   protected abstract wireDuration(): void;
@@ -67,85 +67,19 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
   protected abstract wireEnded(): void;
   // --- THE EXTENSIONS ---
   protected wireFeatures() {
-    const f = this.features;
-    f.volume && this.wireVolume?.();
-    f.muted && this.wireMuted?.();
-    f.playbackRate && this.wirePlaybackRate?.();
-    f.pictureInPicture && this.wirePictureInPicture?.();
-    f.fullscreen && this.wireFullscreen?.();
-    f.airplay && this.wireAirplay?.();
-    f.chromecast && this.wireChromecast?.();
-    f.xrSession && this.wireXRSession?.();
-    f.xrMode && this.wireXRMode?.();
-    f.xrReferenceSpace && this.wireXRReferenceSpace?.();
-    f.projection && this.wireProjection?.();
-    f.stereoMode && this.wireStereoMode?.();
-    f.fieldOfView && this.wireFieldOfView?.();
-    f.aspectRatio && this.wireAspectRatio?.();
-    f.panningX && this.wirePanningX?.();
-    f.panningY && this.wirePanningY?.();
-    f.panningZ && this.wirePanningZ?.();
-    f.xrInputSource && this.wireXRInputSource?.();
-    f.currentTextTrack && this.wireCurrentTextTrack?.();
-    f.currentAudioTrack && this.wireCurrentAudioTrack?.();
-    f.currentVideoTrack && this.wireCurrentVideoTrack?.();
-    f.autoLevel && this.wireAutoLevel?.();
-    f.currentLevel && this.wireCurrentLevel?.();
-    f.poster && this.wirePoster?.();
-    f.autoplay && this.wireAutoplay?.();
-    f.loop && this.wireLoop?.();
-    f.preload && this.wirePreload?.();
-    f.playsInline && this.wirePlaysInline?.();
-    f.crossOrigin && this.wireCrossOrigin?.();
-    f.controls && this.wireControls?.();
-    f.controlsList && this.wireControlsList?.();
-    f.disablePictureInPicture && this.wireDisablePictureInPicture?.();
-    f.sources && this.wireSources?.();
-    f.tracks && this.wireTracks?.();
+    this.features.on("*", this.handleFeaturesChange, { signal: this.signal, immediate: true });
+    this.ctlr.media.on("intent", this.handleIntentChange, { signal: this.signal });
   }
-  // --- The Engine Inputs (Interceptable) ---
-  protected wireVolume?(): void;
-  protected wireMuted?(): void;
-  protected wirePlaybackRate?(): void;
-  // --- The Presentation Modes (Heavily Rejectable) ---
-  protected wirePictureInPicture?(): void;
-  protected wireFullscreen?(): void;
-  // --- Casting (Connection Handshakes) ---
-  protected wireAirplay?(): void;
-  protected wireChromecast?(): void;
-  // --- VR / XR (Spatial Realities) ---
-  protected wireXRSession?(): void;
-  protected wireXRMode?(): void;
-  protected wireXRReferenceSpace?(): void;
-  // --- Projection & Stereo (The "Content" Logic) ---
-  protected wireProjection?(): void;
-  protected wireStereoMode?(): void;
-  // --- Camera & Viewport (The "Lens") ---
-  protected wireFieldOfView?(): void;
-  protected wireAspectRatio?(): void;
-  // --- Orientation (The "Head/Camera" Pose) ---
-  protected wirePanningX?(): void;
-  protected wirePanningY?(): void;
-  protected wirePanningZ?(): void;
-  // --- Interaction (XR Controllers) ---
-  protected wireXRInputSource?(): void;
-  // --- Track Switching (Async Buffering/Streaming) ---
-  protected wireAutoLevel?(): void;
-  protected wireCurrentLevel?(): void;
-  protected wireCurrentAudioTrack?(): void;
-  protected wireCurrentVideoTrack?(): void;
-  protected wireCurrentTextTrack?(): void;
-  // --- HTML Attributes ---
-  protected wirePoster?(): void;
-  protected wireAutoplay?(): void;
-  protected wireLoop?(): void;
-  protected wirePreload?(): void;
-  protected wirePlaysInline?(): void;
-  protected wireCrossOrigin?(): void;
-  protected wireControls?(): void;
-  protected wireControlsList?(): void;
-  protected wireDisablePictureInPicture?(): void;
-  // --- HTML Lists ---
-  protected wireSources?(): void;
-  protected wireTracks?(): void;
+  protected handleFeaturesChange({ type, target: t }: Event<MediaFeatures, "*">) {
+    type === "update" ? this.wireFeature(t.key) : type === "init" && (Object.keys(t.value) as (keyof MediaFeatures)[]).forEach(this.wireFeature);
+  }
+  protected handleIntentChange(e: Event<CtlrMedia, "intent">) {
+    if (e.type !== "update") return;
+    if (!this.features[e.target.key as keyof MediaFeatures]) e.stopImmediatePropagation();
+  }
+  wireFeature(feature: keyof MediaFeatures): void {
+    if (this.wiredFeatures[feature]) return;
+    this.wiredFeatures[feature] = true;
+    (this as any)[`wire${capitalize(feature)}`]?.();
+  }
 }

@@ -299,4 +299,4 @@ export function initArrowFocusNav(container: HTMLElement, cfg: ArrowNavConfig = 
     getGrid: () => ({ x: gridX, y: gridY, vY: vGridY }),
     destroy,
   };
-};
+}

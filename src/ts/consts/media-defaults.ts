@@ -14,6 +14,8 @@ export const DEFAULT_MEDIA_STATE: MediaState = {
   // Modes
   pictureInPicture: false,
   fullscreen: false,
+  theater: false,
+  miniplayer: false,
   // Casting
   airplay: false,
   chromecast: false,
@@ -24,7 +26,7 @@ export const DEFAULT_MEDIA_STATE: MediaState = {
   projection: "flat",
   stereoMode: "none",
   fieldOfView: 90, // Standard FOV
-  aspectRatio: 16 / 9, // Standard Aspect Ratio
+  viewRatio: 16 / 9, // Standard Aspect Ratio
   panningX: 0,
   panningY: 0,
   panningZ: 0,
@@ -39,7 +41,7 @@ export const DEFAULT_MEDIA_STATE: MediaState = {
   poster: "",
   autoplay: false,
   loop: false,
-  preload: "metadata",
+  preload: "auto",
   playsInline: true,
   crossOrigin: null,
   controls: false, // We disable native controls
@@ -48,6 +50,8 @@ export const DEFAULT_MEDIA_STATE: MediaState = {
   // HTML Lists
   sources: [],
   tracks: [],
+  // Misc
+  objectFit: "contain",
 };
 
 // DEFAULT INTENT (The Wishes)

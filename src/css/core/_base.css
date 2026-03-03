@@ -7,8 +7,6 @@
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  scrollbar-width: thin;
-  scrollbar-color: var(--tmg-video-brand-color) transparent;
 }
 .tmg-media-container *:disabled {
   filter: grayscale(100%);
@@ -19,6 +17,8 @@
 :where(.tmg-media-container) *::before {
   padding: 0;
   margin: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--tmg-video-brand-color) transparent;
 }
 :where(.tmg-media-container) *::selection {
   color: currentColor;

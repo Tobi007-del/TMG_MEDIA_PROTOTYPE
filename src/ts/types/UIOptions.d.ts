@@ -17,9 +17,7 @@ export interface UIConfig<T> {
 }
 
 export type UIObject<T> = {
-  [K in keyof T as T[K] extends object ? K : never]: T[K] extends UISettings<
-    infer U
-  >
+  [K in keyof T as T[K] extends object ? K : never]: T[K] extends UISettings<infer U>
     ? UIConfig<U>
     : UIObject<T[K]>;
 };

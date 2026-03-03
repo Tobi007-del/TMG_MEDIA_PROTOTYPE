@@ -1,11 +1,11 @@
 import { AUDIO_CONTEXT, type RuntimeState } from "../tools/runtime";
 import type { VideoBuild } from "../types/build";
-import type { CMedia } from "../types/contract";
+import type { CtlrMedia } from "../types/contract";
 import { reactive, type Reactive, guardAllMethods, guardMethod, nuke, inert, intent } from "../tools/mixins";
 import { TechRegistry, PlugRegistry } from "./registry";
 import { TechConstructor, BaseTech, HTML5Tech } from "../media";
 import { PlugConstructor, ToastsPlug, type BasePlug as Plug } from "../plugs";
-import { setTimeout, requestAnimationFrame, clamp, uncamelize, cloneMedia, getMediaReport, isSameURL, isSameSources, observeIntersection, observeResize, queryFullscreen, getSizeTier, createEl } from "../utils";
+import { setTimeout, requestAnimationFrame, getWindow, clamp, uncamelize, cloneMedia, getMediaReport, isSameURL, isSameSources, observeIntersection, observeResize, queryFullscreen, getSizeTier, createEl } from "../utils";
 
 interface LifePayload {
   readyState: number;
@@ -27,10 +27,10 @@ export class Controller {
   // --- RUNTIME (Global Controller States) ---
   public config: Reactive<VideoBuild>;
   public state: Reactive<RuntimeState> & Record<string, any>; // runtime state and states to be populated for easy reach
-  public media: Reactive<CMedia>;
+  public media: Reactive<CtlrMedia>;
   // --- MEMORY ---
   public buildCache: VideoBuild;
-  private payloadCache: LifePayload = { instance: this } as any; // must use getter for payload
+  private _payload: LifePayload = { instance: this } as any; // must use getter for payload
   // DOM References (Utilized by Core Plugs)
   public videoContainer: HTMLElement = createEl("div");
   public pseudoVideo: HTMLVideoElement = createEl("video");
@@ -60,7 +60,7 @@ export class Controller {
       docInFullscreen: queryFullscreen(),
     });
     const defaults = getMediaReport(medium); // returns defaults and initials
-    this.media = reactive<CMedia>({
+    this.media = reactive<CtlrMedia>({
       tech: {} as BaseTech, // dummy tech to be replaced on boot
       element: medium,
       intent: intent(defaults.intent),
@@ -124,7 +124,7 @@ export class Controller {
       }
     }
     this.switchTech(selectedTech || HTML5Tech);
-    if (selectedSource !== prefSrc && !selectedTech?.features?.sources) this.media.intent.src = selectedSource!; // since tech can't handle sources
+    if (selectedSource !== prefSrc && !this.media.tech.features.sources) this.media.intent.src = selectedSource!; // since tech can't handle sources
   }
   public switchTech(TechClass: TechConstructor, config = this.media): void {
     if (this.media.tech && TechClass === this.media.tech.constructor) return;
@@ -143,8 +143,8 @@ export class Controller {
 
   public get payload() {
     const readyState = this.state?.readyState ?? 0;
-    ((this.payloadCache.readyState = readyState), (this.payloadCache.initialized = readyState > 0), (this.payloadCache.destroyed = readyState < 0));
-    return this.payloadCache;
+    ((this._payload.readyState = readyState), (this._payload.initialized = readyState > 0), (this._payload.destroyed = readyState < 0));
+    return this._payload;
   }
   public setReadyState(state?: number, medium?: HTMLVideoElement) {
     const readyState = !this.state ? 0 : clamp(0, state ?? this.state.readyState + 1, 3);
@@ -177,16 +177,16 @@ export class Controller {
       return (this.throttleMap.set(key, now), fn());
     }
     if (this.throttleMap.has(key)) return;
-    const id = setTimeout(() => this.throttleMap.delete(key), delay, this.signal); // uses timeout so code runs when sync thread is free
+    const id = setTimeout(() => this.throttleMap.delete(key), delay, this.signal, getWindow(this.videoContainer)); // uses timeout so code runs when sync thread is free
     return (this.throttleMap.set(key, id), fn());
   }
   public RAFLoop(key: string, fn: Function) {
     this.rafLoopFnMap.set(key, fn);
-    const loop = () => (this.rafLoopFnMap.get(key)?.(), this.rafLoopMap.set(key, requestAnimationFrame(loop, this.signal)));
-    !this.rafLoopMap.has(key) && this.rafLoopMap.set(key, requestAnimationFrame(loop, this.signal));
+    const loop = () => (this.rafLoopFnMap.get(key)?.(), this.rafLoopMap.set(key, requestAnimationFrame(loop, this.signal, getWindow(this.videoContainer))));
+    !this.rafLoopMap.has(key) && this.rafLoopMap.set(key, requestAnimationFrame(loop, this.signal, getWindow(this.videoContainer)));
   }
   public cancelRAFLoop(key: string) {
-    (cancelAnimationFrame(this.rafLoopMap.get(key)!), this.rafLoopFnMap.delete(key), this.rafLoopMap.delete(key));
+    (getWindow(this.videoContainer)?.cancelAnimationFrame(this.rafLoopMap.get(key)!), this.rafLoopFnMap.delete(key), this.rafLoopMap.delete(key));
   }
   public cancelAllLoops = (): void => this.rafLoopMap.keys().forEach(this.cancelRAFLoop);
 

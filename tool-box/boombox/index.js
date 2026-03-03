@@ -141,7 +141,7 @@ class Boombox {
     // We connect back to TVP's limiter so we don't blow out the user's speakers
     this.analyser.connect(tmg._limiter);
   }
-  handlePanChange({ target: { value } }) {
+  handlePanChange({ value }) {
     this.stereoPanner?.pan.setTargetAtTime(Number(value), this.ctime, 0.02);
     [this.stereoLeftBtn, this.stereoRightBtn, this.stereoCenterBtn].forEach((btn) => btn.classList.toggle("activated", btn.dataset.pan == value));
   }
@@ -150,14 +150,14 @@ class Boombox {
     this.state.audio.volume.muted = value === 0;
     // this.ctl.media.intent.volume = value; // real
   }
-  handleVolumeChange({ target: { value } }) {
+  handleVolumeChange({ value }) {
     this.volumeText.textContent = `${(this.volumeSlider.value = value)}%`;
   }
-  handleMinChange({ target: { value } }) {
+  handleMinChange({ value }) {
     if (value >= this.state.audio.volume.value) this.state.audio.volume.value = value;
     this.volumeSlider.min = value;
   }
-  handleMaxChange({ target: { value } }) {
+  handleMaxChange({ value }) {
     if (value <= this.state.audio.volume.value) this.state.audio.volume.value = value;
     this.volumeSlider.max = value;
   }
@@ -169,10 +169,10 @@ class Boombox {
     } else if (tmg.isValidNum(this.lastVolume)) this.state.audio.volume.value = this.lastVolume; // dummy
     // this.ctl.media.intent.muted = muted; // real
   }
-  handleMutedChange({ target: { value: muted } }) {
+  handleMutedChange({ value: muted }) {
     this.muteBtn.classList.toggle("activated", muted);
   }
-  handleBoostChange({ target: { value: boost } }) {
+  handleBoostChange({ value: boost }) {
     if (!boost) {
       this.lastMax = this.state.audio.volume.max;
       this.state.audio.volume.max = tmg.clamp(this.state.audio.volume.min, this.state.audio.volume.max, boost ? Infinity : 100);
@@ -180,21 +180,21 @@ class Boombox {
     // no real yet but likely same
     this.boostBtn.classList.toggle("activated", boost);
   }
-  handleMoveModeChange({ target: { value: moveMode } }) {
+  handleMoveModeChange({ value: moveMode }) {
     this.moveModeBtn.classList.toggle("activated", moveMode === "3d");
   }
   onPaused(paused) {
     !paused ? this.media.play().catch((e) => (Toast.error(`Failed to play audio`), console.error("Failed to play audio:", e))) : this.media.pause(); // dummy
     // this.ctl.media.intent.paused = paused; // real
   }
-  handlePausedChange({ target: { value: paused } }) {
+  handlePausedChange({ value: paused }) {
     this.bbEl.classList.toggle("paused", paused);
     this.playBtn.classList.toggle("activated", !paused);
   }
-  handleVibeChange({ target: { value: vibe } }) {
+  handleVibeChange({ value: vibe }) {
     this.bbEl.style.setProperty("--bb-vibe", vibe * 0.007); // most natural plus 7's my fav
   }
-  handleVibeDisabledChange({ target: { value: disabled } }) {
+  handleVibeDisabledChange({ value: disabled }) {
     !disabled ? this.RAFLoop("vibing", this.startVibing) : this.cancelRAFLoop("vibing");
   }
   handleTransformChange() {

@@ -25,11 +25,14 @@ declare function createEl<K extends keyof HTMLElementTagNameMap>(tag: K, props?:
 declare function createEl(tag: string, props?: Partial<HTMLElement>, dataset?: Dataset, styles?: Style): HTMLElement | null;
 declare function assignEl<K extends keyof HTMLElementTagNameMap>(el?: HTMLElementTagNameMap[K], props?: Partial<HTMLElementTagNameMap[K]>, dataset?: Dataset, styles?: Style): void;
 declare function assignEl(el?: HTMLElement, props?: Partial<HTMLElement>, dataset?: Dataset, styles?: Style): void;
-declare function loadResource(src: string, type?: ResourceType, { module, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, attempts, retryKey }?: LoadResourceOptions): Promise<HTMLElement | void>;
+declare function getWindow(el?: any): (Window & typeof globalThis) | undefined;
+declare function loadResource(src: string, type?: ResourceType, { module, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, attempts, retryKey }?: LoadResourceOptions, w?: Window & typeof globalThis): Promise<HTMLElement | void>;
 declare function inDocView(el: Element, axis?: "x" | "y"): boolean;
 declare function getElSiblingAt(p: number, dir: Direction, els: HTMLElement[] | NodeListOf<HTMLElement>, pos?: Position): Element | undefined;
 declare const queryFullscreen: () => boolean;
 declare function queryFullscreenEl(): Element | null;
+declare const queryPictureInPicture: () => boolean;
+declare const queryPictureInPictureEl: () => Element | null;
 declare function supportsFullscreen(): boolean;
 declare function supportsPictureInPicture(): boolean;
 declare function enterFullscreen(el: Element): Promise<void>;
@@ -109,69 +112,99 @@ export type ArrowNavHandle = {
 };
 declare function initArrowFocusNav(container: HTMLElement, cfg?: ArrowNavConfig): ArrowNavHandle;
 export type Primitive = string | number | boolean | bigint | symbol | null | undefined;
-export type NoTraverse = Primitive | Function | Date | Error | RegExp | Promise<any> | Map<any, any> | WeakMap<any, any> | Set<any> | WeakSet<any> | HTMLElement | Element | Node | EventTarget | Window | Document | AbortSignal | Inert<unknown>;
-export type WCPaths<T> = "*" | Paths<T>;
-export type Paths<T, S extends string = "."> = T extends NoTraverse ? never : T extends readonly (infer U)[] ? `${Extract<keyof T, number>}` | `${Extract<keyof T, number>}${S}${Paths<U, S>}` : {
-	[K in keyof T & (string | number)]: T[K] extends Primitive ? `${K}` : `${K}` | `${K}${S}${Paths<T[K], S>}`;
+export type NoTraverse = Primitive | Function | Date | Error | RegExp | Promise<any> | Map<any, any> | WeakMap<any, any> | Set<any> | WeakSet<any> | HTMLElement | Element | Node | EventTarget | Window | Document | DOMTokenList | TextTrackList | TextTrackCue | AbortSignal | TimeRanges | MediaStream | Inert<unknown>;
+export type Paths<T, S extends string = ".", D extends number = RDepth> = [
+	D
+] extends [
+	0
+] ? never // Circuit Breaker Triggered
+ : T extends NoTraverse ? never : T extends readonly (infer U)[] ? `${Extract<keyof T, number>}` | `${Extract<keyof T, number>}${S}${Paths<U, S, RPrev[D]>}` : {
+	[K in keyof T & (string | number)]: T[K] extends Primitive ? `${K}` : `${K}` | `${K}${S}${Paths<T[K], S, RPrev[D]>}`;
 }[keyof T & (string | number)];
+export type WildPaths<T, S extends string = "."> = "*" | Paths<T, S>;
+export type ChildPaths<T, P extends WildPaths<T>, S extends string = "."> = P extends "*" ? Paths<T, S> : P | Extract<Paths<T, S>, `${P}${S}${string}`>;
+export type PathKey<T, P extends string = Paths<T>, S extends string = "."> = P extends "*" ? keyof T & (string | number) : PathLeaf<P, S>; // Loose since reactor just slices strings
 export type PathValue<T, P extends string = Paths<T>, S extends string = "."> = P extends "*" ? T : P extends `${infer K}${S}${infer Rest}` ? K extends keyof T ? PathValue<T[K], Rest, S> : never : P extends keyof T ? T[P] : never;
-export type PathParentValue<T, P extends string = Paths<T>> = P extends `${infer Parent}.${infer _Rest}` ? Parent extends "" ? T : PathValue<T, Parent> : T;
-// Turns dotted keys into nested objects while preserving value types
-export type Unflatten<T extends Record<string, any>, S extends string = "."> = UnionToIntersection<{
+export type PathBranchValue<T, P extends string = Paths<T>, S extends string = "."> = P extends "*" ? T : P extends `${string}${S}${string}` ? PathValue<T, PathBranch<P, S>, S> : T;
+export type Unflatten<T extends object, S extends string = "."> = UnionToIntersection<{
 	[K in keyof T & string]: UnflattenKey<K, T[K], S>;
-}[keyof T & string]>;
-export type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
+}[keyof T & string]>; // Turns dotted keys into nested objects while preserving value types
 export type UnflattenKey<K extends string, V, S extends string> = K extends `${infer Head}${S}${infer Tail}` ? {
 	[P in Head]: UnflattenKey<Tail, V, S>;
 } : {
 	[P in K]: V;
 };
-// "It's not that deep" Warriors
-export type DeepMerge<T1, T2> = T2 extends object ? T1 extends object ? {
-	[K in keyof T1 | keyof T2]: K extends keyof T2 ? K extends keyof T1 ? DeepMerge<T1[K], T2[K]> : T2[K] : K extends keyof T1 ? T1[K] : never;
+// Helpers
+export type PathLeaf<P extends string, S extends string = "."> = P extends `${infer _Head}${S}${infer Tail}` ? PathLeaf<Tail, S> : P;
+export type PathBranch<P extends string, S extends string = "."> = P extends `${infer Head}${S}${infer Tail}` ? Tail extends `${string}${S}${string}` ? `${Head}${S}${PathBranch<Tail, S>}` : Head : never;
+export type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
+export type DeepMerge<T1, T2, D extends number = RDepth> = [
+	D
+] extends [
+	0
+] ? never : T2 extends object ? T1 extends object ? {
+	[K in keyof T1 | keyof T2]: K extends keyof T2 ? K extends keyof T1 ? DeepMerge<T1[K], T2[K], RPrev[D]> : T2[K] : K extends keyof T1 ? T1[K] : never;
 } : T2 : T2;
-export type DeepPartial<T> = T extends Function ? T : T extends Array<infer U> ? Array<DeepPartial<U>> : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>> : T extends object ? {
-	[P in keyof T]?: DeepPartial<T[P]>;
+export type DeepPartial<T, D extends number = RDepth> = [
+	D
+] extends [
+	0
+] ? never : T extends Function ? T : T extends Array<infer U> ? Array<DeepPartial<U, RPrev[D]>> : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U, RPrev[D]>> : T extends object ? {
+	[P in keyof T]?: DeepPartial<T[P], RPrev[D]>;
 } : T;
+// --- RECURSION LIMITERS ---
+export type RDepth = 19; // current limit for state trees, observed ts max - 19; limit needed cuz of ts bundlers
+// This tuple maps a number to the number below it (Index 4 contains 3) allowing `RPrev[D]` to subtract 1 from our depth.
+export type RPrev = [
+	never,
+	0,
+	1,
+	2,
+	3,
+	4,
+	5,
+	6,
+	7,
+	8,
+	9,
+	10,
+	11,
+	12,
+	13,
+	14,
+	15,
+	16,
+	17,
+	18,
+	19
+];
 export declare const RAW: unique symbol;
 export declare const REJECTABLE: unique symbol;
 export declare const INERTIA: unique symbol;
 export declare const TERMINATOR: unique symbol;
-export declare const REOPTS: {
-	readonly LISTENER: readonly [
-		"capture",
-		"depth",
-		"once",
-		"signal",
-		"immediate"
-	];
-	readonly MEDIATOR: readonly [
-		"lazy",
-		"signal",
-		"immediate"
-	];
-};
-declare class Event$1<T, P extends WCPaths<T> = WCPaths<T>> {
+export declare class ReactorEvent<T, P extends WildPaths<T> = WildPaths<T>> {
 	static readonly NONE = 0;
 	static readonly CAPTURING_PHASE = 1;
 	static readonly AT_TARGET = 2;
 	static readonly BUBBLING_PHASE = 3;
+	eventPhase: number;
 	type: Payload<T, P>["type"];
 	currentTarget: Payload<T, P>["currentTarget"];
-	eventPhase: number;
 	readonly staticType: Payload<T, P>["type"];
 	readonly target: Payload<T, P>["target"];
 	readonly root: Payload<T, P>["root"];
-	readonly path: Target<T, P>["path"];
-	readonly value: Target<T, P>["value"];
-	readonly oldValue: Target<T, P>["oldValue"];
+	readonly path: Payload<T, P>["target"]["path"];
+	readonly value: Payload<T, P>["target"]["value"];
+	readonly oldValue: Payload<T, P>["target"]["oldValue"];
 	readonly rejectable: boolean;
 	readonly bubbles: boolean;
+	readonly canWarn: boolean;
 	private _propagationStopped;
 	private _immediatePropagationStopped;
 	private _resolved;
 	private _rejected;
-	constructor(payload: Payload<T, P>, bubbles?: boolean);
+	get warn(): ((...args: any[]) => void) | undefined;
+	constructor(payload: Payload<T, P>, bubbles?: boolean, canWarn?: boolean);
 	get propagationStopped(): boolean;
 	stopPropagation(): void;
 	get immediatePropagationStopped(): boolean;
@@ -180,21 +213,24 @@ declare class Event$1<T, P extends WCPaths<T> = WCPaths<T>> {
 	resolve(message?: string): void;
 	get rejected(): string;
 	reject(reason?: string): void;
-	composedPath(): WCPaths<T>[];
+	composedPath(): WildPaths<T>[];
 }
-declare class Reactor<T extends object> {
-	private getters;
-	private setters;
-	private watchers;
-	private listenersRecord;
+export declare class Reactor<T extends object> {
+	private getters?;
+	private setters?;
+	private deleters?;
+	private watchers?;
+	private listeners?;
+	private queue?;
 	private batch;
 	private isBatching;
-	private queue;
 	private proxyCache;
 	private lineage;
+	options?: ReactorOptions<T>;
 	core: T;
-	constructor(obj?: T, options?: ReactorOptions);
-	private proxify;
+	get log(): ((...args: any[]) => void) | undefined;
+	constructor(obj?: T, options?: ReactorOptions<T>);
+	private proxied;
 	private trace;
 	private link;
 	private unlink;
@@ -217,57 +253,20 @@ declare class Reactor<T extends object> {
 	set<P extends Paths<T>>(path: P, cb: Setter<T, P>, opts?: SyncOptions): Reactor<T>["noset"];
 	sonce<P extends Paths<T>>(path: P, cb: Setter<T, P>, opts?: SyncOptions): Reactor<T>["noset"];
 	noset<P extends Paths<T>>(path: P, cb: Setter<T, P>): boolean | undefined;
+	delete<P extends Paths<T>>(path: P, cb: Deleter<T, P>, opts?: SyncOptions): Reactor<T>["nodelete"];
+	donce<P extends Paths<T>>(path: P, cb: Deleter<T, P>, opts?: SyncOptions): Reactor<T>["nodelete"];
+	nodelete<P extends Paths<T>>(path: P, cb: Deleter<T, P>): boolean | undefined;
 	watch<P extends Paths<T>>(path: P, cb: Watcher<T, P>, opts?: SyncOptions): Reactor<T>["nowatch"];
 	wonce<P extends Paths<T>>(path: P, cb: Watcher<T, P>, opts?: SyncOptions): Reactor<T>["nowatch"];
 	nowatch<P extends Paths<T>>(path: P, cb: Watcher<T, P>): boolean | undefined;
-	on<P extends WCPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): Reactor<T>["off"];
-	once<P extends WCPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): Reactor<T>["off"];
-	off<P extends WCPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): boolean | undefined;
-	cascade({ type, currentTarget: { path, value: news, oldValue: olds } }: Event$1<T>, objSafe?: boolean): void;
+	on<P extends WildPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): Reactor<T>["off"];
+	once<P extends WildPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): Reactor<T>["off"];
+	off<P extends WildPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): boolean | undefined;
+	cascade({ type, currentTarget: { path, value: news, oldValue: olds } }: ReactorEvent<T>, objSafe?: boolean): void;
 	snapshot(): T;
 	reset(): void;
 	destroy(): void;
 }
-export type Inert<T> = T & {
-	[INERTIA]?: true;
-};
-export type Live<T> = T extends Inert<infer U> ? U : T;
-export type Intent<T> = T & {
-	[REJECTABLE]?: true;
-};
-export type State<T> = T extends Intent<infer U> ? U : T;
-export interface ReactorOptions {
-}
-export interface Target<T, P extends WCPaths<T> = WCPaths<T>> {
-	path: P;
-	value?: PathValue<T, P>;
-	oldValue?: PathValue<T, P>;
-	key: string;
-	object: PathParentValue<T, P>;
-}
-export interface Payload<T, P extends WCPaths<T> = WCPaths<T>> {
-	type: "init" | "get" | "set" | "delete" | "update"; // init during `immediate: true` sync
-	target: Target<T, P>;
-	currentTarget: Target<T, P>; // use this always to survive shape changes from nesting
-	root: T;
-	rejectable: boolean;
-}
-export type Getter<T, P extends Paths<T> = Paths<T>> = (value: PathValue<T, P> | undefined, payload: Payload<T, P>) => PathValue<T, P> | undefined;
-export type Setter<T, P extends Paths<T> = Paths<T>> = (value: PathValue<T, P> | undefined, terminated: boolean, payload: Payload<T, P>) => PathValue<T, P> | typeof TERMINATOR | undefined;
-export type Watcher<T, P extends Paths<T> = Paths<T>> = (value: PathValue<T, P> | undefined, payload: Payload<T, P>) => void;
-export type Listener<T, P extends WCPaths<T> = WCPaths<T>> = (event: Event$1<T, P>) => void;
-export interface SyncOptionsTuple {
-	lazy?: boolean;
-	once?: boolean;
-	signal?: AbortSignal;
-	immediate?: boolean | "auto";
-}
-export type SyncOptions = boolean | SyncOptionsTuple;
-export interface ListenerOptionsTuple extends Omit<SyncOptionsTuple, "lazy"> {
-	capture?: boolean;
-	depth?: number;
-}
-export type ListenerOptions = boolean | ListenerOptionsTuple;
 declare function onAllMethods(owner: any, callback: (method: string, owner: any) => void): void;
 declare function bindAllMethods(owner: any): void;
 declare function guardAllMethods(owner: any, guardFn?: (fn: Function) => Function, bound?: boolean): void;
@@ -282,6 +281,9 @@ declare const methods: readonly [
 	"set",
 	"sonce",
 	"noset",
+	"delete",
+	"donce",
+	"nodelete",
 	"watch",
 	"wonce",
 	"nowatch",
@@ -293,8 +295,10 @@ declare const methods: readonly [
 	"reset",
 	"destroy"
 ];
-export type Reactive<T extends object> = T & Pick<Reactor<T>, (typeof methods)[number]>;
-declare function reactive<T extends object>(target: T | Reactor<T>, options?: ReactorOptions): Reactive<T>;
+export type Reactive<T extends object> = T & Pick<Reactor<T>, (typeof methods)[number]> & {
+	__Reactor__: Reactor<T>;
+};
+declare function reactive<T extends object>(target: T | Reactor<T>, options?: ReactorOptions<T>): Reactive<T>;
 declare function inert<T extends object>(target: T): Inert<T>;
 declare function live<T extends object>(target: T): Live<T>;
 declare function isInert<T extends object>(target: T): target is Inert<T>;
@@ -302,6 +306,85 @@ declare function intent<T extends object>(target: T): Intent<T>;
 declare function state<T extends object>(target: T): State<T>;
 declare function isIntent<T extends object>(target: T): target is Intent<T>;
 declare function nuke(target: any): void;
+// ===========================================================================
+// CORE MARKERS & STATE WRAPPERS
+// ===========================================================================
+export type Inert<T> = T & {
+	[INERTIA]?: true;
+};
+export type Live<T> = T extends Inert<infer U> ? U : T;
+export type Intent<T> = T & {
+	[REJECTABLE]?: true;
+};
+export type State<T> = T extends Intent<infer U> ? U : T;
+// ===========================================================================
+// EVENT SYSTEM & PAYLOADS
+// ===========================================================================
+export interface Target<T, P extends WildPaths<T> = WildPaths<T>> {
+	path: P;
+	value: PathValue<T, P>;
+	oldValue?: PathValue<T, P>;
+	key: PathKey<T, P>;
+	object: PathBranchValue<T, P>;
+}
+// Discriminated Payload Type (Creates the IDE magic)
+export type Payload<T, P extends WildPaths<T> = WildPaths<T>> = DirectPayload<T, P> | UpdatePayload<T, P>;
+export interface BasePayload<T, P extends WildPaths<T> = WildPaths<T>> {
+	currentTarget: Target<T, P>; // use this to survive shape changes from nesting
+	root: T;
+	rejectable: boolean;
+}
+export interface DirectPayload<T, P extends WildPaths<T> = WildPaths<T>> extends BasePayload<T, P> {
+	type: "init" | "get" | "set" | "delete"; // init during `immediate: true` sync
+	target: Target<T, P>;
+}
+export interface UpdatePayload<T, P extends WildPaths<T> = WildPaths<T>> extends BasePayload<T, P> {
+	type: "update";
+	target: Target<T, ChildPaths<T, P>>; // Target is strictly one of the child paths!
+}
+type Event$1<T, P extends WildPaths<T> = WildPaths<T>> = (Omit<ReactorEvent<T, P>, OverrideEvProp> & DirectPayload<T, P> & OverrideEvPart<DirectPayload<T, P>>) | (Omit<ReactorEvent<T, P>, OverrideEvProp> & UpdatePayload<T, P> & OverrideEvPart<UpdatePayload<T, P>>);
+export type OverrideEvProp = "type" | "target" | "value" | "oldValue" | "path";
+export interface OverrideEvPart<PL extends {
+	target: {
+		path: any;
+		value: any;
+		oldValue?: any;
+	};
+}> {
+	path: PL["target"]["path"];
+	value: PL["target"]["value"];
+	oldValue: PL["target"]["oldValue"];
+}
+// ===========================================================================
+// REACTIVITY CALLBACKS (The Handlers)
+// ===========================================================================
+export type Getter<T, P extends Paths<T> = Paths<T>> = (value: PathValue<T, P> | undefined, payload: Payload<T, P>) => PathValue<T, P> | undefined;
+export type Setter<T, P extends Paths<T> = Paths<T>> = (value: PathValue<T, P> | undefined, terminated: boolean, payload: Payload<T, P>) => PathValue<T, P> | typeof TERMINATOR | undefined;
+export type Deleter<T, P extends Paths<T> = Paths<T>> = (terminated: boolean, payload: Payload<T, P>) => typeof TERMINATOR | undefined;
+export type Watcher<T, P extends Paths<T> = Paths<T>> = (value: PathValue<T, P> | undefined, payload: Payload<T, P>) => void;
+export type Listener<T, P extends WildPaths<T> = WildPaths<T>> = (event: Event$1<T, P>) => void;
+// ===========================================================================
+// CONFIGURATION OPTIONS
+// ===========================================================================
+export interface SyncOptionsTuple {
+	lazy?: boolean;
+	once?: boolean;
+	signal?: AbortSignal;
+	immediate?: boolean | "auto";
+}
+export type SyncOptions = boolean | SyncOptionsTuple;
+export interface ListenerOptionsTuple extends Omit<SyncOptionsTuple, "lazy"> {
+	capture?: boolean;
+	depth?: number;
+}
+export type ListenerOptions = boolean | ListenerOptionsTuple;
+// "wild" mediation, (mediator|listener) for desired path, equality checks eg: `object.is()`
+export interface ReactorOptions<T extends object, P extends Paths<T> = Paths<T>> {
+	debug?: boolean;
+	get?: (object: PathBranchValue<T, P>, key: PathKey<T, P>, value: PathValue<T, P>, receiver: Reactive<T>, paths: Paths<T>[]) => PathValue<T, P> | undefined;
+	set?: (object: PathBranchValue<T, P>, key: PathKey<T, P>, value: PathValue<T, P>, oldValue: PathValue<T, P>, receiver: Reactive<T>, paths: Paths<T>[]) => PathValue<T, P> | typeof TERMINATOR | undefined;
+	delete?: (object: PathBranchValue<T, P>, key: PathKey<T, P>, oldValue: PathValue<T, P>, receiver: Reactive<T>, paths: Paths<T>[]) => typeof TERMINATOR | undefined;
+}
 export declare abstract class Controllable<Config = any, State = any> {
 	protected readonly ac: AbortController;
 	protected readonly signal: AbortSignal;
@@ -343,8 +426,8 @@ declare class SkeletonPlug extends BasePlug<Skeleton> {
 	wire(): void;
 	protected setupContainers(): void;
 	protected injectInterface(): void;
-	protected handlePausedChange({ target: { value } }: Event$1<CMedia, "state.paused">): void;
-	protected handleLoadedMetadataStatus({ target: { value } }: Event$1<CMedia, "status.loadedMetadata">): void;
+	protected handlePausedChange({ value }: Event$1<CtlrMedia, "state.paused">): void;
+	protected handleLoadedMetadataStatus({ value }: Event$1<CtlrMedia, "status.loadedMetadata">): void;
 	activatePseudoMode(): void;
 	deactivatePseudoMode(destroy?: boolean): void;
 	protected onDestroy(): void;
@@ -734,19 +817,18 @@ export type Css = Record<string, string | number> & {
 declare class CSSPlug extends BasePlug<Css> {
 	static readonly plugName: string;
 	static readonly isCore: boolean;
-	classSettings: string[];
+	classKeys: string[];
 	CSSCache: Record<string, string>;
 	wire(): void;
-	protected wireSheetMediators(): void;
-	protected wireClassMediator(key: string): void;
-	protected handleCSSChange({ type, target: { key, value } }: Event$1<VideoBuild, "settings.css">): void;
-	protected getValue(key: string): string;
+	protected wireCSSMediator(): void;
+	protected getCSSValue(key: string): string;
+	protected getClassValue(key: string): string;
+	protected handleCSSChange({ type, target: t }: Event$1<VideoBuild, "settings.css">): void;
 	protected apply(key: string, value: any): void;
 	protected updateCssVariable(key: string, value: any): void;
-	protected updateClass(key: string, value: any): void;
-	protected wireComputedVars(): void;
+	protected updateClassValue(key: string, value: any): void;
 	protected syncAspectRatio(): void;
-	protected handleLoadedMetadataChange({ value }: Event$1<CMedia, "status.loadedMetadata">): void;
+	protected handleLoadedMetadataChange({ value }: Event$1<CtlrMedia, "status.loadedMetadata">): void;
 }
 export interface ComponentConstructor<T extends BaseComponent = BaseComponent> {
 	new (ctlr: Controller, config?: any, state?: any): T;
@@ -844,9 +926,9 @@ declare class ControlPanelPlug extends BasePlug<ControlPanel> {
 	};
 	protected fillZone(zoneW: ZoneW, ids: SControl[] | BigControl[]): void;
 	protected getZones(): HTMLElement[];
-	protected handleTopLayout({ target: { value } }: Event$1<VideoBuild, "settings.controlPanel.top">): void;
-	protected handleCenterLayout({ target: { value } }: Event$1<VideoBuild, "settings.controlPanel.center">): void;
-	protected handleBottomLayout({ target: { value } }: Event$1<VideoBuild, "settings.controlPanel.bottom">): void;
+	protected handleTopLayout({ value }: Event$1<VideoBuild, "settings.controlPanel.top">): void;
+	protected handleCenterLayout({ value }: Event$1<VideoBuild, "settings.controlPanel.center">): void;
+	protected handleBottomLayout({ value }: Event$1<VideoBuild, "settings.controlPanel.bottom">): void;
 	protected getDraggableControls(): NodeListOf<HTMLElement>;
 	protected getDropZones(): HTMLElement[];
 	protected setDragEventListeners(action: "add" | "remove"): void;
@@ -878,8 +960,8 @@ declare class OverlayPlug extends BasePlug<Overlay, OverlayState> {
 	overlayDelayId: number;
 	constructor(ctlr: Controller, config: Overlay);
 	wire(): void;
-	protected handleCurtain({ target: { value } }: Event$1<VideoBuild, "settings.overlay.curtain">): void;
-	protected handleBehavior({ target: { value } }: Event$1<VideoBuild, "settings.overlay.behavior">): void;
+	protected handleCurtain({ value }: Event$1<VideoBuild, "settings.overlay.curtain">): void;
+	protected handleBehavior({ value }: Event$1<VideoBuild, "settings.overlay.behavior">): void;
 	shouldShow(): boolean;
 	shouldRemove(manner?: "force"): boolean;
 	show(): void;
@@ -1053,16 +1135,20 @@ declare class Timeline extends RangeSlider<TimelineConfig> {
 	protected previewBar: HTMLElement;
 	protected previewContext: CanvasRenderingContext2D | null;
 	protected thumbnailContext: CanvasRenderingContext2D | null;
+	protected wasPaused: boolean;
+	protected scrubbingId: number;
 	constructor(ctlr: Controller, options?: Partial<TimelineConfig>);
 	create(): HTMLElement;
 	mount(): void;
 	wire(): void;
 	protected seek(value: number): void;
 	protected handleLoadedMetadata(): void;
-	protected handleTimeUpdate({ target }: Event$1<CMedia, "state.currentTime">): void;
 	protected handleProgress(): void;
-	protected handleDurationChange({ target }: Event$1<CMedia, "status.duration">): void;
-	protected handleScrubbingChange({ target }: Event$1<RangeState, "scrubbing">): void;
+	protected handleDurationChange({ value }: Event$1<CtlrMedia, "status.duration">): void;
+	protected handlePausedChange({ value }: Event$1<CtlrMedia, "state.paused">): void;
+	protected handleCurrentTimeChange({ target }: Event$1<CtlrMedia, "state.currentTime">): void;
+	protected handleTimeUpdateLoop(optimize?: boolean): void;
+	protected handleScrubbingChange({ value }: Event$1<RangeState, "scrubbing">): void;
 	protected handlePreviewChange({ target }: Event$1<TimelineConfig, "previews">): void;
 	stopScrubbing(): void;
 	protected stopPreview(): void;
@@ -1087,7 +1173,7 @@ declare class LockedPlug extends BasePlug<Locked, LockedState> {
 	protected injectLockedWrapper(): void;
 	protected injectScreenLockedBtn(): void;
 	protected handleScreenClick(): void;
-	protected handleLockChange({ target: { value } }: Event$1<VideoBuild, "settings.locked.disabled">): Promise<void>;
+	protected handleLockChange({ value }: Event$1<VideoBuild, "settings.locked.disabled">): Promise<void>;
 	showOverlay(): void;
 	removeOverlay(): void;
 	delayOverlay(): void;
@@ -1111,8 +1197,8 @@ declare class TimePlug extends BasePlug<CTime> {
 	private currentSkipNotifier;
 	wire(): void;
 	protected forwardTimeValue(value?: number): void;
-	protected handleTimeUpdate({ target }: Event$1<CMedia, "state.currentTime">): void;
-	protected handleWaitingStatus({ target: { value } }: Event$1<CMedia, "status.waiting">): void;
+	protected handleTimeUpdate({ target }: Event$1<CtlrMedia, "state.currentTime">): void;
+	protected handleWaitingStatus({ value }: Event$1<CtlrMedia, "status.waiting">): void;
 	toTimeVal(value: number | string | undefined | null): number;
 	toTimeText(time?: number, useMode?: boolean, showMs?: boolean): string;
 	get nextMode(): CTime["mode"];
@@ -1146,7 +1232,7 @@ declare class TimeTravelPlug extends BasePlug<TimeTravel> {
 	/**
 	 * RECORD: Chronicling the lifecycle of the system.
 	 */
-	protected record(e: Event$1<any>): void;
+	protected record(e: Event$1<CtlrMedia, "intent" | "state" | "settings">): void;
 	exportSession(): string;
 	loadSession(json: string): void;
 	/**
@@ -1304,8 +1390,8 @@ declare class VolumePlug extends BasePlug<Volume> {
 	protected handleMutedState(muted: boolean): void;
 	protected forwardVolume(value?: number): void;
 	protected forwardMuted(value?: boolean): void;
-	protected handleVolumeIntent(e: Event$1<CMedia, "intent.volume">): void;
-	protected handleMutedIntent(e: Event$1<CMedia, "intent.muted">): void;
+	protected handleVolumeIntent(e: Event$1<CtlrMedia, "intent.volume">): void;
+	protected handleMutedIntent(e: Event$1<CtlrMedia, "intent.muted">): void;
 	protected handleMinChange({ target }: Event$1<VideoBuild, "settings.volume.min">): void;
 	protected handleMaxChange({ target }: Event$1<VideoBuild, "settings.volume.max">): void;
 	toggleMute(option?: "auto"): void;
@@ -1336,7 +1422,7 @@ declare class BrightnessPlug extends BasePlug<Brightness> {
 	wire(): void;
 	protected handleBrightnessState(value: number): void;
 	protected handleDarkState(dark: boolean): void;
-	protected handleBrightnessChange({ target: { value } }: Event$1<VideoBuild, "settings.brightness.value">): void;
+	protected handleBrightnessChange({ value }: Event$1<VideoBuild, "settings.brightness.value">): void;
 	protected handleDarkChange({ oldValue, value: dark }: Event$1<VideoBuild, "settings.brightness.dark">): void;
 	protected handleMinChange({ target }: Event$1<VideoBuild, "settings.brightness.min">): void;
 	protected handleMaxChange({ target }: Event$1<VideoBuild, "settings.brightness.max">): void;
@@ -1359,10 +1445,10 @@ declare class AutoPlug extends BasePlug<Auto> {
 	wire(): void;
 	protected forwardAutoPlay(value?: boolean | AptAutoplayOption): void;
 	protected handleIntersectionChange(): void;
-	protected handleTimeUpdate({ target }: Event$1<CMedia, "state.currentTime">): void;
-	protected handleUsePoster({ target: { value } }: Event$1<VideoBuild, "settings.auto.next.videoPreview.usePoster">): void;
-	protected handleTease({ target: { value } }: Event$1<VideoBuild, "settings.auto.next.videoPreview.tease">): void;
-	protected handlePreviewTime({ target: { value } }: Event$1<VideoBuild, "settings.auto.next.videoPreview.time">): void;
+	protected handleTimeUpdate({ target }: Event$1<CtlrMedia, "state.currentTime">): void;
+	protected handleUsePoster({ value }: Event$1<VideoBuild, "settings.auto.next.videoPreview.usePoster">): void;
+	protected handleTease({ value }: Event$1<VideoBuild, "settings.auto.next.videoPreview.tease">): void;
+	protected handlePreviewTime({ value }: Event$1<VideoBuild, "settings.auto.next.videoPreview.time">): void;
 	protected handleMediaAptAutoPlay(auto?: string | boolean, bool?: boolean, p?: string): void;
 	protected autonextVideo: () => void;
 }
@@ -1421,7 +1507,7 @@ export interface Toasts extends ToastOptions {
 declare class ToastsPlug extends BasePlug<Toasts> {
 	static readonly plugName: string;
 	wire(): void;
-	protected handleDisabled({ target: { value } }: Event$1<VideoBuild, "settings.toasts.disabled">): void;
+	protected handleDisabled({ value }: Event$1<VideoBuild, "settings.toasts.disabled">): void;
 	protected handleToastUpdate({ type, target: { path, key, value } }: Event$1<VideoBuild, "settings.toasts">): void;
 	get toast(): ToastInstance | null;
 }
@@ -1467,26 +1553,25 @@ export type ErrorMessages = Record<ErrorCode, string>;
 declare class ErrorMessagesPlug extends BasePlug<ErrorMessages> {
 	static readonly plugName: string;
 	wire(): void;
-	protected handleError({ target: { value } }: Event$1<CMedia, "status.error">): void;
+	protected handleError({ value }: Event$1<CtlrMedia, "status.error">): void;
 }
-export type BaseTechConfig = Reactive<CMedia>;
+export type BaseTechConfig = Reactive<CtlrMedia>;
 export interface TechConstructor<T extends BaseTech = BaseTech> {
 	new (ctlr: Controller, config: any): T;
 	techName: string;
-	features: MediaFeatures;
 	canPlaySource(src: string): boolean;
 }
 declare abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, El extends HTMLElement = HTMLElement> extends Controllable<Config> {
 	static readonly techName: string;
+	static canPlaySource(src: string): boolean;
 	get name(): string;
-	static readonly features: MediaFeatures;
-	get features(): MediaFeatures;
 	element: HTMLElement;
 	protected get el(): El;
-	constructor(ctlr: Controller, config: Config);
+	features: Reactive<MediaFeatures>;
+	protected wiredFeatures: MediaFeatures;
+	constructor(ctlr: Controller, config: Config, features?: Partial<MediaFeatures>);
 	onSetup(): void;
 	onDestroy(): void;
-	static canPlaySource(src: string): boolean;
 	mount(): void;
 	unmount(): void;
 	wire(): void;
@@ -1496,45 +1581,12 @@ declare abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, 
 	protected abstract wirePaused(): void;
 	protected abstract wireEnded(): void;
 	protected wireFeatures(): void;
-	protected wireVolume?(): void;
-	protected wireMuted?(): void;
-	protected wirePlaybackRate?(): void;
-	protected wirePictureInPicture?(): void;
-	protected wireFullscreen?(): void;
-	protected wireAirplay?(): void;
-	protected wireChromecast?(): void;
-	protected wireXRSession?(): void;
-	protected wireXRMode?(): void;
-	protected wireXRReferenceSpace?(): void;
-	protected wireProjection?(): void;
-	protected wireStereoMode?(): void;
-	protected wireFieldOfView?(): void;
-	protected wireAspectRatio?(): void;
-	protected wirePanningX?(): void;
-	protected wirePanningY?(): void;
-	protected wirePanningZ?(): void;
-	protected wireXRInputSource?(): void;
-	protected wireAutoLevel?(): void;
-	protected wireCurrentLevel?(): void;
-	protected wireCurrentAudioTrack?(): void;
-	protected wireCurrentVideoTrack?(): void;
-	protected wireCurrentTextTrack?(): void;
-	protected wirePoster?(): void;
-	protected wireAutoplay?(): void;
-	protected wireLoop?(): void;
-	protected wirePreload?(): void;
-	protected wirePlaysInline?(): void;
-	protected wireCrossOrigin?(): void;
-	protected wireControls?(): void;
-	protected wireControlsList?(): void;
-	protected wireDisablePictureInPicture?(): void;
-	protected wireSources?(): void;
-	protected wireTracks?(): void;
+	protected handleFeaturesChange({ type, target: t }: Event$1<MediaFeatures, "*">): void;
+	protected handleIntentChange(e: Event$1<CtlrMedia, "intent">): void;
+	wireFeature(feature: keyof MediaFeatures): void;
 }
 declare class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
 	static readonly techName: string;
-	static readonly features: MediaFeatures;
-	private static readonly DUMMY;
 	protected readonly eOpts: {
 		EL: AddEventListenerOptions;
 		REACTOR: ListenerOptions;
@@ -1573,35 +1625,35 @@ declare class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
 	protected wireActiveCueStatus(): void;
 	protected wireDefaultMuted(): void;
 	protected wireDefaultPlaybackRate(): void;
-	protected handleLoadStartState(): void;
-	protected handleTimeUpdateState(): void;
-	protected handleSeekingState(): void;
-	protected handleSeekedState(): void;
-	protected handleDurationChangeState(): void;
-	protected handlePlayState(): void;
-	protected handlePauseState(): void;
-	protected handleEndedState(): void;
-	protected handleSrcIntent(e: Event$1<CMedia, "intent.src">): void;
-	protected handleCurrentTimeIntent(e: Event$1<CMedia, "intent.currentTime">): void;
-	protected handlePausedIntent(e: Event$1<CMedia, "intent.paused">): void;
-	protected handleVolumeChangeState(): void;
-	protected handleRateChangeState(): void;
-	protected handleEnterPiPState(): void;
-	protected handleLeavePiPState(): void;
-	protected handleFullscreenChangeState(docInFs?: boolean): void;
-	protected handleWebkitBeginFullscreenState(): void;
-	protected handleWebkitEndFullscreenState(): void;
-	protected handleCurrentTrackState(type: TrackType, list: any): void;
-	protected handleHTMLState(mutations: MutationRecord[]): string | boolean | DOMTokenList | null | undefined;
-	protected handleVolumeIntent(e: Event$1<CMedia, "intent.volume">): void;
-	protected handleMutedIntent(e: Event$1<CMedia, "intent.muted">): void;
-	protected handlePlaybackRateIntent(e: Event$1<CMedia, "intent.playbackRate">): void;
-	protected handlePiPIntent(e: Event$1<CMedia, "intent.pictureInPicture">): void;
-	protected handleFullscreenIntent(e: Event$1<CMedia, "intent.fullscreen">): void;
-	protected handleCurrentTrackIntent(e: Event$1<CMedia, `intent.current${TrackType}Track`>, type: TrackType): void;
-	protected handleAttributeIntent(e: Event$1<CMedia, WCPaths<CMedia>>, key: string, isBool: boolean): void;
-	protected handleSourcesIntent(e: Event$1<CMedia, "intent.sources">): void;
-	protected handleTracksIntent(e: Event$1<CMedia, "intent.tracks">): void;
+	protected setLoadStartState(): void;
+	protected setTimeUpdateState(): void;
+	protected setSeekingState(): void;
+	protected setSeekedState(): void;
+	protected setDurationChangeState(): void;
+	protected setPlayState(): void;
+	protected setPauseState(): void;
+	protected setEndedState(): void;
+	protected handleSrcIntent(e: Event$1<CtlrMedia, "intent.src">): void;
+	protected handleCurrentTimeIntent(e: Event$1<CtlrMedia, "intent.currentTime">): void;
+	protected handlePausedIntent(e: Event$1<CtlrMedia, "intent.paused">): void;
+	protected setVolumeChangeState(): void;
+	protected setRateChangeState(): void;
+	protected setEnterPiPState(): void;
+	protected setLeavePiPState(): void;
+	protected setFullscreenChangeState(docInFs?: boolean): void;
+	protected setWebkitBeginFullscreenState(): void;
+	protected setWebkitEndFullscreenState(): void;
+	protected setCurrentTrackState(type: TrackType, list: any): void;
+	protected setHTMLStateFromMutation(mutations: MutationRecord[]): string | boolean | DOMTokenList | null | undefined;
+	protected handleVolumeIntent(e: Event$1<CtlrMedia, "intent.volume">): void;
+	protected handleMutedIntent(e: Event$1<CtlrMedia, "intent.muted">): void;
+	protected handlePlaybackRateIntent(e: Event$1<CtlrMedia, "intent.playbackRate">): void;
+	protected handlePiPIntent(e: Event$1<CtlrMedia, "intent.pictureInPicture">): void;
+	protected handleFullscreenIntent(e: Event$1<CtlrMedia, "intent.fullscreen">): void;
+	protected handleCurrentTrackIntent(e: Event$1<CtlrMedia, `intent.current${TrackType}Track`>, type: TrackType): void;
+	protected handleAttributeIntent(e: Event$1<CtlrMedia, WildPaths<CtlrMedia>>, key: string, isBool: boolean): void;
+	protected handleSourcesIntent(e: Event$1<CtlrMedia, "intent.sources">): void;
+	protected handleTracksIntent(e: Event$1<CtlrMedia, "intent.tracks">): void;
 	protected handleLoadStatus(): void;
 	protected handleLoadedMetadataStatus(): void;
 	protected handleLoadedDataStatus(): void;
@@ -1615,14 +1667,9 @@ declare class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
 	protected handleActiveCueStatus(e?: globalThis.Event | {
 		target?: TextTrack;
 	}): void;
-	protected handleDefaultMutedSetting(e: Event$1<CMedia, "settings.defaultMuted">): void;
-	protected handleDefaultPlaybackRateSetting(e: Event$1<CMedia, "settings.defaultPlaybackRate">): void;
-	protected static canControlVolume(): boolean;
-	protected static canMuteVolume(): boolean;
-	protected static canControlRate(): boolean;
-	protected static supportsTextTracks(): boolean;
-	protected static supportsVideoTracks(): boolean;
-	protected static supportsAudioTracks(): boolean;
+	protected handleDefaultMutedSetting(e: Event$1<CtlrMedia, "settings.defaultMuted">): void;
+	protected handleDefaultPlaybackRateSetting(e: Event$1<CtlrMedia, "settings.defaultPlaybackRate">): void;
+	protected handlePiPState(e: Event$1<CtlrMedia, "state.disablePictureInPicture">): void;
 }
 export interface MediaContract {
 	// "Must Haves" to be even considered media
@@ -1644,6 +1691,8 @@ export interface MediaState {
 	// --- The Presentation Modes (Heavily Rejectable) ---
 	pictureInPicture: boolean;
 	fullscreen: boolean;
+	theater: boolean;
+	miniplayer: boolean;
 	// --- Casting (Connection Handshakes) ---
 	airplay: boolean; // Apple AirPlay
 	chromecast: boolean; // Google Cast
@@ -1655,16 +1704,15 @@ export interface MediaState {
 	projection: "flat" | "equirectangular" | "cubemap" | "cylindrical";
 	stereoMode: "mono" | "sbs" | "top-bottom" | "vr180" | "none"; // Side-by-Side vs Top-Bottom
 	// --- Camera & Viewport (The "Lens") ---
-	fieldOfView: number; // Degrees (Vertical FOV)
-	aspectRatio: number; // Viewport ratio
+	fieldOfView: number; // Vertical aperture in degrees (Vertical FOV)
+	viewRatio: number; // Horizontal expansion factor (Width / Height)
 	// --- Orientation (The "Head/Camera" Pose) ---
 	panningX: number; // Yaw (Left/Right)
 	panningY: number; // Pitch (Up/Down)
 	panningZ: number; // Roll (Tilt/Barrel)
 	// --- Interaction (XR Controllers) ---
-	xrInputSource: any; // Reference to active controllers/hand-tracking
-	// --- Track Switching (Async Buffering/Streaming) ---
-	// NOTE: "Disabled" value is "-1"
+	xrInputSource: unknown; // Reference to active controllers/hand-tracking
+	// --- Track Switching (Async Buffering/Streaming) --- NOTE: "Disabled" value is "-1"
 	currentTextTrack: number; // Subtitle
 	currentAudioTrack: number; // Language (English -> Spanish)
 	currentVideoTrack: number; // Angle
@@ -1683,13 +1731,15 @@ export interface MediaState {
 	// ---  HTML Lists ---
 	sources: Sources; // HTML courtesy
 	tracks: Tracks; // HTML courtesy
+	// --- Misc ---
+	objectFit: "fill" | "contain" | "cover" | "none" | "scale-down" | string;
 }
-export interface MediaIntent extends MediaState {
-	currentLevel: any;
-	currentAudioTrack: any;
-	currentVideoTrack: any;
-	currentTextTrack: any;
-} // Tech's responsibility to receive `any` intent and produce a `number` that can index their status (track/level) lists
+export type MediaIntent = Omit<MediaState, "currentLevel" | "currentAudioTrack" | "currentVideoTrack" | "currentTextTrack"> & {
+	currentLevel: unknown;
+	currentAudioTrack: unknown;
+	currentVideoTrack: unknown;
+	currentTextTrack: unknown;
+}; // Tech's responsibility to receive `unknown` intent and produce a `number` that can index their status (track/level) lists
 export interface MediaStatus {
 	// --- Network & Health ---
 	readyState: number;
@@ -1715,9 +1765,9 @@ export interface MediaStatus {
 	canPlayThrough: boolean; // Can we finish?
 	// --- Lists ---
 	textTracks: TextTrackList | any[];
-	audioTracks: any[]; // | AudioTrackList
-	videoTracks: any[]; // | VideoTrackList
-	levels: any[];
+	audioTracks: unknown[]; // | AudioTrackList
+	videoTracks: unknown[]; // | VideoTrackList
+	levels: unknown[];
 	// --- VR / XR Info ---
 	xrCapabilities: Record<"hasPosition" | "hasOrientation" | "isEmulated", // 6DoF- Room-scale, 3DoF- Head rotation, Emulated- Magic Window
 	boolean> | null;
@@ -1744,7 +1794,7 @@ export interface MediaReport {
 	status: MediaStatus;
 	settings: MediaSettings;
 }
-export type CMedia = {
+export type CtlrMedia = {
 	tech: Inert<BaseTech>;
 	element: HTMLVideoElement;
 } & MediaReport; // Controller Media
@@ -1778,6 +1828,13 @@ declare const removeTracks: (medium: HTMLElement) => void;
 declare function isSameTracks(a?: Tracks, b?: Tracks): boolean;
 declare function getTrackIdx(medium: HTMLMediaElement, type: TrackType, term?: any): number;
 declare function setCurrentTrack(medium: HTMLMediaElement, type: TrackType, term: any, flush?: boolean): void;
+declare const DUMMY_VID: HTMLVideoElement;
+declare function canVidCtrlVolume(): boolean;
+declare function canVidMuteVolume(): boolean;
+declare function canVidCtrlRate(): boolean;
+declare function canVidTextTracks(): boolean;
+declare function canVidVideoTracks(): boolean;
+declare function canVidAudioTracks(): boolean;
 declare const stripTags: (text: string) => string;
 declare function srtToVtt(srt: string, vttLines?: string[]): string;
 declare function parseVttText(text: string): string;
@@ -1817,11 +1874,11 @@ declare function parseEvOpts<T extends object>(options: T | boolean | undefined,
 declare function mergeObjs<T1 extends object, T2 extends object>(o1: T1, o2: T2): DeepMerge<T1, T2>;
 declare function mergeObjs<T1 extends object>(o1: T1): T1;
 declare function mergeObjs<T2 extends object>(o1: undefined | null, o2: T2): T2;
-declare function getTrailPaths<T>(path: WCPaths<T>, reverse?: boolean): WCPaths<T>[];
-declare function getTrailRecords<T extends object>(obj: T, path: WCPaths<T>): [
-	WCPaths<T>,
-	PathValue<T, WCPaths<T>>,
-	PathValue<T, WCPaths<T>>
+declare function getTrailPaths<T>(path: WildPaths<T>, reverse?: boolean): WildPaths<T>[];
+declare function getTrailRecords<T extends object>(obj: T, path: WildPaths<T>): [
+	WildPaths<T>,
+	PathValue<T, WildPaths<T>>,
+	PathValue<T, WildPaths<T>>
 ][];
 declare function deepClone<T>(obj: T, visited?: WeakMap<WeakKey, any>): T;
 declare function isValidNum(val: any): boolean;
@@ -1834,12 +1891,15 @@ declare function remToPx(val: number): number;
 declare function stepNum<T extends AptRange>(v: number | undefined, { min, max, step }: T): number;
 declare function rotate<T>(cur: T, steps: T[], dir?: "forwards" | "backwards", wrap?: boolean): T;
 declare function rotate(cur: number, steps: AptRange, dir?: "forwards" | "backwards", wrap?: boolean): number;
-declare function capitalize(word?: string): string;
-declare function camelize(str?: string, { source }?: RegExp, { preserveInnerCase: pIC, upperFirst: uF }?: {
+export type TitleCase<S extends string> = S extends `${infer First}${infer Rest}` ? `${Uppercase<First>}${Rest}` : S;
+export type CamelCase<S extends string> = S extends `${infer P1}_${infer P2}${infer P3}` ? `${Lowercase<P1>}${Uppercase<P2>}${CamelCase<P3>}` : S extends `${infer P1}-${infer P2}${infer P3}` ? `${Lowercase<P1>}${Uppercase<P2>}${CamelCase<P3>}` : S extends `${infer P1} ${infer P2}${infer P3}` ? `${Lowercase<P1>}${Uppercase<P2>}${CamelCase<P3>}` : Lowercase<S>;
+export type NoCamelCase<S extends string, Sep extends string = " "> = S extends `${infer First}${infer Rest}` ? First extends Uppercase<First> ? `${Sep}${Lowercase<First>}${NoCamelCase<Rest, Sep>}` : `${First}${NoCamelCase<Rest, Sep>}` : S;
+declare function capitalize<T extends string>(word?: T): TitleCase<T>;
+declare function camelize<T extends string>(str?: T, { source }?: RegExp, { preserveInnerCase: pIC, upperFirst: uF }?: {
 	preserveInnerCase?: boolean | undefined;
 	upperFirst?: boolean | undefined;
-}): string;
-declare function uncamelize(str?: string, separator?: string): string;
+}): CamelCase<T>;
+declare function uncamelize<T extends string, S extends string = " ">(str: T, separator?: S): NoCamelCase<T, S>;
 declare function uid(prefix?: string): string;
 declare function luid(prefix?: string): string;
 declare function isSameURL(src1: unknown, src2: unknown): boolean;
@@ -1904,13 +1964,15 @@ declare function keyEventAllowed(e: KeyboardEvent, settings: any): boolean | str
 declare const formatKeyForDisplay: (combo: string | string[]) => string;
 declare function formatKeyShortcutsForDisplay(keyShortcuts: Record<string, string | string[]>): Record<string, string>;
 declare function parseForARIAKS(s: string): string;
-declare function setTimeout$1(handler: TimerHandler, timeout?: number, ...args: any[]): number;
-declare function setInterval$1(handler: TimerHandler, timeout?: number, ...args: any[]): number;
-declare function requestAnimationFrame$1(callback: FrameRequestCallback, sig?: AbortSignal): number;
+declare function setTimeout$1(handler: TimerHandler, timeout?: number, ...args: any[]): any;
+declare function setInterval$1(handler: TimerHandler, timeout?: number, ...args: any[]): any;
+declare function requestAnimationFrame$1(callback: FrameRequestCallback, sig?: AbortSignal, w?: Window & typeof globalThis): number;
 declare const mockAsync: (timeout?: number) => Promise<void>;
+declare const breath: (w?: Window & typeof globalThis) => Promise<unknown>;
+declare const deepBreath: (w?: Window & typeof globalThis) => Promise<unknown>;
 export interface LimitedOptions {
-	key?: string; /** Key for localStorage persistence (if omitted, uses session-only) */
-	maxTimes?: number; /** Max times to call (default: 1) */
+	key?: string /** Key for localStorage persistence (if omitted, uses session-only) */;
+	maxTimes?: number /** Max times to call (default: 1) */;
 }
 export interface LimitedHandle<T extends (...args: any[]) => any> {
 	(...args: Parameters<T>): ReturnType<T> | void;
@@ -1965,9 +2027,9 @@ export declare class Controller {
 	readonly signal: AbortSignal;
 	config: Reactive<VideoBuild>;
 	state: Reactive<RuntimeState> & Record<string, any>;
-	media: Reactive<CMedia>;
+	media: Reactive<CtlrMedia>;
 	buildCache: VideoBuild;
-	private payloadCache;
+	private _payload;
 	videoContainer: HTMLElement;
 	pseudoVideo: HTMLVideoElement;
 	pseudoVideoContainer: HTMLElement;
@@ -1982,7 +2044,7 @@ export declare class Controller {
 	plugin(PlugClass: PlugConstructor, config?: any): void;
 	protected wireTechOverseer(): void;
 	protected overseeTech(pref?: "state" | "intent"): void;
-	switchTech(TechClass: TechConstructor, config?: Reactive<CMedia>): void;
+	switchTech(TechClass: TechConstructor, config?: Reactive<CtlrMedia>): void;
 	private wireRuntimeState;
 	get payload(): LifePayload;
 	setReadyState(state?: number, medium?: HTMLVideoElement): void;
@@ -2014,7 +2076,10 @@ export declare class Controller {
 export type BuildPaths = Paths<VideoBuild>;
 export type BuildParam = DeepPartial<VideoBuild> & Record<BuildPaths, PathValue<VideoBuild, BuildPaths>>;
 export declare class Player {
-	#private;
+	private medium;
+	private active;
+	private controller;
+	private _build;
 	constructor(customBuild?: BuildParam);
 	get Controller(): Controller | null;
 	get build(): VideoBuild;
@@ -2023,7 +2088,7 @@ export declare class Player {
 	private notice;
 	configure(customBuild: BuildParam): void;
 	attach(medium: HTMLMediaElement): Promise<void | HTMLMediaElement>;
-	detach(): HTMLVideoElement | null | undefined;
+	detach(): any;
 	fetchCustomOptions(): Promise<void>;
 	private deployController;
 }
@@ -2106,7 +2171,7 @@ declare const DEFAULT_VIDEO_BUILD: DeepPartial<VideoBuild>;
 declare const DEFAULT_VIDEO_ITEM_BUILD: DeepPartial<PlaylistItemBuild>;
 
 declare namespace utils {
-	export { ANDROID_VERSION, ArrowNavConfig, ArrowNavHandle, CHROME_VERSION, CHROMIUM_VERSION, Dataset, Dimensions, IE_VERSION, IOS_VERSION, IS_ANDROID, IS_CHROME, IS_CHROMECAST_RECEIVER, IS_CHROMIUM, IS_EDGE, IS_FIREFOX, IS_IE, IS_IOS, IS_IPAD, IS_IPHONE, IS_IPOD, IS_MOBILE, IS_SAFARI, IS_SMART_TV, IS_TIZEN, IS_WEBOS, IS_WINDOWS, Style, TOUCH_ENABLED, TimeRange, TrackType, addSafeClicks, addSources, addTracks, assignEl, camelize, capitalize, clamp, clampRGBBri, cleanKeyCombo, cloneMedia, convertToMonoChrome, createEl, createTimeRanges, deepClone, deleteAny, deprecate, deprecateForMajor, enterFullscreen, exitFullscreen, formatKeyForDisplay, formatKeyShortcutsForDisplay, formatMediaTime, formatSize, formatVttLine, getAny, getDominantColor, getElSiblingAt, getExtension, getMediaReport, getMimeTypeFromExtension, getRGBBri, getRGBSat, getRenderedBox, getSizeTier, getSources, getTermsForKey, getTrackIdx, getTracks, getTrailPaths, getTrailRecords, inAny, inBoolArrOpt, inDocView, initArrowFocusNav, initScrollAssist, initVScrollerator, intersectionObserver, isArr, isDef, isIter, isObj, isSameSources, isSameTracks, isSameURL, isUISetting, isValidNum, keyEventAllowed, limited, loadResource, luid, matchKeys, mergeObjs, mockAsync, mutationObserver, noExtension, observeIntersection, observeMutation, observeResize, onceEver, oncePerSession, parseAnyObj, parseCSSTime, parseCSSUnit, parseEvOpts, parseForARIAKS, parseIfPercent, parseKeyCombo, parsePanelBottomObj, parseUIObj, parseVttText, putSourceDetails, putTrackDetails, queryFullscreen, queryFullscreenEl, queryMediaMobile, remToPx, removeSafeClicks, removeScrollAssist, removeSources, removeTracks, requestAnimationFrame$1 as requestAnimationFrame, resizeObserver, rippleHandler, rotate, safeNum, setAny, setCurrentTrack, setHTMLConfig, setInterval$1 as setInterval, setTimeout$1 as setTimeout, srtToVtt, stepNum, stringifyKeyCombo, stripTags, supportsFullscreen, supportsPictureInPicture, uid, uncamelize };
+	export { ANDROID_VERSION, ArrowNavConfig, ArrowNavHandle, CHROME_VERSION, CHROMIUM_VERSION, DUMMY_VID, Dataset, Dimensions, IE_VERSION, IOS_VERSION, IS_ANDROID, IS_CHROME, IS_CHROMECAST_RECEIVER, IS_CHROMIUM, IS_EDGE, IS_FIREFOX, IS_IE, IS_IOS, IS_IPAD, IS_IPHONE, IS_IPOD, IS_MOBILE, IS_SAFARI, IS_SMART_TV, IS_TIZEN, IS_WEBOS, IS_WINDOWS, Style, TOUCH_ENABLED, TimeRange, TrackType, addSafeClicks, addSources, addTracks, assignEl, breath, camelize, canVidAudioTracks, canVidCtrlRate, canVidCtrlVolume, canVidMuteVolume, canVidTextTracks, canVidVideoTracks, capitalize, clamp, clampRGBBri, cleanKeyCombo, cloneMedia, convertToMonoChrome, createEl, createTimeRanges, deepBreath, deepClone, deleteAny, deprecate, deprecateForMajor, enterFullscreen, exitFullscreen, formatKeyForDisplay, formatKeyShortcutsForDisplay, formatMediaTime, formatSize, formatVttLine, getAny, getDominantColor, getElSiblingAt, getExtension, getMediaReport, getMimeTypeFromExtension, getRGBBri, getRGBSat, getRenderedBox, getSizeTier, getSources, getTermsForKey, getTrackIdx, getTracks, getTrailPaths, getTrailRecords, getWindow, inAny, inBoolArrOpt, inDocView, initArrowFocusNav, initScrollAssist, initVScrollerator, intersectionObserver, isArr, isDef, isIter, isObj, isSameSources, isSameTracks, isSameURL, isUISetting, isValidNum, keyEventAllowed, limited, loadResource, luid, matchKeys, mergeObjs, mockAsync, mutationObserver, noExtension, observeIntersection, observeMutation, observeResize, onceEver, oncePerSession, parseAnyObj, parseCSSTime, parseCSSUnit, parseEvOpts, parseForARIAKS, parseIfPercent, parseKeyCombo, parsePanelBottomObj, parseUIObj, parseVttText, putSourceDetails, putTrackDetails, queryFullscreen, queryFullscreenEl, queryMediaMobile, queryPictureInPicture, queryPictureInPictureEl, remToPx, removeSafeClicks, removeScrollAssist, removeSources, removeTracks, requestAnimationFrame$1 as requestAnimationFrame, resizeObserver, rippleHandler, rotate, safeNum, setAny, setCurrentTrack, setHTMLConfig, setInterval$1 as setInterval, setTimeout$1 as setTimeout, srtToVtt, stepNum, stringifyKeyCombo, stripTags, supportsFullscreen, supportsPictureInPicture, uid, uncamelize };
 }
 declare namespace mixins {
 	export { Reactive, bindAllMethods, guardAllMethods, guardMethod, inert, intent, isInert, isIntent, live, nuke, onAllMethods, reactive, state };
@@ -2125,7 +2190,6 @@ declare namespace consts {
 }
 
 export {
-	Event$1 as Event,
 	comps,
 	consts,
 	media,

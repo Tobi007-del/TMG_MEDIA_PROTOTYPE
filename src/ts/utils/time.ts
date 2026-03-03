@@ -5,7 +5,7 @@ export function formatMediaTime({ time, format = "digital", elapsed = true, show
     cs = (str: string) => (casing === "upper" ? str.toUpperCase() : casing === "title" ? str.replace(/^([a-z])/i, (m) => m.toUpperCase()) : str.toLowerCase()),
     wrd = (n = 0) => ({ h: cs(long ? " hour" + sx(n) + " " : "h"), m: cs(long ? " minute" + sx(n) + " " : "m"), s: cs(long ? " second" + sx(n) + " " : "s"), ms: cs(long ? " millisecond" + sx(n) + " " : "ms") }),
     pad = (v: string | number, n = 2, f?: boolean) => (long && !f ? v : String(v).padStart(n, "number" === typeof +n ? "0" : "-"));
-  if (isNaN(time ?? NaN) || time === Infinity) return format !== "digital" ? ("-" + wrd().h + pad("-") + wrd().m + (!elapsed ? "left" : "")).trim() : (!elapsed ? "--:--" : "-:--");
+  if (isNaN(time ?? NaN) || time === Infinity) return format !== "digital" ? ("-" + wrd().h + pad("-") + wrd().m + (!elapsed ? "left" : "")).trim() : !elapsed ? "--:--" : "-:--";
   const s = Math.floor(Math.abs(time!) % 60),
     m = Math.floor(Math.abs(time!) / 60) % 60,
     h = Math.floor(Math.abs(time!) / 3600),
@@ -34,4 +34,4 @@ export function createTimeRanges(ranges?: [number, number][] | TimeRange): TimeR
     start: (i: number) => (pairs[i] ? pairs[i][0] : 0),
     end: (i: number) => (pairs[i] ? pairs[i][1] : 0),
   };
-};
+}

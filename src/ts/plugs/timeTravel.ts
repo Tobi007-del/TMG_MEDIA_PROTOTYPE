@@ -1,6 +1,7 @@
 // building this file with just AI to test architectural soundness
 import { BasePlug } from "./base";
-import { Event } from "../core/reactor";
+import type { CtlrMedia } from "../types/contract";
+import { Event } from "../types/reactor";
 import { setTimeout, setAny, deleteAny } from "../utils";
 
 /**
@@ -38,15 +39,15 @@ export class TimeTravelPlug extends BasePlug<TimeTravel> {
     const opts = { signal: this.signal, capture: false };
     // We listen to the BUBBLE phase of the ROOT (*)
     // to record the settled outcome of every wave.
-    this.ctlr.media.on("intent", (e) => this.record(e), opts);
-    this.ctlr.media.on("state", (e) => this.record(e), opts);
-    this.ctlr.media.on("settings", (e) => this.record(e), opts);
+    this.ctlr.media.on("intent", this.record, opts);
+    this.ctlr.media.on("state", this.record, opts);
+    this.ctlr.media.on("settings", this.record, opts);
   }
 
   /**
    * RECORD: Chronicling the lifecycle of the system.
    */
-  protected record(e: Event<any>) {
+  protected record(e: Event<CtlrMedia, "intent" | "state" | "settings">) {
     if (this.isReplaying) return;
     this.history.push({ timestamp: Date.now(), path: e.target.path, type: e.staticType, value: e.value, phase: e.eventPhase, rejected: e.rejected });
   }

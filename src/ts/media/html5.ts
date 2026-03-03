@@ -1,45 +1,38 @@
 import { BaseTech, BaseTechConfig } from ".";
 import type { Event, ListenerOptions } from "../types/reactor";
 import type { Controller } from "../core/controller";
-import type { CMedia, MediaIntent, MediaFeatures } from "../types/contract";
-import type { WCPaths } from "../types/obj";
-import { type TrackType, createEl, enterFullscreen, exitFullscreen, getSources, getTracks, isSameURL, queryFullscreenEl, supportsFullscreen, supportsPictureInPicture, observeMutation, removeSources, addSources, isSameSources, isSameTracks, removeTracks, addTracks, getTrackIdx, setCurrentTrack } from "../utils";
+import type { CtlrMedia, MediaIntent } from "../types/contract";
+import type { WildPaths } from "../types/obj";
+import { type TrackType, enterFullscreen, exitFullscreen, getSources, getTracks, isSameURL, queryFullscreenEl, supportsFullscreen, supportsPictureInPicture, observeMutation, removeSources, addSources, isSameSources, isSameTracks, removeTracks, addTracks, getTrackIdx, setCurrentTrack, canVidCtrlVolume, canVidMuteVolume, canVidCtrlRate, canVidTextTracks, canVidVideoTracks, canVidAudioTracks } from "../utils";
 
 export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   public static readonly techName: string = "html5";
-  // prettier-ignore
-  public static readonly features: MediaFeatures = {
-    // Kinda Core
-    volume: HTML5Tech.canControlVolume(),
-    muted: HTML5Tech.canMuteVolume(),
-    playbackRate: HTML5Tech.canControlRate(),
-    // Modes
-    pictureInPicture: supportsPictureInPicture(),
-    fullscreen: supportsFullscreen(),
-    // Attributes
-    poster: true, autoplay: true, loop: true, playsInline: true,
-    crossOrigin: true, controls: true, controlsList: true,
-    disablePictureInPicture: true, preload: true,
-    // Lists
-    textTracks: HTML5Tech.supportsTextTracks(),
-    videoTracks: HTML5Tech.supportsVideoTracks(),
-    audioTracks: HTML5Tech.supportsAudioTracks(),
-    activeCue: HTML5Tech.supportsTextTracks(),
-    // Infos
-    readyState: true, networkState: true, error: true, waiting: true,
-    stalled: true, seeking: true, buffered: true, seekable: true,
-    videoWidth: true, videoHeight: true, loadedMetadata: true,
-    canPlay: true, canPlayThrough: true,
-    // Settings
-    defaultMuted: true, defaultPlaybackRate: true,
-  };
-  private static readonly DUMMY = createEl("video");
   protected readonly eOpts: { EL: AddEventListenerOptions; REACTOR: ListenerOptions };
   static canPlaySource(src: string): boolean {
     return true;
   }
   constructor(ctlr: Controller, config: BaseTechConfig) {
-    super(ctlr, config);
+    // prettier-ignore
+    super(ctlr, config, {
+      // Kinda Core
+      volume: canVidCtrlVolume(), muted: canVidMuteVolume(), playbackRate: canVidCtrlRate(),
+      // Modes
+      pictureInPicture: supportsPictureInPicture() && !ctlr.media.state.disablePictureInPicture, fullscreen: supportsFullscreen(),
+      // Attributes
+      poster: true, autoplay: true, loop: true, playsInline: true,
+      crossOrigin: true, controls: true, controlsList: true,
+      disablePictureInPicture: true, preload: true,
+      // Lists
+      textTracks: canVidTextTracks(), videoTracks: canVidVideoTracks(), audioTracks: canVidAudioTracks(),
+      activeCue: canVidTextTracks(),
+      // Infos
+      readyState: true, networkState: true, error: true, waiting: true,
+      stalled: true, seeking: true, buffered: true, seekable: true,
+      videoWidth: true, videoHeight: true, loadedMetadata: true,
+      canPlay: true, canPlayThrough: true,
+      // Settings
+      defaultMuted: true, defaultPlaybackRate: true,
+    });
     this.eOpts = { EL: { signal: this.signal }, REACTOR: { capture: true, signal: this.signal, immediate: this.ctlr.payload.initialized } }; // Cached Event Options
   }
   // ===========================================================================
@@ -47,25 +40,25 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   // ===========================================================================
   // --- Core Wiring ---
   protected wireSrc() {
-    this.el.addEventListener("loadstart", this.handleLoadStartState, this.eOpts.EL);
+    this.el.addEventListener("loadstart", this.setLoadStartState, this.eOpts.EL);
     this.config.on("intent.src", this.handleSrcIntent, this.eOpts.REACTOR);
   }
   protected wireCurrentTime() {
-    this.el.addEventListener("timeupdate", this.handleTimeUpdateState, this.eOpts.EL);
-    this.el.addEventListener("seeking", this.handleSeekingState, this.eOpts.EL);
-    this.el.addEventListener("seeked", this.handleSeekedState, this.eOpts.EL);
+    this.el.addEventListener("timeupdate", this.setTimeUpdateState, this.eOpts.EL);
+    this.el.addEventListener("seeking", this.setSeekingState, this.eOpts.EL);
+    this.el.addEventListener("seeked", this.setSeekedState, this.eOpts.EL);
     this.config.on("intent.currentTime", this.handleCurrentTimeIntent, this.eOpts.REACTOR);
   }
   protected wireDuration() {
-    this.el.addEventListener("durationchange", this.handleDurationChangeState, this.eOpts.EL);
+    this.el.addEventListener("durationchange", this.setDurationChangeState, this.eOpts.EL);
   }
   protected wirePaused() {
-    this.el.addEventListener("play", this.handlePlayState, this.eOpts.EL);
-    this.el.addEventListener("pause", this.handlePauseState, this.eOpts.EL);
+    this.el.addEventListener("play", this.setPlayState, this.eOpts.EL);
+    this.el.addEventListener("pause", this.setPauseState, this.eOpts.EL);
     this.config.on("intent.paused", this.handlePausedIntent, this.eOpts.REACTOR);
   }
   protected wireEnded() {
-    this.el.addEventListener("ended", this.handleEndedState, this.eOpts.EL);
+    this.el.addEventListener("ended", this.setEndedState, this.eOpts.EL);
   }
   // --- Features Wiring ---
   protected override wireFeatures() {
@@ -90,7 +83,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   }
   // --- Engine Inputs Wiring ---
   protected wireVolume() {
-    this.el.addEventListener("volumechange", this.handleVolumeChangeState, this.eOpts.EL);
+    this.el.addEventListener("volumechange", this.setVolumeChangeState, this.eOpts.EL);
     this.config.on("intent.volume", this.handleVolumeIntent, this.eOpts.REACTOR);
   }
   protected wireMuted() {
@@ -98,27 +91,27 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
     this.config.on("intent.muted", this.handleMutedIntent, this.eOpts.REACTOR);
   }
   protected wirePlaybackRate() {
-    this.el.addEventListener("ratechange", this.handleRateChangeState, this.eOpts.EL);
+    this.el.addEventListener("ratechange", this.setRateChangeState, this.eOpts.EL);
     this.config.on("intent.playbackRate", this.handlePlaybackRateIntent, this.eOpts.REACTOR);
   }
   // --- Presentation Modes Wiring ---
   protected wirePictureInPicture() {
-    this.el.addEventListener("enterpictureinpicture", this.handleEnterPiPState, this.eOpts.EL);
-    this.el.addEventListener("leavepictureinpicture", this.handleLeavePiPState, this.eOpts.EL);
+    this.el.addEventListener("enterpictureinpicture", this.setEnterPiPState, this.eOpts.EL);
+    this.el.addEventListener("leavepictureinpicture", this.setLeavePiPState, this.eOpts.EL);
     this.config.on("intent.pictureInPicture", this.handlePiPIntent, this.eOpts.REACTOR);
   }
   protected wireFullscreen() {
-    this.ctlr.state.watch("docInFullscreen", this.handleFullscreenChangeState, this.eOpts.REACTOR);
-    this.el.addEventListener("webkitbeginfullscreen", this.handleWebkitBeginFullscreenState, this.eOpts.REACTOR);
-    this.el.addEventListener("webkitendfullscreen", this.handleWebkitEndFullscreenState, this.eOpts.REACTOR);
+    this.ctlr.state.watch("docInFullscreen", this.setFullscreenChangeState, this.eOpts.REACTOR);
+    this.el.addEventListener("webkitbeginfullscreen", this.setWebkitBeginFullscreenState, this.eOpts.REACTOR);
+    this.el.addEventListener("webkitendfullscreen", this.setWebkitEndFullscreenState, this.eOpts.REACTOR);
     this.config.on("intent.fullscreen", this.handleFullscreenIntent, this.eOpts.REACTOR);
   }
   // --- Track Switching Wiring ---
   protected wireCurrentTrack(type: TrackType) {
     this.config.set(`intent.current${type}Track`, (term) => getTrackIdx(this.el, type, term), { signal: this.signal }); // pass `any` term, the track will surely be found if available
     const list = (this.el as any)[`${type.toLowerCase()}Tracks`];
-    list?.addEventListener("change", () => this.handleCurrentTrackState(type, list), this.eOpts.REACTOR);
-    this.config.on(`intent.current${type}Track`, (e: Event<CMedia, `intent.current${typeof type}Track`>) => this.handleCurrentTrackIntent(e, type), this.eOpts.REACTOR);
+    list?.addEventListener("change", () => this.setCurrentTrackState(type, list), this.eOpts.REACTOR);
+    this.config.on(`intent.current${type}Track`, (e: Event<CtlrMedia, `intent.current${typeof type}Track`>) => this.handleCurrentTrackIntent(e, type), this.eOpts.REACTOR);
   }
   protected wireCurrentAudioTrack() {
     this.wireCurrentTrack("Audio");
@@ -131,11 +124,11 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   }
   // --- HTML (Bulk Wiring) ---
   protected wireHTMLState() {
-    this.signal.addEventListener("abort", observeMutation(this.el, this.handleHTMLState, { attributes: true, childList: true, subtree: false }), { once: true });
+    this.signal.addEventListener("abort", observeMutation(this.el, this.setHTMLStateFromMutation, { attributes: true, childList: true, subtree: false }), { once: true });
   }
   // --- Attribute Wiring ---
   protected bindAttr<K extends keyof MediaIntent>(key: K, isBool = false) {
-    this.config.on(`intent.${key}`, (e: Event<CMedia, `intent.${K}`>) => this.handleAttributeIntent(e, key, isBool), this.eOpts.REACTOR);
+    this.config.on(`intent.${key}`, (e: Event<CtlrMedia, `intent.${K}`>) => this.handleAttributeIntent(e, key, isBool), this.eOpts.REACTOR);
   }
   protected wirePoster() {
     this.bindAttr("poster");
@@ -163,6 +156,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   }
   protected wireDisablePictureInPicture() {
     this.bindAttr("disablePictureInPicture", true);
+    this.config.on("state.disablePictureInPicture", this.handlePiPState);
   }
   // --- Lists Wiring ---
   protected wireSources() {
@@ -180,7 +174,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   protected wireActiveCueStatus() {
     this.config.on(
       "state.currentTextTrack",
-      ({ value: curr, oldValue: prev }: Event<CMedia, "state.currentTextTrack">) => {
+      ({ value: curr, oldValue: prev }: Event<CtlrMedia, "state.currentTextTrack">) => {
         if (prev !== -1) this.el.textTracks[prev!]?.removeEventListener("cuechange", this.handleActiveCueStatus, this.eOpts.EL);
         this.el.textTracks[curr!]?.addEventListener("cuechange", this.handleActiveCueStatus, this.eOpts.EL);
         this.handleActiveCueStatus({ target: this.el.textTracks[curr!] });
@@ -199,7 +193,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   // HANDLERS (The Logic - Auto-Guarded by Controllable)
   // ===========================================================================
   // --- Core States ---
-  protected handleLoadStartState() {
+  protected setLoadStartState() {
     const { state: s, status: st } = this.config;
     st.error = st.activeCue = null;
     st.waiting = true;
@@ -210,72 +204,72 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
     if (!isSameURL(this.el.src, s.src)) s.src = this.el.src;
     this.config.state.paused = this.el.paused;
   }
-  protected handleTimeUpdateState() {
+  protected setTimeUpdateState() {
     this.config.state.currentTime = this.el.currentTime;
   }
-  protected handleSeekingState() {
+  protected setSeekingState() {
     this.config.status.seeking = true;
   }
-  protected handleSeekedState() {
+  protected setSeekedState() {
     this.config.status.seeking = false;
   }
-  protected handleDurationChangeState() {
+  protected setDurationChangeState() {
     this.config.status.duration = this.el.duration;
   }
-  protected handlePlayState() {
+  protected setPlayState() {
     this.config.state.paused = false;
   }
-  protected handlePauseState() {
+  protected setPauseState() {
     this.config.state.paused = true;
   }
-  protected handleEndedState() {
+  protected setEndedState() {
     this.config.status.ended = this.config.state.paused = true;
   }
   // --- Core Intents ---
-  protected handleSrcIntent(e: Event<CMedia, "intent.src">) {
+  protected handleSrcIntent(e: Event<CtlrMedia, "intent.src">) {
     if (e.resolved || isSameURL(this.el.src, e.value)) return;
     this.el.src = e.value ?? "";
     this.el.load();
     e.resolve(HTML5Tech.techName);
   }
-  protected handleCurrentTimeIntent(e: Event<CMedia, "intent.currentTime">) {
+  protected handleCurrentTimeIntent(e: Event<CtlrMedia, "intent.currentTime">) {
     if (e.resolved) return;
     this.el.currentTime = e.value!;
     e.resolve(HTML5Tech.techName);
   }
-  protected handlePausedIntent(e: Event<CMedia, "intent.paused">) {
+  protected handlePausedIntent(e: Event<CtlrMedia, "intent.paused">) {
     if (e.resolved) return;
     const p = e.value ? this.el.pause() : this.el.play();
     if (p?.then) p.then(() => e.resolve(HTML5Tech.techName)).catch((err: any) => e.reject(err.message));
     else e.resolve(HTML5Tech.techName);
   }
   // --- Feature States ---
-  protected handleVolumeChangeState() {
+  protected setVolumeChangeState() {
     this.config.state.volume = this.el.volume;
     this.config.state.muted = this.el.muted;
   }
-  protected handleRateChangeState() {
+  protected setRateChangeState() {
     this.config.state.playbackRate = this.el.playbackRate;
   }
-  protected handleEnterPiPState() {
+  protected setEnterPiPState() {
     this.config.state.pictureInPicture = true;
   }
-  protected handleLeavePiPState() {
+  protected setLeavePiPState() {
     this.config.state.pictureInPicture = false;
   }
-  protected handleFullscreenChangeState(docInFs?: boolean) {
+  protected setFullscreenChangeState(docInFs?: boolean) {
     this.config.state.fullscreen = docInFs ? queryFullscreenEl() === this.el : false;
   }
-  protected handleWebkitBeginFullscreenState() {
+  protected setWebkitBeginFullscreenState() {
     this.config.state.fullscreen = true;
   }
-  protected handleWebkitEndFullscreenState() {
+  protected setWebkitEndFullscreenState() {
     this.config.state.fullscreen = false;
   }
-  protected handleCurrentTrackState(type: TrackType, list: any) {
+  protected setCurrentTrackState(type: TrackType, list: any) {
     this.config.state[`current${type}Track`] = getTrackIdx(this.el, type, "active");
   }
-  protected handleHTMLState(mutations: MutationRecord[]) {
+  protected setHTMLStateFromMutation(mutations: MutationRecord[]) {
     for (const m of mutations) {
       const { state, settings } = this.config; // Reverse Bind: DOM -> State
       if (m.type === "childList") {
@@ -304,53 +298,53 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
         case "disablepictureinpicture":
           return (state.disablePictureInPicture = this.el.disablePictureInPicture ?? this.el.hasAttribute(m.attributeName));
         case "muted":
-          return ((state.muted = this.el.muted), (settings.defaultMuted = this.el.defaultMuted)); // Mutations report before Queued MicroTasks so double "state.*" sets is safely batched for `on` listeners.
+          return ((state.muted = this.el.muted), (settings.defaultMuted = this.el.defaultMuted)); // Mutations report before Queued MicroTasks so double "state.*" sets is safely batched for `on` listeners :)
       }
     }
   }
   // --- Feature Intents ---
-  protected handleVolumeIntent(e: Event<CMedia, "intent.volume">) {
+  protected handleVolumeIntent(e: Event<CtlrMedia, "intent.volume">) {
     if (e.resolved) return;
     this.el.volume = e.value!;
     e.resolve(HTML5Tech.techName);
   }
-  protected handleMutedIntent(e: Event<CMedia, "intent.muted">) {
+  protected handleMutedIntent(e: Event<CtlrMedia, "intent.muted">) {
     if (e.resolved) return;
     this.el.muted = e.value!;
     e.resolve(HTML5Tech.techName);
   }
-  protected handlePlaybackRateIntent(e: Event<CMedia, "intent.playbackRate">) {
+  protected handlePlaybackRateIntent(e: Event<CtlrMedia, "intent.playbackRate">) {
     if (e.resolved) return;
     this.el.playbackRate = e.value!;
     e.resolve(HTML5Tech.techName);
   }
-  protected handlePiPIntent(e: Event<CMedia, "intent.pictureInPicture">) {
+  protected handlePiPIntent(e: Event<CtlrMedia, "intent.pictureInPicture">) {
     if (e.resolved) return;
     e.value ? this.el.requestPictureInPicture() : document.exitPictureInPicture();
     e.resolve(HTML5Tech.techName);
   }
-  protected handleFullscreenIntent(e: Event<CMedia, "intent.fullscreen">) {
+  protected handleFullscreenIntent(e: Event<CtlrMedia, "intent.fullscreen">) {
     if (e.resolved) return;
     e.value ? enterFullscreen(this.el) : exitFullscreen(this.el);
     e.resolve(HTML5Tech.techName);
   }
-  protected handleCurrentTrackIntent(e: Event<CMedia, `intent.current${TrackType}Track`>, type: TrackType) {
+  protected handleCurrentTrackIntent(e: Event<CtlrMedia, `intent.current${TrackType}Track`>, type: TrackType) {
     if (e.resolved) return;
     setCurrentTrack(this.el, type, e.value, false); // (el), (type), (idx), (no flush: `hidden` & !`disabled`)
     e.resolve(HTML5Tech.techName);
   }
-  protected handleAttributeIntent(e: Event<CMedia, WCPaths<CMedia>>, key: string, isBool: boolean) {
+  protected handleAttributeIntent(e: Event<CtlrMedia, WildPaths<CtlrMedia>>, key: string, isBool: boolean) {
     if (e.resolved) return;
-    (this.el as any)[key] = isBool ? !!e.value : (e.value ?? ""); // Generic handler for simple attributes
-    if (key === "playsInline") this.el.toggleAttribute("webkit-playsinline", e.value);
+    (this.el as any)[key] = isBool ? Boolean(e.value) : (e.value ?? ""); // Generic handler for simple attributes
+    if (key === "playsInline") this.el.toggleAttribute("webkit-playsinline", Boolean(e.value));
     e.resolve(HTML5Tech.techName);
   }
-  protected handleSourcesIntent(e: Event<CMedia, "intent.sources">) {
+  protected handleSourcesIntent(e: Event<CtlrMedia, "intent.sources">) {
     if (e.resolved) return;
     if (!isSameSources(this.config.state.sources, e.value)) (removeSources(this.el), addSources(e.value, this.el));
     e.resolve(HTML5Tech.techName);
   }
-  protected handleTracksIntent(e: Event<CMedia, "intent.tracks">) {
+  protected handleTracksIntent(e: Event<CtlrMedia, "intent.tracks">) {
     if (e.resolved) return;
     if (!isSameTracks(this.config.state.tracks, e.value)) (removeTracks(this.el), addTracks(e.value, this.el));
     e.resolve(HTML5Tech.techName);
@@ -396,49 +390,18 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   }
   protected handleActiveCueStatus(e?: globalThis.Event | { target?: TextTrack }) {
     const track = e?.target as TextTrack | null;
-    // if (getTrackIdx(this.el, "Text", track) !== this.config.state.currentTextTrack) return; // multiple tracks `cuechange`?
+    // if (getTrackIdx(this.el, "Text", track) !== this.config.state.currentTextTrack) return; // incase of multiple tracks `cuechange`
     this.config.status.activeCue = track?.activeCues?.[0] || null;
   }
   // --- Settings ---
-  protected handleDefaultMutedSetting(e: Event<CMedia, "settings.defaultMuted">) {
+  protected handleDefaultMutedSetting(e: Event<CtlrMedia, "settings.defaultMuted">) {
     this.el.defaultMuted = e.value!;
   }
-  protected handleDefaultPlaybackRateSetting(e: Event<CMedia, "settings.defaultPlaybackRate">) {
+  protected handleDefaultPlaybackRateSetting(e: Event<CtlrMedia, "settings.defaultPlaybackRate">) {
     this.el.defaultPlaybackRate = e.value!;
   }
-  // --- Capabilities ---
-  protected static canControlVolume(): boolean {
-    if (!this.DUMMY) return false;
-    try {
-      const prev = this.DUMMY.volume;
-      this.DUMMY.volume = 0.5;
-      const works = this.DUMMY.volume === 0.5;
-      return ((this.DUMMY.volume = prev), works);
-    } catch {
-      return false;
-    }
-  }
-  protected static canMuteVolume(): boolean {
-    return !!this.DUMMY && "muted" in this.DUMMY;
-  }
-  protected static canControlRate(): boolean {
-    if (!this.DUMMY) return false;
-    try {
-      const prev = this.DUMMY.playbackRate;
-      this.DUMMY.playbackRate = 0.5;
-      const works = this.DUMMY.playbackRate === 0.5;
-      return ((this.DUMMY.playbackRate = prev), works);
-    } catch {
-      return false;
-    }
-  }
-  protected static supportsTextTracks(): boolean {
-    return !!this.DUMMY && "textTracks" in this.DUMMY;
-  }
-  protected static supportsVideoTracks(): boolean {
-    return !!this.DUMMY && "videoTracks" in this.DUMMY;
-  }
-  protected static supportsAudioTracks(): boolean {
-    return !!this.DUMMY && "audioTracks" in this.DUMMY;
+  // --- Other Handlers ---
+  protected handlePiPState(e: Event<CtlrMedia, "state.disablePictureInPicture">) {
+    this.features.pictureInPicture = !e.value;
   }
 }

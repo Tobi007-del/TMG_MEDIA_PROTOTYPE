@@ -1,7 +1,7 @@
 import { BasePlug } from ".";
-import type { Event } from "../core/reactor";
-import { VideoBuild } from "../types/build";
-import { CMedia } from "../types/contract";
+import type { Event } from "../types/reactor";
+import type { VideoBuild } from "../types/build";
+import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";
 import { clamp } from "../utils";
 import { AUDIO_CONTEXT, connectMediaToAudioManager } from "../tools/runtime";
@@ -100,7 +100,7 @@ export class VolumePlug extends BasePlug<Volume> {
     this.ctlr.media.intent.muted = value!;
   }
 
-  protected handleVolumeIntent(e: Event<CMedia, "intent.volume">): void {
+  protected handleVolumeIntent(e: Event<CtlrMedia, "intent.volume">): void {
     if (e.resolved) return;
     if (this.ctlr.media.element !== this.ctlr.media.tech.element) return;
     this.handleVolumeState(e.value!);
@@ -108,7 +108,7 @@ export class VolumePlug extends BasePlug<Volume> {
     e.resolve(this.name);
   }
 
-  protected handleMutedIntent(e: Event<CMedia, "intent.muted">): void {
+  protected handleMutedIntent(e: Event<CtlrMedia, "intent.muted">): void {
     if (e.resolved) return;
     if (this.ctlr.media.element !== this.ctlr.media.tech.element) return;
     if (e.oldValue === e.value) return e.resolve(this.name);

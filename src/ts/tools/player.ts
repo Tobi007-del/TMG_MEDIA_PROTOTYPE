@@ -11,27 +11,27 @@ export type BuildPaths = Paths<VideoBuild>;
 export type BuildParam = DeepPartial<VideoBuild> & Record<BuildPaths, PathValue<VideoBuild, BuildPaths>>;
 
 export class Player {
-  #medium: HTMLMediaElement | null = null;
-  #active: boolean = false;
-  #controller: Controller | null = null;
-  #build: VideoBuild = structuredClone(DEFAULT_VIDEO_BUILD as VideoBuild);
+  private medium: HTMLMediaElement | null = null;
+  private active: boolean = false;
+  private controller: Controller | null = null;
+  private _build: VideoBuild = structuredClone(DEFAULT_VIDEO_BUILD as VideoBuild);
 
   constructor(customBuild: BuildParam = {} as BuildParam) {
     this.configure({ ...customBuild, id: customBuild.id ?? `${luid()}_Controller_${Controllers.length + 1}` });
   }
 
   public get Controller() {
-    return this.#controller;
+    return this.controller;
   }
 
   public get build(): VideoBuild {
-    return this.#build;
+    return this._build;
   }
   public set build(customBuild: BuildParam) {
     this.configure(customBuild);
   }
   private queryBuild(): boolean {
-    return (!this.#active ? true : this.notice({ error: "Already deployed the custom controls of your build configuration", tip: "Consider setting your build configuration before attaching your media element" }), false);
+    return (!this.active ? true : this.notice({ error: "Already deployed the custom controls of your build configuration", tip: "Consider setting your build configuration before attaching your media element" }), false);
   }
 
   private notice({ error, warning, tip }: Partial<Record<"error" | "warning" | "tip", string>>) {
@@ -42,8 +42,8 @@ export class Player {
 
   public configure(customBuild: BuildParam): void {
     if (!this.queryBuild() || !isObj(customBuild)) return;
-    this.#build = mergeObjs(this.#build, parseAnyObj(customBuild));
-    const keys = this.#build.settings.keys;
+    this._build = mergeObjs(this._build, parseAnyObj(customBuild));
+    const keys = this._build.settings.keys;
     if (!keys) return;
     Object.keys(keys.shortcuts || {}).forEach((k) => ((keys.shortcuts as any)[k] = cleanKeyCombo((keys.shortcuts as any)[k])));
     ["blocks", "overrides"].forEach((k) => ((keys as any)[k] = cleanKeyCombo((keys as any)[k])));
@@ -51,30 +51,30 @@ export class Player {
 
   public async attach(medium: HTMLMediaElement) {
     if (isIter(medium)) return this.notice({ error: "An iterable argument cannot be attached to the TMG media player", tip: "Consider looping the iterable argument to instantiate a new 'tmg.Player' for each" });
-    if (this.#active) return medium;
+    if (this.active) return medium;
     medium.tmgPlayer?.detach();
-    tmg.Controllers.push(this.build.id as any); // dummy for sync
+    tmg.Controllers.push(this._build.id as any); // dummy for sync
     medium.tmgPlayer = this;
-    this.#medium = medium;
+    this.medium = medium;
     (await this.fetchCustomOptions(), await this.deployController());
-    return (this.#controller?.fire("tmgattached", this.#controller.payload), medium);
+    return (this.controller?.fire("tmgattached", this.controller.payload), medium);
   }
 
   public detach() {
-    if (!this.#active) return;
-    const medium = this.#controller?.destroy() ?? ({} as any);
-    this.#controller && Controllers.splice(Controllers.indexOf(this.#controller), 1);
+    if (!this.active) return;
+    const medium = this.controller?.destroy() ?? ({} as any);
+    this.controller && Controllers.splice(Controllers.indexOf(this.controller), 1);
     medium?.classList?.remove(`tmg-${medium?.tagName.toLowerCase()}`, "tmg-media");
-    medium.tmgcontrols = this.#active = false;
-    this.#controller?.fire("tmgdetached", this.#controller.payload);
-    medium.tmgPlayer = this.#controller = this.#medium = null;
+    medium.tmgcontrols = this.active = false;
+    this.controller?.fire("tmgdetached", this.controller.payload);
+    medium.tmgPlayer = this.controller = this.medium = null;
     return medium;
   }
 
   public async fetchCustomOptions() {
-    if (!this.#medium) return;
-    if (this.#medium.getAttribute("tmg")?.includes(".json")) {
-      await fetch(this.#medium.getAttribute("tmg")!)
+    if (!this.medium) return;
+    if (this.medium.getAttribute("tmg")?.includes(".json")) {
+      await fetch(this.medium.getAttribute("tmg")!)
         .then((res) => {
           if (!res.ok) throw new Error(`JSON file not found at provided URL!. Status: ${res.status}`);
           return res.json();
@@ -83,23 +83,23 @@ export class Player {
         .catch(({ message }) => this.notice({ error: message, tip: "A valid JSON file is required for parsing your build configuration" }));
     }
     const customBuild = {} as BuildParam,
-      attributes = this.#medium.getAttributeNames().filter((attr) => attr.startsWith("tmg--"));
-    attributes?.forEach((attr) => setHTMLConfig<BuildParam>(customBuild, attr as `tmg--${BuildPaths}`, this.#medium!.getAttribute(attr)!));
-    if (this.#medium instanceof HTMLVideoElement && this.#medium.poster) this.configure({ "media.artwork[0].src": this.#medium.poster } as any);
+      attributes = this.medium.getAttributeNames().filter((attr) => attr.startsWith("tmg--"));
+    attributes?.forEach((attr) => setHTMLConfig<BuildParam>(customBuild, attr as `tmg--${BuildPaths}`, this.medium!.getAttribute(attr)!));
+    if (this.medium instanceof HTMLVideoElement && this.medium.poster) this.configure({ "media.artwork[0].src": this.medium.poster } as any);
     this.configure(customBuild);
   }
 
   private async deployController() {
-    if (this.#active || !this.#medium?.isConnected) return;
-    if (this.#build.playlist?.[0]) this.configure(mergeObjs(DEFAULT_VIDEO_ITEM_BUILD as BuildParam, parseAnyObj(this.#build.playlist[0] as BuildParam)));
-    if (!(this.#medium instanceof HTMLVideoElement)) return this.notice({ error: `Could not deploy custom controls on the '${this.#medium.tagName}' element as it is not supported`, warning: "Only the 'VIDEO' element is currently supported", tip: "" });
-    this.#medium.tmgcontrols = this.#active = true;
-    this.#medium.controls = false;
-    this.#medium.classList.add(`tmg-${this.#medium.tagName.toLowerCase()}`, "tmg-media");
-    const s = this.#build.settings;
+    if (this.active || !this.medium?.isConnected) return;
+    if (this._build.playlist?.[0]) this.configure(mergeObjs(DEFAULT_VIDEO_ITEM_BUILD as BuildParam, parseAnyObj(this._build.playlist[0] as BuildParam)));
+    if (!(this.medium instanceof HTMLVideoElement)) return this.notice({ error: `Could not deploy custom controls on the '${this.medium.tagName}' element as it is not supported`, warning: "Only the 'VIDEO' element is currently supported", tip: "" });
+    this.medium.tmgcontrols = this.active = true;
+    this.medium.controls = false;
+    this.medium.classList.add(`tmg-${this.medium.tagName.toLowerCase()}`, "tmg-media");
+    const s = this._build.settings;
     type Mode = keyof typeof s.modes;
     Object.keys(s.modes).forEach((k) => (s.modes[k as Mode] = (s.modes[k as Mode] && (modes[String(k)] ?? true) ? s.modes[k as Mode] : false) as any));
     await Promise.all([loadResource(window.TMG_VIDEO_CSS_SRC), loadResource(window.T007_TOAST_JS_SRC, "script", { module: true }), loadResource(window.T007_INPUT_JS_SRC, "script")]);
-    Controllers[Controllers.indexOf(this.build.id as any)] = this.#controller = new Controller(this.#medium, this.#build);
+    Controllers[Controllers.indexOf(this._build.id as any)] = this.controller = new Controller(this.medium, this._build);
   }
 }

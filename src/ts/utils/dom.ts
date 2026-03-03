@@ -39,30 +39,34 @@ export function assignEl(el?: HTMLElement, props: Record<string, unknown> = {}, 
   for (const k of Object.keys(styles)) if (styles[k as keyof Style] !== undefined) (el.style as unknown as Record<string, unknown>)[k] = styles[k as keyof Style];
 }
 
+export function getWindow(el?: any): (Window & typeof globalThis) | undefined {
+  return (el instanceof Window ? el : el instanceof Document ? el?.defaultView : el?.ownerDocument?.defaultView) ?? undefined;
+}
+
 // Resource Loading
-export function loadResource(src: string, type: ResourceType = "style", { module, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, attempts = 3, retryKey = false }: LoadResourceOptions = {}): Promise<HTMLElement | void> {
-  ((window.t007 ??= {} as any), (t007._resourceCache ??= {}));
-  if (t007._resourceCache[src]) return t007._resourceCache[src]; // set crossorigin on (links|scripts) if provided due to document.(styleSheets|scripts)
-  if (type === "script" ? Array.prototype.some.call(document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.some.call(document.styleSheets, (s) => isSameURL((s as CSSStyleSheet).href ?? "", src)) : false) return Promise.resolve();
-  t007._resourceCache[src] = new Promise<HTMLElement | void>((resolve, reject) => {
+export function loadResource(src: string, type: ResourceType = "style", { module, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, attempts = 3, retryKey = false }: LoadResourceOptions = {}, w = window): Promise<HTMLElement | void> {
+  ((w.t007 ??= {} as any), (w.t007._resourceCache ??= {}));
+  if (w.t007._resourceCache[src]) return w.t007._resourceCache[src]; // set crossorigin on (links|scripts) if provided due to document.(styleSheets|scripts)
+  if (type === "script" ? Array.prototype.some.call(w.document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.some.call(w.document.styleSheets, (s) => isSameURL((s as CSSStyleSheet).href ?? "", src)) : false) return Promise.resolve();
+  w.t007._resourceCache[src] = new Promise<HTMLElement | void>((resolve, reject) => {
     (function tryLoad(remaining: number, el?: HTMLElement) {
       const onerror = () => {
-        el?.remove(); // Remove failed element before retrying
+        el?.remove?.(); // Remove failed element before retrying
         if (remaining > 1) {
           setTimeout(tryLoad, 1000, remaining - 1);
           console.warn(`Retrying ${type} load (${attempts - remaining + 1}): ${src}...`);
         } else {
-          delete t007._resourceCache[src]; // Final fail: clear cache so user can manually retry
+          delete w.t007._resourceCache[src]; // Final fail: clear cache so user can manually retry
           reject(new Error(`${type} load failed after ${attempts} attempts: ${src}`));
         }
       };
       const url = retryKey && remaining < attempts ? `${src}${src.includes("?") ? "&" : "?"}_${retryKey}=${Date.now()}` : src;
-      if (type === "script") document.body.append((el = createEl("script", { src: url, type: module ? "module" : "text/javascript", crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror })));
-      else if (type === "style") document.head.append((el = createEl("link", { rel: "stylesheet", href: url, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror })));
+      if (type === "script") w.document.body.append((el = createEl("script", { src: url, type: module ? "module" : "text/javascript", crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || ""));
+      else if (type === "style") w.document.head.append((el = createEl("link", { rel: "stylesheet", href: url, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || ""));
       else reject(new Error(`Unsupported resource type: ${type}`));
     })(attempts);
   });
-  return t007._resourceCache[src];
+  return w.t007._resourceCache[src];
 }
 
 // Viewport Checks
@@ -97,6 +101,8 @@ export function queryFullscreenEl(): Element | null {
   const d = document as any;
   return d.fullscreenElement || d.webkitFullscreenElement || d.mozFullScreenElement || d.msFullscreenElement || null;
 }
+export const queryPictureInPicture = (): boolean => Boolean(queryPictureInPictureEl());
+export const queryPictureInPictureEl = () => document.pictureInPictureElement;
 
 export function supportsFullscreen(): boolean {
   const d = document as any,

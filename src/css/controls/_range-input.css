@@ -15,7 +15,6 @@
 .tmg-video-container input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  transition: box-shadow var(--tmg-video-switch-transition-time) var(--tmg-video-bounce-timing);
 }
 .tmg-video-container input:active::-webkit-slider-thumb {
   box-shadow: 0 0 0 calc(var(--tmg-video-current-unit) / 10) var(--tmg-video-ripple-color);
@@ -25,7 +24,6 @@
   -webkit-appearance: none;
   appearance: none;
   border: none;
-  transition: box-shadow var(--tmg-video-switch-transition-time) var(--tmg-video-bounce-timing);
 }
 .tmg-video-container input:active::-moz-slider-thumb {
   box-shadow: 0 0 0 calc(var(--tmg-video-current-unit) / 10) var(--tmg-video-ripple-color);

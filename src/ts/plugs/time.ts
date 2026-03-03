@@ -3,7 +3,7 @@ import { parseIfPercent, clamp, safeNum, formatMediaTime, parseCSSTime, setTimeo
 import type { Event } from "../types/reactor";
 import type { OptRange } from "../types/generics";
 import type { PreviewConfig, Timeline } from "../components";
-import { CMedia } from "../types/contract";
+import { CtlrMedia } from "../types/contract";
 
 export interface CTime extends OptRange {
   mode: "elapsed" | "remaining";
@@ -37,27 +37,21 @@ export class TimePlug extends BasePlug<CTime> {
     this.ctlr.media.intent.currentTime = value!;
   }
 
-  protected handleTimeUpdate({ target }: Event<CMedia, "state.currentTime">): void {
-    this.ctlr.throttle(
-      "timeUpdating",
-      () => {
-        const curr = target.value!,
-          min = this.ctlr.config.settings.time.min!,
-          max = this.ctlr.config.settings.time.max!,
-          dur = this.ctlr.media.status.duration,
-          end = this.ctlr.config.settings.time.end!;
-        if (curr < min || curr > max) {
-          this.ctlr.media.intent.currentTime = this.ctlr.config.settings.time.loop ? min : curr;
-          if (!this.ctlr.config.settings.time.loop) this.ctlr.media.intent.paused = true;
-        }
-        if (this.ctlr.media.status.readyState && curr) this.ctlr.config.settings.time.start = this.pseudoStart = curr > 3 && curr < (end ?? dur) - 3 ? curr : this.actualStart;
-      },
-      250
-    );
+  protected handleTimeUpdate({ target }: Event<CtlrMedia, "state.currentTime">): void {
+    const curr = target.value!,
+      min = this.ctlr.config.settings.time.min!,
+      max = this.ctlr.config.settings.time.max!,
+      dur = this.ctlr.media.status.duration,
+      end = this.ctlr.config.settings.time.end!;
+    if (curr < min || curr > max) {
+      this.ctlr.media.intent.currentTime = this.ctlr.config.settings.time.loop ? min : curr;
+      if (!this.ctlr.config.settings.time.loop) this.ctlr.media.intent.paused = true;
+    }
+    if (this.ctlr.media.status.readyState && curr) this.ctlr.config.settings.time.start = this.pseudoStart = curr > 3 && curr < (end ?? dur) - 3 ? curr : this.actualStart;
   }
 
-  protected handleWaitingStatus({ target: { value } }: Event<CMedia, "status.waiting">): void {
-    if (value && IS_MOBILE && this.currentSkipNotifier) this.ctlr.media.once("status.waiting", ({ target: { value } }) => !value && this.ctlr.getPlug<OverlayPlug>("overlay")?.remove(), { signal: this.signal });
+  protected handleWaitingStatus({ value }: Event<CtlrMedia, "status.waiting">): void {
+    if (value && IS_MOBILE && this.currentSkipNotifier) this.ctlr.media.once("status.waiting", ({ value }) => !value && this.ctlr.getPlug<OverlayPlug>("overlay")?.remove(), { signal: this.signal });
   }
 
   public toTimeVal(value: number | string | undefined | null): number {

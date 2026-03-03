@@ -1,5 +1,5 @@
 import { BasePlug } from ".";
-import type { Event } from "../core/reactor";
+import type { Event } from "../types/reactor";
 import { VideoBuild } from "../types/build";
 import type { OptRange } from "../types/generics";
 import { clamp } from "../utils";
@@ -64,7 +64,7 @@ export class BrightnessPlug extends BasePlug<Brightness> {
     }
   }
 
-  protected handleBrightnessChange({ target: { value } }: Event<VideoBuild, "settings.brightness.value">): void {
+  protected handleBrightnessChange({ value }: Event<VideoBuild, "settings.brightness.value">): void {
     this.handleBrightnessState(value!);
   }
 

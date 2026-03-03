@@ -1,8 +1,9 @@
-# Utils Migration Map: JS (tmg.*) → TypeScript
+# Utils Migration Map: JS (tmg.\*) → TypeScript
 
 This document maps all `tmg.*` utility functions from prototype-3.js to their TypeScript equivalents WITHOUT the tmg prefix.
 
 ## String Utils (utils/str.ts)
+
 | JS Prototype                | TypeScript              | Notes                    |
 | --------------------------- | ----------------------- | ------------------------ |
 | `tmg.capitalize(str)`       | `capitalize(str)`       | Capitalizes first letter |
@@ -12,6 +13,7 @@ This document maps all `tmg.*` utility functions from prototype-3.js to their Ty
 | `tmg.isSameURL(src1, src2)` | `isSameURL(src1, src2)` | Compares URLs            |
 
 ## Object Utils (utils/obj.ts)
+
 | JS Prototype                         | TypeScript                       | Notes                       |
 | ------------------------------------ | -------------------------------- | --------------------------- |
 | `tmg.isDef(val)`                     | `isDef(val)`                     | Checks if defined           |
@@ -30,6 +32,7 @@ This document maps all `tmg.*` utility functions from prototype-3.js to their Ty
 | `tmg.parsePanelBottomObj(obj)`       | `parsePanelBottomObj(obj)`       | Parses control panel bottom |
 
 ## Number Utils (utils/num.ts)
+
 | JS Prototype                     | TypeScript                   | Notes                     |
 | -------------------------------- | ---------------------------- | ------------------------- |
 | `tmg.clamp(min, val, max)`       | `clamp(min, val, max)`       | Clamps value              |
@@ -39,12 +42,14 @@ This document maps all `tmg.*` utility functions from prototype-3.js to their Ty
 | `tmg.parseIfPercent(val, whole)` | `parseIfPercent(val, whole)` | Converts percent to value |
 
 ## Time Utils (utils/time.ts)
+
 | JS Prototype                   | TypeScript                 | Notes                     |
 | ------------------------------ | -------------------------- | ------------------------- |
 | `tmg.formatMediaTime(opts)`    | `formatMediaTime(opts)`    | Formats time string       |
 | `tmg.createTimeRanges(ranges)` | `createTimeRanges(ranges)` | Creates TimeRanges object |
 
 ## DOM Utils (utils/dom.ts)
+
 | JS Prototype                              | TypeScript                            | Notes                        |
 | ----------------------------------------- | ------------------------------------- | ---------------------------- |
 | `tmg.createEl(tag, props, data, style)`   | `createEl(tag, props, data, style)`   | Creates element              |
@@ -68,6 +73,7 @@ This document maps all `tmg.*` utility functions from prototype-3.js to their Ty
 | `tmg.observeMutation(el, cb, opts)`       | `observeMutation(el, cb, opts)`       | Observes mutations           |
 
 ## Function Utils (utils/fn.ts)
+
 | JS Prototype                             | TypeScript                           | Notes                          |
 | ---------------------------------------- | ------------------------------------ | ------------------------------ |
 | `tmg.setTimeout(handler, timeout, sig)`  | `setTimeout(handler, timeout, sig)`  | setTimeout with AbortSignal    |
@@ -81,6 +87,7 @@ This document maps all `tmg.*` utility functions from prototype-3.js to their Ty
 | `tmg.deprecateForMajor(v, old, new)`     | `deprecateForMajor(v, old, new)`     | Logs major version deprecation |
 
 ## Media Utils (utils/media.ts)
+
 | JS Prototype                     | TypeScript                   | Notes                 |
 | -------------------------------- | ---------------------------- | --------------------- |
 | `tmg.getSources(video)`          | `getSources(video)`          | Gets video sources    |
@@ -92,6 +99,7 @@ This document maps all `tmg.*` utility functions from prototype-3.js to their Ty
 | `tmg.cloneVideo(video)`          | `cloneVideo(video)`          | Clones video element  |
 
 ## Color Utils (utils/color.ts)
+
 | JS Prototype            | TypeScript          | Notes               |
 | ----------------------- | ------------------- | ------------------- |
 | `tmg.hexToRgb(hex)`     | `hexToRgb(hex)`     | Converts hex to RGB |
@@ -99,18 +107,21 @@ This document maps all `tmg.*` utility functions from prototype-3.js to their Ty
 | `tmg.parseColor(color)` | `parseColor(color)` | Parses color string |
 
 ## Key Utils (utils/keys.ts)
+
 | JS Prototype              | TypeScript            | Notes                     |
 | ------------------------- | --------------------- | ------------------------- |
 | `tmg.fetchKeyShortcuts()` | `fetchKeyShortcuts()` | Gets key bindings config  |
 | `tmg.isModdedKey(e)`      | `isModdedKey(e)`      | Checks if key is modified |
 
 ## File Utils (utils/file.ts)
+
 | JS Prototype                       | TypeScript                     | Notes                   |
 | ---------------------------------- | ------------------------------ | ----------------------- |
 | `tmg.downloadBlob(blob, filename)` | `downloadBlob(blob, filename)` | Downloads blob as file  |
 | `tmg.captureCanvas(canvas, type)`  | `captureCanvas(canvas, type)`  | Captures canvas to blob |
 
 ## Browser Utils (utils/browser.ts)
+
 | JS Prototype    | TypeScript  | Notes                     |
 | --------------- | ----------- | ------------------------- |
 | `tmg.ON_MOBILE` | `ON_MOBILE` | Boolean: is mobile device |
@@ -122,6 +133,7 @@ This document maps all `tmg.*` utility functions from prototype-3.js to their Ty
 ## Usage Example
 
 **Before (JS):**
+
 ```javascript
 const time = tmg.formatMediaTime({ time: 123 });
 const el = tmg.createEl("div", { className: "foo" });
@@ -129,6 +141,7 @@ tmg.addSafeClicks(button, onClick, onDblClick);
 ```
 
 **After (TS):**
+
 ```typescript
 import { formatMediaTime, createEl, addSafeClicks } from "../utils";
 

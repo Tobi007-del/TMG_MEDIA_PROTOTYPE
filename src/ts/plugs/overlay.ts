@@ -24,16 +24,16 @@ export class OverlayPlug extends BasePlug<Overlay, OverlayState> {
   }
 
   public wire(): void {
-    this.ctlr.media.on("state.paused", ({ target: { value } }) => (value ? this.show() : this.delay()), { signal: this.signal, immediate: true });
+    this.ctlr.media.on("state.paused", ({ value }) => (value ? this.show() : this.delay()), { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.overlay.curtain", this.handleCurtain, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.overlay.behavior", this.handleBehavior, { signal: this.signal, immediate: true });
   }
 
-  protected handleCurtain({ target: { value } }: Event<VideoBuild, "settings.overlay.curtain">): void {
+  protected handleCurtain({ value }: Event<VideoBuild, "settings.overlay.curtain">): void {
     this.ctlr.videoContainer.dataset.curtain = value;
   }
 
-  protected handleBehavior({ target: { value } }: Event<VideoBuild, "settings.overlay.behavior">): void {
+  protected handleBehavior({ value }: Event<VideoBuild, "settings.overlay.behavior">): void {
     value === "persistent" && this.show();
     value === "hidden" && this.remove("force");
   }

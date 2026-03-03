@@ -4,7 +4,7 @@ import type { Event } from "../types/reactor";
 import { controls, bigControls } from "../consts/generics";
 import { BaseComponent } from "../components/base";
 import { ComponentRegistry } from "../core/registry";
-import { createEl, parsePanelBottomObj, inBoolArrOpt, getElSiblingAt, setAny, getAny, setTimeout } from "../utils";
+import { createEl, parsePanelBottomObj, inBoolArrOpt, getElSiblingAt, setAny, getAny, setTimeout, capitalize, initScrollAssist } from "../utils";
 import { Timeline } from "../components";
 
 export type Control = (typeof controls)[number];
@@ -63,20 +63,28 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
       bottomW.append(row);
     });
     cc?.append(topW, this.zoneWs.center.zone, bottomW);
-    ComponentRegistry.getAll().forEach((Comp) => {
-      Comp.isControl && this.controls.set(Comp.componentName, ComponentRegistry.init(Comp.componentName, this.ctlr)!);
-    });
+    ComponentRegistry.getAll().forEach((Comp) => Comp.isControl && this.controls.set(Comp.componentName, ComponentRegistry.init(Comp.componentName, this.ctlr)!));
   }
 
   public wire(): void {
+    (["settings.controlPanel.title", "settings.controlPanel.artist", "settings.controlPanel.profile"] as const).forEach((e) =>
+      this.ctlr.config.on(
+        e,
+        ({ target: { key, value } }) => {
+          // const meta = this.getControl<Meta>("meta");
+          // value !== true && (meta[key][key === "profile" ? "src" : "textContent"] = meta[key].dataset["video" + capitalize(key)] = value || "");
+        },
+        { signal: this.signal, immediate: true }
+      )
+    );
     this.ctlr.config.on("settings.controlPanel.top", this.handleTopLayout, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.center", this.handleCenterLayout, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.bottom", this.handleBottomLayout, { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.controlPanel.buffer", ({ target: { value } }) => (this.ctlr.videoContainer.dataset.buffer = String(value)), { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.controlPanel.timeline.thumbIndicator", ({ target: { value } }) => (this.ctlr.videoContainer.dataset.thumbIndicator = String(value)), { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.buffer", ({ value }) => (this.ctlr.videoContainer.dataset.buffer = String(value)), { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.timeline.thumbIndicator", ({ value }) => (this.ctlr.videoContainer.dataset.thumbIndicator = String(value)), { signal: this.signal, immediate: true });
     this.ctlr.config.on(
       "settings.controlPanel.timeline.seek",
-      ({ target: { value } }) => {
+      ({ currentTarget: { value } }) => {
         const timeline = this.getControl<Timeline>("timeline");
         if (!timeline) return;
         timeline.config.scrub.relative = value!.relative;
@@ -84,8 +92,8 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
       },
       { signal: this.signal, immediate: true }
     );
-    this.ctlr.config.on("settings.controlPanel.progressBar", ({ target: { value } }) => this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", !!value), { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.controlPanel.draggable", ({ target: { value } }) => this.setDragEventListeners(value ? "add" : "remove"), { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.progressBar", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", !!value), { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.draggable", ({ value }) => this.setDragEventListeners(value ? "add" : "remove"), { signal: this.signal, immediate: true });
   }
 
   protected buildWSkel(side: string): ZoneW {
@@ -111,7 +119,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     return [...Object.values(this.zoneWs.top), ...Object.values(this.zoneWs.bottom).map((v) => Object.values(v))].flat().map((w) => w.zone);
   }
 
-  protected handleTopLayout({ target: { value } }: Event<VideoBuild, "settings.controlPanel.top">): void {
+  protected handleTopLayout({ value }: Event<VideoBuild, "settings.controlPanel.top">): void {
     if (!value || typeof value === "boolean") return;
     const { left, center, right } = this.getSplitControls(value);
     this.fillZone(this.zoneWs.top.left, left);
@@ -119,12 +127,12 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     this.fillZone(this.zoneWs.top.right, right);
   }
 
-  protected handleCenterLayout({ target: { value } }: Event<VideoBuild, "settings.controlPanel.center">): void {
+  protected handleCenterLayout({ value }: Event<VideoBuild, "settings.controlPanel.center">): void {
     if (!value || typeof value === "boolean") return;
     this.fillZone(this.zoneWs.center, value);
   }
 
-  protected handleBottomLayout({ target: { value } }: Event<VideoBuild, "settings.controlPanel.bottom">): void {
+  protected handleBottomLayout({ value }: Event<VideoBuild, "settings.controlPanel.bottom">): void {
     if (!value || typeof value === "boolean") return;
     ([1, 2, 3] as Row[]).forEach((i) => {
       const { left, center, right } = this.getSplitControls((value as ControlPanelBottomTuple)[i] ?? []);

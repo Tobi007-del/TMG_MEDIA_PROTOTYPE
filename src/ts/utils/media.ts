@@ -1,7 +1,7 @@
 import { DEFAULT_MEDIA_INTENT, DEFAULT_MEDIA_SETTINGS, DEFAULT_MEDIA_STATE, DEFAULT_MEDIA_STATUS } from "../consts/media-defaults";
 import { MediaState, MediaReport } from "../types/contract";
 import type { Source, Sources, Track, Tracks } from "../plugs";
-import { createEl, isIter, isSameURL, loadResource, queryFullscreenEl } from ".";
+import { createEl, isIter, isSameURL, loadResource, queryFullscreenEl, queryPictureInPictureEl } from ".";
 
 // ============ Video Utilities ============
 
@@ -22,7 +22,7 @@ export function getMediaReport(m: HTMLMediaElement): MediaReport {
       volume: m.volume,
       muted: m.muted,
       playbackRate: m.playbackRate,
-      pictureInPicture: document.pictureInPictureElement === m,
+      pictureInPicture: queryPictureInPictureEl() === m,
       fullscreen: queryFullscreenEl() === m,
       currentTextTrack: txtTrackIdx,
       currentAudioTrack: getTrackIdx(m, "Audio"),
@@ -35,7 +35,7 @@ export function getMediaReport(m: HTMLMediaElement): MediaReport {
       crossOrigin: m.crossOrigin,
       controls: m.controls,
       controlsList: m.controlsList ?? m.getAttribute("controlsList"),
-      disablePictureInPicture: m instanceof HTMLVideoElement ? m.disablePictureInPicture ?? m.hasAttribute("disablePictureInPicture") : false,
+      disablePictureInPicture: m instanceof HTMLVideoElement ? (m.disablePictureInPicture ?? m.hasAttribute("disablePictureInPicture")) : false,
       sources: getSources(m),
       tracks: getTracks(m),
     },
@@ -112,7 +112,7 @@ export function getRenderedBox(elem: HTMLElement & { videoWidth?: number; videoH
     return { ...parseObjectPosition(objectPosition, bbox, { width, height }), width, height };
   }
   return {};
-};
+}
 
 export function getSizeTier(container: HTMLElement) {
   const { offsetWidth: w, offsetHeight: h } = container;
@@ -140,7 +140,7 @@ export function cloneMedia<M extends HTMLMediaElement>(v: M): M {
   if (v.disablePictureInPicture) newV.disablePictureInPicture = true;
   if (!v.paused && newV.isConnected) newV.play();
   return newV;
-};
+}
 
 // Source Management
 export function putSourceDetails(source: any, el: HTMLSourceElement | Record<string, any>) {
@@ -226,6 +226,43 @@ export function setCurrentTrack(medium: HTMLMediaElement, type: TrackType, term:
     idx = getTrackIdx(medium, type, term);
   if (type !== "Video") for (let i = 0; i < list.length; i++) type === "Text" ? (list[i].mode = i === idx ? "showing" : flush ? "disabled" : "hidden") : (list[i].enabled = i === idx);
   else list[idx] && (list[idx].selected = true);
+}
+
+// Capbailities
+export const DUMMY_VID = createEl("video");
+export function canVidCtrlVolume(): boolean {
+  if (!DUMMY_VID) return false;
+  try {
+    const prev = DUMMY_VID.volume;
+    DUMMY_VID.volume = 0.5;
+    const works = DUMMY_VID.volume === 0.5;
+    return ((DUMMY_VID.volume = prev), works);
+  } catch {
+    return false;
+  }
+}
+export function canVidMuteVolume(): boolean {
+  return !!DUMMY_VID && "muted" in DUMMY_VID;
+}
+export function canVidCtrlRate(): boolean {
+  if (!DUMMY_VID) return false;
+  try {
+    const prev = DUMMY_VID.playbackRate;
+    DUMMY_VID.playbackRate = 0.5;
+    const works = DUMMY_VID.playbackRate === 0.5;
+    return ((DUMMY_VID.playbackRate = prev), works);
+  } catch {
+    return false;
+  }
+}
+export function canVidTextTracks(): boolean {
+  return !!DUMMY_VID && "textTracks" in DUMMY_VID;
+}
+export function canVidVideoTracks(): boolean {
+  return !!DUMMY_VID && "videoTracks" in DUMMY_VID;
+}
+export function canVidAudioTracks(): boolean {
+  return !!DUMMY_VID && "audioTracks" in DUMMY_VID;
 }
 
 // ============ Caption/Subtitle Utilities ============

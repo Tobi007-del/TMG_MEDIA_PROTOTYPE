@@ -34,20 +34,21 @@
         text-align: center;
       }
     </style>
+    <link rel="stylesheet" href="prototype-3-video.css" />
     <script src="prototype-3.js" defer></script>
     <script src="test.js" defer></script>
   </head>
   <body>
     <div class="container">
       <h2>Single Media</h2>
-      <video poster="../assets/justice-league-b.jpeg" tmgcontrols muted src="../assets/justice_league_preview.mp4" type="video/mp4" tmg--media--title="Justice League Teaser" tmg--settings--time--previews--address="../assets/previewImgs/preview$.jpg" tmg--settings--time--previews--spf="10" tmg--settings--control-panel--bottom--1="prev,playpause,next,brightness,volume,timeandduration,spacer,captions,settings,objectfit,pictureinpicture,theater,fullscreen" tmg--settings--control-panel--bottom--3=","  tmg--settings--overlay--behavior="persistent">
-        <track default kind="captions" src="../assets/test-captions-ultimate.vtt"></track>
+      <video poster="../assets/justice-league-b.jpeg" tmgcontrols muted src="../assets/justice_league_preview.mp4" type="video/mp4" tmg--media--title="Justice League Teaser" tmg--settings--time--previews--address="../assets/previewImgs/preview$.jpg" tmg--settings--time--previews--spf="10" tmg--settings--control-panel--bottom--1="prev,playpause,next,brightness,volume,timeandduration,spacer,captions,settings,objectfit,pictureinpicture,theater,fullscreen" tmg--settings--control-panel--bottom--3="," tmg--settings--overlay--behavior="persistent" class="tmg-media">
+        <track default kind="captions" src="../assets/test-captions-ultimate.vtt" />
         <track kind="subtitles" srclang="en" src="../assets/subtitles/justice_league_preview.vtt" label="English" />
       </video>
     </div>
     <div class="container">
       <h2>Media Playlist</h2>
-      <video muted type="video/mp4" tmg--media--artist="TMG Media Prototype" tmg--media--profile="../assets/icons/movie-tape-two.jpeg" tmg--media--links--artist="../" tmg--media--links--profile="https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE" tmg--settings--overlay--behavior="persistent"></video>
+      <video muted type="video/mp4" tmg--media--artist="TMG Media Prototype" tmg--media--profile="../assets/icons/movie-tape-two.jpeg" tmg--media--links--artist="../" tmg--media--links--profile="https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE" tmg--settings--overlay--behavior="persistent" class="tmg-media"></video>
     </div>
   </body>
 </html>

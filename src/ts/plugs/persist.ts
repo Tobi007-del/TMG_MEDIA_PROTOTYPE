@@ -1,8 +1,8 @@
 import { BasePlug } from ".";
+import type { Event } from "../types/reactor";
+import type { VideoBuild } from "../types/build";
 import { StorageAdapter, LocalStorageAdapter, type StorageAdapterConstructor } from "../core/storage";
 import { mergeObjs } from "../utils";
-import type { Event } from "../core/reactor";
-import { VideoBuild } from "../types/build";
 
 export interface Persist {
   disabled: boolean;

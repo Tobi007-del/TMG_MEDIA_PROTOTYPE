@@ -1,7 +1,7 @@
 import { BasePlug } from ".";
 import type { DisabledPlug } from "./disabled";
 import type { Event } from "../types/reactor";
-import type { CMedia } from "../types/contract";
+import type { CtlrMedia } from "../types/contract";
 import type { ErrorCode } from "../types/generics";
 
 export type ErrorMessages = Record<ErrorCode, string>;
@@ -13,7 +13,7 @@ export class ErrorMessagesPlug extends BasePlug<ErrorMessages> {
     this.ctlr.media.on("status.error", this.handleError, { signal: this.signal });
   }
 
-  protected handleError({ target: { value } }: Event<CMedia, "status.error">): void {
+  protected handleError({ value }: Event<CtlrMedia, "status.error">): void {
     if (!value) return;
     const code = value.code as ErrorCode,
       message = this.config[code] || value.message || "An unknown error occurred with the video :(";

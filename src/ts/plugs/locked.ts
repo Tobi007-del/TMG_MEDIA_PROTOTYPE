@@ -57,7 +57,7 @@ export class LockedPlug extends BasePlug<Locked, LockedState> {
     this.state.visible ? this?.removeOverlay() : this?.showOverlay();
   }
 
-  protected async handleLockChange({ target: { value } }: Event<VideoBuild, "settings.locked.disabled">): Promise<void> {
+  protected async handleLockChange({ value }: Event<VideoBuild, "settings.locked.disabled">): Promise<void> {
     if (!value) {
       // TODO: Implement leaveSettingsView on Controller
       // this.ctlr.leaveSettingsView?.();

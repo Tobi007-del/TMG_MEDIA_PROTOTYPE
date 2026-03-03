@@ -24,6 +24,8 @@ export interface MediaState {
   // --- The Presentation Modes (Heavily Rejectable) ---
   pictureInPicture: boolean;
   fullscreen: boolean;
+  theater: boolean;
+  miniplayer: boolean;
   // --- Casting (Connection Handshakes) ---
   airplay: boolean; // Apple AirPlay
   chromecast: boolean; // Google Cast
@@ -35,16 +37,15 @@ export interface MediaState {
   projection: "flat" | "equirectangular" | "cubemap" | "cylindrical";
   stereoMode: "mono" | "sbs" | "top-bottom" | "vr180" | "none"; // Side-by-Side vs Top-Bottom
   // --- Camera & Viewport (The "Lens") ---
-  fieldOfView: number; // Degrees (Vertical FOV)
-  aspectRatio: number; // Viewport ratio
+  fieldOfView: number; // Vertical aperture in degrees (Vertical FOV)
+  viewRatio: number; // Horizontal expansion factor (Width / Height)
   // --- Orientation (The "Head/Camera" Pose) ---
   panningX: number; // Yaw (Left/Right)
   panningY: number; // Pitch (Up/Down)
   panningZ: number; // Roll (Tilt/Barrel)
   // --- Interaction (XR Controllers) ---
-  xrInputSource: any; // Reference to active controllers/hand-tracking
-  // --- Track Switching (Async Buffering/Streaming) ---
-  // NOTE: "Disabled" value is "-1"
+  xrInputSource: unknown; // Reference to active controllers/hand-tracking
+  // --- Track Switching (Async Buffering/Streaming) --- NOTE: "Disabled" value is "-1"
   currentTextTrack: number; // Subtitle
   currentAudioTrack: number; // Language (English -> Spanish)
   currentVideoTrack: number; // Angle
@@ -63,14 +64,20 @@ export interface MediaState {
   // ---  HTML Lists ---
   sources: Sources; // HTML courtesy
   tracks: Tracks; // HTML courtesy
+  // --- Misc ---
+  objectFit: "fill" | "contain" | "cover" | "none" | "scale-down" | string;
+  // [key: string]: any; // Allow for plugins to add custom contract properties
 }
 
-export interface MediaIntent extends MediaState {
-  currentLevel: any;
-  currentAudioTrack: any;
-  currentVideoTrack: any;
-  currentTextTrack: any;
-} // Tech's responsibility to receive `any` intent and produce a `number` that can index their status (track/level) lists
+export type MediaIntent = Omit<
+  MediaState,
+  "currentLevel" | "currentAudioTrack" | "currentVideoTrack" | "currentTextTrack"
+> & {
+  currentLevel: unknown;
+  currentAudioTrack: unknown;
+  currentVideoTrack: unknown;
+  currentTextTrack: unknown;
+}; // Tech's responsibility to receive `unknown` intent and produce a `number` that can index their status (track/level) lists
 
 export interface MediaStatus {
   // --- Network & Health ---
@@ -97,9 +104,9 @@ export interface MediaStatus {
   canPlayThrough: boolean; // Can we finish?
   // --- Lists ---
   textTracks: TextTrackList | any[];
-  audioTracks: any[]; // | AudioTrackList
-  videoTracks: any[]; // | VideoTrackList
-  levels: any[];
+  audioTracks: unknown[]; // | AudioTrackList
+  videoTracks: unknown[]; // | VideoTrackList
+  levels: unknown[];
   // --- VR / XR Info ---
   xrCapabilities: Record<
     "hasPosition" | "hasOrientation" | "isEmulated", // 6DoF- Room-scale, 3DoF- Head rotation, Emulated- Magic Window
@@ -132,7 +139,7 @@ export interface MediaReport {
   settings: MediaSettings;
 }
 
-export type CMedia = {
+export type CtlrMedia = {
   tech: Inert<BaseTech>;
   element: HTMLVideoElement;
 } & MediaReport; // Controller Media

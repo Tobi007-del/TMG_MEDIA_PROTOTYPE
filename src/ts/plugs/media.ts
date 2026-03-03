@@ -50,7 +50,7 @@ export class MediaPlug extends BasePlug<Media> {
     videoProfile && this.ctlr.setImgLoadState({ target: videoProfile });
   }
   public wire(): void {
-    this.ctlr.media.on("state.paused", ({ target: { value } }) => !value && this.syncMediaSession(), { signal: this.signal });
+    this.ctlr.media.on("state.paused", ({ value }) => !value && this.syncMediaSession(), { signal: this.signal });
     this.ctlr.config.watch("media.title", this.forwardTitle, { immediate: true, signal: this.signal });
     this.ctlr.config.watch("media.artist", this.forwardArtist, { immediate: true, signal: this.signal });
     this.ctlr.config.watch("media.profile", this.forwardProfile, { immediate: true, signal: this.signal });

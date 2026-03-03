@@ -5,6 +5,7 @@
   z-index: 3;
   touch-action: none;
   cursor: pointer;
+  contain: layout;
 }
 .tmg-video-container:is(:not(.tmg-video-overlay, :has(:focus-visible, .tmg-video-playback-rate-notifier.tmg-video-control-active)).tmg-video-progress-bar, [data-size-tier^="xxxxx"]) :is(.tmg-video-timeline-container, .tmg-video-seek-bars-wrapper) {
   position: absolute;
@@ -83,9 +84,7 @@
   background: var(--tmg-video-seek-thumb-background);
   border-radius: 50%;
   transform: scale(var(--tmg-video-current-thumb-indicator-scale));
-  transition:
-    transform var(--tmg-video-switch-transition-time) var(--tmg-video-bounce-timing),
-    box-shadow var(--tmg-video-switch-transition-time) var(--tmg-video-bounce-timing);
+  transition: transform var(--tmg-video-switch-transition-time) var(--tmg-video-bounce-timing);
 }
 .tmg-video-container.tmg-video-scrubbing .tmg-video-thumb-indicator {
   box-shadow:

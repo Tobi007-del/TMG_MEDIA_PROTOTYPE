@@ -1,5 +1,5 @@
 import { BasePlug } from ".";
-import type { Event } from "../core/reactor";
+import type { Event } from "../types/reactor";
 import { VideoBuild } from "../types/build";
 import type { OptRange } from "../types/generics";
 import { clamp, rotate } from "../utils";

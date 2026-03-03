@@ -58,9 +58,7 @@ export interface Captions {
     color: UISettings<string>;
     opacity: UISettings<number>;
   };
-  characterEdgeStyle: UISettings<
-    "none" | "raised" | "depressed" | "outline" | "drop-shadow"
-  >;
+  characterEdgeStyle: UISettings<"none" | "raised" | "depressed" | "outline" | "drop-shadow">;
   textAlignment: UISettings<"left" | "center" | "right">;
 }
 

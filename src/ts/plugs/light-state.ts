@@ -1,7 +1,8 @@
 import { BasePlug, OverlayPlug, ControlPanelPlug, Control, BigControl } from ".";
-import { PosterPreview } from "../types/generics";
-import { VideoBuild } from "../types/build";
-import { Event, TERMINATOR } from "../core/reactor";
+import type { PosterPreview } from "../types/generics";
+import type { VideoBuild } from "../types/build";
+import type { Event } from "../types/reactor";
+import { TERMINATOR } from "../core/reactor";
 import { inBoolArrOpt } from "../utils";
 
 export interface LightState {
@@ -49,7 +50,7 @@ export class LightStatePlug extends BasePlug<LightState> {
   }
 
   protected handleTimeChange({ value, target, root }: Event<VideoBuild, "lightState.preview.time">): void {
-    !root.lightState.disabled && (!target.object.preview.usePoster || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = value!);
+    !root.lightState.disabled && (!target.object.usePoster || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = value!);
   }
 
   protected add(): void {

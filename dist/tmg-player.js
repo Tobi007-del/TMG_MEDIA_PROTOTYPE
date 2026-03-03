@@ -4,9 +4,6 @@ var tmg = (() => {
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __typeError = (msg) => {
-    throw TypeError(msg);
-  };
   var __export = (target, all) => {
     for (var name in all)
       __defProp(target, name, { get: all[name], enumerable: true });
@@ -20,10 +17,6 @@ var tmg = (() => {
     return to;
   };
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-  var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
-  var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
-  var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
-  var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 
   // src/index.ts
   var index_exports = {};
@@ -36,7 +29,6 @@ var tmg = (() => {
     Controllable: () => Controllable,
     Controller: () => Controller,
     Controllers: () => Controllers,
-    Event: () => Event,
     INERTIA: () => INERTIA,
     IS_DOC_TRANSIENT: () => IS_DOC_TRANSIENT,
     IconRegistry: () => IconRegistry,
@@ -46,7 +38,8 @@ var tmg = (() => {
     PlugRegistry: () => PlugRegistry,
     RAW: () => RAW,
     REJECTABLE: () => REJECTABLE,
-    REOPTS: () => REOPTS,
+    Reactor: () => Reactor,
+    ReactorEvent: () => ReactorEvent,
     StorageAdapter: () => StorageAdapter,
     TERMINATOR: () => TERMINATOR,
     TechRegistry: () => TechRegistry,
@@ -69,6 +62,7 @@ var tmg = (() => {
     ANDROID_VERSION: () => ANDROID_VERSION,
     CHROME_VERSION: () => CHROME_VERSION,
     CHROMIUM_VERSION: () => CHROMIUM_VERSION,
+    DUMMY_VID: () => DUMMY_VID,
     IE_VERSION: () => IE_VERSION,
     IOS_VERSION: () => IOS_VERSION,
     IS_ANDROID: () => IS_ANDROID,
@@ -93,7 +87,14 @@ var tmg = (() => {
     addSources: () => addSources,
     addTracks: () => addTracks,
     assignEl: () => assignEl,
+    breath: () => breath,
     camelize: () => camelize,
+    canVidAudioTracks: () => canVidAudioTracks,
+    canVidCtrlRate: () => canVidCtrlRate,
+    canVidCtrlVolume: () => canVidCtrlVolume,
+    canVidMuteVolume: () => canVidMuteVolume,
+    canVidTextTracks: () => canVidTextTracks,
+    canVidVideoTracks: () => canVidVideoTracks,
     capitalize: () => capitalize,
     clamp: () => clamp,
     clampRGBBri: () => clampRGBBri,
@@ -102,6 +103,7 @@ var tmg = (() => {
     convertToMonoChrome: () => convertToMonoChrome,
     createEl: () => createEl,
     createTimeRanges: () => createTimeRanges,
+    deepBreath: () => deepBreath,
     deepClone: () => deepClone,
     deleteAny: () => deleteAny,
     deprecate: () => deprecate,
@@ -129,6 +131,7 @@ var tmg = (() => {
     getTracks: () => getTracks,
     getTrailPaths: () => getTrailPaths,
     getTrailRecords: () => getTrailRecords,
+    getWindow: () => getWindow,
     inAny: () => inAny,
     inBoolArrOpt: () => inBoolArrOpt,
     inDocView: () => inDocView,
@@ -174,6 +177,8 @@ var tmg = (() => {
     queryFullscreen: () => queryFullscreen,
     queryFullscreenEl: () => queryFullscreenEl,
     queryMediaMobile: () => queryMediaMobile,
+    queryPictureInPicture: () => queryPictureInPicture,
+    queryPictureInPictureEl: () => queryPictureInPictureEl,
     remToPx: () => remToPx,
     removeSafeClicks: () => removeSafeClicks,
     removeScrollAssist: () => removeScrollAssist,
@@ -556,6 +561,8 @@ var tmg = (() => {
     // Modes
     pictureInPicture: false,
     fullscreen: false,
+    theater: false,
+    miniplayer: false,
     // Casting
     airplay: false,
     chromecast: false,
@@ -567,7 +574,7 @@ var tmg = (() => {
     stereoMode: "none",
     fieldOfView: 90,
     // Standard FOV
-    aspectRatio: 16 / 9,
+    viewRatio: 16 / 9,
     // Standard Aspect Ratio
     panningX: 0,
     panningY: 0,
@@ -584,7 +591,7 @@ var tmg = (() => {
     poster: "",
     autoplay: false,
     loop: false,
-    preload: "metadata",
+    preload: "auto",
     playsInline: true,
     crossOrigin: null,
     controls: false,
@@ -593,7 +600,9 @@ var tmg = (() => {
     disablePictureInPicture: false,
     // HTML Lists
     sources: [],
-    tracks: []
+    tracks: [],
+    // Misc
+    objectFit: "contain"
   };
   var DEFAULT_MEDIA_INTENT = DEFAULT_MEDIA_STATE;
   var DEFAULT_MEDIA_STATUS = {
@@ -649,7 +658,7 @@ var tmg = (() => {
         volume: m.volume,
         muted: m.muted,
         playbackRate: m.playbackRate,
-        pictureInPicture: document.pictureInPictureElement === m,
+        pictureInPicture: queryPictureInPictureEl() === m,
         fullscreen: queryFullscreenEl() === m,
         currentTextTrack: txtTrackIdx,
         currentAudioTrack: getTrackIdx(m, "Audio"),
@@ -837,6 +846,41 @@ var tmg = (() => {
     const list = medium[`${type.toLowerCase()}Tracks`], idx = getTrackIdx(medium, type, term);
     if (type !== "Video") for (let i = 0; i < list.length; i++) type === "Text" ? list[i].mode = i === idx ? "showing" : flush ? "disabled" : "hidden" : list[i].enabled = i === idx;
     else list[idx] && (list[idx].selected = true);
+  }
+  var DUMMY_VID = createEl("video");
+  function canVidCtrlVolume() {
+    if (!DUMMY_VID) return false;
+    try {
+      const prev = DUMMY_VID.volume;
+      DUMMY_VID.volume = 0.5;
+      const works = DUMMY_VID.volume === 0.5;
+      return DUMMY_VID.volume = prev, works;
+    } catch {
+      return false;
+    }
+  }
+  function canVidMuteVolume() {
+    return !!DUMMY_VID && "muted" in DUMMY_VID;
+  }
+  function canVidCtrlRate() {
+    if (!DUMMY_VID) return false;
+    try {
+      const prev = DUMMY_VID.playbackRate;
+      DUMMY_VID.playbackRate = 0.5;
+      const works = DUMMY_VID.playbackRate === 0.5;
+      return DUMMY_VID.playbackRate = prev, works;
+    } catch {
+      return false;
+    }
+  }
+  function canVidTextTracks() {
+    return !!DUMMY_VID && "textTracks" in DUMMY_VID;
+  }
+  function canVidVideoTracks() {
+    return !!DUMMY_VID && "videoTracks" in DUMMY_VID;
+  }
+  function canVidAudioTracks() {
+    return !!DUMMY_VID && "audioTracks" in DUMMY_VID;
   }
   var stripTags = (text) => text.replace(/<(\/)?([a-z0-9.:]+)([^>]*)>/gi, "");
   function srtToVtt(srt, vttLines = ["WEBVTT", ""]) {
@@ -1071,7 +1115,7 @@ var tmg = (() => {
     let acc = "", currObj = obj;
     for (let i = 0; i < parts.length; i++) {
       acc += (i === 0 ? "" : ".") + parts[i];
-      record.push([acc, currObj, currObj = Reflect.get(currObj, parts[i])]);
+      record.push([acc, currObj, currObj = currObj?.[parts[i]]]);
     }
     return record;
   }
@@ -1158,7 +1202,7 @@ var tmg = (() => {
   function camelize(str = "", { source } = /[\s_-]+/, { preserveInnerCase: pIC = true, upperFirst: uF = false } = {}) {
     return (pIC ? str : str.toLowerCase()).replace(new RegExp(source + "(\\w)", "g"), (_, c) => c.toUpperCase()).replace(/^\w/, (c) => c[uF ? "toUpperCase" : "toLowerCase"]());
   }
-  function uncamelize(str = "", separator = " ") {
+  function uncamelize(str, separator = " ") {
     return str.replace(/([a-z])([A-Z])/g, `$1${separator}$2`).toLowerCase();
   }
   function uid(prefix = "tmg_") {
@@ -1374,23 +1418,26 @@ var tmg = (() => {
   function setTimeout2(handler, timeout, ...args) {
     const sig = args[0] instanceof AbortSignal ? args.shift() : void 0;
     if (sig?.aborted) return -1;
-    if (!sig) return window.setTimeout(handler, timeout, ...args);
-    const id = window.setTimeout(() => (sig.removeEventListener("abort", kill), typeof handler === "string" ? new Function(handler) : handler(...args)), timeout), kill = () => window.clearTimeout(id);
+    const w2 = args[0] instanceof Window ? args.shift() : window;
+    if (!sig) return w2.setTimeout(handler, timeout, ...args);
+    const id = w2.setTimeout(() => (sig.removeEventListener("abort", kill), typeof handler === "string" ? new Function(handler) : handler(...args)), timeout), kill = () => w2.clearTimeout(id);
     return sig.addEventListener("abort", kill, { once: true }), id;
   }
   function setInterval(handler, timeout, ...args) {
     const sig = args[0] instanceof AbortSignal ? args.shift() : void 0;
     if (sig?.aborted) return -1;
-    const id = window.setInterval(handler, timeout, ...args);
-    return sig?.addEventListener("abort", () => window.clearInterval(id), { once: true }), id;
+    const w2 = args[0] instanceof Window ? args.shift() : window, id = w2.setInterval(handler, timeout, ...args);
+    return sig?.addEventListener("abort", () => w2.clearInterval(id), { once: true }), id;
   }
-  function requestAnimationFrame2(callback, sig) {
+  function requestAnimationFrame2(callback, sig, w2 = window) {
     if (sig?.aborted) return -1;
-    if (!sig) return window.requestAnimationFrame(callback);
-    const id = window.requestAnimationFrame((t) => (sig.removeEventListener("abort", kill), callback(t))), kill = () => window.cancelAnimationFrame(id);
+    if (!sig) return w2.requestAnimationFrame(callback);
+    const id = w2.requestAnimationFrame((t) => (sig.removeEventListener("abort", kill), callback(t))), kill = () => w2.cancelAnimationFrame(id);
     return sig.addEventListener("abort", kill, { once: true }), id;
   }
   var mockAsync = (timeout = 250) => new Promise((resolve) => setTimeout2(resolve, timeout));
+  var breath = (w2 = window) => new Promise((res) => w2.requestAnimationFrame(res));
+  var deepBreath = (w2 = window) => new Promise((res) => w2.requestAnimationFrame(() => w2.requestAnimationFrame(res)));
   function limited(fn, opts = {}) {
     let count = 0, { key, maxTimes: max = 1 } = "string" === typeof opts ? { key: opts } : opts;
     const getReg = () => JSON.parse(localStorage.getItem(FN_KEY) || "{}"), setReg = (r) => localStorage.setItem(FN_KEY, JSON.stringify(r));
@@ -1423,29 +1470,33 @@ var tmg = (() => {
     for (const k of Object.keys(dataset)) if (dataset[k] !== void 0) el.dataset[k] = String(dataset[k]);
     for (const k of Object.keys(styles)) if (styles[k] !== void 0) el.style[k] = styles[k];
   }
-  function loadResource2(src, type = "style", { module, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, attempts = 3, retryKey = false } = {}) {
-    window.t007 ?? (window.t007 = {}), t007._resourceCache ?? (t007._resourceCache = {});
-    if (t007._resourceCache[src]) return t007._resourceCache[src];
-    if (type === "script" ? Array.prototype.some.call(document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.some.call(document.styleSheets, (s) => isSameURL(s.href ?? "", src)) : false) return Promise.resolve();
-    t007._resourceCache[src] = new Promise((resolve, reject) => {
+  function getWindow(el) {
+    return (el instanceof Window ? el : el instanceof Document ? el?.defaultView : el?.ownerDocument?.defaultView) ?? void 0;
+  }
+  function loadResource2(src, type = "style", { module, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, attempts = 3, retryKey = false } = {}, w2 = window) {
+    var _a;
+    w2.t007 ?? (w2.t007 = {}), (_a = w2.t007)._resourceCache ?? (_a._resourceCache = {});
+    if (w2.t007._resourceCache[src]) return w2.t007._resourceCache[src];
+    if (type === "script" ? Array.prototype.some.call(w2.document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.some.call(w2.document.styleSheets, (s) => isSameURL(s.href ?? "", src)) : false) return Promise.resolve();
+    w2.t007._resourceCache[src] = new Promise((resolve, reject) => {
       (function tryLoad(remaining, el) {
         const onerror = () => {
-          el?.remove();
+          el?.remove?.();
           if (remaining > 1) {
             setTimeout(tryLoad, 1e3, remaining - 1);
             console.warn(`Retrying ${type} load (${attempts - remaining + 1}): ${src}...`);
           } else {
-            delete t007._resourceCache[src];
+            delete w2.t007._resourceCache[src];
             reject(new Error(`${type} load failed after ${attempts} attempts: ${src}`));
           }
         };
         const url = retryKey && remaining < attempts ? `${src}${src.includes("?") ? "&" : "?"}_${retryKey}=${Date.now()}` : src;
-        if (type === "script") document.body.append(el = createEl("script", { src: url, type: module ? "module" : "text/javascript", crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }));
-        else if (type === "style") document.head.append(el = createEl("link", { rel: "stylesheet", href: url, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }));
+        if (type === "script") w2.document.body.append(el = createEl("script", { src: url, type: module ? "module" : "text/javascript", crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || "");
+        else if (type === "style") w2.document.head.append(el = createEl("link", { rel: "stylesheet", href: url, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || "");
         else reject(new Error(`Unsupported resource type: ${type}`));
       })(attempts);
     });
-    return t007._resourceCache[src];
+    return w2.t007._resourceCache[src];
   }
   function inDocView(el, axis = "y") {
     const rect = el.getBoundingClientRect(), inX = rect.left + window.scrollX >= 0 && rect.right + window.scrollX <= window.scrollX + (window.innerWidth || document.documentElement.clientWidth), inY = rect.top + window.scrollY >= 0 && rect.bottom + window.scrollY <= window.scrollY + (window.innerHeight || document.documentElement.clientHeight);
@@ -1466,6 +1517,8 @@ var tmg = (() => {
     const d = document;
     return d.fullscreenElement || d.webkitFullscreenElement || d.mozFullScreenElement || d.msFullscreenElement || null;
   }
+  var queryPictureInPicture = () => Boolean(queryPictureInPictureEl());
+  var queryPictureInPictureEl = () => document.pictureInPictureElement;
   function supportsFullscreen() {
     const d = document, v = HTMLVideoElement.prototype;
     return Boolean(d.fullscreenEnabled || d.mozFullscreenEnabled || d.msFullscreenEnabled || d.webkitFullscreenEnabled || d.webkitSupportsFullscreen || v.webkitEnterFullscreen);
@@ -1531,7 +1584,7 @@ var tmg = (() => {
     inert: () => inert,
     intent: () => intent,
     isInert: () => isInert,
-    isIntent: () => isIntent,
+    isIntent: () => isIntent2,
     live: () => live,
     nuke: () => nuke,
     onAllMethods: () => onAllMethods,
@@ -1578,10 +1631,9 @@ var tmg = (() => {
   var INERTIA = /* @__PURE__ */ Symbol.for("S.I.A_INERTIA");
   var TERMINATOR = /* @__PURE__ */ Symbol.for("S.I.A_TERMINATOR");
   var REOPTS = { LISTENER: ["capture", "depth", "once", "signal", "immediate"], MEDIATOR: ["lazy", "signal", "immediate"] };
-  var _Event = class _Event {
-    constructor(payload, bubbles = true) {
-      this.eventPhase = _Event.NONE;
-      // readonly timestamp: number;
+  var _ReactorEvent = class _ReactorEvent {
+    constructor(payload, bubbles = true, canWarn = true) {
+      this.eventPhase = _ReactorEvent.NONE;
       this._propagationStopped = false;
       this._immediatePropagationStopped = false;
       this._resolved = "";
@@ -1595,6 +1647,10 @@ var tmg = (() => {
       this.path = payload.target.path;
       this.rejectable = payload.rejectable;
       this.bubbles = bubbles;
+      this.canWarn = canWarn;
+    }
+    get warn() {
+      return this.canWarn ? console.warn.bind(console, `[S.I.A ReactorEvent]`) : void 0;
     }
     get propagationStopped() {
       return this._propagationStopped;
@@ -1613,138 +1669,147 @@ var tmg = (() => {
       return this._resolved;
     }
     resolve(message) {
-      if (!this.rejectable) return console.warn(`Ignored resolve() call on a non-rejectable ${this.staticType} at "${this.path}"`);
-      if (this.eventPhase !== _Event.CAPTURING_PHASE) console.warn(`Resolving an intent on ${this.staticType} at "${this.path}" outside of the capture phase is unadvised.`);
+      if (!this.rejectable) return this.warn?.(`Ignored resolve() call on a non-rejectable ${this.staticType} at "${this.path}"`);
+      if (this.eventPhase !== _ReactorEvent.CAPTURING_PHASE) this.warn?.(`Resolving an intent on ${this.staticType} at "${this.path}" outside of the capture phase is unadvised.`);
       if (this.rejectable) this._resolved = message || `Could ${this.staticType} intended value at "${this.path}"`;
     }
     get rejected() {
       return this._rejected;
     }
     reject(reason) {
-      if (!this.rejectable) return console.warn(`Ignored reject() call on a non-rejectable ${this.staticType} at "${this.path}"`);
-      if (this.eventPhase !== _Event.CAPTURING_PHASE) console.warn(`Rejecting an intent on ${this.staticType} at "${this.path}" outside of the capture phase is unadvised.`);
+      if (!this.rejectable) return this.warn?.(`Ignored reject() call on a non-rejectable ${this.staticType} at "${this.path}"`);
+      if (this.eventPhase !== _ReactorEvent.CAPTURING_PHASE) this.warn?.(`Rejecting an intent on ${this.staticType} at "${this.path}" outside of the capture phase is unadvised.`);
       if (this.rejectable) this._rejected = reason || `Couldn't ${this.staticType} intended value at "${this.path}"`;
     }
     composedPath() {
       return getTrailPaths(this.path);
     }
   };
-  _Event.NONE = 0;
-  _Event.CAPTURING_PHASE = 1;
-  _Event.AT_TARGET = 2;
-  _Event.BUBBLING_PHASE = 3;
-  var Event = _Event;
+  _ReactorEvent.NONE = 0;
+  _ReactorEvent.CAPTURING_PHASE = 1;
+  _ReactorEvent.AT_TARGET = 2;
+  _ReactorEvent.BUBBLING_PHASE = 3;
+  var ReactorEvent = _ReactorEvent;
   var Reactor = class {
     constructor(obj = {}, options) {
-      this.getters = /* @__PURE__ */ new Map();
-      this.setters = /* @__PURE__ */ new Map();
-      this.watchers = /* @__PURE__ */ new Map();
-      this.listenersRecord = /* @__PURE__ */ new Map();
+      // Tasks to run after flush
       this.batch = /* @__PURE__ */ new Map();
       this.isBatching = false;
-      this.queue = null;
-      // Tasks to run after flush, `null` | pay the empty set 64 byte price for what u might never use
       this.proxyCache = /* @__PURE__ */ new WeakMap();
       this.lineage = /* @__PURE__ */ new WeakMap();
-      this.core = this.proxify(obj);
+      inert(this);
+      this.core = this.proxied(obj);
+      this.options = options;
     }
-    proxify(obj, rejectable = false, p, k) {
+    // `?:`s | pay the ~600 byte price upfront for what u might never use
+    get log() {
+      return this.options?.debug ? console.log.bind(console, "[S.I.A Reactor]") : void 0;
+    }
+    proxied(obj, rejectable = false, p, k) {
       if (!obj || typeof obj !== "object") return obj;
       const tag = Object.prototype.toString.call(obj);
       if (tag !== "[object Object]" && tag !== "[object Array]" || obj[INERTIA]) return obj;
       obj = obj[RAW] || obj;
       if (p && k) this.link(obj, p, k);
       if (this.proxyCache.has(obj)) return this.proxyCache.get(obj);
-      rejectable || (rejectable = isIntent(obj));
+      rejectable || (rejectable = obj[REJECTABLE]);
       const proxy = new Proxy(obj, {
         // Robust Proxy handler
         get: (object, key, receiver) => {
           if (key === RAW) return object;
-          const safeKey = String(key);
           let value = Reflect.get(object, key, receiver);
-          this.trace(object, safeKey, (fullPath) => {
-            if (!this.getters.has(fullPath)) return;
-            const target = { path: fullPath, value, key: safeKey, object: receiver };
-            value = this.mediate(fullPath, { type: "get", target, currentTarget: target, root: this.core, rejectable }, false);
-          });
-          return this.proxify(value, rejectable, object, safeKey);
+          const safeKey = String(key), paths = [];
+          this.trace(object, safeKey, paths), this.log?.(`\u{1F440} [GET Trap] Initiated for "${safeKey}" on "${paths}"`);
+          this.options?.get && (value = this.options.get(object, key, value, receiver, paths));
+          for (let i = 0; i < paths.length; i++) {
+            const getters = this.getters?.get(paths[i]);
+            if (!getters) continue;
+            const target = { path: paths[i], value, key: safeKey, object: receiver };
+            value = this.mediate(paths[i], { type: "get", target, currentTarget: target, root: this.core, rejectable }, "get", getters);
+          }
+          return this.proxied(value, rejectable, object, safeKey);
         },
         set: (object, key, value, receiver) => {
-          const safeKey = String(key), oldValue = Reflect.get(object, key, receiver), rawValue = value = value && value[RAW] || value;
-          this.trace(object, safeKey, (fullPath) => {
-            if (!this.setters.has(fullPath)) return;
-            const target = { path: fullPath, value, oldValue, key: safeKey, object: receiver }, result = this.mediate(fullPath, { type: "set", target, currentTarget: target, root: this.core, rejectable }, true);
+          const safeKey = String(key), paths = [], oldValue = Reflect.get(object, key, receiver);
+          this.trace(object, safeKey, paths), this.log?.(`\u270F\uFE0F [SET Trap] Initiated for "${safeKey}" on "${paths}"`);
+          this.options?.set && (value = this.options.set(object, key, value, oldValue, receiver, paths));
+          for (let i = 0; i < paths.length; i++) {
+            const setters = this.setters?.get(paths[i]);
+            if (!setters) continue;
+            const target = { path: paths[i], value, oldValue, key: safeKey, object: receiver }, result = this.mediate(paths[i], { type: "set", target, currentTarget: target, root: this.core, rejectable }, "set", setters);
             if (result !== TERMINATOR) value = result;
-          });
-          if (value === TERMINATOR) return true;
+          }
+          if (value === TERMINATOR) return this.log?.(`\u{1F6E1}\uFE0F [SET Mediator] Terminated on "${paths}"`), true;
           if (!Reflect.set(object, key, value, receiver)) return false;
-          if (rawValue !== (oldValue && oldValue[RAW] || oldValue)) this.unlink(oldValue, object, safeKey), this.link(value, object, safeKey);
-          this.trace(object, safeKey, (p2) => {
-            const target = { path: p2, value, oldValue, key: safeKey, object: receiver };
-            this.notify(p2, { type: "set", target, currentTarget: target, root: this.core, rejectable });
-          });
+          if (!Object.is(value?.[RAW] || value, oldValue?.[RAW] || oldValue)) this.unlink(oldValue, object, safeKey), this.link(value, object, safeKey);
+          for (let i = 0; i < paths.length; i++) {
+            const target = { path: paths[i], value, oldValue, key: safeKey, object: receiver };
+            this.notify(paths[i], { type: "set", target, currentTarget: target, root: this.core, rejectable });
+          }
           return true;
         },
         deleteProperty: (object, key) => {
-          const safeKey = String(key), oldValue = Reflect.get(object, key), receiver = this.proxyCache.get(object);
-          let value = void 0;
-          this.trace(object, safeKey, (fullPath) => {
-            if (!this.setters.has(fullPath)) return;
-            const target = { path: fullPath, oldValue, key: safeKey, object: receiver }, result = this.mediate(fullPath, { type: "delete", target, currentTarget: target, root: this.core, rejectable }, true);
+          let value, receiver = this.proxyCache.get(object);
+          const safeKey = String(key), paths = [], oldValue = Reflect.get(object, key, receiver);
+          this.trace(object, safeKey, paths), this.log?.(`\u{1F5D1}\uFE0F [DELETE Trap] Initiated for "${safeKey}" on "${paths}"`);
+          this.options?.delete && (value = this.options.delete(object, key, oldValue, receiver, paths));
+          for (let i = 0; i < paths.length; i++) {
+            const deleters = this.deleters?.get(paths[i]);
+            if (!deleters) continue;
+            const target = { path: paths[i], value, oldValue, key: safeKey, object: receiver }, result = this.mediate(paths[i], { type: "delete", target, currentTarget: target, root: this.core, rejectable }, "delete", deleters);
             if (result !== TERMINATOR) value = result;
-          });
-          if (value === TERMINATOR) return true;
+          }
+          if (value === TERMINATOR) return this.log?.(`\u{1F6E1}\uFE0F [DELETE Mediator] Terminated on "${paths}"`), true;
           if (!Reflect.deleteProperty(object, key)) return false;
           this.unlink(oldValue, object, safeKey);
-          this.trace(object, safeKey, (p2) => {
-            const target = { path: p2, oldValue, key: safeKey, object: receiver };
-            this.notify(p2, { type: "delete", target, currentTarget: target, root: this.core, rejectable });
-          });
+          for (let i = 0; i < paths.length; i++) {
+            const target = { path: paths[i], value, oldValue, key: safeKey, object: receiver };
+            this.notify(paths[i], { type: "delete", target, currentTarget: target, root: this.core, rejectable });
+          }
           return true;
         }
       });
       return this.proxyCache.set(obj, proxy), proxy;
     }
-    trace(target, key, cb, visited = /* @__PURE__ */ new WeakSet()) {
-      if (target === (this.core[RAW] || this.core)) return cb(key);
+    trace(target, key, paths, visited = /* @__PURE__ */ new WeakSet()) {
+      if (Object.is(target, this.core?.[RAW] || this.core)) return void paths.push(key);
       if (visited.has(target)) return;
       visited.add(target);
       const parents = this.lineage.get(target);
       if (!parents) return;
       for (let i = 0; i < parents.length; i++) {
         const { p, k } = parents[i];
-        this.trace(p, k ? k + "." + key : key, cb, visited);
+        this.trace(p, k ? k + "." + key : key, paths, visited);
       }
     }
     link(child, p, k, es) {
-      const target = child && child[RAW] || child;
+      const target = child?.[RAW] || child;
       if (!isObj(target) && !isArr(target)) return;
       es = this.lineage.get(target) ?? (this.lineage.set(target, es = []), es);
-      for (let i = 0; i < es.length; i++) if (es[i].p === p && es[i].k === k) return;
+      for (let i = 0; i < es.length; i++) if (Object.is(es[i].p, p) && es[i].k === k) return;
       es.push({ p, k });
     }
     unlink(child, p, k) {
-      const target = child && child[RAW] || child;
+      const target = child?.[RAW] || child;
       if (!target || typeof target !== "object") return;
       const es = this.lineage.get(target);
       if (es) {
-        for (let i = 0; i < es.length; i++) if (es[i].p === p && es[i].k === k) return void es.splice(i, 1);
+        for (let i = 0; i < es.length; i++) if (Object.is(es[i].p, p) && es[i].k === k) return void es.splice(i, 1);
       }
     }
-    mediate(path, payload, set) {
+    mediate(path, payload, type, cords) {
       let terminated = false, value = payload.target.value;
-      const cords = (set ? this.setters : this.getters)?.get(path);
-      if (!cords?.length) return value;
-      for (let i = set ? 0 : cords.length - 1; i !== (set ? cords.length : -1); i += set ? 1 : -1) {
-        if (set) terminated || (terminated = value === TERMINATOR);
-        if (cords[i].once) cords.splice(i--, 1), !cords.length && (set ? this.setters : this.getters)?.delete(path);
-        const response = set ? cords[i].cb(value, terminated, payload) : cords[i].cb(value, payload);
+      const mediators = type === "get" ? this.getters : type === "set" ? this.setters : this.deleters;
+      for (let i = type !== "get" ? 0 : cords.length - 1; i !== (type !== "get" ? cords.length : -1); i += type !== "get" ? 1 : -1) {
+        if (type !== "get") terminated || (terminated = value === TERMINATOR);
+        if (cords[i].once) cords.splice(i--, 1), !cords.length && mediators.delete(path);
+        const response = type === "get" ? cords[i].cb(value, payload) : type === "set" ? cords[i].cb(value, terminated, payload) : cords[i].cb(terminated, payload);
         if (!terminated) value = response;
       }
       return value;
     }
     notify(path, payload) {
-      const cords = this.watchers.get(path);
+      const cords = this.watchers?.get(path);
       for (let i = 0; i < (cords?.length ?? 0); i++) {
         if (cords[i].once) cords.splice(i--, 1), !cords.length && this.watchers.delete(path);
         cords[i].cb(payload.target.value, payload);
@@ -1765,26 +1830,24 @@ var tmg = (() => {
       this.queue?.clear();
     }
     wave(path, payload) {
-      const e = new Event(payload), chain = getTrailRecords(this.core, path);
-      e.eventPhase = Event.CAPTURING_PHASE;
+      const e = new ReactorEvent(payload), chain = getTrailRecords(this.core, path);
+      e.eventPhase = ReactorEvent.CAPTURING_PHASE;
       for (let i = 0; i <= chain.length - 2; i++) {
         if (e.propagationStopped) break;
         this.fire(chain[i], e, true);
       }
       if (e.propagationStopped) return;
-      e.eventPhase = Event.AT_TARGET;
+      e.eventPhase = ReactorEvent.AT_TARGET;
       this.fire(chain[chain.length - 1], e, true);
       !e.immediatePropagationStopped && this.fire(chain[chain.length - 1], e, false);
       if (!e.bubbles) return;
-      e.eventPhase = Event.BUBBLING_PHASE;
+      e.eventPhase = ReactorEvent.BUBBLING_PHASE;
       for (let i = chain.length - 2; i >= 0; i--) {
         if (e.propagationStopped) break;
         this.fire(chain[i], e, false);
       }
-      if (e.rejected) return;
     }
-    fire([path, object, value], e, isCapture) {
-      const cords = this.listenersRecord.get(path);
+    fire([path, object, value], e, isCapture, cords = this.listeners?.get(path)) {
       if (!cords?.length) return;
       e.type = path !== e.target.path ? "update" : e.staticType;
       e.currentTarget = { path, value, oldValue: e.type !== "update" ? e.target.oldValue : void 0, key: e.type !== "update" ? path : path.slice(path.lastIndexOf(".") + 1) || "", object };
@@ -1792,11 +1855,11 @@ var tmg = (() => {
       for (let i = 0; i < cords.length; i++) {
         if (e.immediatePropagationStopped) break;
         if (cords[i].capture !== isCapture) continue;
-        if (cords[i].depth !== void 0) {
+        if (cords[i].depth != void 0) {
           tDepth ?? (tDepth = this.getDepth(e.target.path)), lDepth ?? (lDepth = this.getDepth(path));
           if (tDepth > lDepth + cords[i].depth) continue;
         }
-        if (cords[i].once) cords.splice(i--, 1), !cords.length && this.listenersRecord.delete(path);
+        if (cords[i].once) cords.splice(i--, 1), !cords.length && this.listeners.delete(path);
         cords[i].cb(e);
       }
     }
@@ -1825,23 +1888,25 @@ var tmg = (() => {
         }
     }
     stall(task) {
-      this.queue ?? (this.queue = /* @__PURE__ */ new Set()), this.queue.add(task), this.initBatching();
+      this.queue ?? (this.queue = /* @__PURE__ */ new Set());
+      this.queue.add(task), this.initBatching();
     }
     nostall(task) {
       return this.queue?.delete(task);
     }
     get(path, cb, opts) {
+      this.getters ?? (this.getters = /* @__PURE__ */ new Map());
       const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, REOPTS.MEDIATOR);
-      let cords = this.getters.get(path), cord = {};
+      let cords = this.getters.get(path), cord;
       for (let i = 0; i < (cords?.length ?? 0); i++)
-        if (cords[i].cb === cb) {
+        if (Object.is(cords[i].cb, cb)) {
           cord = cords[i];
           break;
         }
       if (cord) return cord.clup;
       cord = { cb, once, clup: () => (lazy && this.nostall(task), this.noget(path, cb)) };
       if (immediate) (immediate !== "auto" || inAny(this.core, path)) && getAny(this.core, path);
-      const task = () => (this.getters.get(path) ?? (this.getters.set(path, cords = []), cords)).push(cord);
+      const task = () => (cords ?? (this.getters.set(path, cords = []), cords)).push(cord);
       lazy ? this.stall(task) : task();
       return this.bind(cord, signal);
     }
@@ -1849,40 +1914,67 @@ var tmg = (() => {
       return this.get(path, cb, { ...parseEvOpts(opts, REOPTS.MEDIATOR), once: true });
     }
     noget(path, cb) {
-      const cords = this.getters.get(path);
+      const cords = this.getters?.get(path);
       if (!cords) return void 0;
-      for (let i = 0; i < cords.length; i++) if (cords[i].cb === cb) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.getters.delete(path), true;
+      for (let i = 0; i < cords.length; i++) if (Object.is(cords[i].cb, cb)) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.getters.delete(path), true;
       return false;
     }
     set(path, cb, opts) {
+      this.setters ?? (this.setters = /* @__PURE__ */ new Map());
       const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, REOPTS.MEDIATOR);
-      let cords = this.setters.get(path), cord = {};
+      let cords = this.setters.get(path), cord;
       for (let i = 0; i < (cords?.length ?? 0); i++)
-        if (cords[i].cb === cb) {
+        if (Object.is(cords[i].cb, cb)) {
           cord = cords[i];
           break;
         }
       if (cord) return cord.clup;
       cord = { cb, once, clup: () => (lazy && this.nostall(task), this.noset(path, cb)) };
       if (immediate) (immediate !== "auto" || inAny(this.core, path)) && setAny(this.core, path, this.getContext(path).value);
-      const task = () => (this.setters.get(path) ?? (this.setters.set(path, cords = []), cords)).push(cord);
+      const task = () => (cords ?? (this.setters.set(path, cords = []), cords)).push(cord);
       lazy ? this.stall(task) : task();
       return this.bind(cord, signal);
     }
     sonce(path, cb, opts) {
-      return this.set(path, cb, { ...parseEvOpts(opts, REOPTS.MEDIATOR), once: true });
+      return this.set(path, cb, Object.assign(parseEvOpts(opts, REOPTS.MEDIATOR), { once: true }));
     }
     noset(path, cb) {
-      const cords = this.setters.get(path);
+      const cords = this.setters?.get(path);
       if (!cords) return void 0;
-      for (let i = 0; i < cords.length; i++) if (cords[i].cb === cb) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.setters.delete(path), true;
+      for (let i = 0; i < cords.length; i++) if (Object.is(cords[i].cb, cb)) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.setters.delete(path), true;
+      return false;
+    }
+    delete(path, cb, opts) {
+      this.deleters ?? (this.deleters = /* @__PURE__ */ new Map());
+      const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, REOPTS.MEDIATOR);
+      let cords = this.deleters.get(path), cord;
+      for (let i = 0; i < (cords?.length ?? 0); i++)
+        if (Object.is(cords[i].cb, cb)) {
+          cord = cords[i];
+          break;
+        }
+      if (cord) return cord.clup;
+      cord = { cb, once, clup: () => (lazy && this.nostall(task), this.nodelete(path, cb)) };
+      if (immediate) (immediate !== "auto" || inAny(this.core, path)) && deleteAny(this.core, path, void 0);
+      const task = () => (cords ?? (this.deleters.set(path, cords = []), cords)).push(cord);
+      lazy ? this.stall(task) : task();
+      return this.bind(cord, signal);
+    }
+    donce(path, cb, opts) {
+      return this.delete(path, cb, Object.assign(parseEvOpts(opts, REOPTS.MEDIATOR), { once: true }));
+    }
+    nodelete(path, cb) {
+      const cords = this.deleters?.get(path);
+      if (!cords) return void 0;
+      for (let i = 0; i < cords.length; i++) if (Object.is(cords[i].cb, cb)) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.deleters.delete(path), true;
       return false;
     }
     watch(path, cb, opts) {
+      this.watchers ?? (this.watchers = /* @__PURE__ */ new Map());
       const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, REOPTS.MEDIATOR);
-      let cords = this.watchers.get(path), cord = {};
+      let cords = this.watchers.get(path), cord;
       for (let i = 0; i < (cords?.length ?? 0); i++)
-        if (cords[i].cb === cb) {
+        if (Object.is(cords[i].cb, cb)) {
           cord = cords[i];
           break;
         }
@@ -1897,19 +1989,20 @@ var tmg = (() => {
       return this.bind(cord, signal);
     }
     wonce(path, cb, opts) {
-      return this.watch(path, cb, { ...parseEvOpts(opts, REOPTS.MEDIATOR), once: true });
+      return this.watch(path, cb, Object.assign(parseEvOpts(opts, REOPTS.MEDIATOR), { once: true }));
     }
     nowatch(path, cb) {
-      const cords = this.watchers.get(path);
+      const cords = this.watchers?.get(path);
       if (!cords) return void 0;
-      for (let i = 0; i < cords.length; i++) if (cords[i].cb === cb) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.watchers.delete(path), true;
+      for (let i = 0; i < cords.length; i++) if (Object.is(cords[i].cb, cb)) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.watchers.delete(path), true;
       return false;
     }
     on(path, cb, options) {
+      this.listeners ?? (this.listeners = /* @__PURE__ */ new Map());
       const { capture = false, once = false, signal, immediate = false, depth } = parseEvOpts(options, REOPTS.LISTENER);
-      let cords = this.listenersRecord.get(path), cord = {};
+      let cords = this.listeners.get(path), cord;
       for (let i = 0; i < (cords?.length ?? 0); i++)
-        if (cords[i].cb === cb && capture === cords[i].capture) {
+        if (Object.is(cords[i].cb, cb) && capture === cords[i].capture) {
           cord = cords[i];
           break;
         }
@@ -1917,19 +2010,19 @@ var tmg = (() => {
       cord = { cb, capture, depth, once, clup: () => this.off(path, cb, options) };
       if (immediate && (immediate !== "auto" || inAny(this.core, path))) {
         const target = this.getContext(path);
-        cb(new Event({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, false));
+        cb(new ReactorEvent({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, false, this.options?.debug));
       }
-      (cords ?? (this.listenersRecord.set(path, cords = []), cords)).push(cord);
+      (cords ?? (this.listeners.set(path, cords = []), cords)).push(cord);
       return this.bind(cord, signal);
     }
     once(path, cb, options) {
-      return this.on(path, cb, { ...parseEvOpts(options, REOPTS.LISTENER), once: true });
+      return this.on(path, cb, Object.assign(parseEvOpts(options, REOPTS.LISTENER), { once: true }));
     }
     off(path, cb, options) {
-      const cords = this.listenersRecord.get(path);
+      const cords = this.listeners?.get(path);
       if (!cords) return void 0;
       const { capture } = parseEvOpts(options, REOPTS.LISTENER);
-      for (let i = 0; i < cords.length; i++) if (cords[i].cb === cb && cords[i].capture === capture) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.listenersRecord.delete(path), true;
+      for (let i = 0; i < cords.length; i++) if (Object.is(cords[i].cb, cb) && cords[i].capture === capture) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.listeners.delete(path), true;
       return false;
     }
     cascade({ type, currentTarget: { path, value: news, oldValue: olds } }, objSafe = true) {
@@ -1941,7 +2034,7 @@ var tmg = (() => {
       return deepClone(this.core);
     }
     reset() {
-      this.getters.clear(), this.setters.clear(), this.watchers.clear(), this.listenersRecord.clear();
+      this.getters?.clear(), this.setters?.clear(), this.deleters?.clear(), this.watchers?.clear(), this.listeners?.clear();
       this.queue?.clear(), this.batch.clear(), this.isBatching = false;
       this.proxyCache = /* @__PURE__ */ new WeakMap();
     }
@@ -1962,6 +2055,9 @@ var tmg = (() => {
     "set",
     "sonce",
     "noset",
+    "delete",
+    "donce",
+    "nodelete",
     "watch",
     "wonce",
     "nowatch",
@@ -1974,14 +2070,9 @@ var tmg = (() => {
     "destroy"
   ];
   function reactive(target, options) {
-    const descriptors = {}, r = target instanceof Reactor ? target : new Reactor(target, options);
-    for (const m of methods)
-      descriptors[m] = {
-        value: r[m].bind(r),
-        writable: false,
-        enumerable: false,
-        configurable: true
-      };
+    const descriptors = {}, r = target instanceof Reactor ? target : new Reactor(target, options), locks = { enumerable: false, configurable: true, writable: false };
+    for (const m of methods) descriptors[m] = { value: r[m].bind(r), ...locks };
+    descriptors["__Reactor__"] = { value: r, ...locks };
     Object.defineProperties(r.core, descriptors);
     return r.core;
   }
@@ -2004,7 +2095,7 @@ var tmg = (() => {
     delete target[REJECTABLE];
     return target;
   }
-  function isIntent(target) {
+  function isIntent2(target) {
     return !!target[REJECTABLE];
   }
 
@@ -2178,18 +2269,21 @@ var tmg = (() => {
 
   // src/ts/media/base.ts
   var BaseTech = class extends Controllable {
+    static canPlaySource(src) {
+      return false;
+    }
     get name() {
       return this.constructor.techName;
-    }
-    get features() {
-      return this.constructor.features;
     }
     get el() {
       return this.element;
     }
-    constructor(ctlr, config) {
+    // Tracking to avoid rewiring
+    constructor(ctlr, config, features = {}) {
       super(ctlr, config);
       this.element = config.element;
+      this.features = reactive(features);
+      this.wiredFeatures = {};
     }
     onSetup() {
       this.mount();
@@ -2198,9 +2292,6 @@ var tmg = (() => {
     }
     onDestroy() {
       this.unmount();
-    }
-    static canPlaySource(src) {
-      return false;
     }
     mount() {
       this.element && this.element !== this.config.element && this.config.element.replaceWith(this.element);
@@ -2219,44 +2310,22 @@ var tmg = (() => {
     }
     // --- THE EXTENSIONS ---
     wireFeatures() {
-      const f = this.features;
-      f.volume && this.wireVolume?.();
-      f.muted && this.wireMuted?.();
-      f.playbackRate && this.wirePlaybackRate?.();
-      f.pictureInPicture && this.wirePictureInPicture?.();
-      f.fullscreen && this.wireFullscreen?.();
-      f.airplay && this.wireAirplay?.();
-      f.chromecast && this.wireChromecast?.();
-      f.xrSession && this.wireXRSession?.();
-      f.xrMode && this.wireXRMode?.();
-      f.xrReferenceSpace && this.wireXRReferenceSpace?.();
-      f.projection && this.wireProjection?.();
-      f.stereoMode && this.wireStereoMode?.();
-      f.fieldOfView && this.wireFieldOfView?.();
-      f.aspectRatio && this.wireAspectRatio?.();
-      f.panningX && this.wirePanningX?.();
-      f.panningY && this.wirePanningY?.();
-      f.panningZ && this.wirePanningZ?.();
-      f.xrInputSource && this.wireXRInputSource?.();
-      f.currentTextTrack && this.wireCurrentTextTrack?.();
-      f.currentAudioTrack && this.wireCurrentAudioTrack?.();
-      f.currentVideoTrack && this.wireCurrentVideoTrack?.();
-      f.autoLevel && this.wireAutoLevel?.();
-      f.currentLevel && this.wireCurrentLevel?.();
-      f.poster && this.wirePoster?.();
-      f.autoplay && this.wireAutoplay?.();
-      f.loop && this.wireLoop?.();
-      f.preload && this.wirePreload?.();
-      f.playsInline && this.wirePlaysInline?.();
-      f.crossOrigin && this.wireCrossOrigin?.();
-      f.controls && this.wireControls?.();
-      f.controlsList && this.wireControlsList?.();
-      f.disablePictureInPicture && this.wireDisablePictureInPicture?.();
-      f.sources && this.wireSources?.();
-      f.tracks && this.wireTracks?.();
+      this.features.on("*", this.handleFeaturesChange, { signal: this.signal, immediate: true });
+      this.ctlr.media.on("intent", this.handleIntentChange, { signal: this.signal });
+    }
+    handleFeaturesChange({ type, target: t }) {
+      type === "update" ? this.wireFeature(t.key) : type === "init" && Object.keys(t.value).forEach(this.wireFeature);
+    }
+    handleIntentChange(e) {
+      if (e.type !== "update") return;
+      if (!this.features[e.target.key]) e.stopImmediatePropagation();
+    }
+    wireFeature(feature) {
+      if (this.wiredFeatures[feature]) return;
+      this.wiredFeatures[feature] = true;
+      this[`wire${capitalize(feature)}`]?.();
     }
   };
-  BaseTech.features = {};
 
   // src/ts/media/html5.ts
   var _HTML5Tech = class _HTML5Tech extends BaseTech {
@@ -2264,7 +2333,47 @@ var tmg = (() => {
       return true;
     }
     constructor(ctlr, config) {
-      super(ctlr, config);
+      super(ctlr, config, {
+        // Kinda Core
+        volume: canVidCtrlVolume(),
+        muted: canVidMuteVolume(),
+        playbackRate: canVidCtrlRate(),
+        // Modes
+        pictureInPicture: supportsPictureInPicture() && !ctlr.media.state.disablePictureInPicture,
+        fullscreen: supportsFullscreen(),
+        // Attributes
+        poster: true,
+        autoplay: true,
+        loop: true,
+        playsInline: true,
+        crossOrigin: true,
+        controls: true,
+        controlsList: true,
+        disablePictureInPicture: true,
+        preload: true,
+        // Lists
+        textTracks: canVidTextTracks(),
+        videoTracks: canVidVideoTracks(),
+        audioTracks: canVidAudioTracks(),
+        activeCue: canVidTextTracks(),
+        // Infos
+        readyState: true,
+        networkState: true,
+        error: true,
+        waiting: true,
+        stalled: true,
+        seeking: true,
+        buffered: true,
+        seekable: true,
+        videoWidth: true,
+        videoHeight: true,
+        loadedMetadata: true,
+        canPlay: true,
+        canPlayThrough: true,
+        // Settings
+        defaultMuted: true,
+        defaultPlaybackRate: true
+      });
       this.eOpts = { EL: { signal: this.signal }, REACTOR: { capture: true, signal: this.signal, immediate: this.ctlr.payload.initialized } };
     }
     // ===========================================================================
@@ -2272,25 +2381,25 @@ var tmg = (() => {
     // ===========================================================================
     // --- Core Wiring ---
     wireSrc() {
-      this.el.addEventListener("loadstart", this.handleLoadStartState, this.eOpts.EL);
+      this.el.addEventListener("loadstart", this.setLoadStartState, this.eOpts.EL);
       this.config.on("intent.src", this.handleSrcIntent, this.eOpts.REACTOR);
     }
     wireCurrentTime() {
-      this.el.addEventListener("timeupdate", this.handleTimeUpdateState, this.eOpts.EL);
-      this.el.addEventListener("seeking", this.handleSeekingState, this.eOpts.EL);
-      this.el.addEventListener("seeked", this.handleSeekedState, this.eOpts.EL);
+      this.el.addEventListener("timeupdate", this.setTimeUpdateState, this.eOpts.EL);
+      this.el.addEventListener("seeking", this.setSeekingState, this.eOpts.EL);
+      this.el.addEventListener("seeked", this.setSeekedState, this.eOpts.EL);
       this.config.on("intent.currentTime", this.handleCurrentTimeIntent, this.eOpts.REACTOR);
     }
     wireDuration() {
-      this.el.addEventListener("durationchange", this.handleDurationChangeState, this.eOpts.EL);
+      this.el.addEventListener("durationchange", this.setDurationChangeState, this.eOpts.EL);
     }
     wirePaused() {
-      this.el.addEventListener("play", this.handlePlayState, this.eOpts.EL);
-      this.el.addEventListener("pause", this.handlePauseState, this.eOpts.EL);
+      this.el.addEventListener("play", this.setPlayState, this.eOpts.EL);
+      this.el.addEventListener("pause", this.setPauseState, this.eOpts.EL);
       this.config.on("intent.paused", this.handlePausedIntent, this.eOpts.REACTOR);
     }
     wireEnded() {
-      this.el.addEventListener("ended", this.handleEndedState, this.eOpts.EL);
+      this.el.addEventListener("ended", this.setEndedState, this.eOpts.EL);
     }
     // --- Features Wiring ---
     wireFeatures() {
@@ -2313,33 +2422,33 @@ var tmg = (() => {
     }
     // --- Engine Inputs Wiring ---
     wireVolume() {
-      this.el.addEventListener("volumechange", this.handleVolumeChangeState, this.eOpts.EL);
+      this.el.addEventListener("volumechange", this.setVolumeChangeState, this.eOpts.EL);
       this.config.on("intent.volume", this.handleVolumeIntent, this.eOpts.REACTOR);
     }
     wireMuted() {
       this.config.on("intent.muted", this.handleMutedIntent, this.eOpts.REACTOR);
     }
     wirePlaybackRate() {
-      this.el.addEventListener("ratechange", this.handleRateChangeState, this.eOpts.EL);
+      this.el.addEventListener("ratechange", this.setRateChangeState, this.eOpts.EL);
       this.config.on("intent.playbackRate", this.handlePlaybackRateIntent, this.eOpts.REACTOR);
     }
     // --- Presentation Modes Wiring ---
     wirePictureInPicture() {
-      this.el.addEventListener("enterpictureinpicture", this.handleEnterPiPState, this.eOpts.EL);
-      this.el.addEventListener("leavepictureinpicture", this.handleLeavePiPState, this.eOpts.EL);
+      this.el.addEventListener("enterpictureinpicture", this.setEnterPiPState, this.eOpts.EL);
+      this.el.addEventListener("leavepictureinpicture", this.setLeavePiPState, this.eOpts.EL);
       this.config.on("intent.pictureInPicture", this.handlePiPIntent, this.eOpts.REACTOR);
     }
     wireFullscreen() {
-      this.ctlr.state.watch("docInFullscreen", this.handleFullscreenChangeState, this.eOpts.REACTOR);
-      this.el.addEventListener("webkitbeginfullscreen", this.handleWebkitBeginFullscreenState, this.eOpts.REACTOR);
-      this.el.addEventListener("webkitendfullscreen", this.handleWebkitEndFullscreenState, this.eOpts.REACTOR);
+      this.ctlr.state.watch("docInFullscreen", this.setFullscreenChangeState, this.eOpts.REACTOR);
+      this.el.addEventListener("webkitbeginfullscreen", this.setWebkitBeginFullscreenState, this.eOpts.REACTOR);
+      this.el.addEventListener("webkitendfullscreen", this.setWebkitEndFullscreenState, this.eOpts.REACTOR);
       this.config.on("intent.fullscreen", this.handleFullscreenIntent, this.eOpts.REACTOR);
     }
     // --- Track Switching Wiring ---
     wireCurrentTrack(type) {
       this.config.set(`intent.current${type}Track`, (term) => getTrackIdx(this.el, type, term), { signal: this.signal });
       const list = this.el[`${type.toLowerCase()}Tracks`];
-      list?.addEventListener("change", () => this.handleCurrentTrackState(type, list), this.eOpts.REACTOR);
+      list?.addEventListener("change", () => this.setCurrentTrackState(type, list), this.eOpts.REACTOR);
       this.config.on(`intent.current${type}Track`, (e) => this.handleCurrentTrackIntent(e, type), this.eOpts.REACTOR);
     }
     wireCurrentAudioTrack() {
@@ -2353,7 +2462,7 @@ var tmg = (() => {
     }
     // --- HTML (Bulk Wiring) ---
     wireHTMLState() {
-      this.signal.addEventListener("abort", observeMutation(this.el, this.handleHTMLState, { attributes: true, childList: true, subtree: false }), { once: true });
+      this.signal.addEventListener("abort", observeMutation(this.el, this.setHTMLStateFromMutation, { attributes: true, childList: true, subtree: false }), { once: true });
     }
     // --- Attribute Wiring ---
     bindAttr(key, isBool = false) {
@@ -2385,6 +2494,7 @@ var tmg = (() => {
     }
     wireDisablePictureInPicture() {
       this.bindAttr("disablePictureInPicture", true);
+      this.config.on("state.disablePictureInPicture", this.handlePiPState);
     }
     // --- Lists Wiring ---
     wireSources() {
@@ -2421,7 +2531,7 @@ var tmg = (() => {
     // HANDLERS (The Logic - Auto-Guarded by Controllable)
     // ===========================================================================
     // --- Core States ---
-    handleLoadStartState() {
+    setLoadStartState() {
       const { state: s, status: st } = this.config;
       st.error = st.activeCue = null;
       st.waiting = true;
@@ -2432,25 +2542,25 @@ var tmg = (() => {
       if (!isSameURL(this.el.src, s.src)) s.src = this.el.src;
       this.config.state.paused = this.el.paused;
     }
-    handleTimeUpdateState() {
+    setTimeUpdateState() {
       this.config.state.currentTime = this.el.currentTime;
     }
-    handleSeekingState() {
+    setSeekingState() {
       this.config.status.seeking = true;
     }
-    handleSeekedState() {
+    setSeekedState() {
       this.config.status.seeking = false;
     }
-    handleDurationChangeState() {
+    setDurationChangeState() {
       this.config.status.duration = this.el.duration;
     }
-    handlePlayState() {
+    setPlayState() {
       this.config.state.paused = false;
     }
-    handlePauseState() {
+    setPauseState() {
       this.config.state.paused = true;
     }
-    handleEndedState() {
+    setEndedState() {
       this.config.status.ended = this.config.state.paused = true;
     }
     // --- Core Intents ---
@@ -2472,32 +2582,32 @@ var tmg = (() => {
       else e.resolve(_HTML5Tech.techName);
     }
     // --- Feature States ---
-    handleVolumeChangeState() {
+    setVolumeChangeState() {
       this.config.state.volume = this.el.volume;
       this.config.state.muted = this.el.muted;
     }
-    handleRateChangeState() {
+    setRateChangeState() {
       this.config.state.playbackRate = this.el.playbackRate;
     }
-    handleEnterPiPState() {
+    setEnterPiPState() {
       this.config.state.pictureInPicture = true;
     }
-    handleLeavePiPState() {
+    setLeavePiPState() {
       this.config.state.pictureInPicture = false;
     }
-    handleFullscreenChangeState(docInFs) {
+    setFullscreenChangeState(docInFs) {
       this.config.state.fullscreen = docInFs ? queryFullscreenEl() === this.el : false;
     }
-    handleWebkitBeginFullscreenState() {
+    setWebkitBeginFullscreenState() {
       this.config.state.fullscreen = true;
     }
-    handleWebkitEndFullscreenState() {
+    setWebkitEndFullscreenState() {
       this.config.state.fullscreen = false;
     }
-    handleCurrentTrackState(type, list) {
+    setCurrentTrackState(type, list) {
       this.config.state[`current${type}Track`] = getTrackIdx(this.el, type, "active");
     }
-    handleHTMLState(mutations) {
+    setHTMLStateFromMutation(mutations) {
       for (const m of mutations) {
         const { state: state2, settings } = this.config;
         if (m.type === "childList") {
@@ -2563,8 +2673,8 @@ var tmg = (() => {
     }
     handleAttributeIntent(e, key, isBool) {
       if (e.resolved) return;
-      this.el[key] = isBool ? !!e.value : e.value ?? "";
-      if (key === "playsInline") this.el.toggleAttribute("webkit-playsinline", e.value);
+      this.el[key] = isBool ? Boolean(e.value) : e.value ?? "";
+      if (key === "playsInline") this.el.toggleAttribute("webkit-playsinline", Boolean(e.value));
       e.resolve(_HTML5Tech.techName);
     }
     handleSourcesIntent(e) {
@@ -2627,86 +2737,12 @@ var tmg = (() => {
     handleDefaultPlaybackRateSetting(e) {
       this.el.defaultPlaybackRate = e.value;
     }
-    // --- Capabilities ---
-    static canControlVolume() {
-      if (!this.DUMMY) return false;
-      try {
-        const prev = this.DUMMY.volume;
-        this.DUMMY.volume = 0.5;
-        const works = this.DUMMY.volume === 0.5;
-        return this.DUMMY.volume = prev, works;
-      } catch {
-        return false;
-      }
-    }
-    static canMuteVolume() {
-      return !!this.DUMMY && "muted" in this.DUMMY;
-    }
-    static canControlRate() {
-      if (!this.DUMMY) return false;
-      try {
-        const prev = this.DUMMY.playbackRate;
-        this.DUMMY.playbackRate = 0.5;
-        const works = this.DUMMY.playbackRate === 0.5;
-        return this.DUMMY.playbackRate = prev, works;
-      } catch {
-        return false;
-      }
-    }
-    static supportsTextTracks() {
-      return !!this.DUMMY && "textTracks" in this.DUMMY;
-    }
-    static supportsVideoTracks() {
-      return !!this.DUMMY && "videoTracks" in this.DUMMY;
-    }
-    static supportsAudioTracks() {
-      return !!this.DUMMY && "audioTracks" in this.DUMMY;
+    // --- Other Handlers ---
+    handlePiPState(e) {
+      this.features.pictureInPicture = !e.value;
     }
   };
   _HTML5Tech.techName = "html5";
-  // prettier-ignore
-  _HTML5Tech.features = {
-    // Kinda Core
-    volume: _HTML5Tech.canControlVolume(),
-    muted: _HTML5Tech.canMuteVolume(),
-    playbackRate: _HTML5Tech.canControlRate(),
-    // Modes
-    pictureInPicture: supportsPictureInPicture(),
-    fullscreen: supportsFullscreen(),
-    // Attributes
-    poster: true,
-    autoplay: true,
-    loop: true,
-    playsInline: true,
-    crossOrigin: true,
-    controls: true,
-    controlsList: true,
-    disablePictureInPicture: true,
-    preload: true,
-    // Lists
-    textTracks: _HTML5Tech.supportsTextTracks(),
-    videoTracks: _HTML5Tech.supportsVideoTracks(),
-    audioTracks: _HTML5Tech.supportsAudioTracks(),
-    activeCue: _HTML5Tech.supportsTextTracks(),
-    // Infos
-    readyState: true,
-    networkState: true,
-    error: true,
-    waiting: true,
-    stalled: true,
-    seeking: true,
-    buffered: true,
-    seekable: true,
-    videoWidth: true,
-    videoHeight: true,
-    loadedMetadata: true,
-    canPlay: true,
-    canPlayThrough: true,
-    // Settings
-    defaultMuted: true,
-    defaultPlaybackRate: true
-  };
-  _HTML5Tech.DUMMY = createEl("video");
   var HTML5Tech = _HTML5Tech;
 
   // src/ts/core/controller.ts
@@ -2716,7 +2752,7 @@ var tmg = (() => {
       this.plugs = /* @__PURE__ */ new Map();
       this.ac = new AbortController();
       this.signal = this.ac.signal;
-      this.payloadCache = { instance: this };
+      this._payload = { instance: this };
       // must use getter for payload
       // DOM References (Utilized by Core Plugs)
       this.videoContainer = createEl("div");
@@ -2812,7 +2848,7 @@ var tmg = (() => {
         }
       }
       this.switchTech(selectedTech || HTML5Tech);
-      if (selectedSource !== prefSrc && !selectedTech?.features?.sources) this.media.intent.src = selectedSource;
+      if (selectedSource !== prefSrc && !this.media.tech.features.sources) this.media.intent.src = selectedSource;
     }
     switchTech(TechClass, config = this.media) {
       if (this.media.tech && TechClass === this.media.tech.constructor) return;
@@ -2829,8 +2865,8 @@ var tmg = (() => {
     }
     get payload() {
       const readyState = this.state?.readyState ?? 0;
-      this.payloadCache.readyState = readyState, this.payloadCache.initialized = readyState > 0, this.payloadCache.destroyed = readyState < 0;
-      return this.payloadCache;
+      this._payload.readyState = readyState, this._payload.initialized = readyState > 0, this._payload.destroyed = readyState < 0;
+      return this._payload;
     }
     setReadyState(state2, medium) {
       const readyState = !this.state ? 0 : clamp(0, state2 ?? this.state.readyState + 1, 3);
@@ -2859,16 +2895,16 @@ var tmg = (() => {
         return this.throttleMap.set(key, now), fn();
       }
       if (this.throttleMap.has(key)) return;
-      const id = setTimeout2(() => this.throttleMap.delete(key), delay, this.signal);
+      const id = setTimeout2(() => this.throttleMap.delete(key), delay, this.signal, getWindow(this.videoContainer));
       return this.throttleMap.set(key, id), fn();
     }
     RAFLoop(key, fn) {
       this.rafLoopFnMap.set(key, fn);
-      const loop = () => (this.rafLoopFnMap.get(key)?.(), this.rafLoopMap.set(key, requestAnimationFrame2(loop, this.signal)));
-      !this.rafLoopMap.has(key) && this.rafLoopMap.set(key, requestAnimationFrame2(loop, this.signal));
+      const loop = () => (this.rafLoopFnMap.get(key)?.(), this.rafLoopMap.set(key, requestAnimationFrame2(loop, this.signal, getWindow(this.videoContainer))));
+      !this.rafLoopMap.has(key) && this.rafLoopMap.set(key, requestAnimationFrame2(loop, this.signal, getWindow(this.videoContainer)));
     }
     cancelRAFLoop(key) {
-      cancelAnimationFrame(this.rafLoopMap.get(key)), this.rafLoopFnMap.delete(key), this.rafLoopMap.delete(key);
+      getWindow(this.videoContainer)?.cancelAnimationFrame(this.rafLoopMap.get(key)), this.rafLoopFnMap.delete(key), this.rafLoopMap.delete(key);
     }
     queryDOM(query, all = false, isPseudo = false) {
       const container = isPseudo ? this.pseudoVideoContainer : this.videoContainer;
@@ -3116,26 +3152,25 @@ var tmg = (() => {
 
   // src/ts/tools/player.ts
   var modes2 = { fullScreen: supportsFullscreen(), pictureInPicture: supportsPictureInPicture() };
-  var _medium, _active, _controller, _build;
   var Player = class {
     constructor(customBuild = {}) {
-      __privateAdd(this, _medium, null);
-      __privateAdd(this, _active, false);
-      __privateAdd(this, _controller, null);
-      __privateAdd(this, _build, structuredClone(DEFAULT_VIDEO_BUILD));
+      this.medium = null;
+      this.active = false;
+      this.controller = null;
+      this._build = structuredClone(DEFAULT_VIDEO_BUILD);
       this.configure({ ...customBuild, id: customBuild.id ?? `${luid()}_Controller_${Controllers.length + 1}` });
     }
     get Controller() {
-      return __privateGet(this, _controller);
+      return this.controller;
     }
     get build() {
-      return __privateGet(this, _build);
+      return this._build;
     }
     set build(customBuild) {
       this.configure(customBuild);
     }
     queryBuild() {
-      return !__privateGet(this, _active) ? true : this.notice({ error: "Already deployed the custom controls of your build configuration", tip: "Consider setting your build configuration before attaching your media element" }), false;
+      return !this.active ? true : this.notice({ error: "Already deployed the custom controls of your build configuration", tip: "Consider setting your build configuration before attaching your media element" }), false;
     }
     notice({ error, warning, tip }) {
       error && console.error(`[TMG Player] ${error}`);
@@ -3144,63 +3179,58 @@ var tmg = (() => {
     }
     configure(customBuild) {
       if (!this.queryBuild() || !isObj(customBuild)) return;
-      __privateSet(this, _build, mergeObjs(__privateGet(this, _build), parseAnyObj(customBuild)));
-      const keys = __privateGet(this, _build).settings.keys;
+      this._build = mergeObjs(this._build, parseAnyObj(customBuild));
+      const keys = this._build.settings.keys;
       if (!keys) return;
       Object.keys(keys.shortcuts || {}).forEach((k) => keys.shortcuts[k] = cleanKeyCombo(keys.shortcuts[k]));
       ["blocks", "overrides"].forEach((k) => keys[k] = cleanKeyCombo(keys[k]));
     }
     async attach(medium) {
       if (isIter(medium)) return this.notice({ error: "An iterable argument cannot be attached to the TMG media player", tip: "Consider looping the iterable argument to instantiate a new 'tmg.Player' for each" });
-      if (__privateGet(this, _active)) return medium;
+      if (this.active) return medium;
       medium.tmgPlayer?.detach();
+      tmg.Controllers.push(this._build.id);
       medium.tmgPlayer = this;
-      __privateSet(this, _medium, medium);
-      await this.fetchCustomOptions();
-      await this.deployController();
-      return __privateGet(this, _controller)?.fire("tmgattached", __privateGet(this, _controller).payload), medium;
+      this.medium = medium;
+      await this.fetchCustomOptions(), await this.deployController();
+      return this.controller?.fire("tmgattached", this.controller.payload), medium;
     }
     detach() {
-      if (!__privateGet(this, _active)) return;
-      const medium = __privateGet(this, _controller)?.destroy() ?? null;
-      __privateGet(this, _controller) && Controllers.splice(Controllers.indexOf(__privateGet(this, _controller)), 1);
-      medium?.classList.remove(`tmg-${medium?.tagName.toLowerCase()}`, "tmg-media");
-      if (medium) medium.tmgcontrols = false, medium.tmgPlayer = null;
-      __privateSet(this, _active, false);
-      __privateGet(this, _controller)?.fire("tmgdetached");
-      __privateSet(this, _controller, __privateSet(this, _medium, null));
+      if (!this.active) return;
+      const medium = this.controller?.destroy() ?? {};
+      this.controller && Controllers.splice(Controllers.indexOf(this.controller), 1);
+      medium?.classList?.remove(`tmg-${medium?.tagName.toLowerCase()}`, "tmg-media");
+      medium.tmgcontrols = this.active = false;
+      this.controller?.fire("tmgdetached", this.controller.payload);
+      medium.tmgPlayer = this.controller = this.medium = null;
       return medium;
     }
     async fetchCustomOptions() {
-      if (!__privateGet(this, _medium)) return;
-      if (__privateGet(this, _medium).getAttribute("tmg")?.includes(".json")) {
-        await fetch(__privateGet(this, _medium).getAttribute("tmg")).then((res) => {
+      if (!this.medium) return;
+      if (this.medium.getAttribute("tmg")?.includes(".json")) {
+        await fetch(this.medium.getAttribute("tmg")).then((res) => {
           if (!res.ok) throw new Error(`JSON file not found at provided URL!. Status: ${res.status}`);
           return res.json();
         }).then((json) => this.configure(json)).catch(({ message }) => this.notice({ error: message, tip: "A valid JSON file is required for parsing your build configuration" }));
       }
-      const customBuild = {}, attributes = __privateGet(this, _medium).getAttributeNames().filter((attr) => attr.startsWith("tmg--"));
-      attributes?.forEach((attr) => setHTMLConfig(customBuild, attr, __privateGet(this, _medium).getAttribute(attr)));
-      if (__privateGet(this, _medium) instanceof HTMLVideoElement && __privateGet(this, _medium).poster) this.configure({ "media.artwork[0].src": __privateGet(this, _medium).poster });
+      const customBuild = {}, attributes = this.medium.getAttributeNames().filter((attr) => attr.startsWith("tmg--"));
+      attributes?.forEach((attr) => setHTMLConfig(customBuild, attr, this.medium.getAttribute(attr)));
+      if (this.medium instanceof HTMLVideoElement && this.medium.poster) this.configure({ "media.artwork[0].src": this.medium.poster });
       this.configure(customBuild);
     }
     async deployController() {
-      if (__privateGet(this, _active) || !__privateGet(this, _medium)?.isConnected) return;
-      if (__privateGet(this, _build).playlist?.[0]) this.configure(mergeObjs(DEFAULT_VIDEO_ITEM_BUILD, parseAnyObj(__privateGet(this, _build).playlist[0])));
-      if (!(__privateGet(this, _medium) instanceof HTMLVideoElement)) return this.notice({ error: `Could not deploy custom controls on the '${__privateGet(this, _medium).tagName}' element as it is not supported`, warning: "Only the 'VIDEO' element is currently supported", tip: "" });
-      __privateGet(this, _medium).tmgcontrols = __privateSet(this, _active, true);
-      __privateGet(this, _medium).controls = false;
-      __privateGet(this, _medium).classList.add(`tmg-${__privateGet(this, _medium).tagName.toLowerCase()}`, "tmg-media");
-      const s = __privateGet(this, _build).settings;
+      if (this.active || !this.medium?.isConnected) return;
+      if (this._build.playlist?.[0]) this.configure(mergeObjs(DEFAULT_VIDEO_ITEM_BUILD, parseAnyObj(this._build.playlist[0])));
+      if (!(this.medium instanceof HTMLVideoElement)) return this.notice({ error: `Could not deploy custom controls on the '${this.medium.tagName}' element as it is not supported`, warning: "Only the 'VIDEO' element is currently supported", tip: "" });
+      this.medium.tmgcontrols = this.active = true;
+      this.medium.controls = false;
+      this.medium.classList.add(`tmg-${this.medium.tagName.toLowerCase()}`, "tmg-media");
+      const s = this._build.settings;
       Object.keys(s.modes).forEach((k) => s.modes[k] = s.modes[k] && (modes2[String(k)] ?? true) ? s.modes[k] : false);
       await Promise.all([loadResource2(window.TMG_VIDEO_CSS_SRC), loadResource2(window.T007_TOAST_JS_SRC, "script", { module: true }), loadResource2(window.T007_INPUT_JS_SRC, "script")]);
-      Controllers.push(__privateSet(this, _controller, new Controller(__privateGet(this, _medium), __privateGet(this, _build))));
+      Controllers[Controllers.indexOf(this._build.id)] = this.controller = new Controller(this.medium, this._build);
     }
   };
-  _medium = new WeakMap();
-  _active = new WeakMap();
-  _controller = new WeakMap();
-  _build = new WeakMap();
 
   // src/ts/tools/runtime.ts
   var AUDIO_CONTEXT = null;
@@ -3275,7 +3305,7 @@ var tmg = (() => {
       AUDIO_CONTEXT = new (window.AudioContext || window.webkitAudioContext)();
       const L = AUDIO_LIMITER = AUDIO_CONTEXT.createDynamicsCompressor();
       L.threshold.value = -1, L.knee.value = 0, L.ratio.value = 20, L.attack.value = 1e-3, L.release.value = 0.05;
-      Controllers.forEach((c) => c.state.audioContextReady = true);
+      Controllers.forEach((c) => c.state && (c.state.audioContextReady = true));
     } else if (AUDIO_CONTEXT?.state === "suspended") AUDIO_CONTEXT.resume();
   }
   function connectMediaToAudioManager(medium) {
@@ -3296,9 +3326,9 @@ var tmg = (() => {
       medium.tmgcontrols = medium.hasAttribute("tmgcontrols");
     });
     observeMutation(document.documentElement, handleDOMMutation, { childList: true, subtree: true });
-    window?.addEventListener("resize", () => Controllers.forEach((c) => c.state.dimensions.window = { width: window.innerWidth, height: window.innerHeight }));
-    screen?.orientation.addEventListener("change", (e) => Controllers.forEach((c) => c.state.screenOrientation = e?.target));
-    document?.addEventListener("visibilitychange", () => Controllers.forEach((c) => c.state.docVisibilityState = document.visibilityState));
+    window?.addEventListener("resize", () => Controllers.forEach((c) => c.state && (c.state.dimensions.window = { width: window.innerWidth, height: window.innerHeight })));
+    screen?.orientation.addEventListener("change", (e) => Controllers.forEach((c) => c.state && (c.state.screenOrientation = e?.target)));
+    document?.addEventListener("visibilitychange", () => Controllers.forEach((c) => c.state && (c.state.docVisibilityState = document.visibilityState)));
     ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "msfullscreenchange"].forEach((e) => document?.addEventListener(e, () => Controllers.forEach((c) => c.state.docInFullscreen = queryFullscreen())));
   }
 
@@ -3432,8 +3462,9 @@ var tmg = (() => {
     }
     wire() {
       this.ctlr.media.on("state.paused", this.handlePausedChange, { signal: this.signal, immediate: true });
-      this.ctlr.media.on("status.ended", ({ target: { value } }) => this.ctlr.videoContainer.classList.toggle("tmg-video-replay", value), { signal: this.signal, immediate: true });
-      this.ctlr.media.on("status.waiting", ({ target: { value } }) => this.ctlr.videoContainer.classList.toggle("tmg-video-buffering", value), { signal: this.signal, immediate: true });
+      this.ctlr.media.on("state.currentTime", () => this.ctlr.videoContainer.classList.remove("tmg-video-replay"), { signal: this.signal, immediate: true });
+      this.ctlr.media.on("status.ended", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-replay", value), { signal: this.signal, immediate: true });
+      this.ctlr.media.on("status.waiting", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-buffering", value), { signal: this.signal, immediate: true });
       this.ctlr.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
     }
     setupContainers() {
@@ -3501,11 +3532,11 @@ var tmg = (() => {
       this.ctlr.DOM.settingsBottomPanel = this.ctlr.queryDOM(".tmg-video-settings-bottom-panel");
       this.ctlr.DOM.containerContent?.prepend(this.ctlr.media.element);
     }
-    handlePausedChange({ target: { value } }) {
+    handlePausedChange({ value }) {
       if (!value) for (const media of document.querySelectorAll("video, audio")) media !== this.ctlr.media.element && !media.paused && media.pause();
       this.ctlr.videoContainer.classList.toggle("tmg-video-paused", value);
     }
-    handleLoadedMetadataStatus({ target: { value } }) {
+    handleLoadedMetadataStatus({ value }) {
       if (!value) return;
       this.ctlr.pseudoVideo.src = this.ctlr.media.element.currentSrc;
       this.ctlr.pseudoVideo.crossOrigin = this.ctlr.media.element.crossOrigin;
@@ -3539,7 +3570,7 @@ var tmg = (() => {
       videoProfile && this.ctlr.setImgLoadState({ target: videoProfile });
     }
     wire() {
-      this.ctlr.media.on("state.paused", ({ target: { value } }) => !value && this.syncMediaSession(), { signal: this.signal });
+      this.ctlr.media.on("state.paused", ({ value }) => !value && this.syncMediaSession(), { signal: this.signal });
       this.ctlr.config.watch("media.title", this.forwardTitle, { immediate: true, signal: this.signal });
       this.ctlr.config.watch("media.artist", this.forwardArtist, { immediate: true, signal: this.signal });
       this.ctlr.config.watch("media.profile", this.forwardProfile, { immediate: true, signal: this.signal });
@@ -3680,57 +3711,12 @@ var tmg = (() => {
   var CSSPlug = class extends BasePlug {
     constructor() {
       super(...arguments);
-      this.classSettings = ["captionsCharacterEdgeStyle", "captionsTextAlignment"];
+      this.classKeys = ["captionsCharacterEdgeStyle", "captionsTextAlignment"];
       this.CSSCache = {};
     }
     wire() {
-      this.CSSCache = {};
       this.ctlr.config.on("settings.css", this.handleCSSChange, { signal: this.signal, immediate: true, depth: 1 });
-      this.classSettings.forEach(this.wireClassMediator);
-      this.wireSheetMediators();
-      this.wireComputedVars();
-    }
-    wireSheetMediators() {
-      for (const sheet of document.styleSheets) {
-        try {
-          if (!sheet.cssRules) continue;
-          for (const rule of sheet.cssRules) {
-            if (!(rule instanceof CSSStyleRule) || !rule.selectorText?.replace(/\s/g, "")?.match(/(:root|\.tmg-media-container)/)) continue;
-            for (const prop of rule.style) {
-              if (!prop.startsWith("--tmg-video-")) continue;
-              const field = camelize(prop.replace("--tmg-video-", ""));
-              this.CSSCache[field] = rule.style.getPropertyValue(prop);
-              this.ctlr.config.get(`settings.css.${field}`, () => getComputedStyle(this.ctlr.videoContainer).getPropertyValue(prop), { signal: this.signal });
-            }
-          }
-        } catch {
-          continue;
-        }
-      }
-    }
-    wireClassMediator(key) {
-      this.ctlr.config.get(`settings.css.${key}`, () => this.getValue(key), { signal: this.signal });
-    }
-    handleCSSChange({ type, target: { key, value } }) {
-      type === "update" ? this.apply(key, value) : type === "init" && Object.keys(value).forEach((k) => k !== "syncWithMedia" && this.apply(k, value[k]));
-    }
-    getValue(key) {
-      const pre = `tmg-video-${uncamelize(key, "-")}`, val = Array.prototype.find.call(this.ctlr.videoContainer.classList, (c) => c.startsWith(pre))?.replace(`${pre}-`, "");
-      return val || "none";
-    }
-    apply(key, value) {
-      this[this.classSettings.includes(key) ? "updateClass" : "updateCssVariable"](key, value);
-    }
-    updateCssVariable(key, value) {
-      const strVal = String(value), cssVar = `--tmg-video-${uncamelize(key, "-")}`;
-      [this.ctlr.videoContainer, this.ctlr.pseudoVideoContainer].forEach((el) => el?.style.setProperty(cssVar, strVal));
-    }
-    updateClass(key, value) {
-      const pre = `tmg-video-${uncamelize(key, "-")}`;
-      this.ctlr.videoContainer.classList.forEach((c) => c.startsWith(pre) && this.ctlr.videoContainer.classList.remove(c));
-      this.ctlr.videoContainer.classList.add(`${pre}-${value}`);
-    }
-    wireComputedVars() {
+      this.wireCSSMediator();
       this.ctlr.config.settings.css.altImgUrl = `url(${window.TMG_VIDEO_ALT_IMG_SRC})`;
       this.ctlr.media.watch("status.videoWidth", this.syncAspectRatio, { signal: this.signal, immediate: true });
       this.ctlr.media.watch("status.videoHeight", this.syncAspectRatio, { signal: this.signal });
@@ -3739,6 +3725,44 @@ var tmg = (() => {
       this.ctlr.state.watch("dimensions.container.height", (h) => this.ctlr.config.settings.css.currentContainerHeight = `${h || 0}px`, { signal: this.signal, immediate: true });
       this.ctlr.state.on("dimensions.container.tier", ({ value: tier }) => this.ctlr.videoContainer.dataset.sizeTier = tier || "", { signal: this.signal, immediate: true });
       this.ctlr.state.on("dimensions.pseudoContainer.tier", ({ value: tier }) => this.ctlr.pseudoVideoContainer.dataset.sizeTier = tier || "", { signal: this.signal, immediate: true });
+    }
+    wireCSSMediator() {
+      var _a;
+      (_a = this.ctlr.config.__Reactor__).options ?? (_a.options = {});
+      const prevGet = this.ctlr.config.__Reactor__.options.get;
+      this.ctlr.config.__Reactor__.options.get = (obj, key, val, proxy, paths) => {
+        var _a2;
+        prevGet && (val = prevGet(obj, key, val, proxy, paths));
+        if (!paths[0]?.startsWith("settings.css.")) return val;
+        const safeKey = String(key);
+        if (safeKey === "syncWithMedia") return val;
+        const newVal = this[this.classKeys.includes(safeKey) ? "getClassValue" : "getCSSValue"](safeKey);
+        (_a2 = this.CSSCache)[safeKey] || (_a2[safeKey] = newVal);
+        return newVal;
+      };
+    }
+    getCSSValue(key) {
+      const cssVar = `--tmg-video-${uncamelize(key, "-")}`, val = getComputedStyle(this.ctlr.videoContainer).getPropertyValue(cssVar);
+      return val;
+    }
+    getClassValue(key) {
+      const prefix = `tmg-video-${uncamelize(key, "-")}`, val = Array.prototype.find.call(this.ctlr.videoContainer.classList, (c) => c.startsWith(prefix))?.replace(`${prefix}-`, "");
+      return val || "none";
+    }
+    handleCSSChange({ type, target: t }) {
+      type === "update" ? this.apply(t.key, t.value) : type === "init" && Object.keys(t.value).forEach((k) => k !== "syncWithMedia" && this.apply(k, t.value[k]));
+    }
+    apply(key, value) {
+      this[this.classKeys.includes(key) ? "updateClassValue" : "updateCssVariable"](key, value);
+    }
+    updateCssVariable(key, value) {
+      const strVal = String(value), cssVar = `--tmg-video-${uncamelize(key, "-")}`;
+      [this.ctlr.videoContainer, this.ctlr.pseudoVideoContainer].forEach((el) => el?.style.setProperty(cssVar, strVal));
+    }
+    updateClassValue(key, value) {
+      const pre = `tmg-video-${uncamelize(key, "-")}`;
+      this.ctlr.videoContainer.classList.forEach((c) => c.startsWith(pre) && this.ctlr.videoContainer.classList.remove(c));
+      this.ctlr.videoContainer.classList.add(`${pre}-${value}`);
     }
     syncAspectRatio() {
       const { videoWidth: w2, videoHeight: h } = this.ctlr.media.status;
@@ -3785,19 +3809,25 @@ var tmg = (() => {
         bottomW.append(row);
       });
       cc?.append(topW, this.zoneWs.center.zone, bottomW);
-      ComponentRegistry.getAll().forEach((Comp) => {
-        Comp.isControl && this.controls.set(Comp.componentName, ComponentRegistry.init(Comp.componentName, this.ctlr));
-      });
+      ComponentRegistry.getAll().forEach((Comp) => Comp.isControl && this.controls.set(Comp.componentName, ComponentRegistry.init(Comp.componentName, this.ctlr)));
     }
     wire() {
+      ["settings.controlPanel.title", "settings.controlPanel.artist", "settings.controlPanel.profile"].forEach(
+        (e) => this.ctlr.config.on(
+          e,
+          ({ target: { key, value } }) => {
+          },
+          { signal: this.signal, immediate: true }
+        )
+      );
       this.ctlr.config.on("settings.controlPanel.top", this.handleTopLayout, { signal: this.signal, immediate: true });
       this.ctlr.config.on("settings.controlPanel.center", this.handleCenterLayout, { signal: this.signal, immediate: true });
       this.ctlr.config.on("settings.controlPanel.bottom", this.handleBottomLayout, { signal: this.signal, immediate: true });
-      this.ctlr.config.on("settings.controlPanel.buffer", ({ target: { value } }) => this.ctlr.videoContainer.dataset.buffer = String(value), { signal: this.signal, immediate: true });
-      this.ctlr.config.on("settings.controlPanel.timeline.thumbIndicator", ({ target: { value } }) => this.ctlr.videoContainer.dataset.thumbIndicator = String(value), { signal: this.signal, immediate: true });
+      this.ctlr.config.on("settings.controlPanel.buffer", ({ value }) => this.ctlr.videoContainer.dataset.buffer = String(value), { signal: this.signal, immediate: true });
+      this.ctlr.config.on("settings.controlPanel.timeline.thumbIndicator", ({ value }) => this.ctlr.videoContainer.dataset.thumbIndicator = String(value), { signal: this.signal, immediate: true });
       this.ctlr.config.on(
         "settings.controlPanel.timeline.seek",
-        ({ target: { value } }) => {
+        ({ currentTarget: { value } }) => {
           const timeline = this.getControl("timeline");
           if (!timeline) return;
           timeline.config.scrub.relative = value.relative;
@@ -3805,8 +3835,8 @@ var tmg = (() => {
         },
         { signal: this.signal, immediate: true }
       );
-      this.ctlr.config.on("settings.controlPanel.progressBar", ({ target: { value } }) => this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", !!value), { signal: this.signal, immediate: true });
-      this.ctlr.config.on("settings.controlPanel.draggable", ({ target: { value } }) => this.setDragEventListeners(value ? "add" : "remove"), { signal: this.signal, immediate: true });
+      this.ctlr.config.on("settings.controlPanel.progressBar", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", !!value), { signal: this.signal, immediate: true });
+      this.ctlr.config.on("settings.controlPanel.draggable", ({ value }) => this.setDragEventListeners(value ? "add" : "remove"), { signal: this.signal, immediate: true });
     }
     buildWSkel(side) {
       const zone = createEl("div", { className: `tmg-video-side-controls-wrapper tmg-video-${side}-side-controls-wrapper` }, { dropZone: "", scroller: side === "right" ? "reverse" : "" }), cover = createEl("div", { className: `tmg-video-side-controls-wrapper-cover tmg-video-${side}-side-controls-wrapper-cover` });
@@ -3825,18 +3855,18 @@ var tmg = (() => {
     getZones() {
       return [...Object.values(this.zoneWs.top), ...Object.values(this.zoneWs.bottom).map((v) => Object.values(v))].flat().map((w2) => w2.zone);
     }
-    handleTopLayout({ target: { value } }) {
+    handleTopLayout({ value }) {
       if (!value || typeof value === "boolean") return;
       const { left, center, right } = this.getSplitControls(value);
       this.fillZone(this.zoneWs.top.left, left);
       this.fillZone(this.zoneWs.top.center, center);
       this.fillZone(this.zoneWs.top.right, right);
     }
-    handleCenterLayout({ target: { value } }) {
+    handleCenterLayout({ value }) {
       if (!value || typeof value === "boolean") return;
       this.fillZone(this.zoneWs.center, value);
     }
-    handleBottomLayout({ target: { value } }) {
+    handleBottomLayout({ value }) {
       if (!value || typeof value === "boolean") return;
       [1, 2, 3].forEach((i) => {
         const { left, center, right } = this.getSplitControls(value[i] ?? []);
@@ -3966,14 +3996,14 @@ var tmg = (() => {
       this.overlayDelayId = -1;
     }
     wire() {
-      this.ctlr.media.on("state.paused", ({ target: { value } }) => value ? this.show() : this.delay(), { signal: this.signal, immediate: true });
+      this.ctlr.media.on("state.paused", ({ value }) => value ? this.show() : this.delay(), { signal: this.signal, immediate: true });
       this.ctlr.config.on("settings.overlay.curtain", this.handleCurtain, { signal: this.signal, immediate: true });
       this.ctlr.config.on("settings.overlay.behavior", this.handleBehavior, { signal: this.signal, immediate: true });
     }
-    handleCurtain({ target: { value } }) {
+    handleCurtain({ value }) {
       this.ctlr.videoContainer.dataset.curtain = value;
     }
-    handleBehavior({ target: { value } }) {
+    handleBehavior({ value }) {
       value === "persistent" && this.show();
       value === "hidden" && this.remove("force");
     }
@@ -4065,7 +4095,7 @@ var tmg = (() => {
       if (this.config.disabled) return;
       this.state.visible ? this?.removeOverlay() : this?.showOverlay();
     }
-    async handleLockChange({ target: { value } }) {
+    async handleLockChange({ value }) {
       if (!value) {
         setTimeout2(this.showOverlay, 0, this.signal);
         this.ctlr.videoContainer.classList.add("tmg-video-locked", "tmg-video-progress-bar");
@@ -4131,7 +4161,7 @@ var tmg = (() => {
       !root.lightState.disabled && (!value || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = root.lightState.preview.time);
     }
     handleTimeChange({ value, target, root }) {
-      !root.lightState.disabled && (!target.object.preview.usePoster || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = value);
+      !root.lightState.disabled && (!target.object.usePoster || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = value);
     }
     add() {
       this.ctlr.config.lightState.disabled = false;
@@ -4179,21 +4209,15 @@ var tmg = (() => {
       this.ctlr.media.intent.currentTime = value;
     }
     handleTimeUpdate({ target }) {
-      this.ctlr.throttle(
-        "timeUpdating",
-        () => {
-          const curr = target.value, min = this.ctlr.config.settings.time.min, max = this.ctlr.config.settings.time.max, dur = this.ctlr.media.status.duration, end = this.ctlr.config.settings.time.end;
-          if (curr < min || curr > max) {
-            this.ctlr.media.intent.currentTime = this.ctlr.config.settings.time.loop ? min : curr;
-            if (!this.ctlr.config.settings.time.loop) this.ctlr.media.intent.paused = true;
-          }
-          if (this.ctlr.media.status.readyState && curr) this.ctlr.config.settings.time.start = this.pseudoStart = curr > 3 && curr < (end ?? dur) - 3 ? curr : this.actualStart;
-        },
-        250
-      );
+      const curr = target.value, min = this.ctlr.config.settings.time.min, max = this.ctlr.config.settings.time.max, dur = this.ctlr.media.status.duration, end = this.ctlr.config.settings.time.end;
+      if (curr < min || curr > max) {
+        this.ctlr.media.intent.currentTime = this.ctlr.config.settings.time.loop ? min : curr;
+        if (!this.ctlr.config.settings.time.loop) this.ctlr.media.intent.paused = true;
+      }
+      if (this.ctlr.media.status.readyState && curr) this.ctlr.config.settings.time.start = this.pseudoStart = curr > 3 && curr < (end ?? dur) - 3 ? curr : this.actualStart;
     }
-    handleWaitingStatus({ target: { value } }) {
-      if (value && IS_MOBILE && this.currentSkipNotifier) this.ctlr.media.once("status.waiting", ({ target: { value: value2 } }) => !value2 && this.ctlr.getPlug("overlay")?.remove(), { signal: this.signal });
+    handleWaitingStatus({ value }) {
+      if (value && IS_MOBILE && this.currentSkipNotifier) this.ctlr.media.once("status.waiting", ({ value: value2 }) => !value2 && this.ctlr.getPlug("overlay")?.remove(), { signal: this.signal });
     }
     toTimeVal(value) {
       return parseIfPercent(value ?? 0, this.ctlr.media.status.duration);
@@ -4268,9 +4292,9 @@ var tmg = (() => {
     onSetup() {
       this.initialState = this.ctlr.media.snapshot();
       const opts = { signal: this.signal, capture: false };
-      this.ctlr.media.on("intent", (e) => this.record(e), opts);
-      this.ctlr.media.on("state", (e) => this.record(e), opts);
-      this.ctlr.media.on("settings", (e) => this.record(e), opts);
+      this.ctlr.media.on("intent", this.record, opts);
+      this.ctlr.media.on("state", this.record, opts);
+      this.ctlr.media.on("settings", this.record, opts);
     }
     /**
      * RECORD: Chronicling the lifecycle of the system.
@@ -4887,7 +4911,7 @@ var tmg = (() => {
         this.shouldDark = this.shouldSetLastBrightness = false;
       }
     }
-    handleBrightnessChange({ target: { value } }) {
+    handleBrightnessChange({ value }) {
       this.handleBrightnessState(value);
     }
     handleDarkChange({ oldValue, value: dark }) {
@@ -4988,17 +5012,17 @@ var tmg = (() => {
       const dur = this.ctlr.media.status.duration, curr = target.value;
       if (this.ctlr.media.status.readyState && curr && Math.floor((this.ctlr.config.settings.time.end ?? dur) - curr) <= this.config.next.value) this.autonextVideo();
     }
-    handleUsePoster({ target: { value } }) {
+    handleUsePoster({ value }) {
       if (!this.nextVideoPreview || value && this.nextVideoPreview.poster) return;
       if (this.config.next.videoPreview.tease) this.ctlr.config.settings.auto.next.videoPreview.tease = this.config.next.videoPreview.tease;
       else this.ctlr.config.settings.auto.next.videoPreview.time = this.config.next.videoPreview.time;
     }
-    handleTease({ target: { value } }) {
+    handleTease({ value }) {
       if (!this.nextVideoPreview) return;
       this.nextVideoPreview.ontimeupdate = () => this.nextVideoPreview && Number(this.nextVideoPreview.currentTime) >= this.config.next.videoPreview.time && this.nextVideoPreview.pause();
       if (value && (!this.config.next.videoPreview.usePoster || !this.nextVideoPreview.poster)) this.nextVideoPreview.play();
     }
-    handlePreviewTime({ target: { value } }) {
+    handlePreviewTime({ value }) {
       if (!this.nextVideoPreview || this.config.next.videoPreview.usePoster && this.nextVideoPreview.poster) return;
       this.nextVideoPreview.currentTime = Number(value);
     }
@@ -5015,7 +5039,7 @@ var tmg = (() => {
       this.ctlr.config.on("settings.toasts.disabled", this.handleDisabled, { signal: this.signal });
       this.ctlr.config.on("settings.toasts", this.handleToastUpdate, { signal: this.signal });
     }
-    handleDisabled({ target: { value } }) {
+    handleDisabled({ value }) {
       if (!value || !t007?.toast) return;
       t007.toast.dismissAll(this.ctlr.id);
     }
@@ -5158,7 +5182,7 @@ var tmg = (() => {
     wire() {
       this.ctlr.media.on("status.error", this.handleError, { signal: this.signal });
     }
-    handleError({ target: { value } }) {
+    handleError({ value }) {
       if (!value) return;
       const code = value.code, message = this.config[code] || value.message || "An unknown error occurred with the video :(";
       const disabledPlug = this.ctlr.getPlug("disabled");
@@ -5532,6 +5556,8 @@ var tmg = (() => {
       super(ctlr, { label: "Video timeline", ...{ ...options, previews: options.previews } });
       this.previewContext = null;
       this.thumbnailContext = null;
+      this.wasPaused = false;
+      this.scrubbingId = -1;
     }
     create() {
       const element = super.create();
@@ -5558,8 +5584,9 @@ var tmg = (() => {
     wire() {
       super.wire();
       this.plug = this.ctlr.getPlug("time");
+      this.ctlr.media.on("state.paused", this.handlePausedChange, { signal: this.signal, immediate: true });
+      this.ctlr.media.on("state.currentTime", this.handleCurrentTimeChange, { signal: this.signal, immediate: true });
       this.ctlr.media.on("status.loadedMetadata", this.handleLoadedMetadata, { signal: this.signal, immediate: true });
-      this.ctlr.media.on("state.currentTime", this.handleTimeUpdate, { signal: this.signal, immediate: true });
       this.ctlr.media.on("status.buffered", this.handleProgress, { signal: this.signal, immediate: true });
       this.ctlr.media.on("status.duration", this.handleDurationChange, { signal: this.signal, immediate: true });
       this.ctlr.state.on("dimensions.container", this.syncThumbnailSize, { signal: this.signal, immediate: true });
@@ -5580,12 +5607,6 @@ var tmg = (() => {
     handleLoadedMetadata() {
       this.ctlr.pseudoVideo.addEventListener("timeupdate", (e) => e.target.ontimeupdate = this.syncCanvasPreviews, { signal: this.signal, once: true });
     }
-    handleTimeUpdate({ target }) {
-      if (this.state.scrubbing) return;
-      const duration = safeNum(this.ctlr.media.status.duration, 60);
-      this.config.value = safeNum(target.value / duration) * 100;
-      this.container.ariaValueText = `${formatMediaTime({ time: target.value, format: "human-long" })} out of ${formatMediaTime({ time: duration, format: "human-long" })}`;
-    }
     handleProgress() {
       const buffered = this.ctlr.media.status.buffered;
       for (let i = 0; i < buffered.length; i++) {
@@ -5595,12 +5616,36 @@ var tmg = (() => {
         }
       }
     }
-    handleDurationChange({ target }) {
-      this.container.ariaValueMax = String(Math.floor(target.value));
+    handleDurationChange({ value }) {
+      this.container.ariaValueMax = String(Math.floor(value));
     }
-    handleScrubbingChange({ target }) {
-      this.ctlr.videoContainer.classList.toggle("tmg-video-scrubbing", target.value);
-      if (!target.value) this.stopPreview();
+    handlePausedChange({ value }) {
+      !value ? this.ctlr.RAFLoop("timelineUpdating", this.handleTimeUpdateLoop) : this.ctlr.cancelRAFLoop("timelineUpdating");
+    }
+    handleCurrentTimeChange({ target }) {
+      if (this.state.scrubbing) return;
+      if (this.ctlr.media.state.paused) this.handleTimeUpdateLoop(false);
+      this.container.ariaValueText = `${formatMediaTime({ time: target.value, format: "human-long" })} out of ${formatMediaTime({ time: this.ctlr.media.status.duration, format: "human-long" })}`;
+    }
+    handleTimeUpdateLoop(optimize = true) {
+      if (optimize && !this.ctlr.state.mediaIntersecting) return;
+      const duration = safeNum(this.ctlr.media.status.duration, 60);
+      if (!this.state.scrubbing) this.config.value = safeNum(this.ctlr.media.state.currentTime / duration) * 100;
+    }
+    handleScrubbingChange({ value }) {
+      if (!value) {
+        this.ctlr.media.intent.paused = this.wasPaused;
+        cancelAnimationFrame(this.scrubbingId);
+        this.ctlr.videoContainer.classList.remove("tmg-video-scrubbing");
+      } else {
+        this.wasPaused = this.ctlr.media.state.paused;
+        this.scrubbingId = requestAnimationFrame(() => {
+          this.ctlr.media.intent.paused = true;
+          this.ctlr.videoContainer.classList.add("tmg-video-scrubbing");
+        });
+      }
+      this.ctlr.videoContainer.classList.toggle("tmg-video-scrubbing", value);
+      if (!value) this.stopPreview();
     }
     handlePreviewChange({ target }) {
       const value = target.value === true ? {} : target.value;

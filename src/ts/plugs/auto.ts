@@ -1,7 +1,7 @@
 import { BasePlug } from ".";
-import type { Event } from "../core/reactor";
+import type { Event } from "../types/reactor";
 import { VideoBuild } from "../types/build";
-import { CMedia } from "../types/contract";
+import { CtlrMedia } from "../types/contract";
 import type { AptAutoplayOption, PosterPreview } from "../types/generics";
 import type { PlaylistPlug } from "./playlist";
 import type { ToastsPlug } from "./toasts";
@@ -40,25 +40,25 @@ export class AutoPlug extends BasePlug<Auto> {
     this.handleMediaAptAutoPlay();
   }
 
-  protected handleTimeUpdate({ target }: Event<CMedia, "state.currentTime">): void {
+  protected handleTimeUpdate({ target }: Event<CtlrMedia, "state.currentTime">): void {
     const dur = this.ctlr.media.status.duration,
       curr = target.value!;
     if (this.ctlr.media.status.readyState && curr && Math.floor((this.ctlr.config.settings.time.end ?? dur) - curr) <= this.config.next.value) this.autonextVideo();
   }
 
-  protected handleUsePoster({ target: { value } }: Event<VideoBuild, "settings.auto.next.videoPreview.usePoster">): void {
+  protected handleUsePoster({ value }: Event<VideoBuild, "settings.auto.next.videoPreview.usePoster">): void {
     if (!this.nextVideoPreview || (value && this.nextVideoPreview.poster)) return;
     if (this.config.next.videoPreview.tease) this.ctlr.config.settings.auto.next.videoPreview.tease = this.config.next.videoPreview.tease;
     else this.ctlr.config.settings.auto.next.videoPreview.time = this.config.next.videoPreview.time;
   }
 
-  protected handleTease({ target: { value } }: Event<VideoBuild, "settings.auto.next.videoPreview.tease">): void {
+  protected handleTease({ value }: Event<VideoBuild, "settings.auto.next.videoPreview.tease">): void {
     if (!this.nextVideoPreview) return;
     this.nextVideoPreview.ontimeupdate = () => this.nextVideoPreview && Number(this.nextVideoPreview.currentTime) >= this.config.next.videoPreview.time && this.nextVideoPreview.pause();
     if (value && (!this.config.next.videoPreview.usePoster || !this.nextVideoPreview.poster)) this.nextVideoPreview.play();
   }
 
-  protected handlePreviewTime({ target: { value } }: Event<VideoBuild, "settings.auto.next.videoPreview.time">): void {
+  protected handlePreviewTime({ value }: Event<VideoBuild, "settings.auto.next.videoPreview.time">): void {
     if (!this.nextVideoPreview || (this.config.next.videoPreview.usePoster && this.nextVideoPreview.poster)) return;
     this.nextVideoPreview.currentTime = Number(value);
   }

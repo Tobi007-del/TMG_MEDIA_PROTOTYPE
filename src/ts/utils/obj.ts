@@ -1,5 +1,5 @@
 import type { Control, ControlPanelBottomTuple } from "../plugs";
-import type { DeepMerge, Unflatten, WCPaths, Paths, PathValue } from "../types/obj";
+import type { DeepMerge, Unflatten, WildPaths, Paths, PathValue } from "../types/obj";
 import type { UIObject, UISettings } from "../types/UIOptions";
 import { camelize } from ".";
 const arrRx = /^([^\[\]]+)\[(\d+)\]$/;
@@ -168,25 +168,25 @@ export function mergeObjs(o1: any = {}, o2: any = {}): any {
   return (Object.keys(merged).forEach((k) => isObj(o1?.[k]) && isObj(o2?.[k]) && (merged[k] = mergeObjs(o1[k], o2[k]))), merged);
 }
 
-export function getTrailPaths<T>(path: WCPaths<T>, reverse: boolean = true): WCPaths<T>[] {
+export function getTrailPaths<T>(path: WildPaths<T>, reverse: boolean = true): WildPaths<T>[] {
   const parts = path.split("."),
-    chain: WCPaths<T>[] = ["*"];
+    chain: WildPaths<T>[] = ["*"];
   let acc = "";
   for (let i = 0; i < parts.length; i++) {
     acc += (i === 0 ? "" : ".") + parts[i];
-    chain.push(acc as WCPaths<T>);
+    chain.push(acc as WildPaths<T>);
   }
   return reverse ? chain.reverse() : chain; // for mostly logs
 }
 
-export function getTrailRecords<T extends object>(obj: T, path: WCPaths<T>): [WCPaths<T>, PathValue<T, WCPaths<T>>, PathValue<T, WCPaths<T>>][] {
+export function getTrailRecords<T extends object>(obj: T, path: WildPaths<T>): [WildPaths<T>, PathValue<T, WildPaths<T>>, PathValue<T, WildPaths<T>>][] {
   const parts = path.split("."),
     record: ReturnType<typeof getTrailRecords<T>> = [["*", obj, obj]];
   let acc = "",
     currObj: any = obj;
   for (let i = 0; i < parts.length; i++) {
     acc += (i === 0 ? "" : ".") + parts[i];
-    record.push([acc as WCPaths<T>, currObj, (currObj = currObj?.[parts[i]])]); // at most one iteration per depth, storage over derivation
+    record.push([acc as WildPaths<T>, currObj, (currObj = currObj?.[parts[i]])]); // at most one iteration per depth, storage over derivation
   }
   return record;
 }

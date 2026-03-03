@@ -100,7 +100,7 @@ export function startAudioManager() {
     AUDIO_CONTEXT = new (window.AudioContext || (window as any).webkitAudioContext)() as AudioContext;
     const L = (AUDIO_LIMITER = AUDIO_CONTEXT!.createDynamicsCompressor());
     ((L.threshold.value = -1.0), (L.knee.value = 0.0), (L.ratio.value = 20), (L.attack.value = 0.001), (L.release.value = 0.05));
-    Controllers.forEach((c) => (c.state.audioContextReady = true));
+    Controllers.forEach((c) => c.state && (c.state.audioContextReady = true));
   } else if (AUDIO_CONTEXT?.state === "suspended") AUDIO_CONTEXT.resume();
 }
 
@@ -123,8 +123,8 @@ export function init() {
     medium.tmgcontrols = medium.hasAttribute("tmgcontrols");
   });
   observeMutation(document.documentElement, handleDOMMutation, { childList: true, subtree: true });
-  window?.addEventListener("resize", () => Controllers.forEach((c) => (c.state.dimensions.window = { width: window.innerWidth, height: window.innerHeight })));
-  screen?.orientation.addEventListener("change", (e) => Controllers.forEach((c) => (c.state.screenOrientation = e?.target as ScreenOrientation)));
-  document?.addEventListener("visibilitychange", () => Controllers.forEach((c) => (c.state.docVisibilityState = document.visibilityState)));
+  window?.addEventListener("resize", () => Controllers.forEach((c) => c.state && (c.state.dimensions.window = { width: window.innerWidth, height: window.innerHeight })));
+  screen?.orientation.addEventListener("change", (e) => Controllers.forEach((c) => c.state && (c.state.screenOrientation = e?.target as ScreenOrientation)));
+  document?.addEventListener("visibilitychange", () => Controllers.forEach((c) => c.state && (c.state.docVisibilityState = document.visibilityState)));
   ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "msfullscreenchange"].forEach((e) => document?.addEventListener(e, () => Controllers.forEach((c) => (c.state.docInFullscreen = queryFullscreen()))));
 }

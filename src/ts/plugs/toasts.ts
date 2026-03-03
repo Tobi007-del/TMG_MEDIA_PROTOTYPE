@@ -1,6 +1,6 @@
 import { BasePlug } from ".";
-import type { Event } from "../core/reactor";
-import { VideoBuild } from "../types/build";
+import type { Event } from "../types/reactor";
+import type { VideoBuild } from "../types/build";
 import type { ToastOptions } from "../types/t007";
 
 export interface Toasts extends ToastOptions {
@@ -16,7 +16,7 @@ export class ToastsPlug extends BasePlug<Toasts> {
     this.ctlr.config.on("settings.toasts", this.handleToastUpdate, { signal: this.signal });
   }
 
-  protected handleDisabled({ target: { value } }: Event<VideoBuild, "settings.toasts.disabled">): void {
+  protected handleDisabled({ value }: Event<VideoBuild, "settings.toasts.disabled">): void {
     if (!value || !t007?.toast) return;
     t007.toast.dismissAll(this.ctlr.id);
   }

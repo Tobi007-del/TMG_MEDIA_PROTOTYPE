@@ -1,6 +1,6 @@
 import { BasePlug } from ".";
 import type { Event } from "../types/reactor";
-import type { CMedia } from "../types/contract";
+import type { CtlrMedia } from "../types/contract";
 import { assignEl, IS_MOBILE } from "../utils";
 
 export type Skeleton = undefined;
@@ -16,8 +16,9 @@ export class SkeletonPlug extends BasePlug<Skeleton> {
 
   public wire(): void {
     this.ctlr.media.on("state.paused", this.handlePausedChange, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.ended", ({ target: { value } }) => this.ctlr.videoContainer.classList.toggle("tmg-video-replay", value), { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.waiting", ({ target: { value } }) => this.ctlr.videoContainer.classList.toggle("tmg-video-buffering", value), { signal: this.signal, immediate: true });
+    this.ctlr.media.on("state.currentTime", () => this.ctlr.videoContainer.classList.remove("tmg-video-replay"), { signal: this.signal, immediate: true });
+    this.ctlr.media.on("status.ended", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-replay", value), { signal: this.signal, immediate: true });
+    this.ctlr.media.on("status.waiting", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-buffering", value), { signal: this.signal, immediate: true });
     this.ctlr.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
   }
 
@@ -87,12 +88,12 @@ export class SkeletonPlug extends BasePlug<Skeleton> {
     this.ctlr.DOM.containerContent?.prepend(this.ctlr.media.element);
   }
 
-  protected handlePausedChange({ target: { value } }: Event<CMedia, "state.paused">): void {
+  protected handlePausedChange({ value }: Event<CtlrMedia, "state.paused">): void {
     if (!value) for (const media of document.querySelectorAll<HTMLMediaElement>("video, audio")) media !== this.ctlr.media.element && !media.paused && media.pause();
     this.ctlr.videoContainer.classList.toggle("tmg-video-paused", value);
   }
 
-  protected handleLoadedMetadataStatus({ target: { value } }: Event<CMedia, "status.loadedMetadata">): void {
+  protected handleLoadedMetadataStatus({ value }: Event<CtlrMedia, "status.loadedMetadata">): void {
     if (!value) return;
     this.ctlr.pseudoVideo.src = this.ctlr.media.element.currentSrc;
     this.ctlr.pseudoVideo.crossOrigin = this.ctlr.media.element.crossOrigin;

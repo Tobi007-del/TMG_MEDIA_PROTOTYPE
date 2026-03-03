@@ -16,11 +16,11 @@ export class DisabledPlug extends BasePlug<Disabled, DisabledState> {
   public static readonly plugName: string = "disabled";
 
   public wire(): void {
-    this.ctlr.media.on("state.paused", ({ target: { value } }) => !value && this.ctlr.media.status.loadedMetadata && this.reactivate(), { signal: this.signal });
+    this.ctlr.media.on("state.paused", ({ value }) => !value && this.ctlr.media.status.loadedMetadata && this.reactivate(), { signal: this.signal });
     this.ctlr.config.on("disabled", this.handleDisabled, { immediate: true, signal: this.signal });
   }
 
-  protected handleDisabled({ target: { value } }: Event<VideoBuild, "disabled">): void {
+  protected handleDisabled({ value }: Event<VideoBuild, "disabled">): void {
     if (value) {
       // this.leaveSettingsView(); // TODO: when settings plug exists
       this.ctlr.cancelAllLoops();

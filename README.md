@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[Live Demo](https://tmg-video-player.vercel.app) | [Prototype 1](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-1/prototype-1.html) | [Prototype 2](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2.html) 
+[Live Demo](https://tmg-video-player.vercel.app) | [Prototype 1](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-1/prototype-1.html) | [Prototype 2](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2.html)
 
 ---
 

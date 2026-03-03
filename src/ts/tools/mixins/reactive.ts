@@ -1,4 +1,4 @@
-import Reactor, { INERTIA, REJECTABLE } from "../../core/reactor";
+import { Reactor, INERTIA, REJECTABLE } from "../../core/reactor";
 import type { ReactorOptions, Inert, Intent, Live, State } from "../../types/reactor";
 
 const methods = [
@@ -12,6 +12,9 @@ const methods = [
   "set",
   "sonce",
   "noset",
+  "delete",
+  "donce",
+  "nodelete",
   "watch",
   "wonce",
   "nowatch",
@@ -23,7 +26,7 @@ const methods = [
   "reset",
   "destroy",
 ] as const;
-export type Reactive<T extends object> = T & Pick<Reactor<T>, (typeof methods)[number]>;
+export type Reactive<T extends object> = T & Pick<Reactor<T>, (typeof methods)[number]> & { __Reactor__: Reactor<T> };
 
 export function reactive<T extends object>(target: T | Reactor<T>, options?: ReactorOptions<T>): Reactive<T> {
   const descriptors: PropertyDescriptorMap = {},

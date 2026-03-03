@@ -10,7 +10,7 @@ export type ToastOptions = Partial<{
   icon: string;
   autoClose: boolean | number; //
   position: //
-    | "top-right"
+  | "top-right"
     | "top-left"
     | "top-center"
     | "bottom-right"
@@ -51,14 +51,7 @@ export type ToastOptions = Partial<{
   vibrate: boolean | number[];
   delay: number;
   bodyHTML: string;
-  animation:
-    | "fade"
-    | "zoom"
-    | "slide"
-    | "slide-left"
-    | "slide-right"
-    | "slide-up"
-    | "slide-down";
+  animation: "fade" | "zoom" | "slide" | "slide-left" | "slide-right" | "slide-up" | "slide-down";
   actions: Record<string, () => void>;
   rootElement: any; // HTMLElement
   maxToasts: number;

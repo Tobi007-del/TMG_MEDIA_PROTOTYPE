@@ -6,24 +6,26 @@ import { uid } from ".";
 export function setTimeout(handler: TimerHandler, timeout?: number, ...args: any[]) {
   const sig = args[0] instanceof AbortSignal ? args.shift() : undefined;
   if (sig?.aborted) return -1;
-  if (!sig) return window.setTimeout(handler, timeout, ...args);
-  const id = window.setTimeout(() => (sig.removeEventListener("abort", kill), typeof handler === "string" ? new Function(handler) : handler(...args)), timeout),
-    kill = () => window.clearTimeout(id);
+  const w = args[0] instanceof Window ? args.shift() : window;
+  if (!sig) return w.setTimeout(handler, timeout, ...args);
+  const id = w.setTimeout(() => (sig.removeEventListener("abort", kill), typeof handler === "string" ? new Function(handler) : handler(...args)), timeout),
+    kill = () => w.clearTimeout(id);
   return (sig.addEventListener("abort", kill, { once: true }), id);
 }
 
 export function setInterval(handler: TimerHandler, timeout?: number, ...args: any[]) {
   const sig = args[0] instanceof AbortSignal ? args.shift() : undefined;
   if (sig?.aborted) return -1;
-  const id = window.setInterval(handler, timeout, ...args);
-  return (sig?.addEventListener("abort", () => window.clearInterval(id), { once: true }), id);
+  const w = args[0] instanceof Window ? args.shift() : window,
+    id = w.setInterval(handler, timeout, ...args);
+  return (sig?.addEventListener("abort", () => w.clearInterval(id), { once: true }), id);
 }
 
-export function requestAnimationFrame(callback: FrameRequestCallback, sig?: AbortSignal) {
+export function requestAnimationFrame(callback: FrameRequestCallback, sig?: AbortSignal, w = window) {
   if (sig?.aborted) return -1;
-  if (!sig) return window.requestAnimationFrame(callback);
-  const id = window.requestAnimationFrame((t) => (sig.removeEventListener("abort", kill), callback(t))),
-    kill = () => window.cancelAnimationFrame(id);
+  if (!sig) return w.requestAnimationFrame(callback);
+  const id = w.requestAnimationFrame((t) => (sig.removeEventListener("abort", kill), callback(t))),
+    kill = () => w.cancelAnimationFrame(id);
   return (sig.addEventListener("abort", kill, { once: true }), id);
 }
 
@@ -31,11 +33,15 @@ export function requestAnimationFrame(callback: FrameRequestCallback, sig?: Abor
 
 export const mockAsync = (timeout = 250): Promise<void> => new Promise((resolve) => setTimeout(resolve, timeout));
 
+export const breath = (w = window) => new Promise((res) => w.requestAnimationFrame(res)); // The "Single Frame" breathe - GPU Readiness, the loading animation is the build process itself. Sike!!
+
+export const deepBreath = (w = window) => new Promise((res) => w.requestAnimationFrame(() => w.requestAnimationFrame(res))); // The "Double Frame" breathe - guaranteed layout completion
+
 // ============ Limited Call Utilities ============
 
 interface LimitedOptions {
-  key?: string; /** Key for localStorage persistence (if omitted, uses session-only) */
-  maxTimes?: number; /** Max times to call (default: 1) */
+  key?: string /** Key for localStorage persistence (if omitted, uses session-only) */;
+  maxTimes?: number /** Max times to call (default: 1) */;
 }
 interface LimitedHandle<T extends (...args: any[]) => any> {
   (...args: Parameters<T>): ReturnType<T> | void;
