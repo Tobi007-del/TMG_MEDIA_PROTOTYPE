@@ -1665,7 +1665,7 @@ var Reactor = class {
       // Robust Proxy handler
       get: (object, key, receiver) => {
         if (key === RAW) return object;
-        let value = Reflect.get(object, key, receiver);
+        let value = object[key];
         const safeKey = String(key), paths = [];
         this.trace(object, safeKey, paths), this.log?.(`\u{1F440} [GET Trap] Initiated for "${safeKey}" on "${paths}"`);
         this.options?.get && (value = this.options.get(object, key, value, receiver, paths));
@@ -1678,7 +1678,7 @@ var Reactor = class {
         return this.proxied(value, rejectable, object, safeKey);
       },
       set: (object, key, value, receiver) => {
-        const safeKey = String(key), paths = [], oldValue = Reflect.get(object, key, receiver);
+        const safeKey = String(key), paths = [], oldValue = object[key];
         this.trace(object, safeKey, paths), this.log?.(`\u270F\uFE0F [SET Trap] Initiated for "${safeKey}" on "${paths}"`);
         this.options?.set && (value = this.options.set(object, key, value, oldValue, receiver, paths));
         for (let i = 0; i < paths.length; i++) {
@@ -1688,7 +1688,7 @@ var Reactor = class {
           if (result !== TERMINATOR) value = result;
         }
         if (value === TERMINATOR) return this.log?.(`\u{1F6E1}\uFE0F [SET Mediator] Terminated on "${paths}"`), true;
-        if (!Reflect.set(object, key, value, receiver)) return false;
+        object[key] = value;
         if (!Object.is(value?.[RAW] || value, oldValue?.[RAW] || oldValue)) this.unlink(oldValue, object, safeKey), this.link(value, object, safeKey);
         for (let i = 0; i < paths.length; i++) {
           const target = { path: paths[i], value, oldValue, key: safeKey, object: receiver };
@@ -1698,7 +1698,7 @@ var Reactor = class {
       },
       deleteProperty: (object, key) => {
         let value, receiver = this.proxyCache.get(object);
-        const safeKey = String(key), paths = [], oldValue = Reflect.get(object, key, receiver);
+        const safeKey = String(key), paths = [], oldValue = object[key];
         this.trace(object, safeKey, paths), this.log?.(`\u{1F5D1}\uFE0F [DELETE Trap] Initiated for "${safeKey}" on "${paths}"`);
         this.options?.delete && (value = this.options.delete(object, key, oldValue, receiver, paths));
         for (let i = 0; i < paths.length; i++) {
@@ -1708,7 +1708,7 @@ var Reactor = class {
           if (result !== TERMINATOR) value = result;
         }
         if (value === TERMINATOR) return this.log?.(`\u{1F6E1}\uFE0F [DELETE Mediator] Terminated on "${paths}"`), true;
-        if (!Reflect.deleteProperty(object, key)) return false;
+        delete object[key];
         this.unlink(oldValue, object, safeKey);
         for (let i = 0; i < paths.length; i++) {
           const target = { path: paths[i], value, oldValue, key: safeKey, object: receiver };
@@ -3683,7 +3683,7 @@ var CSSPlug = class extends BasePlug {
       prevGet && (val = prevGet(obj, key, val, proxy, paths));
       if (!paths[0]?.startsWith("settings.css.")) return val;
       const safeKey = String(key);
-      if (safeKey === "syncWithMedia") return val;
+      if (paths[0]?.includes("syncWithMedia")) return val;
       const newVal = this[this.classKeys.includes(safeKey) ? "getClassValue" : "getCSSValue"](safeKey);
       (_a2 = this.CSSCache)[safeKey] || (_a2[safeKey] = newVal);
       return newVal;

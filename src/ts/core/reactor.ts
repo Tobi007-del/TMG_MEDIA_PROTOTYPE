@@ -132,7 +132,7 @@ export class Reactor<T extends object> {
       // Robust Proxy handler
       get: (object, key, receiver) => {
         if (key === RAW) return object;
-        let value = Reflect.get(object, key, receiver);
+        let value = (object as any)[key];
         const safeKey = String(key),
           paths: Paths<T>[] = [];
         (this.trace(object, safeKey, paths), this.log?.(`👀 [GET Trap] Initiated for "${safeKey}" on "${paths}"`));
@@ -148,7 +148,7 @@ export class Reactor<T extends object> {
       set: (object, key, value, receiver) => {
         const safeKey = String(key),
           paths: Paths<T>[] = [],
-          oldValue = Reflect.get(object, key, receiver);
+          oldValue = (object as any)[key];
         (this.trace(object, safeKey, paths), this.log?.(`✏️ [SET Trap] Initiated for "${safeKey}" on "${paths}"`));
         this.options?.set && (value = this.options.set(object as PathBranchValue<T>, key as PathKey<T>, value, oldValue, receiver, paths));
         for (let i = 0; i < paths.length; i++) {
@@ -159,7 +159,7 @@ export class Reactor<T extends object> {
           if (result !== TERMINATOR) value = result;
         } // Mediators
         if (value === TERMINATOR) return (this.log?.(`🛡️ [SET Mediator] Terminated on "${paths}"`), true); // soft rejection if terminated: `true`
-        if (!Reflect.set(object, key, value, receiver)) return false;
+        (object as any)[key] = value;
         if (!Object.is((value as any)?.[RAW] || value, (oldValue as any)?.[RAW] || oldValue)) (this.unlink(oldValue, object, safeKey), this.link(value, object, safeKey));
         for (let i = 0; i < paths.length; i++) {
           const target: Target<T> = { path: paths[i], value, oldValue, key: safeKey as PathKey<T>, object: receiver };
@@ -172,7 +172,7 @@ export class Reactor<T extends object> {
           receiver = this.proxyCache.get(object);
         const safeKey = String(key),
           paths: Paths<T>[] = [],
-          oldValue = Reflect.get(object, key, receiver);
+          oldValue = (object as any)[key];
         (this.trace(object, safeKey, paths), this.log?.(`🗑️ [DELETE Trap] Initiated for "${safeKey}" on "${paths}"`));
         this.options?.delete && (value = this.options.delete(object as PathBranchValue<T>, key as PathKey<T>, oldValue, receiver, paths));
         for (let i = 0; i < paths.length; i++) {
@@ -183,7 +183,7 @@ export class Reactor<T extends object> {
           if (result !== TERMINATOR) value = result;
         } // Mediators
         if (value === TERMINATOR) return (this.log?.(`🛡️ [DELETE Mediator] Terminated on "${paths}"`), true); // soft rejection if terminated: `true`
-        if (!Reflect.deleteProperty(object, key)) return false;
+        delete (object as any)[key];
         this.unlink(oldValue, object, safeKey);
         for (let i = 0; i < paths.length; i++) {
           const target: Target<T> = { path: paths[i], value, oldValue, key: safeKey as PathKey<T>, object: receiver };

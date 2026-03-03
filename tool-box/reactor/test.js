@@ -17,7 +17,7 @@ const breathe = () => new Promise((resolve) => setTimeout(resolve, 50));
 
 window.runBenchmark = async function runBenchmark() {
   btn.disabled = true;
-  log(`%c🧪 S.I.A. REACTOR PERFORMANCE EVALUATION`, "font-weight: bold; font-size: 17px; color: #4CAF50;");
+  log(`%c🧪 S.I.A. REACTOR PERFORMANCE EVALUATION`, "font-weight: bold; font-size: 16px; color: #4CAF50; padding-bottom: 4px;");
   log(`Initializing suite: ${TEST_CYCLES} cycles of ${TEST_ITERATIONS.toLocaleString()} operations...\n`);
 
   const rawObj = { val: 0 };
@@ -25,15 +25,15 @@ window.runBenchmark = async function runBenchmark() {
     { val: 0 },
     {
       set(t, k, v, r) {
-        return Reflect.set(t, k, v, r);
+        t[k] = v;
+        return true;
       },
     }
   );
-  const oldReactor = new window.OldReactor({ val: 0 });
-  if (typeof Reactor === "undefined") return console.error("❌ Critical Error: VN 'Reactor' class not found in memory.");
+  const oldReactor = new OldReactor({ val: 0 });
   const newReactor = new Reactor({ val: 0 });
 
-  log(`🔥 Warming up JIT compiler with ${TEST_WARMUP_ITERATIONS.toLocaleString()} operations to stabilize execution environments...`);
+  log(`🔥 Warming up JIT compiler to stabilize execution environments...`);
   for (let i = 0; i < TEST_WARMUP_ITERATIONS; i++) {
     rawObj.val = i;
     nativeProxy.val = i;
@@ -43,7 +43,7 @@ window.runBenchmark = async function runBenchmark() {
 
   await breathe();
 
-  log(`⏱️ Executing timed cycles...\n`);
+  log(`⏱️ Executing timed cycles after (${TEST_WARMUP_ITERATIONS.toLocaleString()} ops) warm up...\n`);
   const results = { raw: [], proxy: [], oldR: [], newR: [] };
 
   for (let cycle = 1; cycle <= TEST_CYCLES; cycle++) {
@@ -131,13 +131,13 @@ window.runBenchmark = async function runBenchmark() {
   log(`• Total Reactor Penalty: ~${(newStats.avg / rawStats.avg).toFixed(1)}x slower than Bare Metal`);
 
   if (oldStats.avg > newStats.avg) {
-    log(`• Generation Shift: VN is ${archShift}% FASTER than V0`);
+    log(`• Generation Shift: VN is ${archShift}% FASTER than V0 even with an event system & reference tracking`);
   } else {
-    log(`• Generation Shift: VN sacrificed ${Math.abs(archShift)}% speed vs V0 to add a standardized architecture, DOM Event propagation, Object Reference Tracing, e.t.c.`);
+    log(`• Generation Shift: VN sacrificed ${Math.abs(archShift)}% speed vs V0 for an event system & reference tracking`);
   }
 
   log(`%c\n🎯 CONCLUSION:`, "color: #FF9800; font-weight: bold;");
-  log(`At ~${newStats.opsSec.toLocaleString()} operations per second, the S.I.A VN Reactor can process ${opsPerFrame.toLocaleString()} deep reactive state changes within a single 16.6ms rendering frame.`);
+  log(`At ~${newStats.opsSec.toLocaleString()} ops/sec, the Reactor can process ${opsPerFrame.toLocaleString()} reactive state changes within a frame.`);
   log(`---------------------------------------------------------------------------\n`);
   btn.disabled = false;
 };
@@ -171,5 +171,5 @@ log(`%c📉 THE BENCHMARK OBJECTIVE`, "color: #E91E63; font-weight: bold;");
 log(`Native Proxies are inherently slower than bare-metal objects. By adding an entire`);
 log(`event routing system, lineage tracking, and batched microtask scheduling on top of a Proxy,`);
 log(`we introduce overhead. This benchmark proves that the S.I.A Reactor handles this weight`);
-log(`gracefully, executing deeply reactive state changes well within the 16.6ms frame budget.\n`);
+log(`gracefully, executing deeply reactive state changes well within the 16.6ms(60fps) frame budget.\n`);
 log(`---------------------------------------------------------------------------\n`);
