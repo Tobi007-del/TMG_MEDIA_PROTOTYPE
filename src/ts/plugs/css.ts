@@ -31,9 +31,8 @@ export class CSSPlug extends BasePlug<Css> {
   }
 
   protected wireCSSMediator() {
-    this.ctlr.config.__Reactor__.options ??= {};
-    const prevGet = this.ctlr.config.__Reactor__.options.get;
-    this.ctlr.config.__Reactor__.options.get = (obj, key, val, proxy, paths) => {
+    const prevGet = this.ctlr.config.__Reactor__.config.get;
+    this.ctlr.config.__Reactor__.config.get = (obj, key, val, proxy, paths) => {
       prevGet && (val = prevGet(obj, key, val, proxy, paths));
       if (!paths[0]?.startsWith("settings.css.")) return val;
       const safeKey = String(key);

@@ -1,3 +1,5 @@
+"use strict";
+
 import log from "./logger.js";
 import { Reactor } from "../../dist/tmg-player.mjs";
 import { Reactor as OldReactor } from "./fossil.js";
@@ -131,9 +133,9 @@ window.runBenchmark = async function runBenchmark() {
   log(`• Total Reactor Penalty: ~${(newStats.avg / rawStats.avg).toFixed(1)}x slower than Bare Metal`);
 
   if (oldStats.avg > newStats.avg) {
-    log(`• Generation Shift: VN is ${archShift}% FASTER than V0 even with an event system & reference tracking`);
+    log(`• Generation Shift: VN is ${archShift}% FASTER than V0 even with an event system & opt-in reference tracking`);
   } else {
-    log(`• Generation Shift: VN sacrificed ${Math.abs(archShift)}% speed vs V0 for an event system & reference tracking`);
+    log(`• Generation Shift: VN sacrificed ${Math.abs(archShift)}% speed vs V0 for an event system & opt-in reference tracking`);
   }
 
   log(`%c\n🎯 CONCLUSION:`, "color: #FF9800; font-weight: bold;");
@@ -168,8 +170,8 @@ log(`  .watch() / .nowatch()   : Listen to precise path mutations (Fast, isolate
 log(`  .on() / .off() / .once(): DOM-like event listeners with path propagation and depth limits.\n`);
 
 log(`%c📉 THE BENCHMARK OBJECTIVE`, "color: #E91E63; font-weight: bold;");
-log(`Native Proxies are inherently slower than bare-metal objects. By adding an entire`);
-log(`event routing system, lineage tracking, and batched microtask scheduling on top of a Proxy,`);
+log(`Native Proxies are inherently slower than bare-metal objects. By adding an entire event system,`);
+log(`opt-in reference tracking with lineage tracing, batched microtask scheduling on top of a Proxy,`);
 log(`we introduce overhead. This benchmark proves that the S.I.A Reactor handles this weight`);
 log(`gracefully, executing deeply reactive state changes well within the 16.6ms(60fps) frame budget.\n`);
 log(`---------------------------------------------------------------------------\n`);

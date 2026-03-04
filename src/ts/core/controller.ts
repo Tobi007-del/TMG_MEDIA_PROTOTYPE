@@ -48,7 +48,7 @@ export class Controller {
     guardAllMethods(this, this.guard, true);
     this.buildCache = { ...build };
     this.id = build.id;
-    this.config = reactive(build);
+    this.config = reactive(build, { referenceTracking: true });
     this.state = reactive<RuntimeState>({
       readyState: 0,
       audioContextReady: !!AUDIO_CONTEXT,

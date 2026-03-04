@@ -178,6 +178,17 @@ export type RPrev = [
 	18,
 	19
 ];
+/***
+ * ========= The S.I.A (State Intent Architecture) `Reactor` CODE PATTERN WATCHLIST =========
+ * 1. non-stack loops & multiple optimizations this is surgical work on the root of reactivity
+ * 2. used cached loop lengths to optimize b4 JIT Compiler does for optimal speed throughout,
+ *    avoided myth of reverse while loops so new CPU's don't waste memory on a forward l1 Cache miss
+ * 3. moved any logic involving `?.` or `??` outside repetitions to not accumulate the ~5x slowdown
+ * 4. `?.` in cases where only other option was `&&` cuz `?.` benchmarks proves to be better
+ * 5. adopted nooping strategy since JIT compiler makes it 2x faster than other alternatives
+ * 6. `cord` is an alias for record and `es` for entries, avoided object pooling incase of logs
+ * 7. it's all progressive: light at creation then grows during the user of desired features
+ **/
 export declare const RAW: unique symbol;
 export declare const REJECTABLE: unique symbol;
 export declare const INERTIA: unique symbol;
@@ -198,12 +209,11 @@ export declare class ReactorEvent<T, P extends WildPaths<T> = WildPaths<T>> {
 	readonly oldValue: Payload<T, P>["target"]["oldValue"];
 	readonly rejectable: boolean;
 	readonly bubbles: boolean;
-	readonly canWarn: boolean;
-	private _propagationStopped;
-	private _immediatePropagationStopped;
-	private _resolved;
-	private _rejected;
-	get warn(): ((...args: any[]) => void) | undefined;
+	protected _propagationStopped: boolean;
+	protected _immediatePropagationStopped: boolean;
+	protected _resolved: string;
+	protected _rejected: string;
+	protected _warn: (...args: any[]) => void;
 	constructor(payload: Payload<T, P>, bubbles?: boolean, canWarn?: boolean);
 	get propagationStopped(): boolean;
 	stopPropagation(): void;
@@ -214,35 +224,44 @@ export declare class ReactorEvent<T, P extends WildPaths<T> = WildPaths<T>> {
 	get rejected(): string;
 	reject(reason?: string): void;
 	composedPath(): WildPaths<T>[];
+	get canWarn(): boolean;
 }
 export declare class Reactor<T extends object> {
-	private getters?;
-	private setters?;
-	private deleters?;
-	private watchers?;
-	private listeners?;
-	private queue?;
-	private batch;
-	private isBatching;
-	private proxyCache;
-	private lineage;
-	options?: ReactorOptions<T>;
+	protected getters?: Map<Paths<T>, Array<GetterRecord<T>>>;
+	protected setters?: Map<Paths<T>, Array<SetterRecord<T>>>;
+	protected deleters?: Map<Paths<T>, Array<DeleterRecord<T>>>;
+	protected watchers?: Map<Paths<T>, Array<WatcherRecord<T>>>;
+	protected listeners?: Map<WildPaths<T>, Array<ListenerRecord<T>>>;
+	protected lineage?: WeakMap<object, {
+		parent: object;
+		key: string;
+	}[]>;
+	protected queue?: Set<() => void>;
+	protected batch?: Map<Paths<T>, Payload<T>>;
+	protected isBatching: boolean;
+	protected isTracking: boolean;
+	protected proxyCache: WeakMap<object, any>;
+	protected log: (...args: any[]) => void;
+	protected _canLog: boolean;
+	config: Omit<ReactorOptions<T>, "debug" | "referenceTracking">;
 	core: T;
-	get log(): ((...args: any[]) => void) | undefined;
 	constructor(obj?: T, options?: ReactorOptions<T>);
-	private proxied;
-	private trace;
-	private link;
-	private unlink;
-	private mediate;
-	private notify;
-	private schedule;
-	private initBatching;
-	private flush;
-	private wave;
-	private fire;
-	private bind;
-	private getContext;
+	protected proxied<O>(obj: O, rejectable?: boolean, parent?: object, key?: string, path?: string): O;
+	protected trace(target: object, path: string, paths: string[], visited?: WeakSet<object>): Paths<T>[];
+	protected link(target: any, parent: object, key: string, typecheck?: boolean, es?: {
+		parent: object;
+		key: string;
+	}[]): void;
+	protected unlink(target: any, parent: object, key: string): void;
+	protected mediate<P extends Paths<T>>(path: Paths<T>, payload: Payload<T, P>, type: "get" | "set" | "delete", cords: Array<GetterRecord<T> | SetterRecord<T> | DeleterRecord<T>>): any;
+	protected notify<P extends Paths<T>>(path: P, payload: Payload<T, P>): void;
+	protected schedule<P extends Paths<T>>(path: P, payload: Payload<T, P>): void;
+	protected initBatching(): void;
+	protected flush(): void;
+	protected wave(path: Paths<T>, payload: Payload<T>): void;
+	protected fire([path, object, value]: ReturnType<typeof getTrailRecords<T>>[number], e: Event$1<T>, isCapture: boolean, cords?: ListenerRecord<T>[] | undefined): void;
+	protected bind<Cb>(cord: GetterRecord<T> | SetterRecord<T> | DeleterRecord<T> | WatcherRecord<T> | ListenerRecord<T>, signal?: AbortSignal): Cb;
+	protected getContext<P extends WildPaths<T>>(path: P): Target<T, P>;
 	getDepth(p: string, d?: number): number;
 	tick(paths?: Paths<T> | Iterable<Paths<T>>): void;
 	stall(task: () => any): void;
@@ -262,8 +281,11 @@ export declare class Reactor<T extends object> {
 	on<P extends WildPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): Reactor<T>["off"];
 	once<P extends WildPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): Reactor<T>["off"];
 	off<P extends WildPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): boolean | undefined;
-	cascade({ type, currentTarget: { path, value: news, oldValue: olds } }: ReactorEvent<T>, objSafe?: boolean): void;
+	get canLog(): boolean;
+	set canLog(value: boolean);
+	get canTrackReferences(): boolean;
 	snapshot(): T;
+	cascade({ type, currentTarget: { path, value: news, oldValue: olds } }: ReactorEvent<T>, objSafe?: boolean): void;
 	reset(): void;
 	destroy(): void;
 }
@@ -364,6 +386,34 @@ export type Deleter<T, P extends Paths<T> = Paths<T>> = (terminated: boolean, pa
 export type Watcher<T, P extends Paths<T> = Paths<T>> = (value: PathValue<T, P> | undefined, payload: Payload<T, P>) => void;
 export type Listener<T, P extends WildPaths<T> = WildPaths<T>> = (event: Event$1<T, P>) => void;
 // ===========================================================================
+// ENGINE RECORDS (Internal Storage)
+// ===========================================================================
+export type GetterRecord<T extends object, P extends Paths<T> = Paths<T>> = {
+	cb: Getter<T, P>;
+	clup?: Reactor<T>["noget"];
+	sclup?: () => void;
+} & SyncOptionsTuple;
+export type SetterRecord<T extends object, P extends Paths<T> = Paths<T>> = {
+	cb: Setter<T, P>;
+	clup?: Reactor<T>["noset"];
+	sclup?: () => void;
+} & SyncOptionsTuple;
+export type DeleterRecord<T extends object, P extends Paths<T> = Paths<T>> = {
+	cb: Deleter<T, P>;
+	clup?: Reactor<T>["nodelete"];
+	sclup?: () => void;
+} & SyncOptionsTuple;
+export type WatcherRecord<T extends object, P extends Paths<T> = Paths<T>> = {
+	cb: Watcher<T, P>;
+	clup?: Reactor<T>["nowatch"];
+	sclup?: () => void;
+} & SyncOptionsTuple;
+export type ListenerRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
+	cb: Listener<T, P>;
+	clup?: Reactor<T>["off"];
+	sclup?: () => void;
+} & ListenerOptionsTuple;
+// ===========================================================================
 // CONFIGURATION OPTIONS
 // ===========================================================================
 export interface SyncOptionsTuple {
@@ -380,10 +430,13 @@ export interface ListenerOptionsTuple extends Omit<SyncOptionsTuple, "lazy"> {
 export type ListenerOptions = boolean | ListenerOptionsTuple;
 // "wild" mediation, (mediator|listener) for desired path, equality checks eg: `object.is()`
 export interface ReactorOptions<T extends object, P extends Paths<T> = Paths<T>> {
-	debug?: boolean;
 	get?: (object: PathBranchValue<T, P>, key: PathKey<T, P>, value: PathValue<T, P>, receiver: Reactive<T>, paths: Paths<T>[]) => PathValue<T, P> | undefined;
 	set?: (object: PathBranchValue<T, P>, key: PathKey<T, P>, value: PathValue<T, P>, oldValue: PathValue<T, P>, receiver: Reactive<T>, paths: Paths<T>[]) => PathValue<T, P> | typeof TERMINATOR | undefined;
 	delete?: (object: PathBranchValue<T, P>, key: PathKey<T, P>, oldValue: PathValue<T, P>, receiver: Reactive<T>, paths: Paths<T>[]) => typeof TERMINATOR | undefined;
+	debug?: boolean;
+	eventBubbling?: boolean; // default true, set to false to prevent bubbling (not recommended if you want power)
+	referenceTracking?: boolean; // one-time set activates lineage tracing
+	crossRealms?: boolean; // needed for object type detection if using across realms e.g, iframes or other environments
 }
 export declare abstract class Controllable<Config = any, State = any> {
 	protected readonly ac: AbortController;
@@ -990,7 +1043,7 @@ export interface Persist {
 }
 declare class PersistPlug extends BasePlug<Persist> {
 	static readonly plugName: string;
-	protected adapter: StorageAdapter;
+	adapter: StorageAdapter;
 	wire(): void;
 	protected handleAdapterChange({ value }: Event$1<VideoBuild, "settings.persist.adapter">): void;
 	protected handleDisabledChange({ value }: Event$1<VideoBuild, "settings.persist.disabled">): void;
@@ -1857,7 +1910,8 @@ declare function createTimeRanges(ranges?: [
 ][] | TimeRange): TimeRange;
 declare function isDef(val: any): boolean;
 declare function isArr<T = unknown>(obj: any): obj is T[];
-declare function isObj<T extends object = object>(obj: any): obj is T;
+declare function isObj<T extends object = object>(obj: any, checkArr?: boolean): obj is T;
+declare function isStrictObj<T extends object = object>(obj: any, crossRealms?: boolean, typecheck?: boolean): obj is T;
 declare function isIter<T = unknown>(obj: any): obj is Iterable<T>;
 declare function isUISetting<T = unknown>(obj: any): obj is UISettings<T>;
 declare function inBoolArrOpt(opt: any, str: string): boolean;
@@ -2171,7 +2225,7 @@ declare const DEFAULT_VIDEO_BUILD: DeepPartial<VideoBuild>;
 declare const DEFAULT_VIDEO_ITEM_BUILD: DeepPartial<PlaylistItemBuild>;
 
 declare namespace utils {
-	export { ANDROID_VERSION, ArrowNavConfig, ArrowNavHandle, CHROME_VERSION, CHROMIUM_VERSION, DUMMY_VID, Dataset, Dimensions, IE_VERSION, IOS_VERSION, IS_ANDROID, IS_CHROME, IS_CHROMECAST_RECEIVER, IS_CHROMIUM, IS_EDGE, IS_FIREFOX, IS_IE, IS_IOS, IS_IPAD, IS_IPHONE, IS_IPOD, IS_MOBILE, IS_SAFARI, IS_SMART_TV, IS_TIZEN, IS_WEBOS, IS_WINDOWS, Style, TOUCH_ENABLED, TimeRange, TrackType, addSafeClicks, addSources, addTracks, assignEl, breath, camelize, canVidAudioTracks, canVidCtrlRate, canVidCtrlVolume, canVidMuteVolume, canVidTextTracks, canVidVideoTracks, capitalize, clamp, clampRGBBri, cleanKeyCombo, cloneMedia, convertToMonoChrome, createEl, createTimeRanges, deepBreath, deepClone, deleteAny, deprecate, deprecateForMajor, enterFullscreen, exitFullscreen, formatKeyForDisplay, formatKeyShortcutsForDisplay, formatMediaTime, formatSize, formatVttLine, getAny, getDominantColor, getElSiblingAt, getExtension, getMediaReport, getMimeTypeFromExtension, getRGBBri, getRGBSat, getRenderedBox, getSizeTier, getSources, getTermsForKey, getTrackIdx, getTracks, getTrailPaths, getTrailRecords, getWindow, inAny, inBoolArrOpt, inDocView, initArrowFocusNav, initScrollAssist, initVScrollerator, intersectionObserver, isArr, isDef, isIter, isObj, isSameSources, isSameTracks, isSameURL, isUISetting, isValidNum, keyEventAllowed, limited, loadResource, luid, matchKeys, mergeObjs, mockAsync, mutationObserver, noExtension, observeIntersection, observeMutation, observeResize, onceEver, oncePerSession, parseAnyObj, parseCSSTime, parseCSSUnit, parseEvOpts, parseForARIAKS, parseIfPercent, parseKeyCombo, parsePanelBottomObj, parseUIObj, parseVttText, putSourceDetails, putTrackDetails, queryFullscreen, queryFullscreenEl, queryMediaMobile, queryPictureInPicture, queryPictureInPictureEl, remToPx, removeSafeClicks, removeScrollAssist, removeSources, removeTracks, requestAnimationFrame$1 as requestAnimationFrame, resizeObserver, rippleHandler, rotate, safeNum, setAny, setCurrentTrack, setHTMLConfig, setInterval$1 as setInterval, setTimeout$1 as setTimeout, srtToVtt, stepNum, stringifyKeyCombo, stripTags, supportsFullscreen, supportsPictureInPicture, uid, uncamelize };
+	export { ANDROID_VERSION, ArrowNavConfig, ArrowNavHandle, CHROME_VERSION, CHROMIUM_VERSION, DUMMY_VID, Dataset, Dimensions, IE_VERSION, IOS_VERSION, IS_ANDROID, IS_CHROME, IS_CHROMECAST_RECEIVER, IS_CHROMIUM, IS_EDGE, IS_FIREFOX, IS_IE, IS_IOS, IS_IPAD, IS_IPHONE, IS_IPOD, IS_MOBILE, IS_SAFARI, IS_SMART_TV, IS_TIZEN, IS_WEBOS, IS_WINDOWS, Style, TOUCH_ENABLED, TimeRange, TrackType, addSafeClicks, addSources, addTracks, assignEl, breath, camelize, canVidAudioTracks, canVidCtrlRate, canVidCtrlVolume, canVidMuteVolume, canVidTextTracks, canVidVideoTracks, capitalize, clamp, clampRGBBri, cleanKeyCombo, cloneMedia, convertToMonoChrome, createEl, createTimeRanges, deepBreath, deepClone, deleteAny, deprecate, deprecateForMajor, enterFullscreen, exitFullscreen, formatKeyForDisplay, formatKeyShortcutsForDisplay, formatMediaTime, formatSize, formatVttLine, getAny, getDominantColor, getElSiblingAt, getExtension, getMediaReport, getMimeTypeFromExtension, getRGBBri, getRGBSat, getRenderedBox, getSizeTier, getSources, getTermsForKey, getTrackIdx, getTracks, getTrailPaths, getTrailRecords, getWindow, inAny, inBoolArrOpt, inDocView, initArrowFocusNav, initScrollAssist, initVScrollerator, intersectionObserver, isArr, isDef, isIter, isObj, isSameSources, isSameTracks, isSameURL, isStrictObj, isUISetting, isValidNum, keyEventAllowed, limited, loadResource, luid, matchKeys, mergeObjs, mockAsync, mutationObserver, noExtension, observeIntersection, observeMutation, observeResize, onceEver, oncePerSession, parseAnyObj, parseCSSTime, parseCSSUnit, parseEvOpts, parseForARIAKS, parseIfPercent, parseKeyCombo, parsePanelBottomObj, parseUIObj, parseVttText, putSourceDetails, putTrackDetails, queryFullscreen, queryFullscreenEl, queryMediaMobile, queryPictureInPicture, queryPictureInPictureEl, remToPx, removeSafeClicks, removeScrollAssist, removeSources, removeTracks, requestAnimationFrame$1 as requestAnimationFrame, resizeObserver, rippleHandler, rotate, safeNum, setAny, setCurrentTrack, setHTMLConfig, setInterval$1 as setInterval, setTimeout$1 as setTimeout, srtToVtt, stepNum, stringifyKeyCombo, stripTags, supportsFullscreen, supportsPictureInPicture, uid, uncamelize };
 }
 declare namespace mixins {
 	export { Reactive, bindAllMethods, guardAllMethods, guardMethod, inert, intent, isInert, isIntent, live, nuke, onAllMethods, reactive, state };

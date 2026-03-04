@@ -13,9 +13,12 @@ export function isArr<T = unknown>(obj: any): obj is T[] {
   return Array.isArray(obj);
 }
 
-export function isObj<T extends object = object>(obj: any): obj is T {
-  return "object" === typeof obj && obj !== null && !isArr(obj) && "function" !== typeof obj;
-}
+export function isObj<T extends object = object>(obj: any, checkArr = true): obj is T {
+  return "object" === typeof obj && obj !== null && (checkArr ? !Array.isArray(obj) : true);
+} // okay for common usecases but loose
+export function isStrictObj<T extends object = object>(obj: any, crossRealms = true, typecheck = true): obj is T {
+  return (typecheck ? isObj(obj, false) : true) && (crossRealms ? Object.prototype.toString.call(obj) === "[object Object]" : obj.constructor === Object);
+} // for strict own objects, handles cross-realm objects too, no nullish obj though for speed of direct access
 
 export function isIter<T = unknown>(obj: any): obj is Iterable<T> {
   return obj != null && "function" === typeof obj[Symbol.iterator];

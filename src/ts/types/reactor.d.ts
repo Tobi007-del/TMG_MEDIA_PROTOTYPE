@@ -92,33 +92,33 @@ export type Listener<T, P extends WildPaths<T> = WildPaths<T>> = (event: Event<T
 // ENGINE RECORDS (Internal Storage)
 // ===========================================================================
 
-export type GetterRecord<T, P extends Paths<T> = Paths<T>> = {
+export type GetterRecord<T extends object, P extends Paths<T> = Paths<T>> = {
   cb: Getter<T, P>;
-  clup?: Reactor<T, P>["noget"];
+  clup?: Reactor<T>["noget"];
   sclup?: () => void;
 } & SyncOptionsTuple;
 
-export type SetterRecord<T, P extends Paths<T> = Paths<T>> = {
+export type SetterRecord<T extends object, P extends Paths<T> = Paths<T>> = {
   cb: Setter<T, P>;
-  clup?: Reactor<T, P>["noset"];
+  clup?: Reactor<T>["noset"];
   sclup?: () => void;
 } & SyncOptionsTuple;
 
-export type DeleterRecord<T, P extends Paths<T> = Paths<T>> = {
+export type DeleterRecord<T extends object, P extends Paths<T> = Paths<T>> = {
   cb: Deleter<T, P>;
-  clup?: Reactor<T, P>["nodelete"];
+  clup?: Reactor<T>["nodelete"];
   sclup?: () => void;
 } & SyncOptionsTuple;
 
-export type WatcherRecord<T, P extends Paths<T> = Paths<T>> = {
+export type WatcherRecord<T extends object, P extends Paths<T> = Paths<T>> = {
   cb: Watcher<T, P>;
-  clup?: Reactor<T, P>["nowatch"];
+  clup?: Reactor<T>["nowatch"];
   sclup?: () => void;
-} & WatcherOptionsTuple;
+} & SyncOptionsTuple;
 
-export type ListenerRecord<T, P extends WildPaths<T> = WildPaths<T>> = {
+export type ListenerRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
   cb: Listener<T, P>;
-  clup?: Reactor<T, P>["off"];
+  clup?: Reactor<T>["off"];
   sclup?: () => void;
 } & ListenerOptionsTuple;
 
@@ -142,7 +142,6 @@ export type ListenerOptions = boolean | ListenerOptionsTuple;
 
 // "wild" mediation, (mediator|listener) for desired path, equality checks eg: `object.is()`
 export interface ReactorOptions<T extends object, P extends Paths<T> = Paths<T>> {
-  debug?: boolean;
   get?: (
     object: PathBranchValue<T, P>,
     key: PathKey<T, P>,
@@ -165,4 +164,8 @@ export interface ReactorOptions<T extends object, P extends Paths<T> = Paths<T>>
     receiver: Reactive<T>,
     paths: Paths<T>[],
   ) => typeof TERMINATOR | undefined;
+  debug?: boolean;
+  eventBubbling?: boolean; // default true, set to false to prevent bubbling (not recommended if you want power)
+  referenceTracking?: boolean; // one-time set activates lineage tracing
+  crossRealms?: boolean; // needed for object type detection if using across realms e.g, iframes or other environments
 }

@@ -12,7 +12,7 @@ export interface Persist {
 
 export class PersistPlug extends BasePlug<Persist> {
   public static readonly plugName: string = "persist";
-  protected adapter!: StorageAdapter;
+  public adapter!: StorageAdapter;
 
   public wire() {
     window.addEventListener("pagehide", this.onDestroy, { signal: this.signal });
