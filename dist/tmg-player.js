@@ -1737,22 +1737,23 @@ var tmg = (() => {
               const getters = this.getters.get(paths[i]);
               if (!getters) continue;
               const target = { path: paths[i], value, key: safeKey, object: receiver };
-              value = this.mediate(paths[i], { type: "get", target, currentTarget: target, root: this.core, rejectable }, "get", getters);
+              value = this.mediate(paths[i], { type: "get", target, currentTarget: target, root: this.core, rejectable }, "get", getters).value;
             }
           return this.proxied(value, rejectable, object, safeKey, fullPath);
         },
         set: (object, key2, value, receiver) => {
+          let terminated = false;
           const safeKey = String(key2), fullPath = this.isTracking ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracking ? this.trace(object, safeKey, []) : [fullPath], oldValue = object[key2];
           this.log(`\u270F\uFE0F [SET Trap] Initiated for "${safeKey}" on "${paths}"`);
-          if (this.config.set) value = this.config.set(object, key2, value, oldValue, receiver, paths);
+          if (this.config.set) terminated = (value = this.config.set(object, key2, value, oldValue, receiver, paths)) === TERMINATOR;
           if (this.setters)
             for (let i = 0, len = paths.length; i < len; i++) {
               const setters = this.setters.get(paths[i]);
               if (!setters) continue;
               const target = { path: paths[i], value, oldValue, key: safeKey, object: receiver }, result = this.mediate(paths[i], { type: "set", target, currentTarget: target, root: this.core, rejectable }, "set", setters);
-              if (result !== TERMINATOR) value = result;
+              if (!(terminated || (terminated = result.terminated))) value = result.value;
             }
-          if (value === TERMINATOR) return this.log(`\u{1F6E1}\uFE0F [SET Mediator] Terminated on "${paths}"`), true;
+          if (terminated) return this.log(`\u{1F6E1}\uFE0F [SET Mediator] Terminated on "${paths}"`), true;
           object[key2] = value;
           if (this.isTracking) {
             const oldV = oldValue?.[RAW] || oldValue, newV = value?.[RAW] || value;
@@ -1766,18 +1767,18 @@ var tmg = (() => {
           return true;
         },
         deleteProperty: (object, key2) => {
-          let value, receiver = this.proxyCache.get(object);
+          let value, receiver = this.proxyCache.get(object), terminated = false;
           const safeKey = String(key2), fullPath = this.isTracking ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracking ? this.trace(object, safeKey, []) : [fullPath], oldValue = object[key2];
           this.log(`\u{1F5D1}\uFE0F [DELETE Trap] Initiated for "${safeKey}" on "${paths}"`);
-          if (this.config.delete) value = this.config.delete(object, key2, oldValue, receiver, paths);
+          if (this.config.delete) terminated = (value = this.config.delete(object, key2, oldValue, receiver, paths)) === TERMINATOR;
           if (this.deleters)
             for (let i = 0, len = paths.length; i < len; i++) {
               const deleters = this.deleters.get(paths[i]);
               if (!deleters) continue;
               const target = { path: paths[i], value, oldValue, key: safeKey, object: receiver }, result = this.mediate(paths[i], { type: "delete", target, currentTarget: target, root: this.core, rejectable }, "delete", deleters);
-              if (result !== TERMINATOR) value = result;
+              if (!(terminated || (terminated = result.terminated))) value = result.value;
             }
-          if (value === TERMINATOR) return this.log(`\u{1F6E1}\uFE0F [DELETE Mediator] Terminated on "${paths}"`), true;
+          if (terminated) return this.log(`\u{1F6E1}\uFE0F [DELETE Mediator] Terminated on "${paths}"`), true;
           delete object[key2];
           this.isTracking && this.unlink(oldValue?.[RAW] || oldValue, object, safeKey);
           if (this.watchers || this.listeners)
@@ -1820,20 +1821,19 @@ var tmg = (() => {
       let terminated = false, value = payload.target.value;
       const getting = type === "get", setting = type === "set", mediators = getting ? this.getters : setting ? this.setters : this.deleters;
       for (let i = !getting ? 0 : cords.length - 1, len = !getting ? cords.length : -1; i !== len; i += !getting ? 1 : -1) {
-        if (!getting) terminated || (terminated = value === TERMINATOR);
-        if (cords[i].once) cords.splice(i--, 1), !cords.length && mediators.delete(path);
         const response = getting ? cords[i].cb(value, payload) : setting ? cords[i].cb(value, terminated, payload) : cords[i].cb(terminated, payload);
-        if (!terminated) value = response;
+        if (getting || !(terminated || (terminated = response === TERMINATOR))) value = response;
+        if (cords[i].once) cords.splice(i--, 1), !cords.length && mediators.delete(path);
       }
-      return value;
+      return { value, terminated };
     }
     notify(path, payload) {
       if (this.watchers) {
         const cords = this.watchers.get(path);
         if (cords)
           for (let i = 0, len = cords.length; i < len; i++) {
-            if (cords[i].once) cords.splice(i--, 1), !cords.length && this.watchers.delete(path);
             cords[i].cb(payload.target.value, payload);
+            if (cords[i].once) cords.splice(i--, 1), !cords.length && this.watchers.delete(path);
           }
       }
       this.listeners && this.schedule(path, payload);
@@ -1879,8 +1879,8 @@ var tmg = (() => {
           tDepth ?? (tDepth = this.getDepth(e.target.path)), lDepth ?? (lDepth = this.getDepth(path));
           if (tDepth > lDepth + cords[i].depth) continue;
         }
-        if (cords[i].once) cords.splice(i--, 1), !cords.length && this.listeners.delete(path);
         cords[i].cb(e);
+        if (cords[i].once) cords.splice(i--, 1), !cords.length && this.listeners.delete(path);
       }
     }
     bind(cord, signal) {

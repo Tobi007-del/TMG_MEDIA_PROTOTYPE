@@ -1,5 +1,4 @@
 "use strict";
-
 import log from "./logger.js";
 import { Reactor } from "../../dist/tmg-player.mjs";
 import { Reactor as OldReactor } from "./fossil.js";
@@ -26,21 +25,20 @@ window.runBenchmark = async function runBenchmark() {
   const nativeProxy = new Proxy(
     { val: 0 },
     {
-      set(t, k, v, r) {
-        t[k] = v;
-        return true;
+      set(t, k, v) {
+        return ((t[k] = v), true);
       },
     }
   );
-  const oldReactor = new OldReactor({ val: 0 });
   const newReactor = new Reactor({ val: 0 });
+  const oldReactor = new OldReactor({ val: 0 });
 
   log(`🔥 Warming up JIT compiler to stabilize execution environments...`);
   for (let i = 0; i < TEST_WARMUP_ITERATIONS; i++) {
     rawObj.val = i;
     nativeProxy.val = i;
-    oldReactor.root.val = i;
     newReactor.core.val = i;
+    oldReactor.root.val = i;
   }
 
   await breathe();
@@ -60,13 +58,13 @@ window.runBenchmark = async function runBenchmark() {
     await breathe();
 
     start = performance.now();
-    for (let i = 0; i < TEST_ITERATIONS; i++) oldReactor.root.val = i;
-    results.oldR.push(performance.now() - start);
+    for (let i = 0; i < TEST_ITERATIONS; i++) newReactor.core.val = i;
+    results.newR.push(performance.now() - start);
     await breathe();
 
     start = performance.now();
-    for (let i = 0; i < TEST_ITERATIONS; i++) newReactor.core.val = i;
-    results.newR.push(performance.now() - start);
+    for (let i = 0; i < TEST_ITERATIONS; i++) oldReactor.root.val = i;
+    results.oldR.push(performance.now() - start);
     await breathe();
   }
 
@@ -79,19 +77,22 @@ window.runBenchmark = async function runBenchmark() {
 
   const rawStats = getStats(results.raw);
   const proxyStats = getStats(results.proxy);
-  const oldStats = getStats(results.oldR);
   const newStats = getStats(results.newR);
+  const oldStats = getStats(results.oldR);
 
   // --- DEVICE PROFILING (Based on 1,000,000 raw object mutations) ---
   const rawMs = parseFloat(rawStats.avg);
   let deviceProfile = "";
   let hardwareSpecs = "";
 
-  if (rawMs <= 2.5) {
-    deviceProfile = "Tier 1: Enthusiast / Server-Grade Compute";
+  if (rawMs <= 1.2) {
+    deviceProfile = "Tier 0: God-Tier Workstation / Bleeding-Edge Silicon";
+    hardwareSpecs = "Apple M4 Max, Intel Core i9-14900K, Ryzen 9 9950X, Liquid-cooled Overclocks";
+  } else if (rawMs <= 2.5) {
+    deviceProfile = "Tier 1: Elite Workstation / Pro-Grade Silicon";
     hardwareSpecs = "Apple M2/M3 Max, AMD Ryzen 9, Intel Core i9";
   } else if (rawMs <= 5.0) {
-    deviceProfile = "Tier 2: High-Performance Desktop / Flagship Silicon";
+    deviceProfile = "Tier 2: High-Performance Workstation / Flagship Silicon";
     hardwareSpecs = "Apple M1/M2, Intel Core i7, AMD Ryzen 7";
   } else if (rawMs <= 9.0) {
     deviceProfile = "Tier 3: Standard Workstation / Premium Mobile";
@@ -117,8 +118,8 @@ window.runBenchmark = async function runBenchmark() {
 
   logPad("1. Bare Metal", rawStats.avg, rawStats.opsSec);
   logPad("2. Native Proxy", proxyStats.avg, proxyStats.opsSec);
-  logPad("3. V0 Reactor", oldStats.avg, oldStats.opsSec);
-  logPad("4. VN Reactor", newStats.avg, newStats.opsSec);
+  logPad("3. VN Reactor", newStats.avg, newStats.opsSec);
+  logPad("4. V0 Reactor", oldStats.avg, oldStats.opsSec);
 
   log(`\n%c=== OVERHEAD ANALYSIS & FRAME BUDGET ===`, "color: darkturquoise; font-weight: bold;");
   const proxyOverhead = (proxyStats.avg / rawStats.avg).toFixed(1);

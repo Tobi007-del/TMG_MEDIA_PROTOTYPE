@@ -253,7 +253,10 @@ export declare class Reactor<T extends object> {
 		key: string;
 	}[]): void;
 	protected unlink(target: any, parent: object, key: string): void;
-	protected mediate<P extends Paths<T>>(path: Paths<T>, payload: Payload<T, P>, type: "get" | "set" | "delete", cords: Array<GetterRecord<T> | SetterRecord<T> | DeleterRecord<T>>): any;
+	protected mediate<P extends Paths<T>>(path: Paths<T>, payload: Payload<T, P>, type: "get" | "set" | "delete", cords: Array<GetterRecord<T> | SetterRecord<T> | DeleterRecord<T>>): {
+		value: PathValue<T, P, "."> | PathValue<T, ChildPaths<T, P, ".">, ".">;
+		terminated: boolean;
+	};
 	protected notify<P extends Paths<T>>(path: P, payload: Payload<T, P>): void;
 	protected schedule<P extends Paths<T>>(path: P, payload: Payload<T, P>): void;
 	protected initBatching(): void;

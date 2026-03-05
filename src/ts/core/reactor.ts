@@ -158,26 +158,27 @@ export class Reactor<T extends object> {
             const getters = this.getters.get(paths[i]);
             if (!getters) continue;
             const target: Target<T> = { path: paths[i], value, key: safeKey as PathKey<T>, object: receiver };
-            value = this.mediate(paths[i], { type: "get", target, currentTarget: target, root: this.core, rejectable } as Payload<T, Paths<T>>, "get", getters);
+            value = this.mediate(paths[i], { type: "get", target, currentTarget: target, root: this.core, rejectable } as Payload<T, Paths<T>>, "get", getters).value;
           } // Mediators
         return this.proxied(value, rejectable, object, safeKey, fullPath);
       },
       set: (object, key, value, receiver) => {
+        let terminated = false;
         const safeKey = String(key),
           fullPath = this.isTracking ? undefined : path ? path + "." + safeKey : safeKey,
           paths: Paths<T>[] = this.isTracking ? this.trace(object, safeKey, []) : [fullPath! as Paths<T>],
           oldValue = (object as any)[key];
         this.log(`✏️ [SET Trap] Initiated for "${safeKey}" on "${paths}"`);
-        if (this.config.set) value = this.config.set(object as PathBranchValue<T>, key as PathKey<T>, value, oldValue, receiver, paths);
+        if (this.config.set) terminated = (value = this.config.set(object as PathBranchValue<T>, key as PathKey<T>, value, oldValue, receiver, paths)) === TERMINATOR;
         if (this.setters)
           for (let i = 0, len = paths.length; i < len; i++) {
             const setters = this.setters.get(paths[i]);
             if (!setters) continue;
             const target: Target<T> = { path: paths[i], value, oldValue, key: safeKey as PathKey<T>, object: receiver },
               result = this.mediate(paths[i], { type: "set", target, currentTarget: target, root: this.core, rejectable } as Payload<T, Paths<T>>, "set", setters);
-            if (result !== TERMINATOR) value = result;
+            if (!(terminated ||= result.terminated)) value = result.value;
           } // Mediators
-        if (value === TERMINATOR) return (this.log(`🛡️ [SET Mediator] Terminated on "${paths}"`), true); // soft rejection if terminated: `true`
+        if (terminated) return (this.log(`🛡️ [SET Mediator] Terminated on "${paths}"`), true); // soft rejection if terminated: `true`
         (object as any)[key] = value;
         if (this.isTracking) {
           const oldV = oldValue?.[RAW] || oldValue,
@@ -192,23 +193,24 @@ export class Reactor<T extends object> {
         return true;
       },
       deleteProperty: (object, key) => {
-        let value,
-          receiver = this.proxyCache.get(object);
+        let value: any,
+          receiver = this.proxyCache.get(object),
+          terminated = false;
         const safeKey = String(key),
           fullPath = this.isTracking ? undefined : ((path ? path + "." + safeKey : safeKey) as Paths<T>),
           paths: Paths<T>[] = this.isTracking ? this.trace(object, safeKey, []) : [fullPath!],
           oldValue = (object as any)[key];
         this.log(`🗑️ [DELETE Trap] Initiated for "${safeKey}" on "${paths}"`);
-        if (this.config.delete) value = this.config.delete(object as PathBranchValue<T>, key as PathKey<T>, oldValue, receiver, paths);
+        if (this.config.delete) terminated = (value = this.config.delete(object as PathBranchValue<T>, key as PathKey<T>, oldValue, receiver, paths)) === TERMINATOR;
         if (this.deleters)
           for (let i = 0, len = paths.length; i < len; i++) {
             const deleters = this.deleters.get(paths[i]);
             if (!deleters) continue;
             const target: Target<T> = { path: paths[i], value, oldValue, key: safeKey as PathKey<T>, object: receiver },
               result = this.mediate(paths[i], { type: "delete", target, currentTarget: target, root: this.core, rejectable } as Payload<T, Paths<T>>, "delete", deleters);
-            if (result !== TERMINATOR) value = result;
+            if (!(terminated ||= result.terminated)) value = result.value;
           } // Mediators
-        if (value === TERMINATOR) return (this.log(`🛡️ [DELETE Mediator] Terminated on "${paths}"`), true); // soft rejection if terminated: `true`
+        if (terminated) return (this.log(`🛡️ [DELETE Mediator] Terminated on "${paths}"`), true); // soft rejection if terminated: `true`
         delete (object as any)[key];
         this.isTracking && this.unlink(oldValue?.[RAW] || oldValue, object, safeKey);
         if (this.watchers || this.listeners)
@@ -245,28 +247,27 @@ export class Reactor<T extends object> {
     if (es) for (let i = 0, len = es.length; i < len; i++) if (Object.is(es[i].parent, parent) && es[i].key === key) return void es.splice(i, 1);
   }
 
-  protected mediate<P extends Paths<T>>(path: Paths<T>, payload: Payload<T, P>, type: "get" | "set" | "delete", cords: Array<GetterRecord<T> | SetterRecord<T> | DeleterRecord<T>>): any {
+  protected mediate<P extends Paths<T>>(path: Paths<T>, payload: Payload<T, P>, type: "get" | "set" | "delete", cords: Array<GetterRecord<T> | SetterRecord<T> | DeleterRecord<T>>) {
     let terminated = false,
       value = payload.target.value; // mediator called when necessary & ready for the argument work, all facts (params) are brought to the table
     const getting = type === "get",
       setting = type === "set",
       mediators = getting ? this.getters : setting ? this.setters : this.deleters;
     for (let i = !getting ? 0 : cords.length - 1, len = !getting ? cords.length : -1; i !== len; i += !getting ? 1 : -1) {
-      if (!getting) terminated ||= value === TERMINATOR;
+      const response: any = getting ? (cords[i] as GetterRecord<T>).cb(value, payload) : setting ? (cords[i] as SetterRecord<T>).cb(value, terminated, payload) : (cords[i] as DeleterRecord<T>).cb(terminated, payload); // all will mediate
+      if (getting || !(terminated ||= response === TERMINATOR)) value = response as PathValue<T, P>;
       if (cords[i].once) (cords.splice(i--, 1), !cords.length && mediators!.delete(path));
-      const response = getting ? (cords[i] as GetterRecord<T>).cb(value, payload) : setting ? (cords[i] as SetterRecord<T>).cb(value, terminated, payload) : (cords[i] as DeleterRecord<T>).cb(terminated, payload); // all will mediate
-      if (!terminated) value = response as PathValue<T, P>;
     }
-    return value; // set - FIFO, get - LIFO
+    return { value, terminated }; // set - FIFO, get - LIFO
   }
 
-  protected notify<P extends Paths<T>>(path: P, payload: Payload<T, P>) {
+  protected notify<P extends Paths<T>>(path: P, payload: Payload<T, P>): void {
     if (this.watchers) {
       const cords = this.watchers.get(path);
       if (cords)
         for (let i = 0, len = cords.length; i < len; i++) {
-          if (cords[i].once) (cords.splice(i--, 1), !cords.length && this.watchers!.delete(path));
           cords[i].cb(payload.target.value, payload); // watchers do not terminate as they're after the OP
+          if (cords[i].once) (cords.splice(i--, 1), !cords.length && this.watchers!.delete(path));
         }
     }
     this.listeners && this.schedule(path, payload); // batch is undefined till listeners are available
@@ -318,8 +319,8 @@ export class Reactor<T extends object> {
         ((tDepth ??= this.getDepth(e.target.path)), (lDepth ??= this.getDepth(path))); // calc if ever needed
         if (tDepth > lDepth + cords[i].depth!) continue;
       }
-      if (cords[i].once) (cords.splice(i--, 1), !cords.length && this.listeners!.delete(path));
       cords[i].cb(e);
+      if (cords[i].once) (cords.splice(i--, 1), !cords.length && this.listeners!.delete(path));
     }
   }
 
