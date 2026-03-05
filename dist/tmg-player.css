@@ -732,7 +732,10 @@
 }
 .tmg-video-container {
   perspective: calc(var(--tmg-video-current-unit) * 38.5);
-  will-change: left, bottom;
+  will-change:
+    left,
+    bottom,
+    transform;
 }
 .tmg-pseudo-video-container {
   background: var(--tmg-video-background);

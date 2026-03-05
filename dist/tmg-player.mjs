@@ -2016,7 +2016,7 @@ var Reactor = class {
     return deepClone(this.core);
   }
   cascade({ type, currentTarget: { path, value: news, oldValue: olds } }, objSafe = true) {
-    if (type !== "set" && type !== "delete" || !(isStrictObj(news, this.config.crossRealms, true) || Array.isArray(news)) || !(isStrictObj(olds, this.config.crossRealms, true) || Array.isArray(olds))) return;
+    if (type !== "set" && type !== "delete" || !(isStrictObj(news, this.config.crossRealms) || Array.isArray(news)) || (objSafe ? !(isStrictObj(olds, this.config.crossRealms) || Array.isArray(olds)) : false)) return;
     const obj = objSafe ? mergeObjs(olds, news) : news, keys = Object.keys(obj);
     for (let i = 0, len = keys.length; i < len; i++) setAny(this.core, path + "." + keys[i], obj[keys[i]]);
   }
@@ -5414,6 +5414,7 @@ var RangeSlider = class extends BaseComponent {
   handleWheel(e) {
     if (this.config.wheel.disabled) return;
     e.preventDefault();
+    e.stopImmediatePropagation();
     const dimension = this.isVertical ? window.innerHeight : window.innerWidth, pos = clamp(0, Math.abs(-e.deltaY), dimension * this.config.wheel.axisRatio) / (dimension * this.config.wheel.axisRatio), value = this.config.value + (-e.deltaY >= 0 ? pos : -pos) * (this.config.max - this.config.min);
     this.seek(Math.round(value));
   }

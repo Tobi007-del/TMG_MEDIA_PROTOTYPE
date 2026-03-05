@@ -128,9 +128,9 @@ async function runReactorStressSuite() {
   window.t5 = new Reactor({ player: { metadata: null } });
 
   let cascadeFired = false;
+  t5.on("player.metadata", (e) => t5.cascade(e, false)); // cascade overwrites down one level, `false` to turn off old and new value object merging since old can be null
   t5.on("player.metadata.duration", () => (cascadeFired = true));
 
-  // Simulating a massive API response dropping into state
   const apiResponse = {
     title: "S.I.A Engine Demo",
     duration: 120,
@@ -154,7 +154,7 @@ async function runReactorStressSuite() {
   } else {
     log(`%c💀 FAILED: ${failed} tests did not pass. Check the engine.`, "color: #F44336; font-weight: bold;");
   }
+  log(`---------------------------------------------------------------------------\n`);
 }
 
-// Execute the suite
-setTimeout(runReactorStressSuite, 1000);
+window.addEventListener("load", () => setTimeout(runReactorStressSuite, 1000));

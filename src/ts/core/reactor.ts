@@ -519,8 +519,8 @@ export class Reactor<T extends object> {
     return deepClone(this.core);
   }
   public cascade({ type, currentTarget: { path, value: news, oldValue: olds } }: ReactorEvent<T>, objSafe = true): void {
-    if ((type !== "set" && type !== "delete") || !(isStrictObj(news, this.config.crossRealms, true) || Array.isArray(news)) || !(isStrictObj(olds, this.config.crossRealms, true) || Array.isArray(olds))) return;
-    const obj = objSafe ? mergeObjs(olds, news) : news, // don't set objSafe for arrays, merger doesn't play nice
+    if ((type !== "set" && type !== "delete") || !(isStrictObj(news, this.config.crossRealms) || Array.isArray(news)) || (objSafe ? !(isStrictObj(olds, this.config.crossRealms) || Array.isArray(olds)) : false)) return;
+    const obj = objSafe ? mergeObjs(olds!, news) : news, // don't set objSafe for arrays, merger doesn't play nice
       keys = Object.keys(obj);
     for (let i = 0, len = keys.length; i < len; i++) setAny(this.core, (path + "." + keys[i]) as Paths<T>, (obj as any)[keys[i]]); // smart progressive enhancement for objects; !*
   }

@@ -140,6 +140,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
   protected handleWheel(e: WheelEvent): void {
     if (this.config.wheel.disabled) return;
     e.preventDefault();
+    e.stopImmediatePropagation();
     const dimension = this.isVertical ? window.innerHeight : window.innerWidth,
       pos = clamp(0, Math.abs(-e.deltaY), dimension * this.config.wheel.axisRatio) / (dimension * this.config.wheel.axisRatio),
       value = this.config.value + (-e.deltaY >= 0 ? pos : -pos) * (this.config.max - this.config.min);
