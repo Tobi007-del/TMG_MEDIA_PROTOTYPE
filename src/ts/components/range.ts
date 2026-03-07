@@ -159,9 +159,11 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
 
   protected updateThumbPosition(pos: number): void {
     this.thumbIndicator.style.cssText = `${this.isVertical ? "inset-block-end" : "inset-inline-start"}: ${pos * 100}%`;
+    // this.thumbIndicator.style.transform = this.isVertical ? `translateY(-${pos * 100}%)` : `translateX(${pos * 100}%)`;
   }
   protected updateValueBar(pos: number): void {
     this.valueBar.style.cssText = `${this.isVertical ? "block-size" : "inline-size"}: ${pos * 100}%`;
+    // this.valueBar.style.transform = this.isVertical ? `scaleY(${pos * 100})` : `scaleX(${pos * 100}%)`;
   }
 
   protected getValueAsPos(value = this.config.value): number {

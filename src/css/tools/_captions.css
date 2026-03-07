@@ -11,7 +11,7 @@
   overflow-y: auto;
   background: rgb(from var(--tmg-video-captions-window-color) r g b / var(--tmg-video-captions-window-opacity));
   touch-action: none;
-  will-change: left, bottom;
+  contain: layout;
   transition: var(--tmg-video-motion-transition);
 }
 .tmg-video-container:where(.tmg-video-captions, .tmg-video-captions-preview) .tmg-video-captions-container:not(:empty, :has(> :empty)) {

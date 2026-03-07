@@ -121,6 +121,7 @@ export type ArrowNavHandle = {
   getAbleIndex: (targetIndex: number, e?: KeyEvent) => number | null;
   typeAhead: (key: string) => void;
   items: () => HTMLElement[];
+  activeIndex: () => number;
   activeItem: () => HTMLElement | null;
   getGrid: () => { x: number; y: number; vY: number };
   destroy: () => void;
@@ -170,7 +171,6 @@ export function initArrowFocusNav(container: HTMLElement, cfg: ArrowNavConfig = 
     } else {
       items[idx]?.focus(focusOptions);
     }
-    updateDOM();
   };
 
   const updateDOM = () => {
@@ -225,8 +225,8 @@ export function initArrowFocusNav(container: HTMLElement, cfg: ArrowNavConfig = 
   };
 
   // Setup
-  const refresh = () => (getItems(), updateDOM());
-  refresh();
+  getItems();
+  updateDOM();
 
   // Keydown binding
   const interactiveEls = !virtual ? [container] : [container.querySelector<HTMLElement>(inputSelector)];
@@ -251,12 +251,14 @@ export function initArrowFocusNav(container: HTMLElement, cfg: ArrowNavConfig = 
     const i = items.indexOf(el);
     if (i !== -1) goToIndex(i);
   };
+  items.forEach((el) => el.addEventListener("mouseenter", handleHover));
 
   // Mutation handling
   const mutationObserver = new MutationObserver(() => {
     const oldEl = items[activeIndex];
-    refresh();
+    getItems();
     const newEl = items[activeIndex];
+    updateDOM();
     if (oldEl && newEl && oldEl === newEl) return;
     activeIndex = -1;
   });
@@ -275,15 +277,10 @@ export function initArrowFocusNav(container: HTMLElement, cfg: ArrowNavConfig = 
   const ancestor = items.length > 1 ? getCommonAncestor(items[0], items[1]) : container;
   ancestor && resizeObserver.observe(ancestor);
 
-  // Hover listeners on items
-  const bindHover = () => items.forEach((el) => el.addEventListener("mouseenter", handleHover));
-  const unbindHover = () => items.forEach((el) => el.removeEventListener("mouseenter", handleHover));
-  bindHover();
-
   const destroy = () => {
     interactiveEls.forEach((el) => el?.removeEventListener("keydown", simulateKey as EventListener));
     container.removeEventListener("focusout", handleFocusOut);
-    unbindHover();
+    items.forEach((el) => el.removeEventListener("mouseenter", handleHover));
     mutationObserver.disconnect();
     resizeObserver.disconnect();
     if (timeout) clearTimeout(timeout);
@@ -295,6 +292,7 @@ export function initArrowFocusNav(container: HTMLElement, cfg: ArrowNavConfig = 
     getAbleIndex,
     typeAhead,
     items: () => items,
+    activeIndex: () => activeIndex,
     activeItem: () => items[activeIndex] ?? null,
     getGrid: () => ({ x: gridX, y: gridY, vY: vGridY }),
     destroy,

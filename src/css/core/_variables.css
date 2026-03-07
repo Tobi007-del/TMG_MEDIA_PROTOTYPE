@@ -79,13 +79,21 @@
 :where(:root, .tmg-media-container) {
   --tmg-video-switch-transition-time: 150ms;
   --tmg-video-fade-transition-time: 175ms;
-  --tmg-video-motion-transition-time: 300ms;
-  --tmg-video-slow-transition-time: 500ms;
+  --tmg-video-motion-transition-time: 350ms;
+  --tmg-video-slow-transition-time: 600ms;
   --tmg-video-notifiers-animation-time: 1000ms;
   --tmg-video-buffer-animation-time: 1250ms;
   --tmg-video-bounce-timing: cubic-bezier(0.68, -0.55, 0.27, 1.55);
   --tmg-video-motion-timing: cubic-bezier(0.1, 0, 0, 1);
   --tmg-video-motion-transition: top var(--tmg-video-motion-transition-time) var(--tmg-video-motion-timing), bottom var(--tmg-video-motion-transition-time) var(--tmg-video-motion-timing), left var(--tmg-video-motion-transition-time) var(--tmg-video-motion-timing), right var(--tmg-video-motion-transition-time) var(--tmg-video-motion-timing);
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(:root, .tmg-media-container) {
+    --tmg-video-switch-transition-time: 0ms;
+    --tmg-video-motion-transition-time: 0ms;
+    --tmg-video-slow-transition-time: 0ms;
+    --tmg-video-fade-transition-time: 50ms; /* Keep fades subtle instead of off */
+  }
 }
 /* theme variables */
 :where(:root, .tmg-media-container) {
@@ -169,7 +177,7 @@
 }
 /* settings variables */
 :where(:root, .tmg-media-container) {
-  --tmg-video-settings-view-transition-time: 600ms;
+  --tmg-video-settings-view-transition-time: var(--tmg-video-slow-transition-time);
   --tmg-video-settings-content-padding: var(--tmg-video-current-safe-inset-x);
   --tmg-video-settings-background-color: rgba(0, 0, 0, 0.75);
   --tmg-video-settings-text-color: var(--tmg-video-text-color);
@@ -198,6 +206,7 @@
   --t007-toast-font-size: calc(var(--t007-toast-unit) * 1.08);
   --t007-toast-max-lines: 3;
   --t007-toast-border-radius: calc(var(--t007-toast-unit) / 1.5);
+  --t007-toast-animation-duration: var(--tmg-video-motion-transition-time);
 }
 .tmg-video-container .t007-toast-container[data-position^="top"] {
   --t007-toast-container-margin-top: var(--tmg-video-current-global-safe-inset-top);
