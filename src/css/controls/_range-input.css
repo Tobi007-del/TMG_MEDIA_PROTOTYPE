@@ -1,3 +1,4 @@
+.tmg-video-timeline-container,
 .tmg-video-timeline,
 .tmg-video-container input[type="range"] {
   height: var(--tmg-video-range-slider-height);

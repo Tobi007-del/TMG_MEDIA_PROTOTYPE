@@ -43,14 +43,14 @@ export class LightStatePlug extends BasePlug<LightState> {
     this.ctlr.queryDOM("[data-control-id]", true).forEach((c) => (c.dataset.lightControl = this.isLight(c.dataset.controlId!) ? "true" : "false"));
   }
 
-  protected handleUsePosterChange({ value, root }: Event<VideoBuild, "lightState.preview.usePoster">): void {
+  protected handleUsePosterChange({ target: { value, object }, root }: Event<VideoBuild, "lightState.preview.usePoster">): void {
     if (root.lightState.disabled || (value && this.ctlr.media.state.poster)) return;
-    this.ctlr.media.intent.currentTime = root.lightState.preview.time;
+    this.ctlr.media.intent.currentTime = object.time;
     if (!this.ctlr.media.status.loadedMetadata) this.ctlr.media.once("status.loadedMetadata", () => (this.config.preview.usePoster = value), { signal: this.signal }); // retrigger when metadata is ready in case time is a percentage
   }
 
-  protected handleTimeChange({ value, target, root }: Event<VideoBuild, "lightState.preview.time">): void {
-    !root.lightState.disabled && (!target.object.usePoster || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = value!);
+  protected handleTimeChange({ target: { object }, root }: Event<VideoBuild, "lightState.preview.time">): void {
+    !root.lightState.disabled && (!object.usePoster || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = object.time!);
   }
 
   protected add(): void {

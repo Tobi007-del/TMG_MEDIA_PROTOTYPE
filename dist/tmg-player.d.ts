@@ -660,8 +660,8 @@ declare class LightStatePlug extends BasePlug<LightState> {
 	wire(): void;
 	protected handleDisabledChange({ value, target }: Event$1<VideoBuild, "lightState.disabled">): void;
 	protected handleControlsChange(): void;
-	protected handleUsePosterChange({ value, root }: Event$1<VideoBuild, "lightState.preview.usePoster">): void;
-	protected handleTimeChange({ value, target, root }: Event$1<VideoBuild, "lightState.preview.time">): void;
+	protected handleUsePosterChange({ target: { value, object }, root }: Event$1<VideoBuild, "lightState.preview.usePoster">): void;
+	protected handleTimeChange({ target: { object }, root }: Event$1<VideoBuild, "lightState.preview.time">): void;
 	protected add(): void;
 	protected remove(): void;
 	protected handleLightStateClick({ target }: MouseEvent): void;
@@ -1519,9 +1519,9 @@ declare class AutoPlug extends BasePlug<Auto> {
 	protected forwardAutoPlay(value?: boolean | AptAutoplayOption): void;
 	protected handleIntersectionChange(): void;
 	protected handleTimeUpdate({ target }: Event$1<CtlrMedia, "state.currentTime">): void;
-	protected handleUsePoster({ value }: Event$1<VideoBuild, "settings.auto.next.videoPreview.usePoster">): void;
-	protected handleTease({ value }: Event$1<VideoBuild, "settings.auto.next.videoPreview.tease">): void;
-	protected handlePreviewTime({ value }: Event$1<VideoBuild, "settings.auto.next.videoPreview.time">): void;
+	protected handleUsePoster({ target: { value, object } }: Event$1<VideoBuild, "settings.auto.next.videoPreview.usePoster">): void;
+	protected handleTease({ target: { value, object } }: Event$1<VideoBuild, "settings.auto.next.videoPreview.tease">): void;
+	protected handlePreviewTime({ target: { value, object } }: Event$1<VideoBuild, "settings.auto.next.videoPreview.time">): void;
 	protected handleMediaAptAutoPlay(auto?: string | boolean, bool?: boolean, p?: string): void;
 	protected autonextVideo: () => void;
 }
@@ -1958,7 +1958,7 @@ declare function deepClone<T>(obj: T, crossRealms?: boolean, visited?: WeakMap<W
 declare function isValidNum(val: any): boolean;
 declare function clamp(min: number | undefined, val: number, max?: number): number;
 declare function safeNum(number: any, fallback?: number): number;
-declare function parseIfPercent(percent: any, amount?: number): number;
+declare function parseIfPercent(percent: any, amount: any, autocap?: number): number;
 declare function parseCSSTime(time: any): number;
 declare function parseCSSUnit(val: any): number;
 declare function remToPx(val: number): number;

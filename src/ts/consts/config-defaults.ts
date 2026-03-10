@@ -8,10 +8,10 @@ export const DEFAULT_VIDEO_BUILD: DeepPartial<VideoBuild> = {
   mediaType: "video",
   media: { title: "", artist: "", profile: "", album: "", artwork: [], chapterInfo: [], links: { title: "", artist: "", profile: "" }, autoGenerate: true },
   disabled: false,
-  lightState: { disabled: false, controls: ["meta", "bigplaypause", "fullscreenorientation"], preview: { usePoster: true, time: 2 } },
+  lightState: { disabled: false, controls: ["meta", "bigplaypause", "fullscreenorientation"], preview: { usePoster: true, time: 4 } },
   debug: true,
   settings: {
-    auto: { next: { value: 20, videoPreview: { usePoster: true, time: 2, tease: true } } },
+    auto: { next: { value: 20, videoPreview: { usePoster: true, time: 4, tease: true } } },
     css: {},
     brightness: { min: 0, max: 150, value: 100, skip: 5 },
     captions: {

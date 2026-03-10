@@ -1141,8 +1141,9 @@ var tmg = (() => {
   function safeNum(number, fallback = 0) {
     return isValidNum(number) ? number : fallback;
   }
-  function parseIfPercent(percent, amount = 100) {
-    return percent?.endsWith?.("%") ? safeNum(percent.slice(0, -1) / 100 * amount) : percent;
+  function parseIfPercent(percent, amount, autocap = 0.25) {
+    const val = percent?.endsWith?.("%") ? safeNum(parseFloat(percent) / 100 * amount) : percent;
+    return val && amount && autocap && amount <= val ? amount * autocap : val;
   }
   function parseCSSTime(time) {
     return time?.endsWith?.("ms") ? parseFloat(time) : parseFloat(time) * 1e3;
@@ -3010,10 +3011,10 @@ var tmg = (() => {
     mediaType: "video",
     media: { title: "", artist: "", profile: "", album: "", artwork: [], chapterInfo: [], links: { title: "", artist: "", profile: "" }, autoGenerate: true },
     disabled: false,
-    lightState: { disabled: false, controls: ["meta", "bigplaypause", "fullscreenorientation"], preview: { usePoster: true, time: 2 } },
+    lightState: { disabled: false, controls: ["meta", "bigplaypause", "fullscreenorientation"], preview: { usePoster: true, time: 4 } },
     debug: true,
     settings: {
-      auto: { next: { value: 20, videoPreview: { usePoster: true, time: 2, tease: true } } },
+      auto: { next: { value: 20, videoPreview: { usePoster: true, time: 4, tease: true } } },
       css: {},
       brightness: { min: 0, max: 150, value: 100, skip: 5 },
       captions: {
@@ -3799,6 +3800,7 @@ var tmg = (() => {
       this.ctlr.state.on("dimensions.pseudoContainer.tier", ({ value: tier }) => this.ctlr.pseudoVideoContainer.dataset.sizeTier = tier || "", { signal: this.signal, immediate: true });
     }
     wireCSSMediator() {
+      Object.keys(this.config).forEach((k) => k !== "syncWithMedia" && this.apply(k, this.config[k]));
       this.ctlr.config.get("*", (val, { target: { key, path } }) => {
         var _a;
         if (!path.startsWith("settings.css.")) return val;
@@ -3810,7 +3812,6 @@ var tmg = (() => {
         if (!path.startsWith("settings.css.") || path.includes("sync")) return;
         this.apply(key, val);
       });
-      Object.keys(this.config).forEach((k) => k !== "syncWithMedia" && this.apply(k, this.config[k]));
     }
     getCSSValue(key) {
       const cssVar = `--tmg-video-${uncamelize(key, "-")}`, val = getComputedStyle(this.ctlr.videoContainer).getPropertyValue(cssVar);
@@ -4223,13 +4224,13 @@ var tmg = (() => {
     handleControlsChange() {
       this.ctlr.queryDOM("[data-control-id]", true).forEach((c) => c.dataset.lightControl = this.isLight(c.dataset.controlId) ? "true" : "false");
     }
-    handleUsePosterChange({ value, root }) {
+    handleUsePosterChange({ target: { value, object }, root }) {
       if (root.lightState.disabled || value && this.ctlr.media.state.poster) return;
-      this.ctlr.media.intent.currentTime = root.lightState.preview.time;
+      this.ctlr.media.intent.currentTime = object.time;
       if (!this.ctlr.media.status.loadedMetadata) this.ctlr.media.once("status.loadedMetadata", () => this.config.preview.usePoster = value, { signal: this.signal });
     }
-    handleTimeChange({ value, target, root }) {
-      !root.lightState.disabled && (!target.object.usePoster || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = value);
+    handleTimeChange({ target: { object }, root }) {
+      !root.lightState.disabled && (!object.usePoster || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = object.time);
     }
     add() {
       this.ctlr.config.lightState.disabled = false;
@@ -4266,7 +4267,7 @@ var tmg = (() => {
       this.guardedTimePaths = ["lightState.preview.time", "settings.time.min", "settings.time.max", "settings.time.start", "settings.time.end", "settings.auto.next.videoPreview.time"];
     }
     wire() {
-      this.pseudoStart = this.ctlr.config.settings.time.start ?? 0;
+      this.pseudoStart = this.config.start ?? 0;
       this.ctlr.media.set("intent.currentTime", () => clamp(this.config.min, this.config.value, this.config.max), { signal: this.signal });
       this.ctlr.media.on("state.currentTime", this.handleTimeUpdate, { signal: this.signal, immediate: true });
       this.ctlr.media.on("status.waiting", this.handleWaitingStatus, { signal: this.signal });
@@ -4277,12 +4278,12 @@ var tmg = (() => {
       this.ctlr.media.intent.currentTime = value;
     }
     handleTimeUpdate({ target }) {
-      const curr = target.value, min = this.ctlr.config.settings.time.min, max = this.ctlr.config.settings.time.max, dur = this.ctlr.media.status.duration, end = this.ctlr.config.settings.time.end;
+      const curr = target.value, min = this.config.min, max = this.config.max, dur = this.ctlr.media.status.duration, end = this.config.end;
       if (curr < min || curr > max) {
-        this.ctlr.media.intent.currentTime = this.ctlr.config.settings.time.loop ? min : curr;
-        if (!this.ctlr.config.settings.time.loop) this.ctlr.media.intent.paused = true;
+        this.ctlr.media.intent.currentTime = this.config.loop ? min : curr;
+        if (!this.config.loop) this.ctlr.media.intent.paused = true;
       }
-      if (this.ctlr.media.status.readyState && curr && this.ctlr.state.readyState > 1) this.ctlr.config.settings.time.start = this.pseudoStart = curr > 3 && curr < (end ?? dur) - 3 ? curr : this.actualStart;
+      if (this.ctlr.media.status.readyState && curr && this.ctlr.state.readyState > 1) this.config.start = this.pseudoStart = curr > 3 && curr < (end ?? dur) - 3 ? curr : this.actualStart;
     }
     handleWaitingStatus({ value }) {
       if (value && IS_MOBILE && this.currentSkipNotifier) this.ctlr.media.once("status.waiting", () => this.ctlr.getPlug("overlay")?.remove(), { signal: this.signal });
@@ -4291,22 +4292,22 @@ var tmg = (() => {
       return parseIfPercent(value ?? 0, this.ctlr.media.status.duration);
     }
     toTimeText(time = this.ctlr.media.state.currentTime, useMode = false, showMs = false) {
-      const format = this.ctlr.config.settings.time.format, duration = this.ctlr.media.status.duration;
-      if (!useMode || this.ctlr.config.settings.time.mode !== "remaining") return formatMediaTime({ time, format, elapsed: true, showMs });
+      const format = this.config.format, duration = this.ctlr.media.status.duration;
+      if (!useMode || this.config.mode !== "remaining") return formatMediaTime({ time, format, elapsed: true, showMs });
       return `-${formatMediaTime({ time: duration - time, format, elapsed: false, showMs })}`;
     }
     get nextMode() {
-      return this.ctlr.config.settings.time.mode === "elapsed" ? "remaining" : "elapsed";
+      return this.config.mode === "elapsed" ? "remaining" : "elapsed";
     }
     toggleMode() {
-      this.ctlr.config.settings.time.mode = this.nextMode;
+      this.config.mode = this.nextMode;
     }
     get nextFormat() {
-      const current = this.ctlr.config.settings.time.format;
+      const current = this.config.format;
       return current === "digital" ? "human" : current === "human" ? "human-long" : "digital";
     }
     rotateFormat() {
-      this.ctlr.config.settings.time.format = this.nextFormat;
+      this.config.format = this.nextFormat;
     }
     skip(duration) {
       const overlay = this.ctlr.getPlug("overlay"), notifier = duration > 0 ? this.ctlr.queryDOM(".tmg-video-fwd-notifier") : this.ctlr.queryDOM(".tmg-video-bwd-notifier");
@@ -5083,18 +5084,18 @@ var tmg = (() => {
       const dur = this.ctlr.media.status.duration, curr = target.value;
       if (this.ctlr.media.status.readyState && curr && this.ctlr.state.readyState > 1 && Math.floor((this.ctlr.config.settings.time.end ?? dur) - curr) <= this.config.next.value) this.autonextVideo();
     }
-    handleUsePoster({ value }) {
+    handleUsePoster({ target: { value, object } }) {
       if (!this.nextVideoPreview || value && this.nextVideoPreview.poster) return;
-      if (this.config.next.videoPreview.tease) this.ctlr.config.settings.auto.next.videoPreview.tease = true;
-      else this.nextVideoPreview.currentTime = this.config.next.videoPreview.time;
+      if (object.tease) this.ctlr.config.settings.auto.next.videoPreview.tease = true;
+      else this.nextVideoPreview.currentTime = object.time;
     }
-    handleTease({ value }) {
+    handleTease({ target: { value, object } }) {
       if (!this.nextVideoPreview) return;
-      this.nextVideoPreview.ontimeupdate = () => this.nextVideoPreview && Number(this.nextVideoPreview.currentTime) >= this.config.next.videoPreview.time && this.nextVideoPreview.pause();
-      if (value && (!this.config.next.videoPreview.usePoster || !this.nextVideoPreview.poster)) this.nextVideoPreview.play();
+      this.nextVideoPreview.ontimeupdate = () => this.nextVideoPreview && Number(this.nextVideoPreview.currentTime) >= object.time && this.nextVideoPreview.pause();
+      if (value && (!object.usePoster || !this.nextVideoPreview.poster)) this.nextVideoPreview.play();
     }
-    handlePreviewTime({ value }) {
-      if (!this.nextVideoPreview || this.config.next.videoPreview.usePoster && this.nextVideoPreview.poster) return;
+    handlePreviewTime({ target: { value, object } }) {
+      if (!this.nextVideoPreview || object.usePoster && this.nextVideoPreview.poster) return;
       this.nextVideoPreview.currentTime = Number(value);
     }
     handleMediaAptAutoPlay(auto = this.config.play, bool = true, p = this.ctlr.state.mediaParentIntersecting ? "in" : "out") {

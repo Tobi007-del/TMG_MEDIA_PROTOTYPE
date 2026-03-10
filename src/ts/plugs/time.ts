@@ -25,7 +25,7 @@ export class TimePlug extends BasePlug<CTime> {
   public guardedTimePaths = ["lightState.preview.time", "settings.time.min", "settings.time.max", "settings.time.start", "settings.time.end", "settings.auto.next.videoPreview.time"] as const;
 
   public wire(): void {
-    this.pseudoStart = this.ctlr.config.settings.time.start ?? 0;
+    this.pseudoStart = this.config.start ?? 0;
     this.ctlr.media.set("intent.currentTime", () => clamp(this.config.min, this.config.value!, this.config.max), { signal: this.signal });
     this.ctlr.media.on("state.currentTime", this.handleTimeUpdate, { signal: this.signal, immediate: true });
     this.ctlr.media.on("status.waiting", this.handleWaitingStatus, { signal: this.signal });
@@ -39,15 +39,15 @@ export class TimePlug extends BasePlug<CTime> {
 
   protected handleTimeUpdate({ target }: Event<CtlrMedia, "state.currentTime">): void {
     const curr = target.value!,
-      min = this.ctlr.config.settings.time.min!,
-      max = this.ctlr.config.settings.time.max!,
+      min = this.config.min!,
+      max = this.config.max!,
       dur = this.ctlr.media.status.duration,
-      end = this.ctlr.config.settings.time.end!;
+      end = this.config.end!;
     if (curr < min || curr > max) {
-      this.ctlr.media.intent.currentTime = this.ctlr.config.settings.time.loop ? min : curr;
-      if (!this.ctlr.config.settings.time.loop) this.ctlr.media.intent.paused = true;
+      this.ctlr.media.intent.currentTime = this.config.loop ? min : curr;
+      if (!this.config.loop) this.ctlr.media.intent.paused = true;
     }
-    if (this.ctlr.media.status.readyState && curr && this.ctlr.state.readyState > 1) this.ctlr.config.settings.time.start = this.pseudoStart = curr > 3 && curr < (end ?? dur) - 3 ? curr : this.actualStart;
+    if (this.ctlr.media.status.readyState && curr && this.ctlr.state.readyState > 1) this.config.start = this.pseudoStart = curr > 3 && curr < (end ?? dur) - 3 ? curr : this.actualStart;
   }
 
   protected handleWaitingStatus({ value }: Event<CtlrMedia, "status.waiting">): void {
@@ -58,25 +58,25 @@ export class TimePlug extends BasePlug<CTime> {
     return parseIfPercent(value ?? 0, this.ctlr.media.status.duration);
   }
   public toTimeText(time = this.ctlr.media.state.currentTime, useMode = false, showMs = false): string {
-    const format = this.ctlr.config.settings.time.format,
+    const format = this.config.format,
       duration = this.ctlr.media.status.duration;
-    if (!useMode || this.ctlr.config.settings.time.mode !== "remaining") return formatMediaTime({ time, format, elapsed: true, showMs });
+    if (!useMode || this.config.mode !== "remaining") return formatMediaTime({ time, format, elapsed: true, showMs });
     return `-${formatMediaTime({ time: duration - time, format, elapsed: false, showMs })}`;
   }
 
   public get nextMode(): CTime["mode"] {
-    return this.ctlr.config.settings.time.mode === "elapsed" ? "remaining" : "elapsed";
+    return this.config.mode === "elapsed" ? "remaining" : "elapsed";
   }
   public toggleMode(): void {
-    this.ctlr.config.settings.time.mode = this.nextMode;
+    this.config.mode = this.nextMode;
   }
 
   public get nextFormat(): CTime["format"] {
-    const current = this.ctlr.config.settings.time.format;
+    const current = this.config.format;
     return current === "digital" ? "human" : current === "human" ? "human-long" : "digital";
   }
   public rotateFormat(): void {
-    this.ctlr.config.settings.time.format = this.nextFormat;
+    this.config.format = this.nextFormat;
   }
 
   public skip(duration: number): void {

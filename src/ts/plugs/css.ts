@@ -28,6 +28,7 @@ export class CSSPlug extends BasePlug<Css> {
   }
 
   protected wireCSSMediator() {
+    Object.keys(this.config!).forEach((k) => k !== "syncWithMedia" && this.apply(k, this.config![k]));
     this.ctlr.config.get("*", (val, { target: { key, path } }) => {
       if (!path.startsWith("settings.css.")) return val;
       if (path.includes("sync")) return val;
@@ -38,7 +39,6 @@ export class CSSPlug extends BasePlug<Css> {
       if (!path.startsWith("settings.css.") || path.includes("sync")) return;
       this.apply(key, val);
     }); // CSSOM needs immediate updates for visual sync
-    Object.keys(this.config!).forEach((k) => k !== "syncWithMedia" && this.apply(k, this.config![k]));
   }
 
   protected getCSSValue(key: string): string {

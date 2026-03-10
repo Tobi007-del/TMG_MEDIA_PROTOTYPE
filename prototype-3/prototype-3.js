@@ -606,9 +606,9 @@ class tmg_Video_Controller {
   async autoGenerateMedia() {
     const url = this.config.media.artwork?.[0]?.src;
     if (!this.config.media.autoGenerate || (url && !url.startsWith("blob:"))) return;
-    url && URL.revokeObjectURL(url);
     this.config.media.artwork = [{ src: "" }];
     this.config.media.artwork = [{ src: (await this.getVideoFrame(undefined, this.config.lightState.preview.time)).url || "" }];
+    url && URL.revokeObjectURL(url);
   }
   get payload() {
     return { readyState: this.readyState, initialized: this.readyState > 0, destroyed: this.readyState < 0, Controller: this };
@@ -641,7 +641,7 @@ class tmg_Video_Controller {
       if (this.nextVideoPreview) this.nextVideoPreview.ontimeupdate = ({ target: p }) => tmg.safeNum(p.currentTime) >= object.time && p.pause();
       value && (!object.usePoster || !this.nextVideoPreview.poster) && this.nextVideoPreview.play();
     });
-    this.config.on("settings.toasts.nextVideoPreview.time", ({ target: { value, object } }) => this.nextVideoPreview && (!object.usePoster || !this.nextVideoPreview.poster) && (this.nextVideoPreview.currentTime = tmg.safeNum(value)));
+    this.config.on("settings.toasts.nextVideoPreview.time", ({ target: { object } }) => this.nextVideoPreview && (!object.usePoster || !this.nextVideoPreview.poster) && (this.nextVideoPreview.currentTime = tmg.safeNum(object.time)));
     this.config.on("settings.toasts", ({ type, target: { path, key, value } }) => type === "update" && !path.match(/disabled|nextVideoPreview|captureAutoClose/) && t007.toast.doForAll("update", { [key]: value }, this.id));
   };
   get toast() {
@@ -715,6 +715,7 @@ class tmg_Video_Controller {
     };
     this.classKeys = ["captionsCharacterEdgeStyle", "captionsTextAlignment"];
     this.CSSCache ??= {};
+    Object.keys(this.settings.css).forEach((k) => k !== "syncWithMedia" && apply(k, this.settings.css[k]));
     this.config.get("*", (val, { target: { key, path } }) => {
       if (!path.startsWith("settings.css.")) return val;
       if (path.includes("sync")) return val;
@@ -725,7 +726,6 @@ class tmg_Video_Controller {
       if (!path.startsWith("settings.css.") || path.includes("sync")) return;
       apply(key, val);
     });
-    Object.keys(this.settings.css).forEach((k) => k !== "syncWithMedia" && apply(k, this.settings.css[k]));
   }
   getCSSValue(key) {
     const cssVar = `--tmg-video-${tmg.uncamelize(key, "-")}`;
@@ -1154,8 +1154,8 @@ class tmg_Video_Controller {
       }
     });
     this.config.on("lightState.controls", () => this.queryDOM("[data-control-id]", false, true).forEach((c) => (c.dataset.lightControl = this.isLight(c.dataset.controlId) ? "true" : "false")), { immediate: true });
-    this.config.on("lightState.preview.usePoster", ({ target: { value }, root }) => !root.lightState.disabled && (!value || !this.video.poster) && (this.currentTime = root.lightState.preview.time));
-    this.config.on("lightState.preview.time", ({ target: { value, object }, root }) => !root.lightState.disabled && (!object.usePoster || !this.video.poster) && (this.currentTime = value));
+    this.config.on("lightState.preview.usePoster", ({ target: { value, object }, root }) => !root.lightState.disabled && (!value || !this.video.poster) && (this.currentTime = object.time));
+    this.config.on("lightState.preview.time", ({ target: { object }, root }) => !root.lightState.disabled && (!object.usePoster || !this.video.poster) && (this.currentTime = object.time));
   }
   addLightState = () => (this.config.lightState.disabled = false);
   removeLightState = () => {
@@ -2549,7 +2549,7 @@ class tmg_Video_Controller {
     this.videoContainer.style.setProperty("left", this.wildMiniplayerX, "important");
     this.videoContainer.style.setProperty("bottom", this.wildMiniplayerY, "important");
     this.videoContainer.style.removeProperty("transform");
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       ((this.settings.css.currentMiniplayerX = this.nextMiniplayerX), (this.settings.css.currentMiniplayerY = this.nextMiniplayerY));
       ["transition", "left", "bottom"].forEach((prop) => this.videoContainer.style.removeProperty(prop));
     });
@@ -3478,7 +3478,10 @@ var tmg = {
     }
   },
   safeNum: (number, fallback = 0) => (tmg.isValidNum(number) ? number : fallback),
-  parseIfPercent: (percent, amount = 100) => (percent?.endsWith?.("%") ? tmg.safeNum((parseFloat(percent) / 100) * amount) : percent),
+  parseIfPercent: (percent, amount, autocap = 0.25) => {
+    const val = percent?.endsWith?.("%") ? tmg.safeNum((parseFloat(percent) / 100) * amount) : percent;
+    return val && amount && autocap && amount <= val ? amount * autocap : val;
+  },
   parseCSSTime: (time) => (time?.endsWith?.("ms") ? parseFloat(time) : parseFloat(time) * 1000),
   parseCSSUnit: (val) => (val?.endsWith?.("px") ? parseFloat(val) : tmg.remToPx(parseFloat(val))),
   parseUIObj(obj) {
@@ -3911,7 +3914,7 @@ if (typeof window !== "undefined") {
     mediaType: "video",
     media: { title: "", artist: "", profile: "", album: "", artwork: [], chapterInfo: [], links: { title: "", artist: "", profile: "" }, autoGenerate: true },
     disabled: false,
-    lightState: { disabled: false, controls: ["meta", "bigplaypause", "fullscreenorientation"], preview: { usePoster: true, time: 10 } },
+    lightState: { disabled: false, controls: ["meta", "bigplaypause", "fullscreenorientation"], preview: { usePoster: true, time: 4 } },
     debug: true,
     settings: {
       auto: { next: 20 },
@@ -4121,7 +4124,7 @@ if (typeof window !== "undefined") {
       playbackRate: { min: 0.25, max: 8, skip: 0.25 },
       playsInline: true,
       time: { min: 0, skip: 10, previews: false, mode: "elapsed", format: "digital", seekSync: false },
-      toasts: { disabled: false, nextVideoPreview: { usePoster: true, time: 2, tease: true }, captureAutoClose: 15000, maxToasts: 7, position: "bottom-left", hideProgressBar: true, closeButton: !tmg.ON_MOBILE, animation: "slide-up", dragToCloseDir: "x||y" },
+      toasts: { disabled: false, nextVideoPreview: { usePoster: true, time: 4, tease: true }, captureAutoClose: 15000, maxToasts: 7, position: "bottom-left", hideProgressBar: true, closeButton: !tmg.ON_MOBILE, animation: "slide-up", dragToCloseDir: "x||y" },
       volume: { min: 0, max: 300, skip: 5 },
     },
   };

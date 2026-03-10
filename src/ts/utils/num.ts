@@ -14,8 +14,9 @@ export function safeNum(number: any, fallback = 0): number {
 }
 
 // Parsers
-export function parseIfPercent(percent: any, amount = 100): number {
-  return percent?.endsWith?.("%") ? safeNum((percent.slice(0, -1) / 100) * amount) : percent;
+export function parseIfPercent(percent: any, amount: any, autocap = 0.25): number {
+  const val = percent?.endsWith?.("%") ? safeNum((parseFloat(percent) / 100) * amount) : percent;
+  return val && amount && autocap && amount <= val ? amount * autocap : val;
 }
 
 export function parseCSSTime(time: any): number {

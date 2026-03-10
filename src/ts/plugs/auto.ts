@@ -46,20 +46,20 @@ export class AutoPlug extends BasePlug<Auto> {
     if (this.ctlr.media.status.readyState && curr && this.ctlr.state.readyState > 1 && Math.floor((this.ctlr.config.settings.time.end ?? dur) - curr) <= this.config.next.value) this.autonextVideo();
   }
 
-  protected handleUsePoster({ value }: Event<VideoBuild, "settings.auto.next.videoPreview.usePoster">): void {
+  protected handleUsePoster({ target: { value, object } }: Event<VideoBuild, "settings.auto.next.videoPreview.usePoster">): void {
     if (!this.nextVideoPreview || (value && this.nextVideoPreview.poster)) return;
-    if (this.config.next.videoPreview.tease) this.ctlr.config.settings.auto.next.videoPreview.tease = true;
-    else this.nextVideoPreview.currentTime = this.config.next.videoPreview.time;
+    if (object.tease) this.ctlr.config.settings.auto.next.videoPreview.tease = true;
+    else this.nextVideoPreview.currentTime = object.time;
   }
 
-  protected handleTease({ value }: Event<VideoBuild, "settings.auto.next.videoPreview.tease">): void {
+  protected handleTease({ target: { value, object } }: Event<VideoBuild, "settings.auto.next.videoPreview.tease">): void {
     if (!this.nextVideoPreview) return;
-    this.nextVideoPreview.ontimeupdate = () => this.nextVideoPreview && Number(this.nextVideoPreview.currentTime) >= this.config.next.videoPreview.time && this.nextVideoPreview.pause();
-    if (value && (!this.config.next.videoPreview.usePoster || !this.nextVideoPreview.poster)) this.nextVideoPreview.play();
+    this.nextVideoPreview.ontimeupdate = () => this.nextVideoPreview && Number(this.nextVideoPreview.currentTime) >= object.time && this.nextVideoPreview.pause();
+    if (value && (!object.usePoster || !this.nextVideoPreview.poster)) this.nextVideoPreview.play();
   }
 
-  protected handlePreviewTime({ value }: Event<VideoBuild, "settings.auto.next.videoPreview.time">): void {
-    if (!this.nextVideoPreview || (this.config.next.videoPreview.usePoster && this.nextVideoPreview.poster)) return;
+  protected handlePreviewTime({ target: { value, object } }: Event<VideoBuild, "settings.auto.next.videoPreview.time">): void {
+    if (!this.nextVideoPreview || (object.usePoster && this.nextVideoPreview.poster)) return;
     this.nextVideoPreview.currentTime = Number(value);
   }
 
