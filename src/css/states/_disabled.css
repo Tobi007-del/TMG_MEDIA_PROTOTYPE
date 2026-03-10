@@ -31,7 +31,7 @@
   display: none;
 }
 .tmg-video-container:is(.tmg-video-disabled, #o#o#o#o#o) .tmg-video {
-  filter: brightness(var(--cmptd-brightness)) grayscale(100%);
+  filter: var(--tmg-video-filter) grayscale(100%);
 }
 .tmg-video-container:is(.tmg-video-inactive, #o#o#o#o#o) .tmg-video-container-content::after {
   content: attr(data-message);

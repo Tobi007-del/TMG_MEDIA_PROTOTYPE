@@ -43,13 +43,13 @@ export class AutoPlug extends BasePlug<Auto> {
   protected handleTimeUpdate({ target }: Event<CtlrMedia, "state.currentTime">): void {
     const dur = this.ctlr.media.status.duration,
       curr = target.value!;
-    if (this.ctlr.media.status.readyState && curr && Math.floor((this.ctlr.config.settings.time.end ?? dur) - curr) <= this.config.next.value) this.autonextVideo();
+    if (this.ctlr.media.status.readyState && curr && this.ctlr.state.readyState > 1 && Math.floor((this.ctlr.config.settings.time.end ?? dur) - curr) <= this.config.next.value) this.autonextVideo();
   }
 
   protected handleUsePoster({ value }: Event<VideoBuild, "settings.auto.next.videoPreview.usePoster">): void {
     if (!this.nextVideoPreview || (value && this.nextVideoPreview.poster)) return;
-    if (this.config.next.videoPreview.tease) this.ctlr.config.settings.auto.next.videoPreview.tease = this.config.next.videoPreview.tease;
-    else this.ctlr.config.settings.auto.next.videoPreview.time = this.config.next.videoPreview.time;
+    if (this.config.next.videoPreview.tease) this.ctlr.config.settings.auto.next.videoPreview.tease = true;
+    else this.nextVideoPreview.currentTime = this.config.next.videoPreview.time;
   }
 
   protected handleTease({ value }: Event<VideoBuild, "settings.auto.next.videoPreview.tease">): void {

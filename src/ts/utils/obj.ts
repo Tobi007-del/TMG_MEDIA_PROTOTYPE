@@ -15,10 +15,10 @@ export function isArr<T = unknown>(obj: any): obj is T[] {
 
 export function isObj<T extends object = object>(obj: any, checkArr = true): obj is T {
   return "object" === typeof obj && obj !== null && (checkArr ? !Array.isArray(obj) : true);
-} // okay for common usecases but loose
-export function isStrictObj<T extends object = object>(obj: any, crossRealms = true, typecheck = true): obj is T {
+} // okay for common use cases but loose
+export function isStrictObj<T extends object = object>(obj: any, crossRealms = false, typecheck = true): obj is T {
   return (typecheck ? isObj(obj, false) : true) && (crossRealms ? Object.prototype.toString.call(obj) === "[object Object]" : obj.constructor === Object);
-} // for strict own objects, handles cross-realm objects too, no nullish obj though for speed of direct access
+} // for strict own POJOs, handles cross-realm objects too
 
 export function isIter<T = unknown>(obj: any): obj is Iterable<T> {
   return obj != null && "function" === typeof obj[Symbol.iterator];
@@ -195,14 +195,11 @@ export function getTrailRecords<T extends object>(obj: T, path: WildPaths<T>): [
 }
 
 // Cloning
-export function deepClone<T>(obj: T, visited = new WeakMap()): T {
-  if (!isObj(obj) || visited.has(obj) || "symbol" === typeof obj || "function" === typeof obj || obj instanceof Map || obj instanceof Set || obj instanceof WeakMap || obj instanceof Promise || obj instanceof Element || obj instanceof EventTarget) return obj; // no circular references
+export function deepClone<T>(obj: T, crossRealms?: boolean, visited = new WeakMap()): T {
+  if (!(isStrictObj(obj, crossRealms) || isArr(obj)) || visited.has(obj)) return obj; // no circular references
   const clone: any = isArr(obj) ? [] : {};
   visited.set(obj, clone);
   const keys = Object.keys(obj);
-  for (let i = 0; i < keys.length; i++) {
-    const val = (obj as any)[keys[i]];
-    clone[keys[i]] = isObj(val) || isArr(val) ? deepClone(val, visited) : val;
-  }
+  for (let i = 0; i < keys.length; i++) clone[keys[i]] = deepClone((obj as any)[keys[i]], crossRealms, visited);
   return clone;
-}
+} // POJO|Arr Deep cloner

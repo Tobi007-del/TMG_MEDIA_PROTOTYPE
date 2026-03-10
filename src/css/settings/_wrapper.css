@@ -6,7 +6,7 @@
   pointer-events: all;
 }
 .tmg-video-container.tmg-video-settings-view .tmg-video-container-content .tmg-video {
-  filter: brightness(var(--cmptd-brightness)) blur(10px);
+  filter: var(--tmg-video-filter) blur(10px);
 }
 .tmg-video-container.tmg-video-settings-view .tmg-video-settings-btn svg {
   transform: rotate(30deg);

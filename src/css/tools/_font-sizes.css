@@ -14,9 +14,11 @@
 .tmg-video-preview-container::after {
   font-size: calc(var(--tmg-video-current-unit) / 1.85);
 }
-.tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) .tmg-video-time-and-duration-btn,
-.tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) .tmg-video-preview-container::after {
+.tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) .tmg-video-time-and-duration-btn {
   font-size: calc(var(--tmg-video-current-unit) / 1.7);
+}
+.tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) .tmg-video-preview-container::after {
+  font-size: calc(var(--tmg-video-current-unit) / 1.65);
 }
 .tmg-video-vb-slider-wrapper::after {
   font-size: calc(var(--tmg-video-current-unit) / 3);

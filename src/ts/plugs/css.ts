@@ -1,8 +1,7 @@
 import { BasePlug } from ".";
-import { VideoBuild } from "../types/build";
 import { CtlrMedia } from "../types/contract";
 import { Event } from "../types/reactor";
-import { camelize, uncamelize } from "../utils";
+import { uncamelize } from "../utils";
 
 export type Css = Record<string, string | number> & {
   captionsCharacterEdgeStyle: "none" | "raised" | "depressed" | "uniform" | "dropshadow";
@@ -17,9 +16,7 @@ export class CSSPlug extends BasePlug<Css> {
   public CSSCache: Record<string, string> = {};
 
   public wire(): void {
-    this.ctlr.config.on("settings.css", this.handleCSSChange, { signal: this.signal, immediate: true, depth: 1 });
     this.wireCSSMediator();
-    // Computed Vars
     this.ctlr.config.settings.css.altImgUrl = `url(${window.TMG_VIDEO_ALT_IMG_SRC})`;
     this.ctlr.media.watch("status.videoWidth", this.syncAspectRatio, { signal: this.signal, immediate: true });
     this.ctlr.media.watch("status.videoHeight", this.syncAspectRatio, { signal: this.signal });
@@ -31,16 +28,17 @@ export class CSSPlug extends BasePlug<Css> {
   }
 
   protected wireCSSMediator() {
-    const prevGet = this.ctlr.config.__Reactor__.config.get;
-    this.ctlr.config.__Reactor__.config.get = (obj, key, val, proxy, paths) => {
-      prevGet && (val = prevGet(obj, key, val, proxy, paths));
-      if (!paths[0]?.startsWith("settings.css.")) return val;
-      const safeKey = String(key);
-      if (paths[0]?.includes("syncWithMedia")) return val;
-      const newVal = this[this.classKeys.includes(safeKey) ? "getClassValue" : "getCSSValue"](safeKey);
-      this.CSSCache[safeKey] ||= newVal;
-      return newVal;
-    };
+    this.ctlr.config.get("*", (val, { target: { key, path } }) => {
+      if (!path.startsWith("settings.css.")) return val;
+      if (path.includes("sync")) return val;
+      const newVal = this[this.classKeys.includes(key) ? "getClassValue" : "getCSSValue"](key);
+      return ((this.CSSCache[key] ||= newVal), newVal);
+    });
+    this.ctlr.config.watch("*", (val, { target: { key, path } }) => {
+      if (!path.startsWith("settings.css.") || path.includes("sync")) return;
+      this.apply(key, val);
+    }); // CSSOM needs immediate updates for visual sync
+    Object.keys(this.config!).forEach((k) => k !== "syncWithMedia" && this.apply(k, this.config![k]));
   }
 
   protected getCSSValue(key: string): string {
@@ -53,10 +51,6 @@ export class CSSPlug extends BasePlug<Css> {
     const prefix = `tmg-video-${uncamelize(key, "-")}`,
       val = Array.prototype.find.call(this.ctlr.videoContainer.classList, (c) => c.startsWith(prefix))?.replace(`${prefix}-`, "");
     return val || "none"; // Validation logic (can be expanded to use tmg.parseUIObj if available)
-  }
-
-  protected handleCSSChange({ type, target: t }: Event<VideoBuild, "settings.css">) {
-    type === "update" ? this.apply(t.key, t.value) : type === "init" && Object.keys(t.value!).forEach((k) => k !== "syncWithMedia" && this.apply(k, t.value![k]));
   }
 
   protected apply(key: string, value: any) {

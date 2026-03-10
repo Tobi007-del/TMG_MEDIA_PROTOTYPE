@@ -20,7 +20,7 @@ export class LightStatePlug extends BasePlug<LightState> {
     this.ctlr.config.on("lightState.controls", this.handleControlsChange, { signal: this.signal, immediate: true });
     this.ctlr.config.on("lightState.preview.usePoster", this.handleUsePosterChange, { signal: this.signal });
     this.ctlr.config.on("lightState.preview.time", this.handleTimeChange, { signal: this.signal });
-    if (this.config.disabled) this.ctlr.setReadyState(); // warning my compadre: gesture plug
+    if (this.config.disabled) this.ctlr.setReadyState(); // warning my compadres: gesture plug & others
   }
 
   protected handleDisabledChange({ value, target }: Event<VideoBuild, "lightState.disabled">): void {
@@ -32,9 +32,7 @@ export class LightStatePlug extends BasePlug<LightState> {
       this.ctlr.DOM.controlsContainer?.removeEventListener("click", this.handleLightStateClick);
       this.ctlr.setReadyState(); // you can wire now, compadre
     } else {
-      const { preview } = target.object;
-      this.ctlr.config.lightState.preview.usePoster = preview.usePoster;
-      this.ctlr.config.lightState.preview.time = preview.time;
+      this.ctlr.config.lightState.preview.usePoster = this.config.preview.usePoster;
       this.ctlr.videoContainer.classList.add("tmg-video-light");
       this.ctlr.media.element.addEventListener("play", this.remove, { signal: this.signal });
       this.ctlr.DOM.controlsContainer?.addEventListener("click", this.handleLightStateClick, { signal: this.signal });
@@ -46,7 +44,9 @@ export class LightStatePlug extends BasePlug<LightState> {
   }
 
   protected handleUsePosterChange({ value, root }: Event<VideoBuild, "lightState.preview.usePoster">): void {
-    !root.lightState.disabled && (!value || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = root.lightState.preview.time);
+    if (root.lightState.disabled || (value && this.ctlr.media.state.poster)) return;
+    this.ctlr.media.intent.currentTime = root.lightState.preview.time;
+    if (!this.ctlr.media.status.loadedMetadata) this.ctlr.media.once("status.loadedMetadata", () => (this.config.preview.usePoster = value), { signal: this.signal }); // retrigger when metadata is ready in case time is a percentage
   }
 
   protected handleTimeChange({ value, target, root }: Event<VideoBuild, "lightState.preview.time">): void {

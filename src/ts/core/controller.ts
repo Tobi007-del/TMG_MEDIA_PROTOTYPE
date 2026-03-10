@@ -48,7 +48,7 @@ export class Controller {
     guardAllMethods(this, this.guard, true);
     this.buildCache = { ...build };
     this.id = build.id;
-    this.config = reactive(build, { referenceTracking: true });
+    this.config = reactive(build, { equalityTracking: false }); // `referenceTracking: false` so clone before reassigning objects already in state
     this.state = reactive<RuntimeState>({
       readyState: 0,
       audioContextReady: !!AUDIO_CONTEXT,

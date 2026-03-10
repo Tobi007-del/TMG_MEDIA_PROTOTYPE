@@ -34,6 +34,7 @@ export type Payload<T, P extends WildPaths<T> = WildPaths<T>> =
 export interface BasePayload<T, P extends WildPaths<T> = WildPaths<T>> {
   currentTarget: Target<T, P>; // use this to survive shape changes from nesting
   root: T;
+  terminated?: boolean; // for mediators to signal operation termination but doesn't stop the chain
   rejectable: boolean;
 }
 export interface DirectPayload<T, P extends WildPaths<T> = WildPaths<T>> extends BasePayload<T, P> {
@@ -65,24 +66,24 @@ interface OverrideEvPart<PL extends { target: { path: any; value: any; oldValue?
 // REACTIVITY CALLBACKS (The Handlers)
 // ===========================================================================
 
-export type Getter<T, P extends Paths<T> = Paths<T>> = (
-  value: PathValue<T, P> | undefined,
+export type Getter<T, P extends WildPaths<T> = WildPaths<T>> = (
+  value: PathValue<T, P>,
   payload: Payload<T, P>,
 ) => PathValue<T, P> | undefined;
 
-export type Setter<T, P extends Paths<T> = Paths<T>> = (
-  value: PathValue<T, P> | undefined,
+export type Setter<T, P extends WildPaths<T> = WildPaths<T>> = (
+  value: PathValue<T, P>,
   terminated: boolean,
   payload: Payload<T, P>,
 ) => PathValue<T, P> | typeof TERMINATOR | undefined;
 
-export type Deleter<T, P extends Paths<T> = Paths<T>> = (
+export type Deleter<T, P extends WildPaths<T> = WildPaths<T>> = (
   terminated: boolean,
   payload: Payload<T, P>,
 ) => typeof TERMINATOR | undefined;
 
-export type Watcher<T, P extends Paths<T> = Paths<T>> = (
-  value: PathValue<T, P> | undefined,
+export type Watcher<T, P extends WildPaths<T> = WildPaths<T>> = (
+  value: PathValue<T, P>,
   payload: Payload<T, P>,
 ) => void;
 
@@ -92,25 +93,25 @@ export type Listener<T, P extends WildPaths<T> = WildPaths<T>> = (event: Event<T
 // ENGINE RECORDS (Internal Storage)
 // ===========================================================================
 
-export type GetterRecord<T extends object, P extends Paths<T> = Paths<T>> = {
+export type GetterRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
   cb: Getter<T, P>;
   clup?: Reactor<T>["noget"];
   sclup?: () => void;
 } & SyncOptionsTuple;
 
-export type SetterRecord<T extends object, P extends Paths<T> = Paths<T>> = {
+export type SetterRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
   cb: Setter<T, P>;
   clup?: Reactor<T>["noset"];
   sclup?: () => void;
 } & SyncOptionsTuple;
 
-export type DeleterRecord<T extends object, P extends Paths<T> = Paths<T>> = {
+export type DeleterRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
   cb: Deleter<T, P>;
   clup?: Reactor<T>["nodelete"];
   sclup?: () => void;
 } & SyncOptionsTuple;
 
-export type WatcherRecord<T extends object, P extends Paths<T> = Paths<T>> = {
+export type WatcherRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
   cb: Watcher<T, P>;
   clup?: Reactor<T>["nowatch"];
   sclup?: () => void;
@@ -131,7 +132,7 @@ export interface SyncOptionsTuple {
   once?: boolean;
   signal?: AbortSignal;
   immediate?: boolean | "auto";
-}
+} // "*" path apart from listener's should not use `immediate`
 export type SyncOptions = boolean | SyncOptionsTuple;
 
 export interface ListenerOptionsTuple extends Omit<SyncOptionsTuple, "lazy"> {
@@ -140,14 +141,14 @@ export interface ListenerOptionsTuple extends Omit<SyncOptionsTuple, "lazy"> {
 }
 export type ListenerOptions = boolean | ListenerOptionsTuple;
 
-// "wild" mediation, (mediator|listener) for desired path, equality checks eg: `object.is()`
+// "almighty" mediation, (mediator|listener) for desired path, equality checks eg: `object.is()`
 export interface ReactorOptions<T extends object, P extends Paths<T> = Paths<T>> {
   get?: (
     object: PathBranchValue<T, P>,
     key: PathKey<T, P>,
     value: PathValue<T, P>,
     receiver: Reactive<T>,
-    paths: Paths<T>[],
+    path: Paths<T> | Paths<T>[],
   ) => PathValue<T, P> | undefined;
   set?: (
     object: PathBranchValue<T, P>,
@@ -155,17 +156,19 @@ export interface ReactorOptions<T extends object, P extends Paths<T> = Paths<T>>
     value: PathValue<T, P>,
     oldValue: PathValue<T, P>,
     receiver: Reactive<T>,
-    paths: Paths<T>[],
+    path: Paths<T> | Paths<T>[],
   ) => PathValue<T, P> | typeof TERMINATOR | undefined;
   delete?: (
     object: PathBranchValue<T, P>,
     key: PathKey<T, P>,
     oldValue: PathValue<T, P>,
     receiver: Reactive<T>,
-    paths: Paths<T>[],
+    path: Paths<T> | Paths<T>[],
   ) => typeof TERMINATOR | undefined;
   debug?: boolean;
-  eventBubbling?: boolean; // default true, set to false to prevent bubbling (not recommended if you want power)
-  referenceTracking?: boolean; // one-time set activates lineage tracing
   crossRealms?: boolean; // needed for object type detection if using across realms e.g, iframes or other environments
-}
+  eventBubbling?: boolean; // default true, set to false to prevent bubbling (not recommended if you want power)
+  batchingFunction?: (cb: () => void) => void; // for listener's notifications, e.g: `queueMicrotask`, `unstable_batchedUpdates` from ReactDOM
+  equalityTracking?: boolean; // enables tracking of previous values for equality checks using `Object.is`
+  referenceTracking?: boolean; // one-time set activates lineage tracing
+} // debating making use of the Reflect API opt-in

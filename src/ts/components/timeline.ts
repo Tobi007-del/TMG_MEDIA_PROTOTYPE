@@ -158,14 +158,9 @@ export class Timeline extends RangeSlider<TimelineConfig> {
 
   protected onInput(e: MouseEvent | PointerEvent, pos: number): void {
     this.ctlr.videoContainer.classList.add("tmg-video-previewing");
-    const { offsetLeft: pLeft, offsetWidth: pWidth } = this.previewContainer,
-      previewImgMin = pWidth / 2 / this.rect.width;
+    const previewImgMin = this.previewContainer.offsetWidth / 2 / this.rect.width;
     const previewImgPos = clamp(previewImgMin, pos, 1 - previewImgMin);
     this.previewContainer.style.left = `${previewImgPos * 100}%`;
-    const arrowBW = 5,
-      arrowPositionMin = Math.max(arrowBW / 5, 5),
-      arrowPos = pos < previewImgMin ? `${Math.max(pos * this.rect.width, arrowPositionMin + arrowBW / 2 + 1)}px` : pos > 1 - previewImgMin ? `${Math.min(pWidth / 2 + pos * this.rect.width - pLeft, pWidth - arrowPositionMin - arrowBW - 1)}px` : "50%";
-    this.previewContainer.style.setProperty("--arrow-position", arrowPos);
     this.previewBar.style.width = `${pos * 100}%`;
 
     const previewConfig = this.config.previews,

@@ -437,7 +437,6 @@ var tmg = (() => {
       } else {
         items[idx]?.focus(focusOptions);
       }
-      updateDOM();
     };
     const updateDOM = () => {
       if (shouldSnub()) return;
@@ -487,8 +486,8 @@ var tmg = (() => {
       const targetIndex = getTargetIndex({ currIndex, gridX, gridY, vGridY, length: items.length, loop, rtl, key, ctrlKey: e.ctrlKey });
       goToIndex(targetIndex, e);
     };
-    const refresh = () => (getItems(), updateDOM());
-    refresh();
+    getItems();
+    updateDOM();
     const interactiveEls = !virtual ? [container] : [container.querySelector(inputSelector)];
     interactiveEls.forEach((el) => el?.addEventListener("keydown", simulateKey));
     const handleFocusOut = (evt) => {
@@ -507,10 +506,12 @@ var tmg = (() => {
       const i = items.indexOf(el);
       if (i !== -1) goToIndex(i);
     };
+    items.forEach((el) => el.addEventListener("mouseenter", handleHover));
     const mutationObserver2 = new MutationObserver(() => {
       const oldEl = items[activeIndex];
-      refresh();
+      getItems();
       const newEl = items[activeIndex];
+      updateDOM();
       if (oldEl && newEl && oldEl === newEl) return;
       activeIndex = -1;
     });
@@ -526,13 +527,10 @@ var tmg = (() => {
     const resizeObserver2 = new ResizeObserver(() => calcGrid());
     const ancestor = items.length > 1 ? getCommonAncestor(items[0], items[1]) : container;
     ancestor && resizeObserver2.observe(ancestor);
-    const bindHover = () => items.forEach((el) => el.addEventListener("mouseenter", handleHover));
-    const unbindHover = () => items.forEach((el) => el.removeEventListener("mouseenter", handleHover));
-    bindHover();
     const destroy = () => {
       interactiveEls.forEach((el) => el?.removeEventListener("keydown", simulateKey));
       container.removeEventListener("focusout", handleFocusOut);
-      unbindHover();
+      items.forEach((el) => el.removeEventListener("mouseenter", handleHover));
       mutationObserver2.disconnect();
       resizeObserver2.disconnect();
       if (timeout) clearTimeout(timeout);
@@ -543,6 +541,7 @@ var tmg = (() => {
       getAbleIndex,
       typeAhead,
       items: () => items,
+      activeIndex: () => activeIndex,
       activeItem: () => items[activeIndex] ?? null,
       getGrid: () => ({ x: gridX, y: gridY, vY: vGridY }),
       destroy
@@ -975,7 +974,7 @@ var tmg = (() => {
   function isObj(obj, checkArr = true) {
     return "object" === typeof obj && obj !== null && (checkArr ? !Array.isArray(obj) : true);
   }
-  function isStrictObj(obj, crossRealms = true, typecheck = true) {
+  function isStrictObj(obj, crossRealms = false, typecheck = true) {
     return (typecheck ? isObj(obj, false) : true) && (crossRealms ? Object.prototype.toString.call(obj) === "[object Object]" : obj.constructor === Object);
   }
   function isIter(obj) {
@@ -1123,15 +1122,12 @@ var tmg = (() => {
     }
     return record;
   }
-  function deepClone(obj, visited = /* @__PURE__ */ new WeakMap()) {
-    if (!isObj(obj) || visited.has(obj) || "symbol" === typeof obj || "function" === typeof obj || obj instanceof Map || obj instanceof Set || obj instanceof WeakMap || obj instanceof Promise || obj instanceof Element || obj instanceof EventTarget) return obj;
+  function deepClone(obj, crossRealms, visited = /* @__PURE__ */ new WeakMap()) {
+    if (!(isStrictObj(obj, crossRealms) || isArr(obj)) || visited.has(obj)) return obj;
     const clone = isArr(obj) ? [] : {};
     visited.set(obj, clone);
     const keys = Object.keys(obj);
-    for (let i = 0; i < keys.length; i++) {
-      const val = obj[keys[i]];
-      clone[keys[i]] = isObj(val) || isArr(val) ? deepClone(val, visited) : val;
-    }
+    for (let i = 0; i < keys.length; i++) clone[keys[i]] = deepClone(obj[keys[i]], crossRealms, visited);
     return clone;
   }
 
@@ -1277,7 +1273,7 @@ var tmg = (() => {
     if (src?.canvas) src = src.canvas;
     const c = document.createElement("canvas"), x = c.getContext("2d"), s = Math.min(64, src.width, src.height);
     c.width = c.height = s;
-    src && x?.drawImage(src, 0, 0, s, s);
+    src?.width && src?.height && x?.drawImage(src, 0, 0, s, s);
     const d = src && x?.getImageData(0, 0, s, s).data, ct = {}, pt = {};
     for (let i = 0; i < (d?.length ?? 0); i += 4) {
       if (d[i + 3] < 128) continue;
@@ -1481,7 +1477,8 @@ var tmg = (() => {
     var _a;
     w2.t007 ?? (w2.t007 = {}), (_a = w2.t007)._resourceCache ?? (_a._resourceCache = {});
     if (w2.t007._resourceCache[src]) return w2.t007._resourceCache[src];
-    if (type === "script" ? Array.prototype.some.call(w2.document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.some.call(w2.document.styleSheets, (s) => isSameURL(s.href ?? "", src)) : false) return Promise.resolve();
+    const existing = type === "script" ? Array.prototype.find.call(w2.document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.find.call(w2.document.styleSheets, (s) => isSameURL(s.href, src)) : null;
+    if (existing) return w2.t007._resourceCache[src] = Promise.resolve(existing);
     w2.t007._resourceCache[src] = new Promise((resolve, reject) => {
       (function tryLoad(remaining, el) {
         const onerror = () => {
@@ -1636,6 +1633,7 @@ var tmg = (() => {
   var TERMINATOR = /* @__PURE__ */ Symbol.for("S.I.A_TERMINATOR");
   var NOOP = () => {
   };
+  var R_BATCH = ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window);
   var R_LOG = console.log.bind(console, "[S.I.A Reactor]");
   var EV_WARN = console.warn.bind(console, "[S.I.A Event]");
   var EV_OPTS = { LISTENER: ["capture", "depth", "once", "signal", "immediate"], MEDIATOR: ["lazy", "signal", "immediate"] };
@@ -1708,14 +1706,14 @@ var tmg = (() => {
       this.log = NOOP;
       this._canLog = false;
       // keeping track so API getter doesn't slow down internal iterations in any way
-      this.config = { eventBubbling: true, crossRealms: false };
+      this.config = { crossRealms: false, eventBubbling: true, batchingFunction: R_BATCH, equalityTracking: true };
       inert(this);
       this.core = this.proxied(obj);
       if (!options) return;
       if (this.isTracking = !!options.referenceTracking) this.lineage = /* @__PURE__ */ new WeakMap();
       if (options.debug) this.canLog = true;
-      const { get = this.config.get, set = this.config.set, delete: del = this.config.delete, eventBubbling = this.config.eventBubbling, crossRealms = this.config.crossRealms } = options;
-      Object.assign(this.config, { get, set, delete: del, eventBubbling, crossRealms });
+      const { get = this.config.get, set = this.config.set, delete: del = this.config.delete, crossRealms = this.config.crossRealms, eventBubbling = this.config.eventBubbling, equalityTracking = this.config.equalityTracking } = options;
+      Object.assign(this.config, { get, set, delete: del, crossRealms, eventBubbling, equalityTracking });
     }
     proxied(obj, rejectable = false, parent, key, path) {
       if (!obj || typeof obj !== "object") return obj;
@@ -1729,69 +1727,94 @@ var tmg = (() => {
         get: (object, key2, receiver) => {
           if (key2 === RAW) return object;
           let value = object[key2];
-          const safeKey = String(key2), fullPath = this.isTracking ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracking ? this.trace(object, safeKey, []) : [fullPath];
+          const safeKey = String(key2), fullPath = this.isTracking ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracking ? this.trace(object, safeKey) : fullPath;
           this.log(`\u{1F440} [GET Trap] Initiated for "${safeKey}" on "${paths}"`);
           if (this.config.get) value = this.config.get(object, key2, value, receiver, paths);
-          if (this.getters)
-            for (let i = 0, len = paths.length; i < len; i++) {
-              const getters = this.getters.get(paths[i]);
-              if (!getters) continue;
-              const target = { path: paths[i], value, key: safeKey, object: receiver };
-              value = this.mediate(paths[i], { type: "get", target, currentTarget: target, root: this.core, rejectable }, "get", getters).value;
+          if (this.getters) {
+            const wildcords = this.getters.get("*");
+            for (let i = 0, len = this.isTracking ? paths.length : 1; i < len; i++) {
+              const currPath = this.isTracking ? paths[i] : fullPath, cords = this.getters.get(currPath);
+              if (!cords && !wildcords) continue;
+              const target = { path: currPath, value, key: safeKey, object: receiver }, payload = { type: "get", target, currentTarget: target, root: this.core, rejectable };
+              if (cords) value = this.mediate(currPath, payload, "get", cords);
+              if (!wildcords) continue;
+              target.value = value;
+              value = this.mediate("*", payload, "get", wildcords);
             }
+          }
           return this.proxied(value, rejectable, object, safeKey, fullPath);
         },
         set: (object, key2, value, receiver) => {
-          let terminated = false;
-          const safeKey = String(key2), fullPath = this.isTracking ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracking ? this.trace(object, safeKey, []) : [fullPath], oldValue = object[key2];
+          let unchanged, safeValue, safeOldValue, terminated = false;
+          const safeKey = String(key2), fullPath = this.isTracking ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracking ? this.trace(object, safeKey) : fullPath, oldValue = object[key2];
+          if (this.isTracking || this.config.equalityTracking) {
+            safeOldValue = oldValue?.[RAW] || oldValue;
+            safeValue = value?.[RAW] || value;
+            unchanged = Object.is(safeValue, safeOldValue);
+          }
+          if (this.config.equalityTracking && unchanged) return true;
           this.log(`\u270F\uFE0F [SET Trap] Initiated for "${safeKey}" on "${paths}"`);
           if (this.config.set) terminated = (value = this.config.set(object, key2, value, oldValue, receiver, paths)) === TERMINATOR;
-          if (this.setters)
+          if (this.setters) {
+            const wildcords = this.setters.get("*");
             for (let i = 0, len = paths.length; i < len; i++) {
-              const setters = this.setters.get(paths[i]);
-              if (!setters) continue;
-              const target = { path: paths[i], value, oldValue, key: safeKey, object: receiver }, result = this.mediate(paths[i], { type: "set", target, currentTarget: target, root: this.core, rejectable }, "set", setters);
-              if (!(terminated || (terminated = result.terminated))) value = result.value;
+              const currPath = this.isTracking ? paths[i] : fullPath, cords = this.setters.get(currPath);
+              if (!cords && !wildcords) continue;
+              const target = { path: currPath, value, oldValue, key: safeKey, object: receiver }, payload = { type: "set", target, currentTarget: target, root: this.core, terminated, rejectable };
+              if (cords) {
+                const result2 = this.mediate(currPath, payload, "set", cords);
+                if (!(terminated || (terminated = payload.terminated))) value = result2;
+              }
+              if (!wildcords) continue;
+              target.value = value;
+              const result = this.mediate("*", payload, "set", wildcords);
+              if (!(terminated || (terminated = payload.terminated))) value = result;
             }
+          }
           if (terminated) return this.log(`\u{1F6E1}\uFE0F [SET Mediator] Terminated on "${paths}"`), true;
           object[key2] = value;
-          if (this.isTracking) {
-            const oldV = oldValue?.[RAW] || oldValue, newV = value?.[RAW] || value;
-            !Object.is(newV, oldV) && (this.unlink(oldV, object, safeKey), this.link(newV, object, safeKey));
-          }
+          if (this.isTracking && !unchanged) this.unlink(safeOldValue, object, safeKey), this.link(safeValue, object, safeKey);
           if (this.watchers || this.listeners)
-            for (let i = 0; i < paths.length; i++) {
-              const target = { path: paths[i], value, oldValue, key: safeKey, object: receiver };
-              this.notify(paths[i], { type: "set", target, currentTarget: target, root: this.core, rejectable });
+            for (let i = 0, len = paths.length; i < len; i++) {
+              const currPath = this.isTracking ? paths[i] : fullPath, target = { path: currPath, value, oldValue, key: safeKey, object: receiver };
+              this.notify(currPath, { type: "set", target, currentTarget: target, root: this.core, terminated, rejectable });
             }
           return true;
         },
         deleteProperty: (object, key2) => {
           let value, receiver = this.proxyCache.get(object), terminated = false;
-          const safeKey = String(key2), fullPath = this.isTracking ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracking ? this.trace(object, safeKey, []) : [fullPath], oldValue = object[key2];
+          const safeKey = String(key2), fullPath = this.isTracking ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracking ? this.trace(object, safeKey) : fullPath, oldValue = object[key2];
           this.log(`\u{1F5D1}\uFE0F [DELETE Trap] Initiated for "${safeKey}" on "${paths}"`);
           if (this.config.delete) terminated = (value = this.config.delete(object, key2, oldValue, receiver, paths)) === TERMINATOR;
-          if (this.deleters)
+          if (this.deleters) {
+            const wildcords = this.deleters.get("*");
             for (let i = 0, len = paths.length; i < len; i++) {
-              const deleters = this.deleters.get(paths[i]);
-              if (!deleters) continue;
-              const target = { path: paths[i], value, oldValue, key: safeKey, object: receiver }, result = this.mediate(paths[i], { type: "delete", target, currentTarget: target, root: this.core, rejectable }, "delete", deleters);
-              if (!(terminated || (terminated = result.terminated))) value = result.value;
+              const currPath = this.isTracking ? paths[i] : fullPath, cords = this.deleters.get(currPath);
+              if (!cords && !wildcords) continue;
+              const target = { path: currPath, value, oldValue, key: safeKey, object: receiver }, payload = { type: "delete", target, currentTarget: target, root: this.core, rejectable };
+              if (cords) {
+                const result2 = this.mediate(currPath, payload, "delete", cords);
+                if (!(terminated || (terminated = payload.terminated))) value = result2;
+              }
+              if (!wildcords) continue;
+              const result = this.mediate("*", payload, "delete", wildcords);
+              if (!(terminated || (terminated = payload.terminated))) value = result;
             }
+          }
           if (terminated) return this.log(`\u{1F6E1}\uFE0F [DELETE Mediator] Terminated on "${paths}"`), true;
           delete object[key2];
           this.isTracking && this.unlink(oldValue?.[RAW] || oldValue, object, safeKey);
           if (this.watchers || this.listeners)
             for (let i = 0, len = paths.length; i < len; i++) {
-              const target = { path: paths[i], value, oldValue, key: safeKey, object: receiver };
-              this.notify(paths[i], { type: "delete", target, currentTarget: target, root: this.core, rejectable });
+              const currPath = this.isTracking ? paths[i] : fullPath, target = { path: currPath, value, oldValue, key: safeKey, object: receiver };
+              this.notify(currPath, { type: "delete", target, currentTarget: target, root: this.core, rejectable });
             }
           return true;
         }
       });
       return this.proxyCache.set(obj, proxy), proxy;
     }
-    trace(target, path, paths, visited = /* @__PURE__ */ new WeakSet()) {
+    trace(target, path, paths = [], visited = /* @__PURE__ */ new WeakSet()) {
       if (Object.is(target, this.core[RAW] || this.core)) return paths.push(path), paths;
       if (visited.has(target)) return paths;
       visited.add(target);
@@ -1819,21 +1842,26 @@ var tmg = (() => {
     }
     mediate(path, payload, type, cords) {
       let terminated = false, value = payload.target.value;
-      const getting = type === "get", setting = type === "set", mediators = getting ? this.getters : setting ? this.setters : this.deleters;
-      for (let i = !getting ? 0 : cords.length - 1, len = !getting ? cords.length : -1; i !== len; i += !getting ? 1 : -1) {
-        const response = getting ? cords[i].cb(value, payload) : setting ? cords[i].cb(value, terminated, payload) : cords[i].cb(terminated, payload);
-        if (getting || !(terminated || (terminated = response === TERMINATOR))) value = response;
+      const isGet = type === "get", isSet = type === "set", mediators = isGet ? this.getters : isSet ? this.setters : this.deleters;
+      for (let i = !isGet ? 0 : cords.length - 1, len = !isGet ? cords.length : -1; i !== len; i += !isGet ? 1 : -1) {
+        const response = isGet ? cords[i].cb(value, payload) : isSet ? cords[i].cb(value, terminated, payload) : cords[i].cb(terminated, payload);
+        if (isGet || !(terminated || (terminated = payload.terminated = response === TERMINATOR))) value = response;
         if (cords[i].once) cords.splice(i--, 1), !cords.length && mediators.delete(path);
       }
-      return { value, terminated };
+      return value;
     }
     notify(path, payload) {
       if (this.watchers) {
-        const cords = this.watchers.get(path);
+        const wildcords = this.watchers.get("*"), cords = this.watchers.get(path);
         if (cords)
           for (let i = 0, len = cords.length; i < len; i++) {
             cords[i].cb(payload.target.value, payload);
             if (cords[i].once) cords.splice(i--, 1), !cords.length && this.watchers.delete(path);
+          }
+        if (wildcords)
+          for (let i = 0, len = wildcords.length; i < len; i++) {
+            wildcords[i].cb(payload.target.value, payload);
+            if (wildcords[i].once) wildcords.splice(i--, 1), !wildcords.length && this.watchers.delete("*");
           }
       }
       this.listeners && this.schedule(path, payload);
@@ -1843,10 +1871,10 @@ var tmg = (() => {
       this.batch.set(path, payload), !this.isBatching && this.initBatching();
     }
     initBatching() {
-      queueMicrotask(() => this.flush()), this.isBatching = true;
+      this.isBatching = true, this.config.batchingFunction(() => this.flush());
     }
     flush() {
-      this.batch && this.tick(this.batch.keys()), this.isBatching = false;
+      this.isBatching = false, this.batch && this.tick(this.batch.keys());
       if (this.queue?.size) for (const task of this.queue) task(), this.queue.delete(task);
     }
     wave(path, payload) {
@@ -1872,10 +1900,10 @@ var tmg = (() => {
       e.type = path !== e.target.path ? "update" : e.staticType;
       e.currentTarget = { path, value, oldValue: e.type !== "update" ? e.target.oldValue : void 0, key: e.type !== "update" ? path : path.slice(path.lastIndexOf(".") + 1) || "", object };
       let tDepth, lDepth;
-      for (let i = 0; i < cords.length; i++) {
+      for (let i = 0, len = cords.length; i < len; i++) {
         if (e.immediatePropagationStopped) break;
         if (cords[i].capture !== isCapture) continue;
-        if (cords[i].depth != void 0) {
+        if (cords[i].depth !== void 0) {
           tDepth ?? (tDepth = this.getDepth(e.target.path)), lDepth ?? (lDepth = this.getDepth(path));
           if (tDepth > lDepth + cords[i].depth) continue;
         }
@@ -2065,7 +2093,7 @@ var tmg = (() => {
       return this.isTracking;
     }
     snapshot() {
-      return deepClone(this.core);
+      return deepClone(this.core, !!this.config.crossRealms);
     }
     cascade({ type, currentTarget: { path, value: news, oldValue: olds } }, objSafe = true) {
       if (type !== "set" && type !== "delete" || !(isStrictObj(news, this.config.crossRealms) || Array.isArray(news)) || (objSafe ? !(isStrictObj(olds, this.config.crossRealms) || Array.isArray(olds)) : false)) return;
@@ -2203,7 +2231,7 @@ var tmg = (() => {
     }
     // Bulk register a map of icons { play: "<svg...>", pause: "<svg...>" }
     static registerAll(icons) {
-      Object.entries(icons).forEach(([k, v]) => this.instance.register(k, v));
+      Object.keys(icons).forEach((k) => this.instance.register(k, icons[k]));
     }
   };
   _IconRegistry.instance = new _IconRegistry();
@@ -2813,7 +2841,7 @@ var tmg = (() => {
       guardAllMethods(this, this.guard, true);
       this.buildCache = { ...build };
       this.id = build.id;
-      this.config = reactive(build, { referenceTracking: true });
+      this.config = reactive(build, { equalityTracking: false });
       this.state = reactive({
         readyState: 0,
         audioContextReady: !!AUDIO_CONTEXT,
@@ -2980,7 +3008,7 @@ var tmg = (() => {
   var DEFAULT_VIDEO_BUILD = {
     mediaPlayer: "TMG",
     mediaType: "video",
-    media: { title: "", artist: "", profile: "", album: "", artwork: [], chapterInfo: [], links: { title: "", artist: "", profile: "" } },
+    media: { title: "", artist: "", profile: "", album: "", artwork: [], chapterInfo: [], links: { title: "", artist: "", profile: "" }, autoGenerate: true },
     disabled: false,
     lightState: { disabled: false, controls: ["meta", "bigplaypause", "fullscreenorientation"], preview: { usePoster: true, time: 2 } },
     debug: true,
@@ -3609,7 +3637,8 @@ var tmg = (() => {
       videoProfile && this.ctlr.setImgLoadState({ target: videoProfile });
     }
     wire() {
-      this.ctlr.media.on("state.paused", ({ value }) => !value && this.syncMediaSession(), { signal: this.signal });
+      this.ctlr.media.on("state.paused", ({ value }) => !value && this.syncSession(), { signal: this.signal });
+      this.ctlr.media.on("status.loadedMetadata", () => this.autoGenerate(), { signal: this.signal });
       this.ctlr.config.watch("media.title", this.forwardTitle, { immediate: true, signal: this.signal });
       this.ctlr.config.watch("media.artist", this.forwardArtist, { immediate: true, signal: this.signal });
       this.ctlr.config.watch("media.profile", this.forwardProfile, { immediate: true, signal: this.signal });
@@ -3636,9 +3665,9 @@ var tmg = (() => {
       this.ctlr.media.intent.poster = value?.[0]?.src || "";
     }
     handleMediaChange() {
-      if (!this.ctlr.media.state.paused) this.syncMediaSession();
+      if (!this.ctlr.media.state.paused) this.syncSession();
     }
-    syncMediaSession() {
+    syncSession() {
       if (!navigator.mediaSession || document.pictureInPictureElement && !this.ctlr.isUIActive("pictureInPicture")) return;
       if (this.config) navigator.mediaSession.metadata = new MediaMetadata(this.config);
       const set = (...args) => navigator.mediaSession.setActionHandler(...args);
@@ -3650,6 +3679,12 @@ var tmg = (() => {
       const playlistPlug = this.ctlr.getPlug("playlist"), playlist = this.ctlr.config.playlist, currentIndex = this.ctlr.state.currentPlaylistIndex ?? 0;
       set("previoustrack", playlist && currentIndex > 0 && playlistPlug ? playlistPlug.previousVideo : null);
       set("nexttrack", playlist && currentIndex < (playlist?.length ?? 0) - 1 && playlistPlug ? playlistPlug.nextVideo : null);
+    }
+    async autoGenerate() {
+      const url = this.config.artwork?.[0]?.src;
+      if (!this.config.autoGenerate || url && !url.startsWith("blob:")) return;
+      url && URL.revokeObjectURL(url);
+      this.config.artwork = [{ src: "" }];
     }
   };
   MediaPlug.plugName = "media";
@@ -3712,15 +3747,14 @@ var tmg = (() => {
       this.ctlr.config.get("playlist", (v) => v?.length ? v : null, { signal: this.signal });
       this.ctlr.config.set("playlist", (v) => v?.map((i) => mergeObjs(DEFAULT_VIDEO_ITEM_BUILD, i)) ?? null, { signal: this.signal });
       this.ctlr.config.on("playlist", this.handlePlaylistChange, { signal: this.signal, immediate: true, depth: 1 });
-      this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && this.ctlr.media.status.readyState && this.ctlr.media.state.currentTime && (this.ctlr.config.playlist[this.ctlr.state.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
+      this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && (this.ctlr.config.playlist[this.ctlr.state.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
     }
     handlePlaylistChange({ root }) {
       if (this.ctlr.media.status.readyState < 1) return;
       const list = root.playlist;
       const v = list?.find((v2) => v2.media.id && v2.media.id === root.media.id || isSameURL(v2.src, root.src));
       this.ctlr.state.currentIndex = v ? list?.indexOf(v) : 0;
-      if (v) this.applyItem(v, false);
-      else this.movePlaylistTo(this.ctlr.state.currentIndex);
+      v ? this.applyItem(v, false) : this.movePlaylistTo(this.ctlr.state.currentIndex);
     }
     movePlaylistTo(index, shouldPlay) {
       if (!this.ctlr.config.playlist) return;
@@ -3729,11 +3763,11 @@ var tmg = (() => {
       if (typeof shouldPlay === "boolean") this.ctlr.media.intent.paused = !shouldPlay;
     }
     applyItem(item, reset = true) {
-      this.ctlr.config.media = item.media;
+      this.ctlr.config.media = deepClone(item.media);
       timeKeys.forEach((p) => this.ctlr.config.settings.time[p] = item.settings.time[p]);
-      this.ctlr.config.tracks = item.tracks ?? [];
+      this.ctlr.config.tracks = deepClone(item.tracks ?? []);
       if (reset) this.ctlr.config.src = item.src || "";
-      if (reset && "sources" in item && item.sources) this.ctlr.config.sources = item.sources;
+      if (reset && "sources" in item && item.sources) this.ctlr.config.sources = deepClone(item.sources);
     }
     previousVideo() {
       if (this.ctlr.media.state.currentTime >= 3) this.ctlr.media.intent.currentTime = 0;
@@ -3754,7 +3788,6 @@ var tmg = (() => {
       this.CSSCache = {};
     }
     wire() {
-      this.ctlr.config.on("settings.css", this.handleCSSChange, { signal: this.signal, immediate: true, depth: 1 });
       this.wireCSSMediator();
       this.ctlr.config.settings.css.altImgUrl = `url(${window.TMG_VIDEO_ALT_IMG_SRC})`;
       this.ctlr.media.watch("status.videoWidth", this.syncAspectRatio, { signal: this.signal, immediate: true });
@@ -3766,17 +3799,18 @@ var tmg = (() => {
       this.ctlr.state.on("dimensions.pseudoContainer.tier", ({ value: tier }) => this.ctlr.pseudoVideoContainer.dataset.sizeTier = tier || "", { signal: this.signal, immediate: true });
     }
     wireCSSMediator() {
-      const prevGet = this.ctlr.config.__Reactor__.config.get;
-      this.ctlr.config.__Reactor__.config.get = (obj, key, val, proxy, paths) => {
+      this.ctlr.config.get("*", (val, { target: { key, path } }) => {
         var _a;
-        prevGet && (val = prevGet(obj, key, val, proxy, paths));
-        if (!paths[0]?.startsWith("settings.css.")) return val;
-        const safeKey = String(key);
-        if (paths[0]?.includes("syncWithMedia")) return val;
-        const newVal = this[this.classKeys.includes(safeKey) ? "getClassValue" : "getCSSValue"](safeKey);
-        (_a = this.CSSCache)[safeKey] || (_a[safeKey] = newVal);
-        return newVal;
-      };
+        if (!path.startsWith("settings.css.")) return val;
+        if (path.includes("sync")) return val;
+        const newVal = this[this.classKeys.includes(key) ? "getClassValue" : "getCSSValue"](key);
+        return (_a = this.CSSCache)[key] || (_a[key] = newVal), newVal;
+      });
+      this.ctlr.config.watch("*", (val, { target: { key, path } }) => {
+        if (!path.startsWith("settings.css.") || path.includes("sync")) return;
+        this.apply(key, val);
+      });
+      Object.keys(this.config).forEach((k) => k !== "syncWithMedia" && this.apply(k, this.config[k]));
     }
     getCSSValue(key) {
       const cssVar = `--tmg-video-${uncamelize(key, "-")}`, val = getComputedStyle(this.ctlr.videoContainer).getPropertyValue(cssVar);
@@ -3785,9 +3819,6 @@ var tmg = (() => {
     getClassValue(key) {
       const prefix = `tmg-video-${uncamelize(key, "-")}`, val = Array.prototype.find.call(this.ctlr.videoContainer.classList, (c) => c.startsWith(prefix))?.replace(`${prefix}-`, "");
       return val || "none";
-    }
-    handleCSSChange({ type, target: t }) {
-      type === "update" ? this.apply(t.key, t.value) : type === "init" && Object.keys(t.value).forEach((k) => k !== "syncWithMedia" && this.apply(k, t.value[k]));
     }
     apply(key, value) {
       this[this.classKeys.includes(key) ? "updateClassValue" : "updateCssVariable"](key, value);
@@ -4183,9 +4214,7 @@ var tmg = (() => {
         this.ctlr.DOM.controlsContainer?.removeEventListener("click", this.handleLightStateClick);
         this.ctlr.setReadyState();
       } else {
-        const { preview } = target.object;
-        this.ctlr.config.lightState.preview.usePoster = preview.usePoster;
-        this.ctlr.config.lightState.preview.time = preview.time;
+        this.ctlr.config.lightState.preview.usePoster = this.config.preview.usePoster;
         this.ctlr.videoContainer.classList.add("tmg-video-light");
         this.ctlr.media.element.addEventListener("play", this.remove, { signal: this.signal });
         this.ctlr.DOM.controlsContainer?.addEventListener("click", this.handleLightStateClick, { signal: this.signal });
@@ -4195,7 +4224,9 @@ var tmg = (() => {
       this.ctlr.queryDOM("[data-control-id]", true).forEach((c) => c.dataset.lightControl = this.isLight(c.dataset.controlId) ? "true" : "false");
     }
     handleUsePosterChange({ value, root }) {
-      !root.lightState.disabled && (!value || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = root.lightState.preview.time);
+      if (root.lightState.disabled || value && this.ctlr.media.state.poster) return;
+      this.ctlr.media.intent.currentTime = root.lightState.preview.time;
+      if (!this.ctlr.media.status.loadedMetadata) this.ctlr.media.once("status.loadedMetadata", () => this.config.preview.usePoster = value, { signal: this.signal });
     }
     handleTimeChange({ value, target, root }) {
       !root.lightState.disabled && (!target.object.usePoster || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = value);
@@ -4232,13 +4263,13 @@ var tmg = (() => {
       this.skipDuration = 0;
       this.skipDurationId = -1;
       this.currentSkipNotifier = null;
+      this.guardedTimePaths = ["lightState.preview.time", "settings.time.min", "settings.time.max", "settings.time.start", "settings.time.end", "settings.auto.next.videoPreview.time"];
     }
     wire() {
       this.pseudoStart = this.ctlr.config.settings.time.start ?? 0;
       this.ctlr.media.set("intent.currentTime", () => clamp(this.config.min, this.config.value, this.config.max), { signal: this.signal });
       this.ctlr.media.on("state.currentTime", this.handleTimeUpdate, { signal: this.signal, immediate: true });
       this.ctlr.media.on("status.waiting", this.handleWaitingStatus, { signal: this.signal });
-      ["settings.time.min", "settings.time.max", "settings.time.value", "settings.time.start", "settings.time.end"].forEach((p) => this.ctlr.config.get(p, this.toTimeVal));
       this.ctlr.config.watch("settings.time.value", this.forwardTimeValue, { signal: this.signal });
       this.ctlr.config.watch("settings.time.start", (v) => v !== this.pseudoStart && (this.actualStart = +v), { signal: this.signal, immediate: true });
     }
@@ -4251,10 +4282,10 @@ var tmg = (() => {
         this.ctlr.media.intent.currentTime = this.ctlr.config.settings.time.loop ? min : curr;
         if (!this.ctlr.config.settings.time.loop) this.ctlr.media.intent.paused = true;
       }
-      if (this.ctlr.media.status.readyState && curr) this.ctlr.config.settings.time.start = this.pseudoStart = curr > 3 && curr < (end ?? dur) - 3 ? curr : this.actualStart;
+      if (this.ctlr.media.status.readyState && curr && this.ctlr.state.readyState > 1) this.ctlr.config.settings.time.start = this.pseudoStart = curr > 3 && curr < (end ?? dur) - 3 ? curr : this.actualStart;
     }
     handleWaitingStatus({ value }) {
-      if (value && IS_MOBILE && this.currentSkipNotifier) this.ctlr.media.once("status.waiting", ({ value: value2 }) => !value2 && this.ctlr.getPlug("overlay")?.remove(), { signal: this.signal });
+      if (value && IS_MOBILE && this.currentSkipNotifier) this.ctlr.media.once("status.waiting", () => this.ctlr.getPlug("overlay")?.remove(), { signal: this.signal });
     }
     toTimeVal(value) {
       return parseIfPercent(value ?? 0, this.ctlr.media.status.duration);
@@ -4307,6 +4338,9 @@ var tmg = (() => {
         return void notifier?.setAttribute("data-skip", String(Math.trunc(this.skipDuration)));
       } else this.currentSkipNotifier?.classList.remove("tmg-video-control-persist");
       notifier?.setAttribute("data-skip", String(Math.trunc(Math.abs(duration))));
+    }
+    guardTimeValues() {
+      this.guardedTimePaths.forEach((p) => this.ctlr.config.get(p, this.toTimeVal, { signal: this.signal }));
     }
   };
   TimePlug.plugName = "time";
@@ -5047,12 +5081,12 @@ var tmg = (() => {
     }
     handleTimeUpdate({ target }) {
       const dur = this.ctlr.media.status.duration, curr = target.value;
-      if (this.ctlr.media.status.readyState && curr && Math.floor((this.ctlr.config.settings.time.end ?? dur) - curr) <= this.config.next.value) this.autonextVideo();
+      if (this.ctlr.media.status.readyState && curr && this.ctlr.state.readyState > 1 && Math.floor((this.ctlr.config.settings.time.end ?? dur) - curr) <= this.config.next.value) this.autonextVideo();
     }
     handleUsePoster({ value }) {
       if (!this.nextVideoPreview || value && this.nextVideoPreview.poster) return;
-      if (this.config.next.videoPreview.tease) this.ctlr.config.settings.auto.next.videoPreview.tease = this.config.next.videoPreview.tease;
-      else this.ctlr.config.settings.auto.next.videoPreview.time = this.config.next.videoPreview.time;
+      if (this.config.next.videoPreview.tease) this.ctlr.config.settings.auto.next.videoPreview.tease = true;
+      else this.nextVideoPreview.currentTime = this.config.next.videoPreview.time;
     }
     handleTease({ value }) {
       if (!this.nextVideoPreview) return;
@@ -5706,11 +5740,9 @@ var tmg = (() => {
     }
     onInput(e, pos) {
       this.ctlr.videoContainer.classList.add("tmg-video-previewing");
-      const { offsetLeft: pLeft, offsetWidth: pWidth } = this.previewContainer, previewImgMin = pWidth / 2 / this.rect.width;
+      const previewImgMin = this.previewContainer.offsetWidth / 2 / this.rect.width;
       const previewImgPos = clamp(previewImgMin, pos, 1 - previewImgMin);
       this.previewContainer.style.left = `${previewImgPos * 100}%`;
-      const arrowBW = 5, arrowPositionMin = Math.max(arrowBW / 5, 5), arrowPos = pos < previewImgMin ? `${Math.max(pos * this.rect.width, arrowPositionMin + arrowBW / 2 + 1)}px` : pos > 1 - previewImgMin ? `${Math.min(pWidth / 2 + pos * this.rect.width - pLeft, pWidth - arrowPositionMin - arrowBW - 1)}px` : "50%";
-      this.previewContainer.style.setProperty("--arrow-position", arrowPos);
       this.previewBar.style.width = `${pos * 100}%`;
       const previewConfig = this.config.previews, type = this.ctlr.videoContainer.dataset.previewType;
       if (type === "sprite" && previewConfig && typeof previewConfig !== "boolean" && previewConfig.cols && previewConfig.rows) {

@@ -47,7 +47,8 @@ export function getWindow(el?: any): (Window & typeof globalThis) | undefined {
 export function loadResource(src: string, type: ResourceType = "style", { module, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, attempts = 3, retryKey = false }: LoadResourceOptions = {}, w = window): Promise<HTMLElement | void> {
   ((w.t007 ??= {} as any), (w.t007._resourceCache ??= {}));
   if (w.t007._resourceCache[src]) return w.t007._resourceCache[src]; // set crossorigin on (links|scripts) if provided due to document.(styleSheets|scripts)
-  if (type === "script" ? Array.prototype.some.call(w.document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.some.call(w.document.styleSheets, (s) => isSameURL((s as CSSStyleSheet).href ?? "", src)) : false) return Promise.resolve();
+  const existing = type === "script" ? Array.prototype.find.call(w.document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.find.call(w.document.styleSheets, (s) => isSameURL((s as CSSStyleSheet).href, src)) : null;
+  if (existing) return (w.t007._resourceCache[src] = Promise.resolve(existing));
   w.t007._resourceCache[src] = new Promise<HTMLElement | void>((resolve, reject) => {
     (function tryLoad(remaining: number, el?: HTMLElement) {
       const onerror = () => {

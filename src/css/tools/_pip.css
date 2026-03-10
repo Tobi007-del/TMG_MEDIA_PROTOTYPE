@@ -7,6 +7,17 @@
   background: var(--tmg-video-background);
   border-radius: inherit;
 }
+.tmg-video-picture-in-picture-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--tmg-video-current-poster-url) center / var(--tmg-video-bg-safe-object-fit) no-repeat;
+  filter: blur(4px) brightness(0.5);
+}
 .tmg-video-container.tmg-video-picture-in-picture .tmg-video-picture-in-picture-wrapper,
 body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-container .tmg-video-picture-in-picture-wrapper {
   display: flex;

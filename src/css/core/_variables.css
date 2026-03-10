@@ -154,8 +154,11 @@
 /* extra variables */
 :where(:root, .tmg-media-container) {
   --tmg-video-brightness: 100;
+  --tmg-video-filter: brightness(var(--cmptd-brightness));
   --tmg-video-object-fit: contain;
+  --tmg-video-bg-safe-object-fit: contain;
   --tmg-video-alt-img-url: "";
+  --tmg-video-current-poster-url: "";
   --tmg-video-current-preview-url: "";
   --tmg-video-current-thumbnail-url: "";
   --tmg-video-img-background: center/cover no-repeat var(--tmg-video-alt-img-url), var(--tmg-video-background);

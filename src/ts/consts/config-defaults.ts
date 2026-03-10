@@ -6,7 +6,7 @@ import { IS_MOBILE } from "../utils";
 export const DEFAULT_VIDEO_BUILD: DeepPartial<VideoBuild> = {
   mediaPlayer: "TMG",
   mediaType: "video",
-  media: { title: "", artist: "", profile: "", album: "", artwork: [], chapterInfo: [], links: { title: "", artist: "", profile: "" } },
+  media: { title: "", artist: "", profile: "", album: "", artwork: [], chapterInfo: [], links: { title: "", artist: "", profile: "" }, autoGenerate: true },
   disabled: false,
   lightState: { disabled: false, controls: ["meta", "bigplaypause", "fullscreenorientation"], preview: { usePoster: true, time: 2 } },
   debug: true,

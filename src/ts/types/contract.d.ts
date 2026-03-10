@@ -83,15 +83,15 @@ export interface MediaStatus {
   // --- Network & Health ---
   readyState: number;
   networkState: number;
-  error: MediaError | null;
+  error: Inert<MediaError> | null;
   bandwidth: number | null; // Estimated Mbps
   // --- Buffering & Time ---
   waiting: boolean; // Spinner Active?
   stalled: boolean; // Network died?
   seeking: boolean; // Scrubbing?
-  buffered: TimeRanges;
-  played: TimeRanges;
-  seekable: TimeRanges;
+  buffered: Inert<TimeRanges>;
+  played: Inert<TimeRanges>;
+  seekable: Inert<TimeRanges>;
   duration: MediaContract["duration"]; // In seconds
   ended: MediaContract["ended"]; // Playback complete?
   // --- Dimensions ---
@@ -103,7 +103,7 @@ export interface MediaStatus {
   canPlay: boolean; // Can we start?
   canPlayThrough: boolean; // Can we finish?
   // --- Lists ---
-  textTracks: TextTrackList | any[];
+  textTracks: Inert<TextTrackList> | any[];
   audioTracks: unknown[]; // | AudioTrackList
   videoTracks: unknown[]; // | VideoTrackList
   levels: unknown[];
@@ -113,7 +113,7 @@ export interface MediaStatus {
     boolean
   > | null;
   // --- Active Content ---
-  activeCue: TextTrackCue | null; // The current subtitle/caption line
+  activeCue: Inert<TextTrackCue> | null; // The current subtitle/caption line
 }
 
 export interface MediaSettings {

@@ -1,4 +1,4 @@
-import { Event, Target, Payload, Getter, Setter, Deleter, Watcher, Listener, ListenerOptions, ListenerRecord, WatcherRecord, GetterRecord, SetterRecord, DeleterRecord, SyncOptions, ReactorOptions } from "../types/reactor";
+import type { Event, Target, Payload, Getter, Setter, Deleter, Watcher, Listener, ListenerOptions, ListenerRecord, WatcherRecord, GetterRecord, SetterRecord, DeleterRecord, SyncOptions, ReactorOptions } from "../types/reactor";
 import type { PathBranchValue, Paths, PathKey, PathValue, WildPaths } from "../types/obj";
 import { isStrictObj, mergeObjs, getTrailPaths, getTrailRecords, parseEvOpts, inAny, getAny, setAny, deleteAny, deepClone } from "../utils";
 import { inert, nuke } from "../tools/mixins";
@@ -6,11 +6,12 @@ import { inert, nuke } from "../tools/mixins";
 /***
  * ========= The S.I.A (State Intent Architecture) `Reactor` CODE PATTERN WATCHLIST =========
  * 1. non-stack loops & multiple optimizations this is surgical work on the root of reactivity
- * 2. used cached loop lengths to optimize b4 JIT Compiler does for optimal speed throughout,
- *    avoided myth of reverse while loops so new CPU's don't waste memory on a forward l1 Cache miss
+ * 2. used cached loop lengths to optimize b4 JIT Compiler does for optimal speed throughput,
+ * avoided myth of reverse while loops so new CPU's don't waste memory on a forward l1 Cache miss
  * 3. moved any logic involving `?.` or `??` outside repetitions to not accumulate the ~5x slowdown
  * 4. `?.` in cases where only other option was `&&` cuz `?.` benchmarks proves to be better
  * 5. adopted nooping strategy since JIT compiler makes it 2x faster than other alternatives
+ * 6. no unorthodox string deduplication or caching since string interning is native to JS
  * 6. `cord` is an alias for record and `es` for entries, avoided object pooling incase of logs
  * 7. it's all progressive: light at creation then grows during the user of desired features
  **/
@@ -24,6 +25,7 @@ export const REJECTABLE: unique symbol = Symbol.for("S.I.A_REJECTABLE"); // "Sta
 export const INERTIA: unique symbol = Symbol.for("S.I.A_INERTIA"); // "No Proxy" Marker
 export const TERMINATOR: unique symbol = Symbol.for("S.I.A_TERMINATOR"); // "Obj Operation Terminator" Marker
 const NOOP = () => {};
+const R_BATCH = ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window);
 const R_LOG = console.log.bind(console, "[S.I.A Reactor]");
 const EV_WARN = console.warn.bind(console, "[S.I.A Event]");
 const EV_OPTS = { LISTENER: ["capture", "depth", "once", "signal", "immediate"], MEDIATOR: ["lazy", "signal", "immediate"] } as const;
@@ -110,10 +112,10 @@ export class ReactorEvent<T, P extends WildPaths<T> = WildPaths<T>> {
 // ===========================================================================
 
 export class Reactor<T extends object> {
-  protected getters?: Map<Paths<T>, Array<GetterRecord<T>>>;
-  protected setters?: Map<Paths<T>, Array<SetterRecord<T>>>;
-  protected deleters?: Map<Paths<T>, Array<DeleterRecord<T>>>;
-  protected watchers?: Map<Paths<T>, Array<WatcherRecord<T>>>;
+  protected getters?: Map<WildPaths<T>, Array<GetterRecord<T>>>;
+  protected setters?: Map<WildPaths<T>, Array<SetterRecord<T>>>;
+  protected deleters?: Map<WildPaths<T>, Array<DeleterRecord<T>>>;
+  protected watchers?: Map<WildPaths<T>, Array<WatcherRecord<T>>>;
   protected listeners?: Map<WildPaths<T>, Array<ListenerRecord<T>>>;
   protected lineage?: WeakMap<object, { parent: object; key: string }[]>; // The Engine Room: Tracks Target
   protected queue?: Set<() => void>; // Tasks to run after flush
@@ -123,7 +125,7 @@ export class Reactor<T extends object> {
   protected proxyCache = new WeakMap<object, any>();
   protected log: (...args: any[]) => void = NOOP;
   protected _canLog = false; // keeping track so API getter doesn't slow down internal iterations in any way
-  public config: Omit<ReactorOptions<T>, "debug" | "referenceTracking"> = { eventBubbling: true, crossRealms: false };
+  public config: Omit<ReactorOptions<T>, "debug" | "referenceTracking"> = { crossRealms: false, eventBubbling: true, batchingFunction: R_BATCH, equalityTracking: true };
   public core: T; // `?:`s | pay the ~600 byte price upfront for what u might never use
 
   constructor(obj: T = {} as T, options?: ReactorOptions<T>) {
@@ -132,8 +134,8 @@ export class Reactor<T extends object> {
     if (!options) return;
     if ((this.isTracking = !!options.referenceTracking)) this.lineage = new WeakMap(); // tracking one-time set to avoid reference issues
     if (options.debug) this.canLog = true;
-    const { get = this.config.get, set = this.config.set, delete: del = this.config.delete, eventBubbling = this.config.eventBubbling, crossRealms = this.config.crossRealms } = options;
-    Object.assign(this.config, { get, set, delete: del, eventBubbling, crossRealms });
+    const { get = this.config.get, set = this.config.set, delete: del = this.config.delete, crossRealms = this.config.crossRealms, eventBubbling = this.config.eventBubbling, equalityTracking = this.config.equalityTracking } = options;
+    Object.assign(this.config, { get, set, delete: del, crossRealms, eventBubbling, equalityTracking });
   }
 
   protected proxied<O>(obj: O, rejectable = false, parent?: object, key?: string, path?: string): O {
@@ -149,46 +151,69 @@ export class Reactor<T extends object> {
         if (key === RAW) return object;
         let value = (object as any)[key];
         const safeKey = String(key),
-          fullPath = this.isTracking ? undefined : path ? path + "." + safeKey : safeKey,
-          paths: Paths<T>[] = this.isTracking ? this.trace(object, safeKey, []) : [fullPath! as Paths<T>];
+          fullPath = this.isTracking ? undefined : ((path ? path + "." + safeKey : safeKey) as Paths<T>),
+          paths = this.isTracking ? this.trace(object, safeKey) : fullPath!;
         this.log(`👀 [GET Trap] Initiated for "${safeKey}" on "${paths}"`);
         if (this.config.get) value = this.config.get(object as PathBranchValue<T>, key as PathKey<T>, value, receiver, paths);
-        if (this.getters)
-          for (let i = 0, len = paths.length; i < len; i++) {
-            const getters = this.getters.get(paths[i]);
-            if (!getters) continue;
-            const target: Target<T> = { path: paths[i], value, key: safeKey as PathKey<T>, object: receiver };
-            value = this.mediate(paths[i], { type: "get", target, currentTarget: target, root: this.core, rejectable } as Payload<T, Paths<T>>, "get", getters).value;
+        if (this.getters) {
+          const wildcords = this.getters.get("*"); // wild cords
+          for (let i = 0, len = this.isTracking ? paths.length : 1; i < len; i++) {
+            const currPath = (this.isTracking ? paths[i] : fullPath!) as Paths<T>,
+              cords = this.getters.get(currPath);
+            if (!cords && !wildcords) continue;
+            const target: Target<T> = { path: currPath, value, key: safeKey as PathKey<T>, object: receiver },
+              payload = { type: "get", target, currentTarget: target, root: this.core, rejectable } as Payload<T, Paths<T>>;
+            if (cords) value = this.mediate(currPath, payload, "get", cords);
+            if (!wildcords) continue;
+            target.value = value;
+            value = this.mediate("*", payload, "get", wildcords);
           } // Mediators
+        }
         return this.proxied(value, rejectable, object, safeKey, fullPath);
       },
       set: (object, key, value, receiver) => {
-        let terminated = false;
+        let unchanged,
+          safeValue,
+          safeOldValue,
+          terminated = false;
         const safeKey = String(key),
-          fullPath = this.isTracking ? undefined : path ? path + "." + safeKey : safeKey,
-          paths: Paths<T>[] = this.isTracking ? this.trace(object, safeKey, []) : [fullPath! as Paths<T>],
+          fullPath = this.isTracking ? undefined : ((path ? path + "." + safeKey : safeKey) as Paths<T>),
+          paths = this.isTracking ? this.trace(object, safeKey) : fullPath!,
           oldValue = (object as any)[key];
+        if (this.isTracking || this.config.equalityTracking) {
+          safeOldValue = oldValue?.[RAW] || oldValue;
+          safeValue = value?.[RAW] || value;
+          unchanged = Object.is(safeValue, safeOldValue);
+        }
+        if (this.config.equalityTracking && unchanged) return true;
         this.log(`✏️ [SET Trap] Initiated for "${safeKey}" on "${paths}"`);
         if (this.config.set) terminated = (value = this.config.set(object as PathBranchValue<T>, key as PathKey<T>, value, oldValue, receiver, paths)) === TERMINATOR;
-        if (this.setters)
+        if (this.setters) {
+          const wildcords = this.setters.get("*");
           for (let i = 0, len = paths.length; i < len; i++) {
-            const setters = this.setters.get(paths[i]);
-            if (!setters) continue;
-            const target: Target<T> = { path: paths[i], value, oldValue, key: safeKey as PathKey<T>, object: receiver },
-              result = this.mediate(paths[i], { type: "set", target, currentTarget: target, root: this.core, rejectable } as Payload<T, Paths<T>>, "set", setters);
-            if (!(terminated ||= result.terminated)) value = result.value;
+            const currPath = (this.isTracking ? paths[i] : fullPath!) as Paths<T>,
+              cords = this.setters.get(currPath);
+            if (!cords && !wildcords) continue;
+            const target: Target<T> = { path: currPath, value, oldValue, key: safeKey as PathKey<T>, object: receiver },
+              payload = { type: "set", target, currentTarget: target, root: this.core, terminated, rejectable } as Payload<T, Paths<T>>;
+            if (cords) {
+              const result = this.mediate(currPath, payload, "set", cords);
+              if (!(terminated ||= payload.terminated!)) value = result;
+            }
+            if (!wildcords) continue;
+            target.value = value;
+            const result = this.mediate("*", payload, "set", wildcords);
+            if (!(terminated ||= payload.terminated!)) value = result;
           } // Mediators
+        }
         if (terminated) return (this.log(`🛡️ [SET Mediator] Terminated on "${paths}"`), true); // soft rejection if terminated: `true`
         (object as any)[key] = value;
-        if (this.isTracking) {
-          const oldV = oldValue?.[RAW] || oldValue,
-            newV = value?.[RAW] || value;
-          !Object.is(newV, oldV) && (this.unlink(oldV, object, safeKey), this.link(newV, object, safeKey));
-        }
+        if (this.isTracking && !unchanged) (this.unlink(safeOldValue, object, safeKey), this.link(safeValue, object, safeKey));
         if (this.watchers || this.listeners)
-          for (let i = 0; i < paths.length; i++) {
-            const target: Target<T> = { path: paths[i], value, oldValue, key: safeKey as PathKey<T>, object: receiver };
-            this.notify(paths[i], { type: "set", target, currentTarget: target, root: this.core, rejectable } as Payload<T, Paths<T>>);
+          for (let i = 0, len = paths.length; i < len; i++) {
+            const currPath = (this.isTracking ? paths[i] : fullPath!) as Paths<T>,
+              target: Target<T> = { path: currPath, value, oldValue, key: safeKey as PathKey<T>, object: receiver };
+            this.notify(currPath, { type: "set", target, currentTarget: target, root: this.core, terminated, rejectable } as Payload<T, Paths<T>>);
           } // Listeners
         return true;
       },
@@ -198,32 +223,42 @@ export class Reactor<T extends object> {
           terminated = false;
         const safeKey = String(key),
           fullPath = this.isTracking ? undefined : ((path ? path + "." + safeKey : safeKey) as Paths<T>),
-          paths: Paths<T>[] = this.isTracking ? this.trace(object, safeKey, []) : [fullPath!],
+          paths = this.isTracking ? this.trace(object, safeKey) : fullPath!,
           oldValue = (object as any)[key];
         this.log(`🗑️ [DELETE Trap] Initiated for "${safeKey}" on "${paths}"`);
         if (this.config.delete) terminated = (value = this.config.delete(object as PathBranchValue<T>, key as PathKey<T>, oldValue, receiver, paths)) === TERMINATOR;
-        if (this.deleters)
+        if (this.deleters) {
+          const wildcords = this.deleters.get("*");
           for (let i = 0, len = paths.length; i < len; i++) {
-            const deleters = this.deleters.get(paths[i]);
-            if (!deleters) continue;
-            const target: Target<T> = { path: paths[i], value, oldValue, key: safeKey as PathKey<T>, object: receiver },
-              result = this.mediate(paths[i], { type: "delete", target, currentTarget: target, root: this.core, rejectable } as Payload<T, Paths<T>>, "delete", deleters);
-            if (!(terminated ||= result.terminated)) value = result.value;
+            const currPath = (this.isTracking ? paths[i] : fullPath!) as Paths<T>,
+              cords = this.deleters.get(currPath);
+            if (!cords && !wildcords) continue;
+            const target: Target<T> = { path: currPath, value, oldValue, key: safeKey as PathKey<T>, object: receiver },
+              payload = { type: "delete", target, currentTarget: target, root: this.core, rejectable } as Payload<T, Paths<T>>;
+            if (cords) {
+              const result = this.mediate(currPath, payload, "delete", cords);
+              if (!(terminated ||= payload.terminated!)) value = result;
+            }
+            if (!wildcords) continue;
+            const result = this.mediate("*", payload, "delete", wildcords);
+            if (!(terminated ||= payload.terminated!)) value = result;
           } // Mediators
+        }
         if (terminated) return (this.log(`🛡️ [DELETE Mediator] Terminated on "${paths}"`), true); // soft rejection if terminated: `true`
         delete (object as any)[key];
         this.isTracking && this.unlink(oldValue?.[RAW] || oldValue, object, safeKey);
         if (this.watchers || this.listeners)
           for (let i = 0, len = paths.length; i < len; i++) {
-            const target: Target<T> = { path: paths[i], value, oldValue, key: safeKey as PathKey<T>, object: receiver };
-            this.notify(paths[i], { type: "delete", target, currentTarget: target, root: this.core, rejectable } as Payload<T, Paths<T>>);
+            const currPath = (this.isTracking ? paths[i] : fullPath!) as Paths<T>,
+              target: Target<T> = { path: currPath, value, oldValue, key: safeKey as PathKey<T>, object: receiver };
+            this.notify(currPath, { type: "delete", target, currentTarget: target, root: this.core, rejectable } as Payload<T, Paths<T>>);
           } // Listeners
         return true;
       },
     });
     return (this.proxyCache.set(obj as object, proxy), proxy) as O;
   }
-  protected trace(target: object, path: string, paths: string[], visited = new WeakSet<object>()): Paths<T>[] {
+  protected trace(target: object, path: string, paths: string[] = [], visited = new WeakSet<object>()): Paths<T>[] {
     if (Object.is(target, (this.core as any)[RAW] || this.core)) return (paths.push(path), paths as Paths<T>[]);
     if (visited.has(target)) return paths as Paths<T>[]; // Stop infinite loops
     visited.add(target);
@@ -247,27 +282,36 @@ export class Reactor<T extends object> {
     if (es) for (let i = 0, len = es.length; i < len; i++) if (Object.is(es[i].parent, parent) && es[i].key === key) return void es.splice(i, 1);
   }
 
-  protected mediate<P extends Paths<T>>(path: Paths<T>, payload: Payload<T, P>, type: "get" | "set" | "delete", cords: Array<GetterRecord<T> | SetterRecord<T> | DeleterRecord<T>>) {
+  protected mediate<P extends WildPaths<T>>(path: WildPaths<T>, payload: Payload<T, P>, type: "get", cords: GetterRecord<T>[]): PathValue<T, P>;
+  protected mediate<P extends WildPaths<T>>(path: WildPaths<T>, payload: Payload<T, P>, type: "set", cords: SetterRecord<T>[]): PathValue<T, P>;
+  protected mediate<P extends WildPaths<T>>(path: WildPaths<T>, payload: Payload<T, P>, type: "delete", cords: DeleterRecord<T>[]): PathValue<T, P>;
+  protected mediate<P extends WildPaths<T>>(path: WildPaths<T>, payload: Payload<T, P>, type: "get" | "set" | "delete", cords: Array<GetterRecord<T> | SetterRecord<T> | DeleterRecord<T>>) {
     let terminated = false,
-      value = payload.target.value; // mediator called when necessary & ready for the argument work, all facts (params) are brought to the table
-    const getting = type === "get",
-      setting = type === "set",
-      mediators = getting ? this.getters : setting ? this.setters : this.deleters;
-    for (let i = !getting ? 0 : cords.length - 1, len = !getting ? cords.length : -1; i !== len; i += !getting ? 1 : -1) {
-      const response: any = getting ? (cords[i] as GetterRecord<T>).cb(value, payload) : setting ? (cords[i] as SetterRecord<T>).cb(value, terminated, payload) : (cords[i] as DeleterRecord<T>).cb(terminated, payload); // all will mediate
-      if (getting || !(terminated ||= response === TERMINATOR)) value = response as PathValue<T, P>;
+      value = payload.target.value; // mediator called when necessary & ready for the argument work, all facts (params) are brought to the table so no `?.`
+    const isGet = type === "get",
+      isSet = type === "set",
+      mediators = isGet ? this.getters : isSet ? this.setters : this.deleters;
+    for (let i = !isGet ? 0 : cords.length - 1, len = !isGet ? cords.length : -1; i !== len; i += !isGet ? 1 : -1) {
+      const response: any = isGet ? (cords[i] as GetterRecord<T>).cb(value, payload) : isSet ? (cords[i] as SetterRecord<T>).cb(value, terminated, payload) : (cords[i] as DeleterRecord<T>).cb(terminated, payload); // all will mediate
+      if (isGet || !(terminated ||= payload.terminated = response === TERMINATOR)) value = response as PathValue<T, P>;
       if (cords[i].once) (cords.splice(i--, 1), !cords.length && mediators!.delete(path));
     }
-    return { value, terminated }; // set - FIFO, get - LIFO
+    return value; // set - FIFO, get - LIFO
   }
 
   protected notify<P extends Paths<T>>(path: P, payload: Payload<T, P>): void {
     if (this.watchers) {
-      const cords = this.watchers.get(path);
+      const wildcords = this.watchers.get("*"),
+        cords = this.watchers.get(path);
       if (cords)
         for (let i = 0, len = cords.length; i < len; i++) {
           cords[i].cb(payload.target.value, payload); // watchers do not terminate as they're after the OP
           if (cords[i].once) (cords.splice(i--, 1), !cords.length && this.watchers!.delete(path));
+        }
+      if (wildcords)
+        for (let i = 0, len = wildcords.length; i < len; i++) {
+          wildcords[i].cb(payload.target.value, payload);
+          if (wildcords[i].once) (wildcords.splice(i--, 1), !wildcords.length && this.watchers!.delete("*"));
         }
     }
     this.listeners && this.schedule(path, payload); // batch is undefined till listeners are available
@@ -277,10 +321,10 @@ export class Reactor<T extends object> {
     (this.batch.set(path, payload), !this.isBatching && this.initBatching());
   }
   protected initBatching(): void {
-    (queueMicrotask(() => this.flush()), (this.isBatching = true)); // do the `!isBatching` check outisde so the func cost is only on first batch
+    ((this.isBatching = true), this.config.batchingFunction!(() => this.flush())); // do the `!isBatching` check outisde so the func cost is only on first batch
   }
   protected flush(): void {
-    (this.batch && this.tick(this.batch.keys()), (this.isBatching = false)); // not slowing dis down with a `?.size` since it's like always filled, rather pay the empty iterator cost once when empty
+    ((this.isBatching = false), this.batch && this.tick(this.batch.keys())); // not slowing dis down with a `?.size` since it's like always filled, rather pay the empty iterator cost once when empty
     if (this.queue?.size) for (const task of this.queue) (task(), this.queue.delete(task)); // you can still stall with an empty batch, and slowing dis down with `?.size`; almost always empty
   }
 
@@ -312,10 +356,10 @@ export class Reactor<T extends object> {
     e.type = path !== e.target.path ? "update" : e.staticType; // `update` for ancestors
     e.currentTarget = { path, value, oldValue: e.type !== "update" ? e.target.oldValue : undefined, key: (e.type !== "update" ? path : path.slice(path.lastIndexOf(".") + 1) || "") as PathKey<T>, object: object as PathBranchValue<T> };
     let tDepth, lDepth;
-    for (let i = 0; i < cords.length; i++) {
+    for (let i = 0, len = cords.length; i < len; i++) {
       if (e.immediatePropagationStopped) break;
       if (cords[i].capture !== isCapture) continue;
-      if (cords[i].depth != undefined) {
+      if (cords[i].depth !== undefined) {
         ((tDepth ??= this.getDepth(e.target.path)), (lDepth ??= this.getDepth(path))); // calc if ever needed
         if (tDepth > lDepth + cords[i].depth!) continue;
       }
@@ -359,8 +403,8 @@ export class Reactor<T extends object> {
     return this.queue?.delete(task);
   }
 
-  public get<P extends Paths<T>>(path: P, cb: Getter<T, P>, opts?: SyncOptions): Reactor<T>["noget"] {
-    this.getters ??= new Map<Paths<T>, Array<GetterRecord<T>>>();
+  public get<P extends WildPaths<T>>(path: P, cb: Getter<T, P>, opts?: SyncOptions): Reactor<T>["noget"] {
+    this.getters ??= new Map<WildPaths<T>, Array<GetterRecord<T>>>();
     const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR);
     let cords = this.getters.get(path),
       cord: GetterRecord<T> | undefined;
@@ -377,18 +421,18 @@ export class Reactor<T extends object> {
     lazy ? this.stall(task) : task(); // a progressive enhancment for gets that are virtual and should not affect init
     return this.bind(cord, signal);
   }
-  public gonce<P extends Paths<T>>(path: P, cb: Getter<T, P>, opts?: SyncOptions): Reactor<T>["noget"] {
+  public gonce<P extends WildPaths<T>>(path: P, cb: Getter<T, P>, opts?: SyncOptions): Reactor<T>["noget"] {
     return this.get<P>(path, cb, { ...parseEvOpts(opts, EV_OPTS.MEDIATOR), once: true });
   }
-  public noget<P extends Paths<T>>(path: P, cb: Getter<T, P>): boolean | undefined {
+  public noget<P extends WildPaths<T>>(path: P, cb: Getter<T, P>): boolean | undefined {
     const cords = this.getters?.get(path);
     if (!cords) return undefined;
     for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.getters!.delete(path), true);
     return false;
   }
 
-  public set<P extends Paths<T>>(path: P, cb: Setter<T, P>, opts?: SyncOptions): Reactor<T>["noset"] {
-    this.setters ??= new Map<Paths<T>, Array<SetterRecord<T>>>();
+  public set<P extends WildPaths<T>>(path: P, cb: Setter<T, P>, opts?: SyncOptions): Reactor<T>["noset"] {
+    this.setters ??= new Map<WildPaths<T>, Array<SetterRecord<T>>>();
     const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR);
     let cords = this.setters.get(path),
       cord: SetterRecord<T> | undefined;
@@ -400,23 +444,23 @@ export class Reactor<T extends object> {
         }
     if (cord) return cord.clup;
     cord = { cb: cb as unknown as Setter<T>, once, clup: () => (lazy && this.nostall(task), this.noset<P>(path, cb)) };
-    if (immediate) (immediate !== "auto" || inAny(this.core, path)) && setAny(this.core, path as Paths<T>, this.getContext(path).value!);
+    if (immediate) (immediate !== "auto" || inAny(this.core, path)) && setAny(this.core, path as Paths<T>, this.getContext(path as Paths<T>).value!);
     const task = () => (cords ?? (this.setters!.set(path, (cords = [])), cords)).push(cord);
     lazy ? this.stall(task) : task();
     return this.bind(cord, signal);
   }
-  public sonce<P extends Paths<T>>(path: P, cb: Setter<T, P>, opts?: SyncOptions): Reactor<T>["noset"] {
+  public sonce<P extends WildPaths<T>>(path: P, cb: Setter<T, P>, opts?: SyncOptions): Reactor<T>["noset"] {
     return this.set<P>(path, cb, Object.assign(parseEvOpts(opts, EV_OPTS.MEDIATOR), { once: true }));
   }
-  public noset<P extends Paths<T>>(path: P, cb: Setter<T, P>): boolean | undefined {
+  public noset<P extends WildPaths<T>>(path: P, cb: Setter<T, P>): boolean | undefined {
     const cords = this.setters?.get(path);
     if (!cords) return undefined;
     for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.setters!.delete(path), true);
     return false;
   }
 
-  public delete<P extends Paths<T>>(path: P, cb: Deleter<T, P>, opts?: SyncOptions): Reactor<T>["nodelete"] {
-    this.deleters ??= new Map<Paths<T>, Array<DeleterRecord<T>>>();
+  public delete<P extends WildPaths<T>>(path: P, cb: Deleter<T, P>, opts?: SyncOptions): Reactor<T>["nodelete"] {
+    this.deleters ??= new Map<WildPaths<T>, Array<DeleterRecord<T>>>();
     const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR);
     let cords = this.deleters.get(path),
       cord: DeleterRecord<T> | undefined;
@@ -433,18 +477,18 @@ export class Reactor<T extends object> {
     lazy ? this.stall(task) : task();
     return this.bind(cord, signal);
   }
-  public donce<P extends Paths<T>>(path: P, cb: Deleter<T, P>, opts?: SyncOptions): Reactor<T>["nodelete"] {
+  public donce<P extends WildPaths<T>>(path: P, cb: Deleter<T, P>, opts?: SyncOptions): Reactor<T>["nodelete"] {
     return this.delete<P>(path, cb, Object.assign(parseEvOpts(opts, EV_OPTS.MEDIATOR), { once: true }));
   }
-  public nodelete<P extends Paths<T>>(path: P, cb: Deleter<T, P>): boolean | undefined {
+  public nodelete<P extends WildPaths<T>>(path: P, cb: Deleter<T, P>): boolean | undefined {
     const cords = this.deleters?.get(path);
     if (!cords) return undefined;
     for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.deleters!.delete(path), true);
     return false;
   }
 
-  public watch<P extends Paths<T>>(path: P, cb: Watcher<T, P>, opts?: SyncOptions): Reactor<T>["nowatch"] {
-    this.watchers ??= new Map<Paths<T>, Array<WatcherRecord<T>>>();
+  public watch<P extends WildPaths<T>>(path: P, cb: Watcher<T, P>, opts?: SyncOptions): Reactor<T>["nowatch"] {
+    this.watchers ??= new Map<WildPaths<T>, Array<WatcherRecord<T>>>();
     const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR);
     let cords = this.watchers.get(path),
       cord: WatcherRecord<T> | undefined;
@@ -464,10 +508,10 @@ export class Reactor<T extends object> {
     lazy ? this.stall(task) : task();
     return this.bind(cord, signal);
   }
-  public wonce<P extends Paths<T>>(path: P, cb: Watcher<T, P>, opts?: SyncOptions): Reactor<T>["nowatch"] {
+  public wonce<P extends WildPaths<T>>(path: P, cb: Watcher<T, P>, opts?: SyncOptions): Reactor<T>["nowatch"] {
     return this.watch<P>(path, cb, Object.assign(parseEvOpts(opts, EV_OPTS.MEDIATOR), { once: true }));
   }
-  public nowatch<P extends Paths<T>>(path: P, cb: Watcher<T, P>): boolean | undefined {
+  public nowatch<P extends WildPaths<T>>(path: P, cb: Watcher<T, P>): boolean | undefined {
     const cords = this.watchers?.get(path);
     if (!cords) return undefined;
     for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.watchers!.delete(path), true);
@@ -488,7 +532,7 @@ export class Reactor<T extends object> {
     if (cord) return cord.clup;
     cord = { cb: cb as Listener<T>, capture, depth, once, clup: () => this.off<P>(path, cb, options) };
     if (immediate && (immediate !== "auto" || inAny(this.core, path))) {
-      const target = this.getContext(path as Paths<T>) as Target<T, P>;
+      const target = this.getContext(path) as Target<T, P>;
       cb(new ReactorEvent<T, P>({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, this.config.eventBubbling, this._canLog) as Event<T, P>);
     }
     (cords ?? (this.listeners.set(path, (cords = [])), cords)).push(cord);
@@ -516,7 +560,7 @@ export class Reactor<T extends object> {
   }
 
   public snapshot(): T {
-    return deepClone(this.core);
+    return deepClone(this.core, !!this.config.crossRealms);
   }
   public cascade({ type, currentTarget: { path, value: news, oldValue: olds } }: ReactorEvent<T>, objSafe = true): void {
     if ((type !== "set" && type !== "delete") || !(isStrictObj(news, this.config.crossRealms) || Array.isArray(news)) || (objSafe ? !(isStrictObj(olds, this.config.crossRealms) || Array.isArray(olds)) : false)) return;

@@ -32,13 +32,14 @@ export interface Media extends MediaMetadata {
   artist: string;
   profile: string;
   album: string;
-  artwork: Array<{ src: string; sizes: string; type: string }>;
+  artwork: Array<{ src: string; sizes?: string; type?: string }>;
   chapterInfo: Array<{
     title: string;
     startTime: number;
-    artwork: Array<{ src: string; sizes: string; type: string }>;
+    artwork: Array<{ src: string; sizes?: string; type?: string }>;
   }>;
   links: Record<"title" | "artist" | "profile", string>;
+  autoGenerate: boolean;
 }
 
 export class MediaPlug extends BasePlug<Media> {
@@ -50,7 +51,8 @@ export class MediaPlug extends BasePlug<Media> {
     videoProfile && this.ctlr.setImgLoadState({ target: videoProfile });
   }
   public wire(): void {
-    this.ctlr.media.on("state.paused", ({ value }) => !value && this.syncMediaSession(), { signal: this.signal });
+    this.ctlr.media.on("state.paused", ({ value }) => !value && this.syncSession(), { signal: this.signal });
+    this.ctlr.media.on("status.loadedMetadata", () => this.autoGenerate(), { signal: this.signal });
     this.ctlr.config.watch("media.title", this.forwardTitle, { immediate: true, signal: this.signal });
     this.ctlr.config.watch("media.artist", this.forwardArtist, { immediate: true, signal: this.signal });
     this.ctlr.config.watch("media.profile", this.forwardProfile, { immediate: true, signal: this.signal });
@@ -77,9 +79,9 @@ export class MediaPlug extends BasePlug<Media> {
     this.ctlr.media.intent.poster = value?.[0]?.src || "";
   }
   protected handleMediaChange(): void {
-    if (!this.ctlr.media.state.paused) this.syncMediaSession();
+    if (!this.ctlr.media.state.paused) this.syncSession();
   }
-  public syncMediaSession(): void {
+  public syncSession(): void {
     if (!navigator.mediaSession || (document.pictureInPictureElement && !this.ctlr.isUIActive("pictureInPicture"))) return;
     if (this.config) navigator.mediaSession.metadata = new MediaMetadata(this.config as MediaMetadataInit);
     const set = (...args: Parameters<typeof navigator.mediaSession.setActionHandler>) => navigator.mediaSession.setActionHandler(...args);
@@ -93,6 +95,13 @@ export class MediaPlug extends BasePlug<Media> {
       currentIndex = this.ctlr.state.currentPlaylistIndex ?? 0;
     set("previoustrack", playlist && currentIndex > 0 && playlistPlug ? playlistPlug.previousVideo : null);
     set("nexttrack", playlist && currentIndex < (playlist?.length ?? 0) - 1 && playlistPlug ? playlistPlug.nextVideo : null);
+  }
+  public async autoGenerate(): Promise<void> {
+    const url = this.config.artwork?.[0]?.src;
+    if (!this.config.autoGenerate || (url && !url.startsWith("blob:"))) return;
+    url && URL.revokeObjectURL(url);
+    this.config.artwork = [{ src: "" }];
+    // JS: this.config.artwork = [{ src: (await this.getVideoFrame(undefined, this.config.lightState.preview.time)).url }];
   }
 }
 

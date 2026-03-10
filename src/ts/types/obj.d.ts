@@ -20,11 +20,7 @@ type NoTraverse =
   | Window
   | Document
   | DOMTokenList
-  | TextTrackList
-  | TextTrackCue
   | AbortSignal
-  | TimeRanges
-  | MediaStream
   | Inert<unknown>;
 
 export type Paths<T, S extends string = ".", D extends number = RDepth> = [D] extends [0]
@@ -44,10 +40,10 @@ export type ChildPaths<T, P extends WildPaths<T>, S extends string = "."> = P ex
   : P | Extract<Paths<T, S>, `${P}${S}${string}`>;
 
 export type PathKey<T, P extends string = Paths<T>, S extends string = "."> = P extends "*"
-  ? keyof T & (string | number)
+  ? keyof T & (string | number) // Or: DeepKeys<T>
   : PathLeaf<P, S>; // Loose since reactor just slices strings
 export type StrictPathKey<T, P extends string = Paths<T>, S extends string = "."> = P extends "*"
-  ? keyof T & (string | number)
+  ? keyof T & (string | number) // Or: DeepKeys<T>
   : P extends `${infer K}${S}${infer Rest}`
     ? K extends keyof T
       ? StrictPathKey<T[K], Rest, S>
@@ -57,7 +53,7 @@ export type StrictPathKey<T, P extends string = Paths<T>, S extends string = "."
       : never; // Strict since it returns existing keys only
 
 export type PathValue<T, P extends string = Paths<T>, S extends string = "."> = P extends "*"
-  ? T
+  ? any // Or: DeepValues<T>
   : P extends `${infer K}${S}${infer Rest}`
     ? K extends keyof T
       ? PathValue<T[K], Rest, S>
@@ -67,7 +63,7 @@ export type PathValue<T, P extends string = Paths<T>, S extends string = "."> = 
       : never;
 
 export type PathBranchValue<T, P extends string = Paths<T>, S extends string = "."> = P extends "*"
-  ? T
+  ? any // Or: DeepValues<T>
   : P extends `${string}${S}${string}`
     ? PathValue<T, PathBranch<P, S>, S>
     : T;

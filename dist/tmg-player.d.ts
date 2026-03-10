@@ -102,6 +102,7 @@ export type ArrowNavHandle = {
 	getAbleIndex: (targetIndex: number, e?: KeyEvent) => number | null;
 	typeAhead: (key: string) => void;
 	items: () => HTMLElement[];
+	activeIndex: () => number;
 	activeItem: () => HTMLElement | null;
 	getGrid: () => {
 		x: number;
@@ -112,7 +113,7 @@ export type ArrowNavHandle = {
 };
 declare function initArrowFocusNav(container: HTMLElement, cfg?: ArrowNavConfig): ArrowNavHandle;
 export type Primitive = string | number | boolean | bigint | symbol | null | undefined;
-export type NoTraverse = Primitive | Function | Date | Error | RegExp | Promise<any> | Map<any, any> | WeakMap<any, any> | Set<any> | WeakSet<any> | HTMLElement | Element | Node | EventTarget | Window | Document | DOMTokenList | TextTrackList | TextTrackCue | AbortSignal | TimeRanges | MediaStream | Inert<unknown>;
+export type NoTraverse = Primitive | Function | Date | Error | RegExp | Promise<any> | Map<any, any> | WeakMap<any, any> | Set<any> | WeakSet<any> | HTMLElement | Element | Node | EventTarget | Window | Document | DOMTokenList | AbortSignal | Inert<unknown>;
 export type Paths<T, S extends string = ".", D extends number = RDepth> = [
 	D
 ] extends [
@@ -123,9 +124,12 @@ export type Paths<T, S extends string = ".", D extends number = RDepth> = [
 }[keyof T & (string | number)];
 export type WildPaths<T, S extends string = "."> = "*" | Paths<T, S>;
 export type ChildPaths<T, P extends WildPaths<T>, S extends string = "."> = P extends "*" ? Paths<T, S> : P | Extract<Paths<T, S>, `${P}${S}${string}`>;
-export type PathKey<T, P extends string = Paths<T>, S extends string = "."> = P extends "*" ? keyof T & (string | number) : PathLeaf<P, S>; // Loose since reactor just slices strings
-export type PathValue<T, P extends string = Paths<T>, S extends string = "."> = P extends "*" ? T : P extends `${infer K}${S}${infer Rest}` ? K extends keyof T ? PathValue<T[K], Rest, S> : never : P extends keyof T ? T[P] : never;
-export type PathBranchValue<T, P extends string = Paths<T>, S extends string = "."> = P extends "*" ? T : P extends `${string}${S}${string}` ? PathValue<T, PathBranch<P, S>, S> : T;
+export type PathKey<T, P extends string = Paths<T>, S extends string = "."> = P extends "*" ? keyof T & (string | number) // Or: DeepKeys<T>
+ : PathLeaf<P, S>; // Loose since reactor just slices strings
+export type PathValue<T, P extends string = Paths<T>, S extends string = "."> = P extends "*" ? any // Or: DeepValues<T>
+ : P extends `${infer K}${S}${infer Rest}` ? K extends keyof T ? PathValue<T[K], Rest, S> : never : P extends keyof T ? T[P] : never;
+export type PathBranchValue<T, P extends string = Paths<T>, S extends string = "."> = P extends "*" ? any // Or: DeepValues<T>
+ : P extends `${string}${S}${string}` ? PathValue<T, PathBranch<P, S>, S> : T;
 export type Unflatten<T extends object, S extends string = "."> = UnionToIntersection<{
 	[K in keyof T & string]: UnflattenKey<K, T[K], S>;
 }[keyof T & string]>; // Turns dotted keys into nested objects while preserving value types
@@ -181,11 +185,12 @@ export type RPrev = [
 /***
  * ========= The S.I.A (State Intent Architecture) `Reactor` CODE PATTERN WATCHLIST =========
  * 1. non-stack loops & multiple optimizations this is surgical work on the root of reactivity
- * 2. used cached loop lengths to optimize b4 JIT Compiler does for optimal speed throughout,
- *    avoided myth of reverse while loops so new CPU's don't waste memory on a forward l1 Cache miss
+ * 2. used cached loop lengths to optimize b4 JIT Compiler does for optimal speed throughput,
+ * avoided myth of reverse while loops so new CPU's don't waste memory on a forward l1 Cache miss
  * 3. moved any logic involving `?.` or `??` outside repetitions to not accumulate the ~5x slowdown
  * 4. `?.` in cases where only other option was `&&` cuz `?.` benchmarks proves to be better
  * 5. adopted nooping strategy since JIT compiler makes it 2x faster than other alternatives
+ * 6. no unorthodox string deduplication or caching since string interning is native to JS
  * 6. `cord` is an alias for record and `es` for entries, avoided object pooling incase of logs
  * 7. it's all progressive: light at creation then grows during the user of desired features
  **/
@@ -227,10 +232,10 @@ export declare class ReactorEvent<T, P extends WildPaths<T> = WildPaths<T>> {
 	get canWarn(): boolean;
 }
 export declare class Reactor<T extends object> {
-	protected getters?: Map<Paths<T>, Array<GetterRecord<T>>>;
-	protected setters?: Map<Paths<T>, Array<SetterRecord<T>>>;
-	protected deleters?: Map<Paths<T>, Array<DeleterRecord<T>>>;
-	protected watchers?: Map<Paths<T>, Array<WatcherRecord<T>>>;
+	protected getters?: Map<WildPaths<T>, Array<GetterRecord<T>>>;
+	protected setters?: Map<WildPaths<T>, Array<SetterRecord<T>>>;
+	protected deleters?: Map<WildPaths<T>, Array<DeleterRecord<T>>>;
+	protected watchers?: Map<WildPaths<T>, Array<WatcherRecord<T>>>;
 	protected listeners?: Map<WildPaths<T>, Array<ListenerRecord<T>>>;
 	protected lineage?: WeakMap<object, {
 		parent: object;
@@ -247,16 +252,15 @@ export declare class Reactor<T extends object> {
 	core: T;
 	constructor(obj?: T, options?: ReactorOptions<T>);
 	protected proxied<O>(obj: O, rejectable?: boolean, parent?: object, key?: string, path?: string): O;
-	protected trace(target: object, path: string, paths: string[], visited?: WeakSet<object>): Paths<T>[];
+	protected trace(target: object, path: string, paths?: string[], visited?: WeakSet<object>): Paths<T>[];
 	protected link(target: any, parent: object, key: string, typecheck?: boolean, es?: {
 		parent: object;
 		key: string;
 	}[]): void;
 	protected unlink(target: any, parent: object, key: string): void;
-	protected mediate<P extends Paths<T>>(path: Paths<T>, payload: Payload<T, P>, type: "get" | "set" | "delete", cords: Array<GetterRecord<T> | SetterRecord<T> | DeleterRecord<T>>): {
-		value: PathValue<T, P, "."> | PathValue<T, ChildPaths<T, P, ".">, ".">;
-		terminated: boolean;
-	};
+	protected mediate<P extends WildPaths<T>>(path: WildPaths<T>, payload: Payload<T, P>, type: "get", cords: GetterRecord<T>[]): PathValue<T, P>;
+	protected mediate<P extends WildPaths<T>>(path: WildPaths<T>, payload: Payload<T, P>, type: "set", cords: SetterRecord<T>[]): PathValue<T, P>;
+	protected mediate<P extends WildPaths<T>>(path: WildPaths<T>, payload: Payload<T, P>, type: "delete", cords: DeleterRecord<T>[]): PathValue<T, P>;
 	protected notify<P extends Paths<T>>(path: P, payload: Payload<T, P>): void;
 	protected schedule<P extends Paths<T>>(path: P, payload: Payload<T, P>): void;
 	protected initBatching(): void;
@@ -269,18 +273,18 @@ export declare class Reactor<T extends object> {
 	tick(paths?: Paths<T> | Iterable<Paths<T>>): void;
 	stall(task: () => any): void;
 	nostall(task: () => any): boolean | undefined;
-	get<P extends Paths<T>>(path: P, cb: Getter<T, P>, opts?: SyncOptions): Reactor<T>["noget"];
-	gonce<P extends Paths<T>>(path: P, cb: Getter<T, P>, opts?: SyncOptions): Reactor<T>["noget"];
-	noget<P extends Paths<T>>(path: P, cb: Getter<T, P>): boolean | undefined;
-	set<P extends Paths<T>>(path: P, cb: Setter<T, P>, opts?: SyncOptions): Reactor<T>["noset"];
-	sonce<P extends Paths<T>>(path: P, cb: Setter<T, P>, opts?: SyncOptions): Reactor<T>["noset"];
-	noset<P extends Paths<T>>(path: P, cb: Setter<T, P>): boolean | undefined;
-	delete<P extends Paths<T>>(path: P, cb: Deleter<T, P>, opts?: SyncOptions): Reactor<T>["nodelete"];
-	donce<P extends Paths<T>>(path: P, cb: Deleter<T, P>, opts?: SyncOptions): Reactor<T>["nodelete"];
-	nodelete<P extends Paths<T>>(path: P, cb: Deleter<T, P>): boolean | undefined;
-	watch<P extends Paths<T>>(path: P, cb: Watcher<T, P>, opts?: SyncOptions): Reactor<T>["nowatch"];
-	wonce<P extends Paths<T>>(path: P, cb: Watcher<T, P>, opts?: SyncOptions): Reactor<T>["nowatch"];
-	nowatch<P extends Paths<T>>(path: P, cb: Watcher<T, P>): boolean | undefined;
+	get<P extends WildPaths<T>>(path: P, cb: Getter<T, P>, opts?: SyncOptions): Reactor<T>["noget"];
+	gonce<P extends WildPaths<T>>(path: P, cb: Getter<T, P>, opts?: SyncOptions): Reactor<T>["noget"];
+	noget<P extends WildPaths<T>>(path: P, cb: Getter<T, P>): boolean | undefined;
+	set<P extends WildPaths<T>>(path: P, cb: Setter<T, P>, opts?: SyncOptions): Reactor<T>["noset"];
+	sonce<P extends WildPaths<T>>(path: P, cb: Setter<T, P>, opts?: SyncOptions): Reactor<T>["noset"];
+	noset<P extends WildPaths<T>>(path: P, cb: Setter<T, P>): boolean | undefined;
+	delete<P extends WildPaths<T>>(path: P, cb: Deleter<T, P>, opts?: SyncOptions): Reactor<T>["nodelete"];
+	donce<P extends WildPaths<T>>(path: P, cb: Deleter<T, P>, opts?: SyncOptions): Reactor<T>["nodelete"];
+	nodelete<P extends WildPaths<T>>(path: P, cb: Deleter<T, P>): boolean | undefined;
+	watch<P extends WildPaths<T>>(path: P, cb: Watcher<T, P>, opts?: SyncOptions): Reactor<T>["nowatch"];
+	wonce<P extends WildPaths<T>>(path: P, cb: Watcher<T, P>, opts?: SyncOptions): Reactor<T>["nowatch"];
+	nowatch<P extends WildPaths<T>>(path: P, cb: Watcher<T, P>): boolean | undefined;
 	on<P extends WildPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): Reactor<T>["off"];
 	once<P extends WildPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): Reactor<T>["off"];
 	off<P extends WildPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): boolean | undefined;
@@ -357,6 +361,7 @@ export type Payload<T, P extends WildPaths<T> = WildPaths<T>> = DirectPayload<T,
 export interface BasePayload<T, P extends WildPaths<T> = WildPaths<T>> {
 	currentTarget: Target<T, P>; // use this to survive shape changes from nesting
 	root: T;
+	terminated?: boolean; // for mediators to signal operation termination but doesn't stop the chain
 	rejectable: boolean;
 }
 export interface DirectPayload<T, P extends WildPaths<T> = WildPaths<T>> extends BasePayload<T, P> {
@@ -383,30 +388,30 @@ export interface OverrideEvPart<PL extends {
 // ===========================================================================
 // REACTIVITY CALLBACKS (The Handlers)
 // ===========================================================================
-export type Getter<T, P extends Paths<T> = Paths<T>> = (value: PathValue<T, P> | undefined, payload: Payload<T, P>) => PathValue<T, P> | undefined;
-export type Setter<T, P extends Paths<T> = Paths<T>> = (value: PathValue<T, P> | undefined, terminated: boolean, payload: Payload<T, P>) => PathValue<T, P> | typeof TERMINATOR | undefined;
-export type Deleter<T, P extends Paths<T> = Paths<T>> = (terminated: boolean, payload: Payload<T, P>) => typeof TERMINATOR | undefined;
-export type Watcher<T, P extends Paths<T> = Paths<T>> = (value: PathValue<T, P> | undefined, payload: Payload<T, P>) => void;
+export type Getter<T, P extends WildPaths<T> = WildPaths<T>> = (value: PathValue<T, P>, payload: Payload<T, P>) => PathValue<T, P> | undefined;
+export type Setter<T, P extends WildPaths<T> = WildPaths<T>> = (value: PathValue<T, P>, terminated: boolean, payload: Payload<T, P>) => PathValue<T, P> | typeof TERMINATOR | undefined;
+export type Deleter<T, P extends WildPaths<T> = WildPaths<T>> = (terminated: boolean, payload: Payload<T, P>) => typeof TERMINATOR | undefined;
+export type Watcher<T, P extends WildPaths<T> = WildPaths<T>> = (value: PathValue<T, P>, payload: Payload<T, P>) => void;
 export type Listener<T, P extends WildPaths<T> = WildPaths<T>> = (event: Event$1<T, P>) => void;
 // ===========================================================================
 // ENGINE RECORDS (Internal Storage)
 // ===========================================================================
-export type GetterRecord<T extends object, P extends Paths<T> = Paths<T>> = {
+export type GetterRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
 	cb: Getter<T, P>;
 	clup?: Reactor<T>["noget"];
 	sclup?: () => void;
 } & SyncOptionsTuple;
-export type SetterRecord<T extends object, P extends Paths<T> = Paths<T>> = {
+export type SetterRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
 	cb: Setter<T, P>;
 	clup?: Reactor<T>["noset"];
 	sclup?: () => void;
 } & SyncOptionsTuple;
-export type DeleterRecord<T extends object, P extends Paths<T> = Paths<T>> = {
+export type DeleterRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
 	cb: Deleter<T, P>;
 	clup?: Reactor<T>["nodelete"];
 	sclup?: () => void;
 } & SyncOptionsTuple;
-export type WatcherRecord<T extends object, P extends Paths<T> = Paths<T>> = {
+export type WatcherRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
 	cb: Watcher<T, P>;
 	clup?: Reactor<T>["nowatch"];
 	sclup?: () => void;
@@ -424,23 +429,25 @@ export interface SyncOptionsTuple {
 	once?: boolean;
 	signal?: AbortSignal;
 	immediate?: boolean | "auto";
-}
+} // "*" path apart from listener's should not use `immediate`
 export type SyncOptions = boolean | SyncOptionsTuple;
 export interface ListenerOptionsTuple extends Omit<SyncOptionsTuple, "lazy"> {
 	capture?: boolean;
 	depth?: number;
 }
 export type ListenerOptions = boolean | ListenerOptionsTuple;
-// "wild" mediation, (mediator|listener) for desired path, equality checks eg: `object.is()`
+// "almighty" mediation, (mediator|listener) for desired path, equality checks eg: `object.is()`
 export interface ReactorOptions<T extends object, P extends Paths<T> = Paths<T>> {
-	get?: (object: PathBranchValue<T, P>, key: PathKey<T, P>, value: PathValue<T, P>, receiver: Reactive<T>, paths: Paths<T>[]) => PathValue<T, P> | undefined;
-	set?: (object: PathBranchValue<T, P>, key: PathKey<T, P>, value: PathValue<T, P>, oldValue: PathValue<T, P>, receiver: Reactive<T>, paths: Paths<T>[]) => PathValue<T, P> | typeof TERMINATOR | undefined;
-	delete?: (object: PathBranchValue<T, P>, key: PathKey<T, P>, oldValue: PathValue<T, P>, receiver: Reactive<T>, paths: Paths<T>[]) => typeof TERMINATOR | undefined;
+	get?: (object: PathBranchValue<T, P>, key: PathKey<T, P>, value: PathValue<T, P>, receiver: Reactive<T>, path: Paths<T> | Paths<T>[]) => PathValue<T, P> | undefined;
+	set?: (object: PathBranchValue<T, P>, key: PathKey<T, P>, value: PathValue<T, P>, oldValue: PathValue<T, P>, receiver: Reactive<T>, path: Paths<T> | Paths<T>[]) => PathValue<T, P> | typeof TERMINATOR | undefined;
+	delete?: (object: PathBranchValue<T, P>, key: PathKey<T, P>, oldValue: PathValue<T, P>, receiver: Reactive<T>, path: Paths<T> | Paths<T>[]) => typeof TERMINATOR | undefined;
 	debug?: boolean;
-	eventBubbling?: boolean; // default true, set to false to prevent bubbling (not recommended if you want power)
-	referenceTracking?: boolean; // one-time set activates lineage tracing
 	crossRealms?: boolean; // needed for object type detection if using across realms e.g, iframes or other environments
-}
+	eventBubbling?: boolean; // default true, set to false to prevent bubbling (not recommended if you want power)
+	batchingFunction?: (cb: () => void) => void; // for listener's notifications, e.g: `queueMicrotask`, `unstable_batchedUpdates` from ReactDOM
+	equalityTracking?: boolean; // enables tracking of previous values for equality checks using `Object.is`
+	referenceTracking?: boolean; // one-time set activates lineage tracing
+} // debating making use of the Reflect API opt-in
 export declare abstract class Controllable<Config = any, State = any> {
 	protected readonly ac: AbortController;
 	protected readonly signal: AbortSignal;
@@ -783,19 +790,20 @@ export interface Media extends MediaMetadata {
 	album: string;
 	artwork: Array<{
 		src: string;
-		sizes: string;
-		type: string;
+		sizes?: string;
+		type?: string;
 	}>;
 	chapterInfo: Array<{
 		title: string;
 		startTime: number;
 		artwork: Array<{
 			src: string;
-			sizes: string;
-			type: string;
+			sizes?: string;
+			type?: string;
 		}>;
 	}>;
 	links: Record<"title" | "artist" | "profile", string>;
+	autoGenerate: boolean;
 }
 declare class MediaPlug extends BasePlug<Media> {
 	static readonly plugName: string;
@@ -808,7 +816,8 @@ declare class MediaPlug extends BasePlug<Media> {
 	protected handleMediaLink({ target: { key, value } }: Event$1<VideoBuild, "media.links.title" | "media.links.artist" | "media.links.profile">): void;
 	protected handleArtwork({ currentTarget: { value } }: Event$1<VideoBuild, "media.artwork">): void;
 	protected handleMediaChange(): void;
-	syncMediaSession(): void;
+	syncSession(): void;
+	autoGenerate(): Promise<void>;
 }
 declare class SrcPlug extends BasePlug<Src> {
 	static readonly plugName: string;
@@ -879,7 +888,6 @@ declare class CSSPlug extends BasePlug<Css> {
 	protected wireCSSMediator(): void;
 	protected getCSSValue(key: string): string;
 	protected getClassValue(key: string): string;
-	protected handleCSSChange({ type, target: t }: Event$1<VideoBuild, "settings.css">): void;
 	protected apply(key: string, value: any): void;
 	protected updateCssVariable(key: string, value: any): void;
 	protected updateClassValue(key: string, value: any): void;
@@ -1251,6 +1259,14 @@ declare class TimePlug extends BasePlug<CTime> {
 	private skipDuration;
 	private skipDurationId;
 	private currentSkipNotifier;
+	guardedTimePaths: readonly [
+		"lightState.preview.time",
+		"settings.time.min",
+		"settings.time.max",
+		"settings.time.start",
+		"settings.time.end",
+		"settings.auto.next.videoPreview.time"
+	];
 	wire(): void;
 	protected forwardTimeValue(value?: number): void;
 	protected handleTimeUpdate({ target }: Event$1<CtlrMedia, "state.currentTime">): void;
@@ -1262,6 +1278,7 @@ declare class TimePlug extends BasePlug<CTime> {
 	get nextFormat(): CTime["format"];
 	rotateFormat(): void;
 	skip(duration: number): void;
+	guardTimeValues(): void;
 }
 /**
  * HISTORY ENTRY: The DNA of a specific moment in time.
@@ -1800,15 +1817,15 @@ export interface MediaStatus {
 	// --- Network & Health ---
 	readyState: number;
 	networkState: number;
-	error: MediaError | null;
+	error: Inert<MediaError> | null;
 	bandwidth: number | null; // Estimated Mbps
 	// --- Buffering & Time ---
 	waiting: boolean; // Spinner Active?
 	stalled: boolean; // Network died?
 	seeking: boolean; // Scrubbing?
-	buffered: TimeRanges;
-	played: TimeRanges;
-	seekable: TimeRanges;
+	buffered: Inert<TimeRanges>;
+	played: Inert<TimeRanges>;
+	seekable: Inert<TimeRanges>;
 	duration: MediaContract["duration"]; // In seconds
 	ended: MediaContract["ended"]; // Playback complete?
 	// --- Dimensions ---
@@ -1820,7 +1837,7 @@ export interface MediaStatus {
 	canPlay: boolean; // Can we start?
 	canPlayThrough: boolean; // Can we finish?
 	// --- Lists ---
-	textTracks: TextTrackList | any[];
+	textTracks: Inert<TextTrackList> | any[];
 	audioTracks: unknown[]; // | AudioTrackList
 	videoTracks: unknown[]; // | VideoTrackList
 	levels: unknown[];
@@ -1828,7 +1845,7 @@ export interface MediaStatus {
 	xrCapabilities: Record<"hasPosition" | "hasOrientation" | "isEmulated", // 6DoF- Room-scale, 3DoF- Head rotation, Emulated- Magic Window
 	boolean> | null;
 	// --- Active Content ---
-	activeCue: TextTrackCue | null; // The current subtitle/caption line
+	activeCue: Inert<TextTrackCue> | null; // The current subtitle/caption line
 }
 export interface MediaSettings {
 	// --- Defaults (Startup values) ---
@@ -1937,7 +1954,7 @@ declare function getTrailRecords<T extends object>(obj: T, path: WildPaths<T>): 
 	PathValue<T, WildPaths<T>>,
 	PathValue<T, WildPaths<T>>
 ][];
-declare function deepClone<T>(obj: T, visited?: WeakMap<WeakKey, any>): T;
+declare function deepClone<T>(obj: T, crossRealms?: boolean, visited?: WeakMap<WeakKey, any>): T;
 declare function isValidNum(val: any): boolean;
 declare function clamp(min: number | undefined, val: number, max?: number): number;
 declare function safeNum(number: any, fallback?: number): number;

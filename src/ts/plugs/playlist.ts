@@ -2,7 +2,7 @@ import { BasePlug } from ".";
 import type { VideoBuild, Settings } from "../types/build";
 import type { Event } from "../types/reactor";
 import { DEFAULT_VIDEO_ITEM_BUILD } from "../consts/config-defaults";
-import { mergeObjs, isSameURL } from "../utils";
+import { mergeObjs, isSameURL, deepClone } from "../utils";
 
 const timeKeys = ["min", "max", "start", "end", "previews"] as const;
 export type PlaylistItemTimeKey = (typeof timeKeys)[number];
@@ -26,7 +26,7 @@ export class PlaylistPlug extends BasePlug<Playlist, PlaylistState> {
     this.ctlr.config.get("playlist", (v) => (v?.length ? v : null), { signal: this.signal });
     this.ctlr.config.set("playlist", (v): Playlist => v?.map((i: any) => mergeObjs(DEFAULT_VIDEO_ITEM_BUILD, i)) ?? null, { signal: this.signal });
     this.ctlr.config.on("playlist", this.handlePlaylistChange, { signal: this.signal, immediate: true, depth: 1 });
-    this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && this.ctlr.media.status.readyState && this.ctlr.media.state.currentTime && (this.ctlr.config.playlist[this.ctlr.state.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
+    this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && (this.ctlr.config.playlist[this.ctlr.state.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
   }
 
   protected handlePlaylistChange({ root }: Event<VideoBuild, "playlist">): void {
@@ -34,8 +34,7 @@ export class PlaylistPlug extends BasePlug<Playlist, PlaylistState> {
     const list = root.playlist;
     const v = list?.find((v) => (v.media.id && v.media.id === root.media.id) || isSameURL(v.src, root.src));
     this.ctlr.state.currentIndex = v ? list?.indexOf(v) : 0;
-    if (v) this.applyItem(v, false);
-    else this.movePlaylistTo(this.ctlr.state.currentIndex);
+    v ? this.applyItem(v, false) : this.movePlaylistTo(this.ctlr.state.currentIndex);
   }
 
   public movePlaylistTo(index: number, shouldPlay?: boolean): void {
@@ -46,11 +45,12 @@ export class PlaylistPlug extends BasePlug<Playlist, PlaylistState> {
   }
 
   protected applyItem(item: PlaylistItemBuild, reset = true): void {
-    this.ctlr.config.media = item.media;
+    this.ctlr.config.media = deepClone(item.media);
     timeKeys.forEach((p) => (this.ctlr.config.settings.time[p] = item.settings.time[p] as any));
-    this.ctlr.config.tracks = item.tracks ?? [];
+    this.ctlr.config.tracks = deepClone(item.tracks ?? []);
     if (reset) this.ctlr.config.src = item.src || "";
-    if (reset && "sources" in item && item.sources) this.ctlr.config.sources = item.sources;
+    if (reset && "sources" in item && item.sources) this.ctlr.config.sources = deepClone(item.sources);
+    // JS: this.setControlsState("playlist");
   }
 
   public previousVideo(): void {

@@ -31,7 +31,7 @@ export async function getDominantColor(src: string | HTMLImageElement | HTMLCanv
     x = c.getContext("2d"),
     s = Math.min(64, (src as HTMLImageElement | HTMLCanvasElement).width, (src as HTMLImageElement | HTMLCanvasElement).height);
   c.width = c.height = s;
-  src && x?.drawImage(src as CanvasImageSource, 0, 0, s, s);
+  src?.width && src?.height && x?.drawImage(src as CanvasImageSource, 0, 0, s, s);
   const d = src && (x?.getImageData(0, 0, s, s).data as Uint8ClampedArray), // had to fool ts, coallesced to 0 below
     ct: Record<string, number> = {},
     pt: Record<string, RGB> = {} as Record<string, RGB>;

@@ -68,7 +68,7 @@ export class IconRegistry extends BaseRegistry<string> {
   }
   // Bulk register a map of icons { play: "<svg...>", pause: "<svg...>" }
   static registerAll(icons: Record<string, string>) {
-    Object.entries(icons).forEach(([k, v]) => this.instance.register(k, v));
+    Object.keys(icons).forEach((k) => this.instance.register(k, icons[k]));
   }
 }
 

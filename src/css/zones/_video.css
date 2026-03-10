@@ -20,7 +20,7 @@
 }
 .tmg-video,
 .tmg-video-thumbnail {
-  filter: brightness(var(--cmptd-brightness));
+  filter: var(--tmg-video-filter);
 }
 :is(*:not(body):has(.tmg-media-container:is(.tmg-video-fullscreen, .tmg-video-theater)), #o#o#o#o#o) {
   flex: 0 0 100%;
