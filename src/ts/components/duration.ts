@@ -11,14 +11,17 @@ export class Duration extends BaseComponent<DurationConfig, ComponentState, HTML
   protected plug?: TimePlug;
 
   public create() {
-    this.element = createEl("button", { className: "tmg-video-total-time" }, { draggableControl: "", controlId: this.name });
-    return this.element;
+    return (this.element = createEl("button", { className: "tmg-video-total-time" }, { draggableControl: "", controlId: this.name }));
   }
 
   public wire(): void {
+    // Variables Assignment
     this.plug = this.ctlr.getPlug<TimePlug>("time");
+    // Event Listeners
     this.plug && this.element.addEventListener("click", this.plug?.rotateFormat, { signal: this.signal });
+    // Ctlr Media Listeners
     this.ctlr.media.on("status.duration", this.updateUI, { signal: this.signal, immediate: true });
+    // ---- Config --------
     this.ctlr.config.on("settings.time.format", this.updateARIA, { signal: this.signal, immediate: true });
   }
 

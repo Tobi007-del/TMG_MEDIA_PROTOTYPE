@@ -1,4 +1,4 @@
-import { setTimeout, addSafeClicks } from "../../utils";
+import { setTimeout, addSafeClicks, IS_MOBILE } from "../../utils";
 import { OverlayPlug, ControlPanelPlug, BaseModule } from "../";
 import { Timeline } from "../../components";
 import type { TimePlug } from "../time";
@@ -14,6 +14,7 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
   protected skipPersistPosition: "left" | "right" | null = null;
 
   public wire(): void {
+    // Event Listeners
     addSafeClicks(this.ctlr.DOM.controlsContainer, this.handleClick, this.handleDblClick, { capture: true, signal: this.signal });
     [this.ctlr.DOM.controlsContainer, this.ctlr.DOM.bottomControlsWrapper].forEach((el) => {
       el?.addEventListener("click", this.handleAnyClick, { capture: true, signal: this.signal });
@@ -47,13 +48,13 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
   protected handleHoverPointerActive(e: Event): void {
     const { target, pointerType } = e as PointerEvent,
       overlay = this.ctlr.getPlug<OverlayPlug>("overlay");
-    (!pointerType || !this.ctlr.state.isMobile) && overlay?.show();
+    (!pointerType || !IS_MOBILE) && overlay?.show();
     pointerType && (target as HTMLElement).closest(".tmg-video-side-controls-wrapper") && clearTimeout(overlay?.overlayDelayId ?? -1);
   }
 
   protected handleHoverPointerOut(): void {
     const overlay = this.ctlr.getPlug<OverlayPlug>("overlay");
-    setTimeout(() => !this.ctlr.state.isMobile && !this.ctlr.videoContainer.matches(":hover") && overlay?.remove());
+    setTimeout(() => !IS_MOBILE && !this.ctlr.videoContainer.matches(":hover") && overlay?.remove());
   }
 
   protected handleClick(e: MouseEvent): void {

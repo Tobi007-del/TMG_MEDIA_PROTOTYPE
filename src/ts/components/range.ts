@@ -47,23 +47,28 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
   }
 
   public create(): HTMLElement {
+    // Variables Assignments
     this.container = createEl("div", { className: "tmg-video-range-container", tabIndex: 0, role: "slider" });
     this.barsWrapper = createEl("div", { className: "tmg-video-bars-wrapper" });
     this.baseBar = createEl("div", { className: "tmg-video-bar tmg-video-base-bar" });
     this.valueBar = createEl("div", { className: "tmg-video-bar tmg-video-value-bar" });
     this.thumbIndicator = createEl("div", { className: "tmg-video-thumb-indicator" });
+    // DOM Injection
     this.barsWrapper.append(this.baseBar, this.valueBar);
     this.container.append(this.barsWrapper, this.thumbIndicator);
     return (this.element = this.container);
   }
 
   public wire(): void {
+    // Event Listeners
     this.container.addEventListener("pointerdown", this.handlePointerDown, { signal: this.signal });
     this.container.addEventListener("keydown", this.handleKeyDown, { signal: this.signal });
     this.container.addEventListener("wheel", this.handleWheel, { passive: false, signal: this.signal });
     this.barsWrapper.addEventListener("mousemove", this.handleInput, { signal: this.signal });
     ["mouseleave", "touchend", "touchcancel"].forEach((e) => this.barsWrapper.addEventListener(e, this.stopPreview, { signal: this.signal }));
+    // Config Setters
     this.config.set("value", (value) => stepNum(value, this.config), { signal: this.signal });
+    // ------ Listeners
     this.config.on("label", ({ value }) => (this.container.ariaLabel = value!), { signal: this.signal, immediate: true });
     this.config.on("min", ({ value }) => (this.container.ariaValueMin = String(value!)), { signal: this.signal, immediate: true });
     this.config.on("max", ({ value }) => (this.container.ariaValueMax = String(value!)), { signal: this.signal, immediate: true });

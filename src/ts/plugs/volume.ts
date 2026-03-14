@@ -27,33 +27,67 @@ export class VolumePlug extends BasePlug<Volume> {
   }
 
   public wire(): void {
-    this.ctlr.config.set("settings.volume.value", (value) => clamp(this.config.min, value!, this.config.max), { signal: this.signal });
-    this.ctlr.media.element.addEventListener("volumechange", this.handleNativeVolumeChange, { signal: this.signal });
+    // Variables Assignment
     const configVolume = this.config.value ?? this.ctlr.media.state.volume * 100;
     this.lastVolume = clamp(this.config.min, configVolume, this.config.max);
     this.shouldMute = this.shouldSetLastVolume = this.ctlr.media.element?.muted ?? false;
     this.config.value = this.shouldMute ? 0 : this.lastVolume;
+    // Event Listeners
+    this.ctlr.media.element.addEventListener("volumechange", this.handleNativeVolumeChange, { signal: this.signal });
+    // Ctlr Config Getters
+    this.ctlr.config.get("settings.volume.value", (value) => (this.gainNode ? Math.round(((this.gainNode.gain?.value ?? 2) / 2) * 100) : value), true);
+    // ----------- Setters
+    this.ctlr.config.set("settings.volume.value", (value) => clamp(this.config.min, value, this.config.max), { signal: this.signal });
+    // ----------- Watchers
     this.ctlr.config.watch("settings.volume.value", this.forwardVolume, { signal: this.signal, immediate: true });
-    this.ctlr.config.watch("settings.volume.muted", this.forwardMuted, { signal: this.signal });
+    this.ctlr.config.watch("settings.volume.muted", this.forwardMuted, { signal: this.signal, immediate: true });
+    // ---- Media Listeners
     this.ctlr.media.on("intent.volume", this.handleVolumeIntent, { capture: true, signal: this.signal });
     this.ctlr.media.on("intent.muted", this.handleMutedIntent, { capture: true, signal: this.signal });
-    this.ctlr.config.on("settings.volume.min", this.handleMinChange, { signal: this.signal });
-    this.ctlr.config.on("settings.volume.max", this.handleMaxChange, { signal: this.signal });
+    // ---- Config --------
+    this.ctlr.config.on("settings.volume.min", this.handleMin, { signal: this.signal });
+    this.ctlr.config.on("settings.volume.max", this.handleMax, { signal: this.signal });
+    // Post Wiring
+    this.ctlr.media.tech.features.volume = true;
   }
 
-  protected setupAudio(): void {
-    if (this.audioSetup || connectMediaToAudioManager(this.ctlr.media.element) === "unavailable") return;
-    this.gainNode = (this.ctlr.media.element as any)._tmgGainNode;
-    const DCN = (this.ctlr.media.element as any)._tmgDynamicsCompressorNode;
-    if (DCN) ((DCN.threshold.value = -30), (DCN.knee.value = 20), (DCN.ratio.value = 12), (DCN.attack.value = 0.003), (DCN.release.value = 0.25));
-    this.audioSetup = true;
+  protected forwardVolume(value: number): void {
+    this.ctlr.media.intent.volume = value;
+  }
+  protected forwardMuted(value: boolean): void {
+    this.ctlr.media.intent.muted = value;
   }
 
-  protected cancelAudio(): void {
-    this.ctlr.media.intent.volume = clamp(0, (this.gainNode?.gain?.value ?? 2) / 2, 1);
-    (this.ctlr.media.element as any).mediaElementSourceNode?.disconnect();
-    this.gainNode?.disconnect();
-    this.audioSetup = false;
+  protected handleVolumeIntent(e: Event<CtlrMedia, "intent.volume">): void {
+    if (e.resolved) return;
+    if (this.ctlr.media.element !== this.ctlr.media.tech.element) return e.reject(this.name);
+    this.handleVolumeState(e.value);
+    this.ctlr.media.state.volume = e.value;
+    e.resolve(this.name);
+  }
+
+  protected handleMutedIntent(e: Event<CtlrMedia, "intent.muted">): void {
+    if (e.resolved) return;
+    if (this.ctlr.media.element !== this.ctlr.media.tech.element) return e.reject(this.name);
+    if (e.oldValue === e.value) return e.resolve(this.name);
+    this.handleMutedState(e.value);
+    this.ctlr.media.state.muted = e.value;
+    e.resolve(this.name);
+  }
+
+  protected handleMin({ target }: Event<VideoBuild, "settings.volume.min">): void {
+    const min = target.value;
+    if (this.config.value < min) this.config.value = min;
+    if (this.lastVolume < min) this.lastVolume = min;
+  }
+
+  protected handleMax({ target }: Event<VideoBuild, "settings.volume.max">): void {
+    const max = target.value;
+    if (this.config.value > max) this.config.value = max;
+    if (this.lastVolume > max) this.lastVolume = max;
+    this.ctlr.videoContainer.classList.toggle("tmg-video-volume-boost", max > 100);
+    this.ctlr.config.settings.css.volumeSliderPercent = Math.round((100 / max) * 100);
+    this.ctlr.config.settings.css.maxVolumeRatio = max / 100;
   }
 
   protected handleVolumeState(volume: number): void {
@@ -92,44 +126,19 @@ export class VolumePlug extends BasePlug<Volume> {
     }
   }
 
-  protected forwardVolume(value?: number): void {
-    this.ctlr.media.intent.volume = value! / 100;
+  protected setupAudio(): void {
+    if (this.audioSetup || connectMediaToAudioManager(this.ctlr.media.element) === "unavailable") return;
+    this.gainNode = (this.ctlr.media.element as any)._tmgGainNode;
+    const DCN = (this.ctlr.media.element as any)._tmgDynamicsCompressorNode;
+    if (DCN) ((DCN.threshold.value = -30), (DCN.knee.value = 20), (DCN.ratio.value = 12), (DCN.attack.value = 0.003), (DCN.release.value = 0.25));
+    this.audioSetup = true;
   }
 
-  protected forwardMuted(value?: boolean): void {
-    this.ctlr.media.intent.muted = value!;
-  }
-
-  protected handleVolumeIntent(e: Event<CtlrMedia, "intent.volume">): void {
-    if (e.resolved) return;
-    if (this.ctlr.media.element !== this.ctlr.media.tech.element) return;
-    this.handleVolumeState(e.value!);
-    this.ctlr.media.state.volume = e.value!;
-    e.resolve(this.name);
-  }
-
-  protected handleMutedIntent(e: Event<CtlrMedia, "intent.muted">): void {
-    if (e.resolved) return;
-    if (this.ctlr.media.element !== this.ctlr.media.tech.element) return;
-    if (e.oldValue === e.value) return e.resolve(this.name);
-    this.handleMutedState(e.value!);
-    this.ctlr.media.state.muted = e.value!;
-    e.resolve(this.name);
-  }
-
-  protected handleMinChange({ target }: Event<VideoBuild, "settings.volume.min">): void {
-    const min = target.value!;
-    if (this.config.value! < min) this.config.value = min;
-    if (this.lastVolume < min) this.lastVolume = min;
-  }
-
-  protected handleMaxChange({ target }: Event<VideoBuild, "settings.volume.max">): void {
-    const max = target.value!;
-    if (this.config.value! > max) this.config.value = max;
-    if (this.lastVolume > max) this.lastVolume = max;
-    this.ctlr.videoContainer.classList.toggle("tmg-video-volume-boost", max > 100);
-    this.ctlr.config.settings.css.volumeSliderPercent = Math.round((100 / max) * 100);
-    this.ctlr.config.settings.css.maxVolumeRatio = max / 100;
+  protected cancelAudio(): void {
+    this.ctlr.media.intent.volume = clamp(0, (this.gainNode?.gain?.value ?? 2) / 2, 1);
+    (this.ctlr.media.element as any).mediaElementSourceNode?.disconnect();
+    this.gainNode?.disconnect();
+    this.audioSetup = false;
   }
 
   public toggleMute(option?: "auto"): void {
@@ -142,7 +151,7 @@ export class VolumePlug extends BasePlug<Volume> {
   public changeVolume(value: number): void {
     const sign = value >= 0 ? "+" : "-";
     value = Math.abs(value);
-    let volume = this.shouldSetLastVolume ? this.lastVolume : this.config.value!;
+    let volume = this.shouldSetLastVolume ? this.lastVolume : this.config.value;
     if (sign === "-") {
       if (volume > this.config.min) volume -= volume % value ? volume % value : value;
       // if (volume === 0) return this.ctlr.notify("volumemuted");
@@ -160,8 +169,8 @@ export class VolumePlug extends BasePlug<Volume> {
     if (volume > 5) this.sliderAptVolume = volume;
   }
 
-  protected handleNativeVolumeChange = (): void => {
-    this.ctlr.media.element.volume = 1;
+  protected handleNativeVolumeChange(): void {
+    this.ctlr.media.element.volume = 1; // there are always edge cases even in advanced systems
     if (this.config.muted !== this.ctlr.media.element.muted) this.toggleMute();
-  };
+  }
 }

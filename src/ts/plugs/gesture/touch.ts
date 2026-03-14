@@ -1,5 +1,5 @@
 import { clamp, setTimeout } from "../../utils";
-import { BaseModule, OverlayPlug, VolumePlug } from "../";
+import { BaseModule, OverlayPlug, VolumePlug, type FastPlayPlug } from "../";
 
 export interface TouchConfig {
   volume: boolean;
@@ -18,19 +18,20 @@ export class TouchModule extends BaseModule<TouchConfig> {
   protected lastX = 0;
   protected lastY = 0;
   protected zone: { x: "left" | "right"; y: "top" | "bottom" } | null = null;
-  protected xCheck = false;
-  protected yCheck = false;
+  public xCheck = false;
+  public yCheck = false;
   protected canCancel = true;
   protected cancelTimeoutId = -1;
   protected sliderTimeoutId = -1;
   protected nextTime = 0;
 
   public wire() {
+    // Event Listeners
     this.ctlr.DOM.controlsContainer?.addEventListener("touchstart", this.handleStart, { capture: true, signal: this.signal });
   }
 
   protected canHandle(e: TouchEvent): boolean {
-    return !this.ctlr.config.disabled && e.touches?.length === 1 && e.target === this.ctlr.DOM.controlsContainer && !this.ctlr.state.speedCheck;
+    return !this.ctlr.config.disabled && e.touches?.length === 1 && e.target === this.ctlr.DOM.controlsContainer && !this.ctlr.getPlug<FastPlayPlug>("fastPlay")?.speedCheck;
   }
 
   protected handleStart(e: TouchEvent): void {
@@ -45,7 +46,7 @@ export class TouchModule extends BaseModule<TouchConfig> {
 
   protected handleInit(e: Event): void {
     const te = e as TouchEvent;
-    if (te.touches?.length > 1 || this.ctlr.state.speedCheck) return;
+    if (te.touches?.length > 1 || this.ctlr.getPlug<FastPlayPlug>("fastPlay")?.speedCheck) return;
     te.preventDefault();
     const tc = this.config,
       rect = this.ctlr.videoContainer.getBoundingClientRect(),
@@ -60,12 +61,12 @@ export class TouchModule extends BaseModule<TouchConfig> {
 
     if (deltaX > deltaY * tc.axesRatio && rLeft > tc.inset && rLeft < rect.width - tc.inset) {
       if (tc.timeline) {
-        this.ctlr.state.gestureTouchXCheck = this.xCheck = true;
+        this.xCheck = true;
         this.ctlr.videoContainer.addEventListener("touchmove", this.handleXMove, { passive: false, signal: this.signal });
       }
     } else if (deltaY > deltaX * tc.axesRatio && rTop > tc.inset && rTop < rect.height - tc.inset) {
       if ((tc.volume && this.zone?.x === "right") || (tc.brightness && this.zone?.x === "left")) {
-        this.ctlr.state.gestureTouchYCheck = this.yCheck = true;
+        this.yCheck = true;
         this.ctlr.videoContainer.addEventListener("touchmove", this.handleYMove, { passive: false, signal: this.signal });
       }
     }
@@ -122,14 +123,14 @@ export class TouchModule extends BaseModule<TouchConfig> {
 
   protected handleEnd(): void {
     if (this.xCheck) {
-      this.ctlr.state.gestureTouchXCheck = this.xCheck = false;
+      this.xCheck = false;
       this.ctlr.videoContainer.removeEventListener("touchmove", this.handleXMove);
       // JS: this.DOM.touchTimelineNotifier?.classList.remove("tmg-video-control-active");
       this.ctlr.DOM.touchTimelineNotifier?.classList.remove("tmg-video-control-active");
       if (!this.canCancel) this.ctlr.media.intent.currentTime = this.nextTime;
     }
     if (this.yCheck) {
-      this.ctlr.state.gestureTouchYCheck = this.yCheck = false;
+      this.yCheck = false;
       this.ctlr.videoContainer.removeEventListener("touchmove", this.handleYMove);
       clearTimeout(this.sliderTimeoutId);
       this.sliderTimeoutId = setTimeout(

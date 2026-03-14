@@ -10,6 +10,8 @@ export const DEFAULT_MEDIA_STATE: MediaState = {
   // Engine
   volume: 1,
   muted: false,
+  brightness: 100,
+  dark: false,
   playbackRate: 1,
   // Modes
   pictureInPicture: false,

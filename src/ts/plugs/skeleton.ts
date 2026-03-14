@@ -10,45 +10,24 @@ export class SkeletonPlug extends BasePlug<Skeleton> {
   public static readonly isCore: boolean = true;
 
   public mount(): void {
-    this.setupContainers();
+    // Properties Assignment
+    assignEl(this.ctlr.videoContainer, { role: "region", ariaLabel: "Video Player", className: `tmg-video-container tmg-media-container${IS_MOBILE ? " tmg-video-mobile" : ""}${this.ctlr.media.state.paused ? " tmg-video-paused" : ""}` }, { trackKind: "captions", volumeLevel: "muted", brightnessLevel: "dark", objectFit: this.ctlr.config.settings.css.objectFit || "contain" });
+    assignEl(this.ctlr.pseudoVideoContainer, { role: "status", className: "tmg-pseudo-video-container tmg-media-container" });
+    assignEl(this.ctlr.pseudoVideo, { ariaHidden: "true", className: "tmg-pseudo-video tmg-media", muted: true, autoplay: false });
+    // DOM Injection
+    this.ctlr.pseudoVideoContainer.appendChild(this.ctlr.pseudoVideo);
+    this.ctlr.media.element.parentElement?.insertBefore(this.ctlr.videoContainer, this.ctlr.media.element);
     this.injectInterface();
+    this.ctlr.DOM.containerContent?.prepend(this.ctlr.media.element);
   }
 
   public wire(): void {
-    this.ctlr.media.on("state.paused", this.handlePausedChange, { signal: this.signal, immediate: true });
+    // Ctlr Media Listeners
+    this.ctlr.media.on("state.paused", this.handlePausedState, { signal: this.signal, immediate: true });
     this.ctlr.media.on("state.currentTime", () => this.ctlr.videoContainer.classList.remove("tmg-video-replay"), { signal: this.signal, immediate: true });
     this.ctlr.media.on("status.ended", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-replay", value), { signal: this.signal, immediate: true });
     this.ctlr.media.on("status.waiting", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-buffering", value), { signal: this.signal, immediate: true });
     this.ctlr.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
-  }
-
-  protected setupContainers(): void {
-    assignEl(
-      this.ctlr.videoContainer,
-      {
-        role: "region",
-        ariaLabel: "Video Player",
-        className: `tmg-video-container tmg-media-container${IS_MOBILE ? " tmg-video-mobile" : ""}${this.ctlr.media.state.paused ? " tmg-video-paused" : ""}`,
-      },
-      {
-        trackKind: "captions",
-        volumeLevel: "muted",
-        brightnessLevel: "dark",
-        objectFit: this.ctlr.config.settings.css.objectFit || "contain", // object fit plug'll handle it
-      }
-    );
-    this.ctlr.media.element.parentElement?.insertBefore(this.ctlr.videoContainer, this.ctlr.media.element);
-    assignEl(this.ctlr.pseudoVideoContainer, {
-      role: "status",
-      className: "tmg-pseudo-video-container tmg-media-container",
-    });
-    assignEl(this.ctlr.pseudoVideo, {
-      ariaHidden: "true",
-      className: "tmg-pseudo-video tmg-media",
-      muted: true,
-      autoplay: false,
-    });
-    this.ctlr.pseudoVideoContainer.appendChild(this.ctlr.pseudoVideo);
   }
 
   protected injectInterface(): void {
@@ -85,10 +64,9 @@ export class SkeletonPlug extends BasePlug<Skeleton> {
     this.ctlr.DOM.settingsContent = this.ctlr.queryDOM(".tmg-video-settings-content");
     this.ctlr.DOM.settingsTopPanel = this.ctlr.queryDOM(".tmg-video-settings-top-panel");
     this.ctlr.DOM.settingsBottomPanel = this.ctlr.queryDOM(".tmg-video-settings-bottom-panel");
-    this.ctlr.DOM.containerContent?.prepend(this.ctlr.media.element);
   }
 
-  protected handlePausedChange({ value }: Event<CtlrMedia, "state.paused">): void {
+  protected handlePausedState({ value }: Event<CtlrMedia, "state.paused">): void {
     if (!value) for (const media of document.querySelectorAll<HTMLMediaElement>("video, audio")) media !== this.ctlr.media.element && !media.paused && media.pause();
     this.ctlr.videoContainer.classList.toggle("tmg-video-paused", value);
   }
@@ -100,26 +78,18 @@ export class SkeletonPlug extends BasePlug<Skeleton> {
   }
 
   public activatePseudoMode(): void {
-    const pv = this.ctlr.pseudoVideo,
-      v = this.ctlr.media.element,
-      pvc = this.ctlr.pseudoVideoContainer,
-      vc = this.ctlr.videoContainer;
-    ((pv.id = v.id), (v.id = ""));
-    pv.className += " " + v.className.replace(/tmg-media|tmg-video/g, "");
-    pvc.className += " " + vc.className.replace(/tmg-media-container|tmg-pseudo-video-container/g, "");
-    vc.parentElement?.insertBefore(pvc, vc);
-    document.body.append(vc);
+    ((this.ctlr.pseudoVideo.id = this.ctlr.media.element.id), (this.ctlr.media.element.id = ""));
+    this.ctlr.pseudoVideo.className += " " + this.ctlr.media.element.className.replace(/tmg-media|tmg-video/g, "");
+    this.ctlr.pseudoVideoContainer.className += " " + this.ctlr.videoContainer.className.replace(/tmg-media-container|tmg-pseudo-video-container/g, "");
+    this.ctlr.videoContainer.parentElement?.insertBefore(this.ctlr.pseudoVideoContainer, this.ctlr.videoContainer);
+    document.body.append(this.ctlr.videoContainer);
   }
 
   public deactivatePseudoMode(destroy?: boolean): void {
-    const pv = this.ctlr.pseudoVideo,
-      v = this.ctlr.media.element,
-      pvc = this.ctlr.pseudoVideoContainer,
-      vc = this.ctlr.videoContainer;
-    ((v.id = pv.id), (pv.id = ""));
-    pv.className = "tmg-pseudo-video tmg-media";
-    pvc.className = "tmg-pseudo-video-container tmg-media-container";
-    pvc.parentElement?.replaceChild(destroy ? v : vc, pvc);
+    ((this.ctlr.media.element.id = this.ctlr.pseudoVideo.id), (this.ctlr.pseudoVideo.id = ""));
+    this.ctlr.pseudoVideo.className = "tmg-pseudo-video tmg-media";
+    this.ctlr.pseudoVideoContainer.className = "tmg-pseudo-video-container tmg-media-container";
+    this.ctlr.pseudoVideoContainer.parentElement?.replaceChild(destroy ? this.ctlr.media.element : this.ctlr.videoContainer, this.ctlr.pseudoVideoContainer);
   }
 
   protected onDestroy() {

@@ -1,14 +1,5 @@
 import type { UIOption, UISettings } from "./UIOptions";
-import type {
-  Mode,
-  ErrorCode,
-  ModdedKeyShortcutAction,
-  KeyShortcutAction,
-  AptAutoplayOption,
-  OrientationOption,
-  OptRange,
-  PosterPreview,
-} from "./generics";
+import type { Mode, ModdedKeyShortcutAction, KeyShortcutAction, OptRange } from "./generics";
 import type {
   Sources,
   Src,
@@ -33,9 +24,11 @@ import type {
   PlaysInline,
   Media,
   FastPlay,
+  Frame,
   ErrorMessages,
+  LightState,
+  Modes,
 } from "../plugs";
-import { LightState } from "../plugs/light-state";
 
 // NOTE: Use deep partial util where necessary after imports
 
@@ -84,25 +77,8 @@ export interface Settings {
     >;
   };
   locked: Locked;
-  modes: {
-    fullscreen: {
-      disabled: boolean;
-      orientationLock: boolean | OrientationOption;
-      onRotate: boolean | number; // 0-portrait, 90-landscape, 180, 270
-    };
-    theater: boolean;
-    pictureInPicture: {
-      disabled: boolean;
-      floatingPlayer: {
-        disabled: boolean;
-        width: number;
-        height: number;
-        disallowReturnToOpener: boolean;
-        preferInitialWindowPlacement: boolean;
-      };
-    };
-    miniplayer: { disabled: boolean; minWindowWidth: number };
-  };
+  modes: Modes;
+  frame: Frame;
   notifiers: boolean;
   overlay: Overlay;
   persist: Persist;

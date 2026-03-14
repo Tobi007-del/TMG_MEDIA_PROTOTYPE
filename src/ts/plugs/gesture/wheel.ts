@@ -1,5 +1,5 @@
 import { clamp, setTimeout } from "../../utils";
-import { BaseModule, ControlPanelPlug, VolumePlug } from "../";
+import { BaseModule, ControlPanelPlug, VolumePlug, type GesturePlug, type FastPlayPlug } from "../";
 
 export interface WheelConfig {
   volume: { normal: boolean; slider: boolean };
@@ -22,11 +22,12 @@ export class WheelModule extends BaseModule<WheelConfig> {
   protected nextTime = 0;
 
   public wire() {
+    // Event Listeners
     this.ctlr.videoContainer.addEventListener("wheel", this.handleWheel, { passive: false, signal: this.signal });
   }
 
   protected canHandle(e: WheelEvent): boolean {
-    return !this.ctlr.config.settings.locked && !this.ctlr.config.disabled && e.target === this.ctlr.DOM.controlsContainer && !this.ctlr.state.gestureTouchXCheck && !this.ctlr.state.gestureTouchYCheck && !this.ctlr.state.speedCheck;
+    return !this.ctlr.config.settings.locked && !this.ctlr.config.disabled && e.target === this.ctlr.DOM.controlsContainer && !this.ctlr.getPlug<GesturePlug>("gesture")?.touch.xCheck && !this.ctlr.getPlug<GesturePlug>("gesture")?.touch.yCheck && !this.ctlr.getPlug<FastPlayPlug>("fastPlay")?.speedCheck;
   }
 
   protected handleWheel(e: WheelEvent): void {

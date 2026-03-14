@@ -1,7 +1,7 @@
 import type { Event, Target, Payload, Getter, Setter, Deleter, Watcher, Listener, ListenerOptions, ListenerRecord, WatcherRecord, GetterRecord, SetterRecord, DeleterRecord, SyncOptions, ReactorOptions } from "../types/reactor";
 import type { PathBranchValue, Paths, PathKey, PathValue, WildPaths } from "../types/obj";
 import { isStrictObj, mergeObjs, getTrailPaths, getTrailRecords, parseEvOpts, inAny, getAny, setAny, deleteAny, deepClone } from "../utils";
-import { inert, nuke } from "../tools/mixins";
+import { inert, isIntent, isVolatile, nuke } from "../tools/mixins";
 
 /***
  * ========= The S.I.A (State Intent Architecture) `Reactor` CODE PATTERN WATCHLIST =========
@@ -20,10 +20,11 @@ import { inert, nuke } from "../tools/mixins";
 // The S.I.A (State Intent Architecture) Constants
 // ===========================================================================
 
-export const RAW: unique symbol = Symbol.for("S.I.A_RAW"); // "Get Original Obj" Marker
-export const REJECTABLE: unique symbol = Symbol.for("S.I.A_REJECTABLE"); // "State Vs. Intent" Marker
 export const INERTIA: unique symbol = Symbol.for("S.I.A_INERTIA"); // "No Proxy" Marker
+export const REJECTABLE: unique symbol = Symbol.for("S.I.A_REJECTABLE"); // "State Vs. Intent" Marker
+export const INDIFFABLE: unique symbol = Symbol.for("S.I.A_INDIFFABLE"); // "Equality Tracking" Marker
 export const TERMINATOR: unique symbol = Symbol.for("S.I.A_TERMINATOR"); // "Obj Operation Terminator" Marker
+export const RAW: unique symbol = Symbol.for("S.I.A_RAW"); // "Get Original Obj" Marker
 const NOOP = () => {};
 const R_BATCH = ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window);
 const R_LOG = console.log.bind(console, "[S.I.A Reactor]");
@@ -125,7 +126,7 @@ export class Reactor<T extends object> {
   protected proxyCache = new WeakMap<object, any>();
   protected log: (...args: any[]) => void = NOOP;
   protected _canLog = false; // keeping track so API getter doesn't slow down internal iterations in any way
-  public config: Omit<ReactorOptions<T>, "debug" | "referenceTracking"> = { crossRealms: false, eventBubbling: true, batchingFunction: R_BATCH, equalityTracking: true };
+  public config: Omit<ReactorOptions<T>, "debug" | "referenceTracking"> = { crossRealms: false, eventBubbling: true, batchingFunction: R_BATCH };
   public core: T; // `?:`s | pay the ~600 byte price upfront for what u might never use
 
   constructor(obj: T = {} as T, options?: ReactorOptions<T>) {
@@ -134,18 +135,19 @@ export class Reactor<T extends object> {
     if (!options) return;
     if ((this.isTracking = !!options.referenceTracking)) this.lineage = new WeakMap(); // tracking one-time set to avoid reference issues
     if (options.debug) this.canLog = true;
-    const { get = this.config.get, set = this.config.set, delete: del = this.config.delete, crossRealms = this.config.crossRealms, eventBubbling = this.config.eventBubbling, equalityTracking = this.config.equalityTracking } = options;
-    Object.assign(this.config, { get, set, delete: del, crossRealms, eventBubbling, equalityTracking });
+    const { get = this.config.get, set = this.config.set, delete: del = this.config.delete, crossRealms = this.config.crossRealms, eventBubbling = this.config.eventBubbling } = options;
+    Object.assign(this.config, { get, set, delete: del, crossRealms, eventBubbling });
   }
 
-  protected proxied<O>(obj: O, rejectable = false, parent?: object, key?: string, path?: string): O {
+  protected proxied<O extends object>(obj: O, rejectable = false, indiffable = false, parent?: object, key?: string, path?: string): O {
     if (!obj || typeof obj !== "object") return obj; // did light type check for `.INERTIA` so `false` to strictObj typecheck param
     if (!(isStrictObj(obj, this.config.crossRealms, false) || Array.isArray(obj)) || (obj as any)[INERTIA]) return obj; // handles direct objects and arrays unless inert
     obj = (obj as any)[RAW] || obj; // prevents nested proxies
     if (this.isTracking && parent && key) this.link(obj, parent, key, false); // already checked types above
-    if (this.proxyCache.has(obj as object)) return this.proxyCache.get(obj as object);
-    rejectable ||= (obj as any)[REJECTABLE];
-    const proxy = new Proxy(obj as object, {
+    if (this.proxyCache.has(obj)) return this.proxyCache.get(obj);
+    rejectable ||= isIntent(obj);
+    indiffable ||= isVolatile(obj);
+    const proxy = new Proxy(obj, {
       // Robust Proxy handler
       get: (object, key, receiver) => {
         if (key === RAW) return object;
@@ -169,7 +171,7 @@ export class Reactor<T extends object> {
             value = this.mediate("*", payload, "get", wildcords);
           } // Mediators
         }
-        return this.proxied(value, rejectable, object, safeKey, fullPath);
+        return this.proxied(value, rejectable, indiffable, object, safeKey, fullPath);
       },
       set: (object, key, value, receiver) => {
         let unchanged,
@@ -180,12 +182,12 @@ export class Reactor<T extends object> {
           fullPath = this.isTracking ? undefined : ((path ? path + "." + safeKey : safeKey) as Paths<T>),
           paths = this.isTracking ? this.trace(object, safeKey) : fullPath!,
           oldValue = (object as any)[key];
-        if (this.isTracking || this.config.equalityTracking) {
+        if (this.isTracking || !indiffable) {
           safeOldValue = oldValue?.[RAW] || oldValue;
           safeValue = value?.[RAW] || value;
           unchanged = Object.is(safeValue, safeOldValue);
         }
-        if (this.config.equalityTracking && unchanged) return true;
+        if (!indiffable && unchanged) return true;
         this.log(`✏️ [SET Trap] Initiated for "${safeKey}" on "${paths}"`);
         if (this.config.set) terminated = (value = this.config.set(object as PathBranchValue<T>, key as PathKey<T>, value, oldValue, receiver, paths)) === TERMINATOR;
         if (this.setters) {
@@ -256,7 +258,7 @@ export class Reactor<T extends object> {
         return true;
       },
     });
-    return (this.proxyCache.set(obj as object, proxy), proxy) as O;
+    return (this.proxyCache.set(obj, proxy), proxy) as O;
   }
   protected trace(target: object, path: string, paths: string[] = [], visited = new WeakSet<object>()): Paths<T>[] {
     if (Object.is(target, (this.core as any)[RAW] || this.core)) return (paths.push(path), paths as Paths<T>[]);
@@ -444,7 +446,7 @@ export class Reactor<T extends object> {
         }
     if (cord) return cord.clup;
     cord = { cb: cb as unknown as Setter<T>, once, clup: () => (lazy && this.nostall(task), this.noset<P>(path, cb)) };
-    if (immediate) (immediate !== "auto" || inAny(this.core, path)) && setAny(this.core, path as Paths<T>, this.getContext(path as Paths<T>).value!);
+    if (immediate) (immediate !== "auto" || inAny(this.core, path)) && setAny(this.core, path as Paths<T>, getAny(this.core, path as Paths<T>)!);
     const task = () => (cords ?? (this.setters!.set(path, (cords = [])), cords)).push(cord);
     lazy ? this.stall(task) : task();
     return this.bind(cord, signal);

@@ -1,5 +1,5 @@
-import { Reactor, INERTIA, REJECTABLE } from "../../core/reactor";
-import type { ReactorOptions, Inert, Intent, Live, State } from "../../types/reactor";
+import { Reactor, INERTIA, REJECTABLE, INDIFFABLE } from "../../core/reactor";
+import type { ReactorOptions, Inert, Intent, Live, State, Volatile, Stable } from "../../types/reactor";
 
 const methods = [
   // --- Reactor public methods ---
@@ -60,4 +60,16 @@ export function state<T extends object>(target: T): State<T> {
 }
 export function isIntent<T extends object>(target: T): target is Intent<T> {
   return !!(target as any)[REJECTABLE];
+}
+
+export function volatile<T extends object>(target: T): Volatile<T> {
+  (target as any)[INDIFFABLE] = true;
+  return target as Volatile<T>;
+}
+export function stable<T extends object>(target: T): Stable<T> {
+  delete (target as any)[INDIFFABLE];
+  return target as Stable<T>;
+}
+export function isVolatile<T extends object>(target: T): target is Volatile<T> {
+  return !!(target as any)[INDIFFABLE];
 }

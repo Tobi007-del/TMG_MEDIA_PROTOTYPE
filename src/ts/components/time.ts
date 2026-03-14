@@ -10,14 +10,17 @@ export class Time extends BaseComponent<TimeConfig, ComponentState, HTMLButtonEl
   protected plug?: TimePlug;
 
   public create() {
-    this.element = createEl("button", { className: "tmg-video-current-time" }, { draggableControl: "", controlId: this.name });
-    return this.element;
+    return (this.element = createEl("button", { className: "tmg-video-current-time" }, { draggableControl: "", controlId: this.name }));
   }
 
   public wire(): void {
+    // Variables Assignments
     this.plug = this.ctlr.getPlug<TimePlug>("time");
+    // Event Listeners
     addSafeClicks(this.element, this.plug?.toggleMode, this.plug?.rotateFormat, { signal: this.signal });
+    // Ctlr Media Listeners
     this.ctlr.media.on("state.currentTime", this.updateUI, { signal: this.signal, immediate: true });
+    // ---- Config --------
     this.ctlr.config.on("settings.time.mode", this.updateUI, { signal: this.signal });
     this.ctlr.config.on("settings.time.format", this.updateUI, { signal: this.signal });
     this.ctlr.config.on("settings.keys.shortcuts.timeMode", this.updateARIA, { signal: this.signal, immediate: true });

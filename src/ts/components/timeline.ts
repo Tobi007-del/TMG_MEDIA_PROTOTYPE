@@ -41,6 +41,7 @@ export class Timeline extends RangeSlider<TimelineConfig> {
   }
 
   public override create() {
+    // Variables Assignments
     const element = super.create();
     this.thumbnailImg = createEl("div", { className: "tmg-video-thumbnail" });
     this.thumbnailCanvas = createEl("canvas", { className: "tmg-video-thumbnail" });
@@ -50,48 +51,67 @@ export class Timeline extends RangeSlider<TimelineConfig> {
     this.previewContainer = createEl("div", { className: "tmg-video-preview-container" });
     this.previewImg = createEl("div", { className: "tmg-video-preview" });
     this.previewCanvas = createEl("canvas", { className: "tmg-video-preview" });
+    this.container.dataset.controlId = this.name;
+    // DOM Injection
     this.previewContainer.append(this.previewImg, this.previewCanvas);
     this.barsWrapper.append(this.bufferedBar, this.previewBar);
     this.barsWrapper.replaceWith(this.timeline);
     this.timeline.append(this.barsWrapper, this.previewContainer);
-    this.container.dataset.controlId = this.name;
     return element;
   }
 
   public mount(): void {
-    this.ctlr.DOM.controlsContainer?.prepend(this.thumbnailImg, this.thumbnailCanvas);
+    // Variables Assignments
     this.previewContext = this.previewCanvas.getContext("2d");
     this.thumbnailContext = this.thumbnailCanvas.getContext("2d");
+    // DOM Injection
+    this.ctlr.DOM.controlsContainer?.prepend(this.thumbnailImg, this.thumbnailCanvas);
   }
 
   public override wire(): void {
     super.wire();
+    // Variables Assignments
     this.plug = this.ctlr.getPlug<TimePlug>("time");
-    this.ctlr.media.on("state.paused", this.handlePausedChange, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("state.currentTime", this.handleCurrentTimeChange, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.loadedMetadata", this.handleLoadedMetadata, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.buffered", this.handleProgress, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.duration", this.handleDurationChange, { signal: this.signal, immediate: true });
-    this.ctlr.state.on("dimensions.container", this.syncThumbnailSize, { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.time.format", this.updatePreviewTime, { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.time.mode", this.updatePreviewTime, { signal: this.signal });
+    // State Listeners
+    this.state.on("scrubbing", this.handleScrubbingChange, { signal: this.signal });
+    // Config --------
+    this.config.on("previewValue", this.updatePreviewTime, { signal: this.signal });
+    this.config.on("previews", this.handlePreviewChange, { signal: this.signal });
+    // Ctlr Config Watchers
     this.ctlr.config.watch("settings.time.previews", (value) => (this.config.previews = value!), { signal: this.signal, immediate: true });
     this.ctlr.config.watch("settings.time.seekSync", (value) => (this.config.scrub.sync = value!), { signal: this.signal, immediate: true });
+    // ---- Media Listeners
+    this.ctlr.media.on("state.paused", this.handlePausedState, { signal: this.signal, immediate: true });
+    this.ctlr.media.on("state.currentTime", this.handleCurrentTimeState, { signal: this.signal, immediate: true });
+    this.ctlr.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
+    this.ctlr.media.on("status.buffered", this.handleBufferedStatus, { signal: this.signal, immediate: true });
+    this.ctlr.media.on("status.duration", this.handleDurationStatus, { signal: this.signal, immediate: true });
+    this.ctlr.media.on("status.error", this.handleErrorStatus, { signal: this.signal, immediate: true });
+    // ---- State ---------
+    this.ctlr.state.on("dimensions.container", this.syncThumbnailSize, { signal: this.signal, immediate: true });
+    // ---- Config --------
+    this.ctlr.config.on("settings.time.format", this.updatePreviewTime, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.time.mode", this.updatePreviewTime, { signal: this.signal });
     this.ctlr.config.on("settings.css.currentThumbnailWidth", ({ value }) => (this.thumbnailCanvas.width = Number(value)), { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.css.currentThumbnailHeight", ({ value }) => (this.thumbnailCanvas.height = Number(value)), { signal: this.signal, immediate: true });
-    this.state.on("scrubbing", this.handleScrubbingChange, { signal: this.signal });
-    this.config.on("previewValue", this.updatePreviewTime, { signal: this.signal });
-    this.config.on("previews", this.handlePreviewChange, { signal: this.signal, immediate: true });
   }
   protected override seek(value: number): void {
     super.seek(value);
     this.ctlr.media.intent.currentTime = safeNum((value / 100) * this.ctlr.media.status.duration);
   }
 
-  protected handleLoadedMetadata(): void {
+  protected handlePausedState({ value }: Event<CtlrMedia, "state.paused">): void {
+    !value ? this.ctlr.RAFLoop("timelineUpdating", this.handleTimeUpdateLoop) : this.ctlr.cancelRAFLoop("timelineUpdating");
+  }
+  protected handleCurrentTimeState({ target }: Event<CtlrMedia, "state.currentTime">): void {
+    if (this.state.scrubbing) return;
+    if (this.ctlr.media.state.paused) this.handleTimeUpdateLoop(false);
+    this.container.ariaValueText = `${formatMediaTime({ time: target.value, format: "human-long" })} out of ${formatMediaTime({ time: this.ctlr.media.status.duration, format: "human-long" })}`;
+  }
+  protected handleLoadedMetadataStatus(): void {
     this.ctlr.pseudoVideo.addEventListener("timeupdate", (e) => ((e.target as any).ontimeupdate = this.syncCanvasPreviews), { signal: this.signal, once: true }); // anonymous low cost
   }
-  protected handleProgress(): void {
+  protected handleBufferedStatus(): void {
     const buffered = this.ctlr.media.status.buffered;
     for (let i = 0; i < buffered.length; i++) {
       if (buffered.start(buffered.length - 1 - i) < this.ctlr.media.state.currentTime) {
@@ -100,16 +120,11 @@ export class Timeline extends RangeSlider<TimelineConfig> {
       }
     }
   }
-  protected handleDurationChange({ value }: Event<CtlrMedia, "status.duration">): void {
+  protected handleDurationStatus({ value }: Event<CtlrMedia, "status.duration">): void {
     this.container.ariaValueMax = String(Math.floor(value));
   }
-  protected handlePausedChange({ value }: Event<CtlrMedia, "state.paused">): void {
-    !value ? this.ctlr.RAFLoop("timelineUpdating", this.handleTimeUpdateLoop) : this.ctlr.cancelRAFLoop("timelineUpdating");
-  }
-  protected handleCurrentTimeChange({ target }: Event<CtlrMedia, "state.currentTime">): void {
-    if (this.state.scrubbing) return;
-    if (this.ctlr.media.state.paused) this.handleTimeUpdateLoop(false);
-    this.container.ariaValueText = `${formatMediaTime({ time: target.value, format: "human-long" })} out of ${formatMediaTime({ time: this.ctlr.media.status.duration, format: "human-long" })}`;
+  protected handleErrorStatus({ value }: Event<CtlrMedia, "status.error">): void {
+    if (value) this.bufferedBar.style.width = "0";
   }
   protected handleTimeUpdateLoop(optimize = true): void {
     if (optimize && !this.ctlr.state.mediaIntersecting) return;
@@ -192,7 +207,7 @@ export class Timeline extends RangeSlider<TimelineConfig> {
     if (this.plug) this.previewContainer.dataset.previewTime = this.plug.toTimeText(this.config.previewValue, true);
   }
   protected syncCanvasPreviews(): void {
-    if (!this.ctlr.media.status.loadedData || !this.ctlr.pseudoVideo) return;
+    if (!this.ctlr.media.status.loadedData || this.ctlr.state.frameReadyPromise || !this.ctlr.pseudoVideo) return;
     this.ctlr.throttle(
       "canvasPreviewSync",
       () => {

@@ -1,4 +1,11 @@
-import Reactor, { ReactorEvent, INERTIA, REJECTABLE, TERMINATOR } from "../core/reactor";
+import {
+  REJECTABLE,
+  INERTIA,
+  INDIFFABLE,
+  TERMINATOR,
+  Reactor,
+  ReactorEvent,
+} from "../core/reactor";
 import type { Paths, WildPaths, ChildPaths, PathValue, PathBranchValue, PathKey } from "./obj";
 import { getComposedPath } from "../utils";
 import { Reactive } from "../tools/mixins";
@@ -13,11 +20,15 @@ export type Live<T> = T extends Inert<infer U> ? U : T;
 export type Intent<T> = T & { [REJECTABLE]?: true };
 export type State<T> = T extends Intent<infer U> ? U : T;
 
+export type Volatile<T> = T & { [INDIFFABLE]?: true };
+export type Stable<T> = T extends Volatile<infer U> ? U : T;
+
 export type { Reactor };
 
 // ===========================================================================
 // EVENT SYSTEM & PAYLOADS
 // ===========================================================================
+
 export interface Target<T, P extends WildPaths<T> = WildPaths<T>> {
   path: P;
   value: PathValue<T, P>;
@@ -95,31 +106,31 @@ export type Listener<T, P extends WildPaths<T> = WildPaths<T>> = (event: Event<T
 
 export type GetterRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
   cb: Getter<T, P>;
-  clup?: Reactor<T>["noget"];
+  clup: () => ReturnType<Reactor<T>["noget"]>;
   sclup?: () => void;
 } & SyncOptionsTuple;
 
 export type SetterRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
   cb: Setter<T, P>;
-  clup?: Reactor<T>["noset"];
+  clup: () => ReturnType<Reactor<T>["noset"]>;
   sclup?: () => void;
 } & SyncOptionsTuple;
 
 export type DeleterRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
   cb: Deleter<T, P>;
-  clup?: Reactor<T>["nodelete"];
+  clup: () => ReturnType<Reactor<T>["nodelete"]>;
   sclup?: () => void;
 } & SyncOptionsTuple;
 
 export type WatcherRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
   cb: Watcher<T, P>;
-  clup?: Reactor<T>["nowatch"];
+  clup: () => ReturnType<Reactor<T>["nowatch"]>;
   sclup?: () => void;
 } & SyncOptionsTuple;
 
 export type ListenerRecord<T extends object, P extends WildPaths<T> = WildPaths<T>> = {
   cb: Listener<T, P>;
-  clup?: Reactor<T>["off"];
+  clup: () => ReturnType<Reactor<T>["off"]>;
   sclup?: () => void;
 } & ListenerOptionsTuple;
 
@@ -169,6 +180,5 @@ export interface ReactorOptions<T extends object, P extends Paths<T> = Paths<T>>
   crossRealms?: boolean; // needed for object type detection if using across realms e.g, iframes or other environments
   eventBubbling?: boolean; // default true, set to false to prevent bubbling (not recommended if you want power)
   batchingFunction?: (cb: () => void) => void; // for listener's notifications, e.g: `queueMicrotask`, `unstable_batchedUpdates` from ReactDOM
-  equalityTracking?: boolean; // enables tracking of previous values for equality checks using `Object.is`
   referenceTracking?: boolean; // one-time set activates lineage tracing
 } // debating making use of the Reflect API opt-in

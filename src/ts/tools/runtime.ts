@@ -16,6 +16,7 @@ export interface RuntimeState {
   screenOrientation: ScreenOrientation;
   docVisibilityState: DocumentVisibilityState;
   docInFullscreen: boolean;
+  frameReadyPromise?: Promise<null> | null;
 }
 
 // --- GLOBAL STATE ---
@@ -28,7 +29,7 @@ const _mutationSet = new WeakSet<HTMLElement>(); // weak set for true magic
 // --- EXPORTS ---
 export const Controllers: Controller[] = [];
 
-const handleVidMutation = (mutations: MutationRecord[]) => {
+export function handleVidMutation(mutations: MutationRecord[]) {
   for (const mutation of mutations) {
     if (mutation.type !== "attributes") continue;
     const target = mutation.target as HTMLMediaElement;
@@ -38,7 +39,7 @@ const handleVidMutation = (mutations: MutationRecord[]) => {
   }
 };
 
-const handleDOMMutation = (mutations: MutationRecord[]) => {
+export function handleDOMMutation(mutations: MutationRecord[]) {
   for (const mutation of mutations) {
     for (const node of Array.from(mutation.addedNodes)) {
       if (!(node instanceof HTMLElement)) continue;

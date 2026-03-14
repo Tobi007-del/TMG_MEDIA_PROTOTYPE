@@ -7,8 +7,9 @@ TODO:
 */
 const arrRx = /^([^\[\]]+)\[(\d+)\]$/;
 const RAW = Symbol.for("S.I.A_RAW");
-const REJECTABLE = Symbol.for("S.I.A_REJECTABLE");
 const INERTIA = Symbol.for("S.I.A_INERTIA");
+const REJECTABLE = Symbol.for("S.I.A_REJECTABLE");
+const INDIFFABLE = Symbol.for("S.I.A_INDIFFABLE");
 const TERMINATOR = Symbol.for("S.I.A_TERMINATOR");
 const NOOP = () => {};
 const R_BATCH = ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window);
@@ -83,22 +84,23 @@ class Reactor {
     this.log = NOOP;
     this._canLog = false;
     // keeping track so API getter doesn't slow down internal iterations in any way
-    this.config = { crossRealms: false, eventBubbling: true, batchingFunction: R_BATCH, equalityTracking: true };
+    this.config = { crossRealms: false, eventBubbling: true, batchingFunction: R_BATCH };
     inert(this);
     this.core = this.proxied(obj);
     if (!options) return;
     if ((this.isTracking = !!options.referenceTracking)) this.lineage = new WeakMap();
     if (options.debug) this.canLog = true;
-    const { get = this.config.get, set = this.config.set, delete: del = this.config.delete, crossRealms = this.config.crossRealms, eventBubbling = this.config.eventBubbling, equalityTracking = this.config.equalityTracking } = options;
-    Object.assign(this.config, { get, set, delete: del, crossRealms, eventBubbling, equalityTracking });
+    const { get = this.config.get, set = this.config.set, delete: del = this.config.delete, crossRealms = this.config.crossRealms, eventBubbling = this.config.eventBubbling } = options;
+    Object.assign(this.config, { get, set, delete: del, crossRealms, eventBubbling });
   }
-  proxied(obj, rejectable = false, parent, key, path) {
+  proxied(obj, rejectable = false, indiffable = false, parent, key, path) {
     if (!obj || typeof obj !== "object") return obj;
     if (!(isStrictObj(obj, this.config.crossRealms, false) || Array.isArray(obj)) || obj[INERTIA]) return obj;
     obj = obj[RAW] || obj;
     if (this.isTracking && parent && key) this.link(obj, parent, key, false);
     if (this.proxyCache.has(obj)) return this.proxyCache.get(obj);
-    rejectable || (rejectable = obj[REJECTABLE]);
+    rejectable || (rejectable = isIntent(obj));
+    indiffable || (indiffable = isVolatile(obj));
     const proxy = new Proxy(obj, {
       // Robust Proxy handler
       get: (object, key2, receiver) => {
@@ -123,7 +125,7 @@ class Reactor {
             value = this.mediate("*", payload, "get", wildcords);
           }
         }
-        return this.proxied(value, rejectable, object, safeKey, fullPath);
+        return this.proxied(value, rejectable, indiffable, object, safeKey, fullPath);
       },
       set: (object, key2, value, receiver) => {
         let unchanged,
@@ -134,12 +136,12 @@ class Reactor {
           fullPath = this.isTracking ? void 0 : path ? path + "." + safeKey : safeKey,
           paths = this.isTracking ? this.trace(object, safeKey) : fullPath,
           oldValue = object[key2];
-        if (this.isTracking || this.config.equalityTracking) {
+        if (this.isTracking || !indiffable) {
           safeOldValue = oldValue?.[RAW] || oldValue;
           safeValue = value?.[RAW] || value;
           unchanged = Object.is(safeValue, safeOldValue);
         }
-        if (this.config.equalityTracking && unchanged) return true;
+        if (!indiffable && unchanged) return true;
         this.log(`\u270F\uFE0F [SET Trap] Initiated for "${safeKey}" on "${paths}"`);
         if (this.config.set) terminated = (value = this.config.set(object, key2, value, oldValue, receiver, paths)) === TERMINATOR;
         if (this.setters) {
@@ -389,7 +391,7 @@ class Reactor {
     }
     if (cord) return cord.clup;
     cord = { cb, once, clup: () => (lazy && this.nostall(task), this.noset(path, cb)) };
-    if (immediate) (immediate !== "auto" || inAny(this.core, path)) && setAny(this.core, path, this.getContext(path).value);
+    if (immediate) (immediate !== "auto" || inAny(this.core, path)) && setAny(this.core, path, getAny(this.core, path));
     const task = () => (cords ?? (this.setters.set(path, (cords = [])), cords)).push(cord);
     lazy ? this.stall(task) : task();
     return this.bind(cord, signal);
@@ -535,7 +537,7 @@ class tmg_Video_Controller {
     this.setReadyState(0, medium); // had to be done before binding, for user info
     this.bindMethods(); // first thing, same this.cZoneWs throughout life cycle
     ((this.buildCache = { ...build }), (this.id = build.id), (this.video = medium));
-    this.config = reactive(build, { equalityTracking: false }); // merging the video build into the Video Player Instance
+    this.config = reactive(tmg.volatile(build)); // merging the video build into the Video Player Instance
     this.settings = this.config.settings; // alias for devx, for non reassignable common config
     (this.guardGenericPaths(), this.guardTimeValues(), this.plugSources(), this.plugTracks(), this.plugPlaylist());
     const { src, sources, tracks } = this.config;
@@ -713,19 +715,16 @@ class tmg_Video_Controller {
         spec = () => (this.videoContainer.classList.forEach((cls) => cls.startsWith(pre) && this.videoContainer.classList.remove(cls)), this.videoContainer.classList.add(`${pre}-${value}`), true);
       ({ captionsCharacterEdgeStyle: spec, captionsTextAlignment: spec })[key]?.() ?? [this.videoContainer, this.pseudoVideoContainer].forEach((el) => el?.style.setProperty(`--${pre}`, value));
     };
+    const entries = Object.entries(this.settings.css);
     this.classKeys = ["captionsCharacterEdgeStyle", "captionsTextAlignment"];
     this.CSSCache ??= {};
-    Object.keys(this.settings.css).forEach((k) => k !== "syncWithMedia" && apply(k, this.settings.css[k]));
     this.config.get("*", (val, { target: { key, path } }) => {
-      if (!path.startsWith("settings.css.")) return val;
-      if (path.includes("sync")) return val;
+      if (!path.startsWith("settings.css.") || path.includes("sync")) return val;
       const newVal = this[this.classKeys.includes(key) ? "getClassValue" : "getCSSValue"](key);
       return ((this.CSSCache[key] ||= newVal), newVal);
     });
-    this.config.watch("*", (val, { target: { key, path } }) => {
-      if (!path.startsWith("settings.css.") || path.includes("sync")) return;
-      apply(key, val);
-    });
+    this.config.watch("*", (val, { target: { key, path } }) => path.startsWith("settings.css.") && !path.includes("sync") && apply(key, val));
+    entries.forEach(([k, v]) => k !== "syncWithMedia" && ((this.CSSCache[k] ||= this.settings.css[k]), apply(k, v)));
   }
   getCSSValue(key) {
     const cssVar = `--tmg-video-${tmg.uncamelize(key, "-")}`;
@@ -1002,6 +1001,7 @@ class tmg_Video_Controller {
       bottomWrapper.append(tmg.createEl("div", { className: `tmg-video-bottom-sub-controls-wrapper tmg-video-bottom-${i}-sub-controls-wrapper tmg-video-apt-controls-wrapper` }, { dropZone: "", dragId: "wrapper" }));
       ((this.zoneWs.bottom[i].left = buildWSkel("left", false)), (this.zoneWs.bottom[i].center = buildWSkel("center", false)), (this.zoneWs.bottom[i].right = buildWSkel("right", true)));
     });
+    this.zonesArr = [...Object.values(this.zoneWs.top), ...Object.values(this.zoneWs.bottom).map((v) => Object.values(v))].flat().map((w) => w.zone);
     controlsContainer.prepend(...[HTML.pictureinpicturewrapper, HTML.thumbnail, HTML.videobuffer, HTML.captionsContainer].flat().filter(Boolean), notifiersContainer, topWrapper, centerWrapper, bottomWrapper);
     this.pseudoVideoContainer.append(HTML.pictureinpicturewrapper?.cloneNode(true) || "");
     ["settings.controlPanel.title", "settings.controlPanel.artist", "settings.controlPanel.profile"].forEach((e) => this.config.on(e, ({ target: { key, value } }) => value !== true && (this.DOM[`video${tmg.capitalize(key)}`][key === "profile" ? "src" : "textContent"] = this.DOM[`video${tmg.capitalize(key)}`].dataset["video" + tmg.capitalize(key)] = value || "")));
@@ -1025,7 +1025,6 @@ class tmg_Video_Controller {
     this.settings.controlPanel = this.settings.controlPanel;
     (this.config.tick("settings.controlPanel"), this.config.tick(["settings.controlPanel.top", "settings.controlPanel.center", "settings.controlPanel.bottom"])); // needed for DOM retrieval
   }
-  getZones = () => [...Object.values(this.zoneWs.top), ...Object.values(this.zoneWs.bottom).map((v) => Object.values(v))].flat().map((w) => w.zone);
   getUIZoneWCoord(target, zoneW = false) {
     let key;
     const pos = { 0: "left", 1: "center", 2: "right" }[[...target.parentElement.children].indexOf(target)],
@@ -1056,7 +1055,6 @@ class tmg_Video_Controller {
       bigControlsWrapper: this.queryDOM(".tmg-video-big-controls-wrapper"),
       topControlsWrapper: this.queryDOM(".tmg-video-top-controls-wrapper"),
       bottomControlsWrapper: this.queryDOM(".tmg-video-bottom-controls-wrapper"),
-      sideControlWrappers: this.videoContainer.getElementsByClassName("tmg-video-side-controls-wrapper"), // has to be dynamic
       pictureInPictureWrapper: this.queryDOM(".tmg-video-picture-in-picture-wrapper"),
       pictureInPictureIconWrapper: this.queryDOM(".tmg-video-picture-in-picture-icon-wrapper"),
       videoProfile: this.queryDOM(".tmg-video-profile"),
@@ -1119,7 +1117,7 @@ class tmg_Video_Controller {
       fullscreenBtn: this.queryDOM(".tmg-video-fullscreen-btn"),
       svgs: this.videoContainer.getElementsByTagName("svg"),
       draggableControls: this.queryDOM("[data-draggable-control]", false, true),
-      dropZones: [...this.queryDOM("[data-drop-zone][data-drag-id]", false, true), ...this.getZones()],
+      dropZones: [...this.queryDOM("[data-drop-zone][data-drag-id]", false, true), ...this.zonesArr],
       settingsCloseBtn: this.settings ? this.queryDOM(".tmg-video-settings-close-btn") : null,
     };
   }
@@ -1337,8 +1335,8 @@ class tmg_Video_Controller {
     this._handleMediaParentResize();
     tmg.initScrollAssist(this.DOM.videoTitle, { pxPerSecond: 60 });
     tmg.initScrollAssist(this.DOM.videoArtist, { pxPerSecond: 30 });
-    Array.prototype.forEach.call(this.DOM.sideControlWrappers, (el) => {
-      this._handleControlsWrapperResize(el);
+    this.zonesArr.forEach((el) => {
+      this._handleControlsView(el);
       tmg.initScrollAssist(el, { pxPerSecond: 60 });
       el && tmg.resizeObserver.observe(el);
       el?.addEventListener("scroll", this._handleDirtyScroll, { passive: true });
@@ -1348,7 +1346,7 @@ class tmg_Video_Controller {
   unobserveResize() {
     tmg.removeScrollAssist(this.DOM.videoTitle);
     tmg.removeScrollAssist(this.DOM.videoArtist);
-    Array.prototype.forEach.call(this.DOM.sideControlWrappers, (el) => {
+    this.zonesArr.forEach((el) => {
       tmg.removeScrollAssist(el);
       el && tmg.resizeObserver.unobserve(el);
     });
@@ -1363,7 +1361,7 @@ class tmg_Video_Controller {
     p && tmg.intersectionObserver.unobserve(p);
     tmg.intersectionObserver.unobserve(this.video);
   }
-  _handleResize = (target) => (target.classList.contains("tmg-media-container") ? this._handleMediaParentResize(target.className.includes("pseudo")) : target.classList.contains("tmg-video-side-controls-wrapper") && this._handleControlsWrapperResize(target));
+  _handleResize = (target) => (target.classList.contains("tmg-media-container") ? this._handleMediaParentResize(target.className.includes("pseudo")) : target.classList.contains("tmg-video-side-controls-wrapper") && this._handleControlsView(target));
   _handleMediaParentResize(isPseudo = false) {
     const getTier = (container) => {
       const { offsetWidth: w, offsetHeight: h } = container;
@@ -1380,7 +1378,6 @@ class tmg_Video_Controller {
       this.pseudoVideoContainer.dataset.sizeTier = tier;
     }
   }
-  _handleControlsWrapperResize = (wrapper) => this._handleControlsView({ target: wrapper });
   _handleWindowResize() {
     if (!this.isUIActive("fullscreen")) this.toggleMiniplayerMode();
   }
@@ -1406,8 +1403,10 @@ class tmg_Video_Controller {
     if (el.scrollLeft > 0) el.dataset.hasScrolled = true;
     el.dataset.resetScrolled = el.scrollLeft === (el.dataset.scroller === "reverse" ? el.scrollWidth - el.clientWidth : 0);
   }
-  _handleControlsView({ target: w }, spacer) {
-    let c = w?.children?.[0];
+  _handleControlsView(w) {
+    if (!w.isConnected) return;
+    let spacer,
+      c = w?.children?.[0];
     do {
       c?.setAttribute("data-displayed", getComputedStyle(c).display !== "none" ? "true" : "false");
       c?.setAttribute("data-spacer", false);
@@ -2022,6 +2021,7 @@ class tmg_Video_Controller {
     Object.entries(this.settings.captions.window).forEach(([k, { value }]) => (this.settings.css[`captionsWindow${tmg.capitalize(k)}`] = value));
     this.settings.css.captionsCharacterEdgeStyle = this.settings.captions.characterEdgeStyle.value;
     this.settings.css.captionsTextAlignment = this.settings.captions.textAlignment.value;
+    (this.settings.css.currentCaptionsX, this.settings.css.currentCaptionsY); // reading to trigger CSS caching just incase
     this.config.on("settings.captions.disabled", ({ value }) => {
       ((this.settings.css.currentCaptionsX = this.CSSCache.currentCaptionsX), (this.settings.css.currentCaptionsY = this.CSSCache.currentCaptionsY));
       if (!this.video.textTracks[this.textTrackIndex]) return;
@@ -2465,17 +2465,17 @@ class tmg_Video_Controller {
     this.floatingWindow.document.documentElement.style.cssText = `height:100%; background:url(${this.config.media.profile}) center / 32px no-repeat, url(${this.video.poster}) center / ${this.settings.css.bgSafeObjectFit} no-repeat, black;`;
     await tmg.breath(this.floatingWindow); // paint the bg incase the stylesheet logic takes a while
     const cssTexts = [],
-      whiteList = Object.keys(t007._resourceCache);
+      whitelist = Object.keys(t007._resourceCache);
     for (const sheet of document.styleSheets) {
       try {
-        if (whiteList.some((href) => tmg.isSameURL(href, sheet.href))) continue;
+        if (whitelist.some((href) => tmg.isSameURL(href, sheet.href))) continue;
         for (const cssRule of sheet.cssRules) if (cssRule.selectorText?.includes(":root") || cssRule.cssText.includes("tmg") || cssRule.cssText.includes("t007")) cssTexts.push(cssRule.cssText);
       } catch {
         continue; // add extensible whitelisting and blacklisting hrefs later
       }
     }
     this.floatingWindow.document.head.append(tmg.createEl("style", { textContent: cssTexts.join("\n") }));
-    await Promise.all(whiteList.map((href) => href.includes(".css") && tmg.loadResource(href, "style", undefined, this.floatingWindow)));
+    await Promise.all(whitelist.map((href) => href.includes(".css") && tmg.loadResource(href, "style", undefined, this.floatingWindow)));
     this.activatePseudoMode();
     this.videoContainer.classList.add("tmg-video-floating-player", "tmg-video-progress-bar");
     this.floatingWindow.document.body.append(this.videoContainer);
@@ -2484,9 +2484,7 @@ class tmg_Video_Controller {
     this.floatingWindow && document.documentElement.getAttributeNames().forEach((attr) => this.floatingWindow.document.documentElement.setAttribute(attr, document.documentElement.getAttribute(attr)));
     tmg.DOMMutationObserver.observe(this.floatingWindow.document.documentElement, { childList: true, subtree: true });
     this.floatingWindow.addEventListener("pagehide", this._handleFloatingPlayerClose);
-    this.floatingWindow.addEventListener("resize", this._handleMediaParentResize);
     this.setKeyEventListeners("add");
-    (this._handleMediaParentResize(), setTimeout(this._handleMediaParentResize));
   }
   _handleFloatingPlayerClose() {
     ((this.inFloatingPlayer = false), (this.floatingWindow = null));
@@ -3004,7 +3002,7 @@ class tmg_Video_Controller {
         }
         const afterControl = tmg.getElSiblingAt(x, "x", t.querySelectorAll("[draggable=true]:not(.tmg-video-control-dragging)"));
         afterControl ? t.insertBefore(this.dragging, afterControl) : t.append(this.dragging);
-        !t.dataset.dragId && Array.prototype.forEach.call(this.DOM.sideControlWrappers, this._handleControlsWrapperResize);
+        !t.dataset.dragId && this.zonesArr.forEach(this._handleControlsView);
       },
       500,
       false
@@ -3562,8 +3560,18 @@ var tmg = {
     target[INERTIA] = true;
     return target;
   },
+  isInert(target) {
+    return !!target?.[INERTIA];
+  },
   isIntent(target) {
     return !!target?.[REJECTABLE];
+  },
+  volatile(target) {
+    target[INDIFFABLE] = true;
+    return target;
+  },
+  isVolatile(target) {
+    return !!target?.[INDIFFABLE];
   },
   formatMediaTime({ time, format = "digital", elapsed = true, showMs = false, casing = "normal" } = {}) {
     const long = format.endsWith("long"),
@@ -3906,7 +3914,7 @@ var tmg = {
   Player: tmg_Media_Player, // THE TMG MEDIA PLAYER BUILDER CLASS
   Controllers: [], // REFERENCES TO ALL THE DEPLOYED TMG MEDIA CONTROLLERS
 };
-const { isStrictObj, mergeObjs, getTrailPaths, getTrailRecords, parseEvOpts, inAny, getAny, setAny, deleteAny, deepClone, inert, nuke } = tmg;
+const { isStrictObj, mergeObjs, getTrailPaths, getTrailRecords, parseEvOpts, inAny, getAny, setAny, deleteAny, deepClone, inert, isIntent, isVolatile, nuke } = tmg;
 if (typeof window !== "undefined") {
   window.tmg = tmg;
   tmg.DEFAULT_VIDEO_BUILD = {
@@ -4078,7 +4086,7 @@ if (typeof window !== "undefined") {
         artist: true,
         top: ["expandminiplayer", "spacer", "meta", "spacer", "capture", "fullscreenlock", "fullscreenorientation", "removeminiplayer"],
         center: ["bigprev", "bigplaypause", "bignext"],
-        bottom: { 1: [], 2: ["spacer", "timeline", "spacer"], 3: ["prev", "playpause", "next", "brightness", "volume", "timeandduration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] },
+        bottom: { 1: [], 2: ["spacer", "timeline", "spacer"], 3: [...(!tmg.ON_MOBILE ? ["prev", "playpause", "next"] : []), "brightness", "volume", "timeandduration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] },
         buffer: "spinner",
         timeline: { thumbIndicator: true, seek: { relative: !tmg.ON_MOBILE, cancel: { delta: 15, timeout: 2000 } } },
         progressBar: tmg.ON_MOBILE,

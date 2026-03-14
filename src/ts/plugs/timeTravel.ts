@@ -1,5 +1,5 @@
 // building this file with just AI to test architectural soundness
-import { BasePlug } from "./base";
+import { BasePlug } from ".";
 import type { CtlrMedia } from "../types/contract";
 import { Event } from "../types/reactor";
 import { setTimeout, setAny, deleteAny } from "../utils";

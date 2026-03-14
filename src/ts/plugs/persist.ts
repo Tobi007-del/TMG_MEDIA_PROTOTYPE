@@ -15,11 +15,12 @@ export class PersistPlug extends BasePlug<Persist> {
   public adapter!: StorageAdapter;
 
   public wire() {
+    // Event Listeners
     window.addEventListener("pagehide", this.onDestroy, { signal: this.signal });
+    // Ctlr State Listeners
     this.ctlr.state.on("docVisibilityState", ({ value }) => value === "hidden" && this.onDestroy(), { signal: this.signal });
-    // 1. Adapter Lifecycle (Init + Hot Swap)
+    // ---- Config Listeners
     this.ctlr.config.on("settings.persist.adapter", this.handleAdapterChange, { signal: this.signal, immediate: true });
-    // 2. Persistence Lifecycle (Init + Toggle)
     this.ctlr.config.on("settings.persist.disabled", this.handleDisabledChange, { signal: this.signal, immediate: true });
   }
 

@@ -22,22 +22,28 @@ export class TimePlug extends BasePlug<CTime> {
   private skipDuration = 0;
   private skipDurationId = -1;
   private currentSkipNotifier: HTMLElement | null = null;
-  public guardedTimePaths = ["lightState.preview.time", "settings.time.min", "settings.time.max", "settings.time.start", "settings.time.end", "settings.auto.next.videoPreview.time"] as const;
+  public guardedTimePaths = ["lightState.preview.time", "settings.time.min", "settings.time.max", "settings.time.start", "settings.time.end", "settings.auto.next.preview.time"] as const;
 
   public wire(): void {
+    // Variables Assignment
     this.pseudoStart = this.config.start ?? 0;
+    // Ctlr Config Getters
+    this.guardTimeValues();
+    // ---- Media Setters
     this.ctlr.media.set("intent.currentTime", () => clamp(this.config.min, this.config.value!, this.config.max), { signal: this.signal });
-    this.ctlr.media.on("state.currentTime", this.handleTimeUpdate, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.waiting", this.handleWaitingStatus, { signal: this.signal });
-    this.ctlr.config.watch("settings.time.value", this.forwardTimeValue, { signal: this.signal });
+    // ---- Config Watchers
+    this.ctlr.config.watch("settings.time.value", this.forwardTimeValue, { signal: this.signal, immediate: "auto" });
     this.ctlr.config.watch("settings.time.start", (v) => v !== this.pseudoStart && (this.actualStart = +v!), { signal: this.signal, immediate: true });
+    // ---- Media Listeners
+    this.ctlr.media.on("state.currentTime", this.handleCurrentTimeState, { signal: this.signal, immediate: true });
+    this.ctlr.media.on("status.waiting", this.handleWaitingStatus, { signal: this.signal });
   }
 
   protected forwardTimeValue(value?: number): void {
     this.ctlr.media.intent.currentTime = value!;
   }
 
-  protected handleTimeUpdate({ target }: Event<CtlrMedia, "state.currentTime">): void {
+  protected handleCurrentTimeState({ target }: Event<CtlrMedia, "state.currentTime">): void {
     const curr = target.value!,
       min = this.config.min!,
       max = this.config.max!,
@@ -54,7 +60,7 @@ export class TimePlug extends BasePlug<CTime> {
     if (value && IS_MOBILE && this.currentSkipNotifier) this.ctlr.media.once("status.waiting", () => this.ctlr.getPlug<OverlayPlug>("overlay")?.remove(), { signal: this.signal });
   }
 
-  public toTimeVal(value: number | string | undefined | null): number {
+  public toTimeVal(value?: number | string | null): number {
     return parseIfPercent(value ?? 0, this.ctlr.media.status.duration);
   }
   public toTimeText(time = this.ctlr.media.state.currentTime, useMode = false, showMs = false): string {

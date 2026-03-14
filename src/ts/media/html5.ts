@@ -101,9 +101,9 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
     this.config.on("intent.pictureInPicture", this.handlePiPIntent, this.eOpts.REACTOR);
   }
   protected wireFullscreen() {
-    this.ctlr.state.watch("docInFullscreen", this.setFullscreenChangeState, this.eOpts.REACTOR);
     this.el.addEventListener("webkitbeginfullscreen", this.setWebkitBeginFullscreenState, this.eOpts.REACTOR);
     this.el.addEventListener("webkitendfullscreen", this.setWebkitEndFullscreenState, this.eOpts.REACTOR);
+    this.ctlr.state.watch("docInFullscreen", this.setFullscreenChangeState, this.eOpts.REACTOR);
     this.config.on("intent.fullscreen", this.handleFullscreenIntent, this.eOpts.REACTOR);
   }
   // --- Track Switching Wiring ---
@@ -234,7 +234,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   }
   protected handleCurrentTimeIntent(e: Event<CtlrMedia, "intent.currentTime">) {
     if (e.resolved) return;
-    this.el.currentTime = e.value!;
+    this.el.currentTime = e.value;
     e.resolve(HTML5Tech.techName);
   }
   protected handlePausedIntent(e: Event<CtlrMedia, "intent.paused">) {
@@ -245,7 +245,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   }
   // --- Feature States ---
   protected setVolumeChangeState() {
-    this.config.state.volume = this.el.volume;
+    this.config.state.volume = this.el.volume * 100;
     this.config.state.muted = this.el.muted;
   }
   protected setRateChangeState() {
@@ -305,17 +305,17 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   // --- Feature Intents ---
   protected handleVolumeIntent(e: Event<CtlrMedia, "intent.volume">) {
     if (e.resolved) return;
-    this.el.volume = e.value!;
+    this.el.volume = e.value / 100;
     e.resolve(HTML5Tech.techName);
   }
   protected handleMutedIntent(e: Event<CtlrMedia, "intent.muted">) {
     if (e.resolved) return;
-    this.el.muted = e.value!;
+    this.el.muted = e.value;
     e.resolve(HTML5Tech.techName);
   }
   protected handlePlaybackRateIntent(e: Event<CtlrMedia, "intent.playbackRate">) {
     if (e.resolved) return;
-    this.el.playbackRate = e.value!;
+    this.el.playbackRate = e.value;
     e.resolve(HTML5Tech.techName);
   }
   protected handlePiPIntent(e: Event<CtlrMedia, "intent.pictureInPicture">) {
@@ -334,8 +334,9 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
     e.resolve(HTML5Tech.techName);
   }
   protected handleAttributeIntent(e: Event<CtlrMedia, WildPaths<CtlrMedia>>, key: string, isBool: boolean) {
-    if (e.resolved) return;
-    (this.el as any)[key] = isBool ? Boolean(e.value) : (e.value ?? ""); // Generic handler for simple attributes
+    if (e.resolved || (key === "poster" && isSameURL(e.value, this.config.state[key]))) return;
+    const attr = key.toLowerCase();
+    isBool ? this.el.toggleAttribute(attr, Boolean(e.value)) : e.value ? this.el.setAttribute(attr, e.value) : this.el.removeAttribute(attr); // (this.el as any)[key] = isBool ? Boolean(e.value) : (e.value ?? ""); // Generic handler for simple attributes
     if (key === "playsInline") this.el.toggleAttribute("webkit-playsinline", Boolean(e.value));
     e.resolve(HTML5Tech.techName);
   }
@@ -381,8 +382,8 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   protected handlePlayingStatus() {
     this.config.status.waiting = this.config.status.stalled = false;
   }
-  protected handleErrorStatus() {
-    this.config.status.error = this.el.error;
+  protected handleErrorStatus(e: any) {
+    this.config.status.error = this.el.error ?? ({ message: ("string" === typeof e && e) || e?.message } as MediaError);
     this.config.status.waiting = false;
   }
   protected handleTracksStatus(type: "textTracks" | "videoTracks" | "audioTracks", list: any) {
@@ -395,10 +396,10 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   }
   // --- Settings ---
   protected handleDefaultMutedSetting(e: Event<CtlrMedia, "settings.defaultMuted">) {
-    this.el.defaultMuted = e.value!;
+    this.el.defaultMuted = e.value;
   }
   protected handleDefaultPlaybackRateSetting(e: Event<CtlrMedia, "settings.defaultPlaybackRate">) {
-    this.el.defaultPlaybackRate = e.value!;
+    this.el.defaultPlaybackRate = e.value;
   }
   // --- Other Handlers ---
   protected handlePiPState(e: Event<CtlrMedia, "state.disablePictureInPicture">) {

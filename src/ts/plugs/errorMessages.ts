@@ -10,14 +10,14 @@ export class ErrorMessagesPlug extends BasePlug<ErrorMessages> {
   public static readonly plugName: string = "errorMessages";
 
   public wire(): void {
-    this.ctlr.media.on("status.error", this.handleError, { signal: this.signal });
+    // Ctlr Media Listeners
+    this.ctlr.media.on("status.error", this.handleError, { signal: this.signal, immediate: true });
   }
 
   protected handleError({ value }: Event<CtlrMedia, "status.error">): void {
     if (!value) return;
-    const code = value.code as ErrorCode,
-      message = this.config[code] || value.message || "An unknown error occurred with the video :(";
-    const disabledPlug = this.ctlr.getPlug<DisabledPlug>("disabled");
-    disabledPlug?.deactivate(message);
+    const code = value.code as ErrorCode | undefined,
+      mssg = this.config[code ?? 5] || value.message || "An unknown error occurred with the video :(";
+    this.ctlr.getPlug<DisabledPlug>("disabled")?.deactivate(mssg);
   }
 }

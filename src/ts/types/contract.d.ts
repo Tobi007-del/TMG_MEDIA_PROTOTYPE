@@ -1,5 +1,5 @@
 import type { Controller } from "./controller";
-import { Inert, Intent } from "./reactor";
+import { Inert, Intent, State, Volatile } from "./reactor";
 import { Sources, Src, SrcObject, Tracks } from "../plugs";
 import { BaseTech } from "../media";
 
@@ -18,14 +18,16 @@ export interface MediaState {
   currentTime: MediaContract["currentTime"]; // Rejects if outside seekable range
   paused: MediaContract["paused"]; // Rejects if "Autoplay Policy" denies it
   // --- The Engine Inputs (Interceptable) ---
-  volume: number;
+  volume: number; // 0 - 100
   muted: boolean;
+  brightness: number; // 0 - 100
+  dark: boolean;
   playbackRate: number;
   // --- The Presentation Modes (Heavily Rejectable) ---
   pictureInPicture: boolean;
   fullscreen: boolean;
   theater: boolean;
-  miniplayer: boolean;
+  miniplayer: "auto" | boolean;
   // --- Casting (Connection Handshakes) ---
   airplay: boolean; // Apple AirPlay
   chromecast: boolean; // Google Cast
@@ -59,7 +61,7 @@ export interface MediaState {
   playsInline: boolean;
   crossOrigin: "anonymous" | "use-credentials" | string | null;
   controls: boolean; // Native controls enabled?
-  controlsList: DOMTokenList | string | null; // Native controls disabled (e.g. "nodownload")
+  controlsList: Inert<DOMTokenList> | string | null; // Native controls disabled (e.g. "nodownload")
   disablePictureInPicture: boolean;
   // ---  HTML Lists ---
   sources: Sources; // HTML courtesy
@@ -133,13 +135,13 @@ export type MediaFeatures = {
 };
 
 export interface MediaReport {
-  state: MediaState;
-  intent: Intent<MediaIntent>;
-  status: MediaStatus;
-  settings: MediaSettings;
+  state: State<MediaState>;
+  intent: Volatile<Intent<MediaIntent>>;
+  status: State<MediaStatus>;
+  settings: State<MediaSettings>;
 }
 
 export type CtlrMedia = {
   tech: Inert<BaseTech>;
-  element: HTMLVideoElement;
+  element: Inert<HTMLVideoElement>;
 } & MediaReport; // Controller Media

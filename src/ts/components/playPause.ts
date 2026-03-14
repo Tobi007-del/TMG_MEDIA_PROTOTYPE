@@ -12,9 +12,12 @@ export class PlayPause extends BaseComponent<PlayPauseConfig, ComponentState, HT
   }
 
   public wire(): void {
+    // Event Listeners
     this.el.addEventListener("click", this.togglePlay, { signal: this.signal });
+    // Ctlr Media Listeners
     this.ctlr.media.on("state.paused", this.updateUI, { signal: this.signal, immediate: true });
     this.ctlr.media.on("status.ended", this.updateUI, { signal: this.signal });
+    // ---- Config --------
     this.ctlr.config.on("settings.keys.shortcuts.playPause", this.updateARIA, { signal: this.signal });
   }
 

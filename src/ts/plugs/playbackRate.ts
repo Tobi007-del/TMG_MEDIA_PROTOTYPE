@@ -10,8 +10,11 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
   public static readonly plugName: string = "playbackRate";
 
   public wire(): void {
+    // Ctlr Media Setters
     this.ctlr.media.set("intent.playbackRate", (value) => clamp(this.config.min, value!, this.config.max), { signal: this.signal });
+    // ---- Config Watchers
     this.ctlr.config.watch("settings.playbackRate.value", this.forwardRate, { signal: this.signal, immediate: true });
+    // ----------- Listeners
     this.ctlr.config.on("settings.playbackRate.min", this.handleMinChange, { signal: this.signal });
     this.ctlr.config.on("settings.playbackRate.max", this.handleMaxChange, { signal: this.signal });
   }

@@ -20,10 +20,12 @@ export class ScreenLocked extends BaseComponent<ScreenLockedConfig, ComponentSta
   }
 
   public wire(): void {
+    // Variables Assignments
     this.plug = this.ctlr.getPlug<LockedPlug>("locked");
-    if (!this.plug) return;
+    // Event Listeners
     this.el.addEventListener("click", this.handleClick, { signal: this.signal });
-    this.plug.state.on("visible", this.updateUI, { signal: this.signal, immediate: true });
+    // Plug Listeners
+    this.plug?.state.on("visible", this.updateUI, { signal: this.signal, immediate: true });
   }
 
   protected updateUI(): void {

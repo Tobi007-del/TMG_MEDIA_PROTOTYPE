@@ -1,7 +1,8 @@
 import { AUDIO_CONTEXT, type RuntimeState } from "../tools/runtime";
 import type { VideoBuild } from "../types/build";
 import type { CtlrMedia } from "../types/contract";
-import { reactive, type Reactive, guardAllMethods, guardMethod, nuke, inert, intent } from "../tools/mixins";
+import type { Volatile } from "../types/reactor";
+import { reactive, type Reactive, guardAllMethods, guardMethod, nuke, inert, intent, state, volatile } from "../tools/mixins";
 import { TechRegistry, PlugRegistry } from "./registry";
 import { TechConstructor, BaseTech, HTML5Tech } from "../media";
 import { PlugConstructor, ToastsPlug, type BasePlug as Plug } from "../plugs";
@@ -25,7 +26,7 @@ export class Controller {
   private ac = new AbortController();
   public readonly signal = this.ac.signal;
   // --- RUNTIME (Global Controller States) ---
-  public config: Reactive<VideoBuild>;
+  public config: Reactive<Volatile<VideoBuild>>;
   public state: Reactive<RuntimeState> & Record<string, any>; // runtime state and states to be populated for easy reach
   public media: Reactive<CtlrMedia>;
   // --- MEMORY ---
@@ -40,15 +41,15 @@ export class Controller {
   private throttleMap = new Map<string, any>();
   private rafLoopMap = new Map<string, number>();
   private rafLoopFnMap = new Map<string, Function>();
+  protected clups: (() => void)[] = [];
   // --- FLAGS (Essential Only) ---
   public mutatingDOMM = true; // Critical for Player wrapper to know when swapping modes
 
   constructor(medium: HTMLVideoElement, build: VideoBuild) {
     this.setReadyState(0, medium);
     guardAllMethods(this, this.guard, true);
-    this.buildCache = { ...build };
     this.id = build.id;
-    this.config = reactive(build, { equalityTracking: false }); // `referenceTracking: false` so clone before reassigning objects already in state
+    this.config = reactive(volatile(build)); // `referenceTracking: false` so clone before reassigning objects already in state
     this.state = reactive<RuntimeState>({
       readyState: 0,
       audioContextReady: !!AUDIO_CONTEXT,
@@ -59,15 +60,16 @@ export class Controller {
       docVisibilityState: document.visibilityState,
       docInFullscreen: queryFullscreen(),
     });
-    const defaults = getMediaReport(medium); // returns defaults and initials
+    const defs = getMediaReport(medium); // returns defaults and initials
     this.media = reactive<CtlrMedia>({
-      tech: {} as BaseTech, // dummy tech to be replaced on boot
-      element: medium,
-      intent: intent(defaults.intent),
-      state: defaults.state,
-      status: defaults.status,
-      settings: defaults.settings,
+      tech: inert({} as BaseTech), // dummy tech to be replaced on boot
+      element: inert(medium),
+      intent: volatile(intent(defs.intent)),
+      state: state(defs.state),
+      status: state(defs.status),
+      settings: state(defs.settings),
     });
+    this.buildCache = this.config.snapshot();
     this.media.set("tech", (t) => inert(t!), { signal: this.signal });
     this.boot();
   }
@@ -98,6 +100,7 @@ export class Controller {
 
   protected wireTechOverseer() {
     const opts = { capture: true, signal: this.signal };
+    // Media Listeners
     this.media.on("intent.src", () => this.overseeTech(), { ...opts, immediate: true }); // load initial
     this.media.on("intent.sources", () => this.overseeTech(), opts);
     this.media.on("state.src", () => this.overseeTech("state"), opts); // just in case
@@ -133,12 +136,10 @@ export class Controller {
   }
 
   private wireRuntimeState() {
-    const clups = [] as Function[];
-    clups.push(observeIntersection(this.videoContainer.parentElement!, (entry) => (this.state.mediaParentIntersecting = entry.isIntersecting)));
-    clups.push(observeIntersection(this.videoContainer, (entry) => (this.state.mediaIntersecting = entry.isIntersecting)));
-    clups.push(observeResize(this.videoContainer, () => (this.state.dimensions.container = getSizeTier(this.videoContainer))));
-    clups.push(observeResize(this.pseudoVideoContainer, () => (this.state.dimensions.pseudoContainer = getSizeTier(this.pseudoVideoContainer))));
-    this.signal.addEventListener("abort", () => clups.forEach((cb) => cb()), { once: true });
+    this.clups.push(observeIntersection(this.videoContainer.parentElement!, (entry) => (this.state.mediaParentIntersecting = entry.isIntersecting)));
+    this.clups.push(observeIntersection(this.videoContainer, (entry) => (this.state.mediaIntersecting = entry.isIntersecting)));
+    this.clups.push(observeResize(this.videoContainer, () => (this.state.dimensions.container = getSizeTier(this.videoContainer))));
+    this.clups.push(observeResize(this.pseudoVideoContainer, () => (this.state.dimensions.pseudoContainer = getSizeTier(this.pseudoVideoContainer))));
   }
 
   public get payload() {
@@ -211,14 +212,15 @@ export class Controller {
   }
   public isUIActive(mode: string, el = this.videoContainer): boolean {
     if (mode === "settings") mode = "settings-view";
-    return el.classList.contains(`tmg-video-${uncamelize(mode)}`);
+    return el.classList.contains(`tmg-video-${uncamelize(mode, "-")}`);
   }
 
   public destroy() {
+    this.mutatingDOMM = true; // destruction will mutate, flag external watchers
     this.setReadyState(-1);
     this.cancelAllLoops();
     this.ac.abort("[TMG Controller] Instance is being destroyed");
-    this.mutatingDOMM = true; // plugs will mutate, flag watchers
+    this.clups.forEach((cleanup) => cleanup());
     [...this.plugs.values()].reverse().forEach((p) => p.destroy());
     this.media.tech.destroy();
     [this.plugs, this.throttleMap, this.rafLoopMap, this.rafLoopFnMap].forEach((map) => map.clear());

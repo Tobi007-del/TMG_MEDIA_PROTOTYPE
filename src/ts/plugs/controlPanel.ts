@@ -4,14 +4,13 @@ import type { Event } from "../types/reactor";
 import { controls, bigControls } from "../consts/generics";
 import { BaseComponent } from "../components/base";
 import { ComponentRegistry } from "../core/registry";
-import { createEl, parsePanelBottomObj, inBoolArrOpt, getElSiblingAt, setAny, getAny, setTimeout, capitalize, initScrollAssist } from "../utils";
+import { createEl, parsePanelBottomObj, inBoolArrOpt, getElSiblingAt, setAny, getAny, setTimeout, capitalize, initScrollAssist, observeResize, removeScrollAssist } from "../utils";
 import { Timeline } from "../components";
 
 export type Control = (typeof controls)[number];
 export type SControl = Control | "spacer";
 export type BigControl = (typeof bigControls)[number];
 export type ControlPanelBottomTuple = Record<1 | 2 | 3, SControl[]>;
-
 export interface ControlPanel {
   profile: string | boolean;
   title: string | boolean;
@@ -25,98 +24,75 @@ export interface ControlPanel {
   draggable: ("" | "big" | "wrapper")[] | boolean;
 }
 
+const rowsArr = [1, 2, 3] as const;
 type ZoneW = { cover?: HTMLElement; zone: HTMLElement };
-type Row = 1 | 2 | 3;
+type Row = (typeof rowsArr)[number];
 
 export class ControlPanelPlug extends BasePlug<ControlPanel> {
   public static readonly plugName: string = "controlPanel";
   public static readonly isCore: boolean = false;
-  public controls = new Map<string, { element: HTMLElement; instance?: BaseComponent<any, any> }>();
+  public controls = new Map<string, { element: HTMLElement; instance: BaseComponent<any, any> | null }>();
   public getControl<T extends BaseComponent = BaseComponent>(name: string): T | undefined {
     return this.controls.get(name)?.instance as T | undefined;
   }
   public getControlEl<T extends HTMLElement = HTMLElement>(name: string): T | undefined {
     return this.getControl(name)?.element as T | undefined;
   }
+  protected topW!: HTMLElement;
+  protected bottomW!: HTMLElement;
   protected zoneWs!: { top: Record<"left" | "center" | "right", ZoneW>; center: ZoneW; bottom: Record<Row, Record<"left" | "center" | "right", ZoneW>> };
   protected cZoneWs!: { top: Record<"left" | "center" | "right", ZoneW>; center: ZoneW; bottom: Record<Row, Record<"left" | "center" | "right", ZoneW>> };
+  protected zonesArr!: HTMLElement[];
+  protected scrollAssistEls: HTMLElement[] = [];
   protected dragging: HTMLElement | null = null;
   protected dragReplaced: { target: HTMLElement; child: HTMLElement } | null = null;
   protected dragSafeTimeoutId: number = -1;
+  protected clups: (() => void)[] = [];
 
   public mount(): void {
-    this.ctlr.config.set("settings.controlPanel.bottom", (value) => parsePanelBottomObj(value));
+    // Variables Assignment
     const cc = this.ctlr.DOM.controlsContainer,
       buffer = ComponentRegistry.init("buffer", this.ctlr);
+    this.topW = createEl("div", { className: "tmg-video-top-controls-wrapper tmg-video-apt-controls-wrapper" }, { dropZone: "", dragId: "wrapper" });
+    this.bottomW = createEl("div", { className: "tmg-video-bottom-controls-wrapper" });
     buffer && this.controls.set("buffer", buffer);
-    buffer && cc?.prepend(buffer.element);
+    ComponentRegistry.getAll().forEach((Comp) => Comp.isControl && this.controls.set(Comp.componentName, ComponentRegistry.init(Comp.componentName, this.ctlr)!));
     this.zoneWs = { top: {}, center: {}, bottom: { 1: {}, 2: {}, 3: {} } } as typeof this.zoneWs;
     this.zoneWs.top = { left: this.buildWSkel("left"), center: this.buildWSkel("center"), right: this.buildWSkel("right") };
     this.zoneWs.center = { zone: createEl("div", { className: "tmg-video-big-controls-wrapper" }, { dropZone: "", dragId: "big" }) };
-    ([1, 2, 3] as Row[]).forEach((i) => (this.zoneWs.bottom[i] = { left: this.buildWSkel("left"), center: this.buildWSkel("center"), right: this.buildWSkel("right") }));
-    const topW = createEl("div", { className: "tmg-video-top-controls-wrapper tmg-video-apt-controls-wrapper" }, { dropZone: "", dragId: "wrapper" });
-    topW.append(this.zoneWs.top.left.cover!, this.zoneWs.top.center.cover!, this.zoneWs.top.right.cover!);
-    const bottomW = createEl("div", { className: "tmg-video-bottom-controls-wrapper" });
-    ([1, 2, 3] as Row[]).forEach((i) => {
+    rowsArr.forEach((i) => (this.zoneWs.bottom[i] = { left: this.buildWSkel("left"), center: this.buildWSkel("center"), right: this.buildWSkel("right") }));
+    this.zonesArr = [...Object.values(this.zoneWs.top), ...Object.values(this.zoneWs.bottom).map((v) => Object.values(v))].flat().map((w) => w.zone);
+    // DOM Injection
+    buffer && cc?.prepend(buffer.element);
+    this.topW.append(this.zoneWs.top.left.cover!, this.zoneWs.top.center.cover!, this.zoneWs.top.right.cover!);
+    rowsArr.forEach((i) => {
       const row = createEl("div", { className: `tmg-video-bottom-sub-controls-wrapper tmg-video-bottom-${i}-sub-controls-wrapper tmg-video-apt-controls-wrapper` }, { dropZone: "", dragId: "wrapper" });
       row.append(this.zoneWs.bottom[i].left.cover!, this.zoneWs.bottom[i].center.cover!, this.zoneWs.bottom[i].right.cover!);
-      bottomW.append(row);
+      this.bottomW.append(row);
     });
-    cc?.append(topW, this.zoneWs.center.zone, bottomW);
-    ComponentRegistry.getAll().forEach((Comp) => Comp.isControl && this.controls.set(Comp.componentName, ComponentRegistry.init(Comp.componentName, this.ctlr)!));
+    cc?.append(this.topW, this.zoneWs.center.zone, this.bottomW);
   }
 
   public wire(): void {
-    (["settings.controlPanel.title", "settings.controlPanel.artist", "settings.controlPanel.profile"] as const).forEach((e) =>
-      this.ctlr.config.on(
-        e,
-        ({ target: { key, value } }) => {
-          // const meta = this.getControl<Meta>("meta");
-          // value !== true && (meta[key][key === "profile" ? "src" : "textContent"] = meta[key].dataset["video" + capitalize(key)] = value || "");
-        },
-        { signal: this.signal, immediate: true }
-      )
-    );
+    // Ctlr Config Setters
+    this.ctlr.config.set("settings.controlPanel.bottom", (value) => parsePanelBottomObj(value), { immediate: true });
+    // ----------- Listeners
+    (["settings.controlPanel.title", "settings.controlPanel.artist", "settings.controlPanel.profile"] as const).forEach((e) => this.ctlr.config.on(e, this.handleMetaLayout, { signal: this.signal, immediate: true }));
     this.ctlr.config.on("settings.controlPanel.top", this.handleTopLayout, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.center", this.handleCenterLayout, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.bottom", this.handleBottomLayout, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.buffer", ({ value }) => (this.ctlr.videoContainer.dataset.buffer = String(value)), { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.timeline.thumbIndicator", ({ value }) => (this.ctlr.videoContainer.dataset.thumbIndicator = String(value)), { signal: this.signal, immediate: true });
-    this.ctlr.config.on(
-      "settings.controlPanel.timeline.seek",
-      ({ currentTarget: { value } }) => {
-        const timeline = this.getControl<Timeline>("timeline");
-        if (!timeline) return;
-        timeline.config.scrub.relative = value!.relative;
-        timeline.config.scrub.cancel = value!.cancel;
-      },
-      { signal: this.signal, immediate: true }
-    );
+    this.ctlr.config.on("settings.controlPanel.timeline.seek", this.handleTimelineSeek, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.progressBar", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", !!value), { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.draggable", ({ value }) => this.setDragEventListeners(value ? "add" : "remove"), { signal: this.signal, immediate: true });
+    // Post Wiring
+    this.initScrollAndResize();
   }
 
-  protected buildWSkel(side: string): ZoneW {
-    const zone = createEl("div", { className: `tmg-video-side-controls-wrapper tmg-video-${side}-side-controls-wrapper` }, { dropZone: "", scroller: side === "right" ? "reverse" : "" }),
-      cover = createEl("div", { className: `tmg-video-side-controls-wrapper-cover tmg-video-${side}-side-controls-wrapper-cover` });
-    return (cover.append(zone), { cover, zone });
-  }
-
-  protected getSplitControls(row: SControl[]): { left: SControl[]; center: SControl[]; right: SControl[] } {
-    if (!row?.length) return { left: [], center: [], right: [] };
-    const s1 = row.indexOf("spacer"),
-      s2 = row.indexOf("spacer", s1 + 1);
-    return s1 === -1 ? { left: row, center: [], right: [] } : s2 === -1 ? { left: row.slice(0, s1), center: [], right: row.slice(s1 + 1) } : { left: row.slice(0, s1), center: row.slice(s1 + 1, s2), right: row.slice(s2 + 1) };
-  }
-
-  protected fillZone(zoneW: ZoneW, ids: SControl[] | BigControl[]): void {
-    if (!zoneW.zone) return;
-    zoneW.zone.innerHTML = "";
-    ids.forEach((id) => this.controls.get(id)?.element && zoneW.zone.append(this.controls.get(id)!.element));
-  }
-
-  protected getZones(): HTMLElement[] {
-    return [...Object.values(this.zoneWs.top), ...Object.values(this.zoneWs.bottom).map((v) => Object.values(v))].flat().map((w) => w.zone);
+  protected handleMetaLayout({ target: { key, value } }: Event<VideoBuild, "settings.controlPanel.title" | "settings.controlPanel.artist" | "settings.controlPanel.profile">): void {
+    // const meta = this.getControl<Meta>("meta");
+    // value !== true && (meta[key][key === "profile" ? "src" : "textContent"] = meta[key].dataset["video" + capitalize(key)] = value || "");
   }
 
   protected handleTopLayout({ value }: Event<VideoBuild, "settings.controlPanel.top">): void {
@@ -142,17 +118,35 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     });
   }
 
-  protected getDraggableControls(): NodeListOf<HTMLElement> {
-    return this.ctlr.queryDOM("[data-draggable-control]", true);
+  protected handleTimelineSeek({ currentTarget: { value } }: Event<VideoBuild, "settings.controlPanel.timeline.seek">): void {
+    const timeline = this.getControl<Timeline>("timeline");
+    if (timeline) timeline.config.scrub.relative = value!.relative;
+    if (timeline) timeline.config.scrub.cancel = value!.cancel;
   }
 
-  protected getDropZones(): HTMLElement[] {
-    return [...this.ctlr.queryDOM("[data-drop-zone][data-drag-id]", true), ...this.getZones()];
+  protected buildWSkel(side: string): ZoneW {
+    const zone = createEl("div", { className: `tmg-video-side-controls-wrapper tmg-video-${side}-side-controls-wrapper` }, { dropZone: "", scroller: side === "right" ? "reverse" : "" }),
+      cover = createEl("div", { className: `tmg-video-side-controls-wrapper-cover tmg-video-${side}-side-controls-wrapper-cover` });
+    return (cover.append(zone), { cover, zone });
+  }
+
+  protected getSplitControls(row: SControl[]): { left: SControl[]; center: SControl[]; right: SControl[] } {
+    if (!row?.length) return { left: [], center: [], right: [] };
+    const s1 = row.indexOf("spacer"),
+      s2 = row.indexOf("spacer", s1 + 1);
+    return s1 === -1 ? { left: row, center: [], right: [] } : s2 === -1 ? { left: row.slice(0, s1), center: [], right: row.slice(s1 + 1) } : { left: row.slice(0, s1), center: row.slice(s1 + 1, s2), right: row.slice(s2 + 1) };
+  }
+
+  protected fillZone(zoneW: ZoneW, ids: SControl[] | BigControl[]): void {
+    if (!zoneW.zone) return;
+    zoneW.zone.innerHTML = "";
+    ids.forEach((id) => this.controls.get(id)?.element && zoneW.zone.append(this.controls.get(id)!.element));
+    this.handleControlsView(zoneW.zone);
   }
 
   protected setDragEventListeners(action: "add" | "remove"): void {
     const draggable = this.ctlr.config.settings.controlPanel.draggable;
-    this.getDraggableControls().forEach((c) => {
+    this.ctlr.queryDOM("[data-draggable-control]", true).forEach((c) => {
       c.dataset.dragId = c.dataset.dragId ?? "";
       const act = !inBoolArrOpt(draggable, c.dataset.dragId) ? "remove" : action;
       c.dataset.draggableControl = String((c.draggable = act === "add"));
@@ -160,7 +154,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
       c[`${act}EventListener` as "addEventListener"]("drag", this.handleDrag, { signal: this.signal });
       c[`${act}EventListener` as "addEventListener"]("dragend", this.handleDragEnd, { signal: this.signal });
     });
-    this.getDropZones().forEach((c) => {
+    [...this.ctlr.queryDOM("[data-drop-zone][data-drag-id]", true), ...this.zonesArr].forEach((c) => {
       c.dataset.dragId = c.dataset.dragId ?? "";
       const act = !inBoolArrOpt(draggable, c.dataset.dragId) ? "remove" : action;
       c.dataset.dropZone = String(act === "add");
@@ -247,6 +241,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
         }
         const afterControl = getElSiblingAt(x, "x", t.querySelectorAll<HTMLElement>("[draggable=true]:not(.tmg-video-control-dragging)"));
         afterControl ? t.insertBefore(this.dragging!, afterControl) : t.append(this.dragging!);
+        !t.dataset.dragId && this.zonesArr.forEach(this.handleControlsView);
       },
       500,
       false
@@ -261,7 +256,46 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     !this.noDropOff(e.target as HTMLElement) && (e.target as HTMLElement).classList.remove("tmg-video-dragover");
   }
 
+  protected initScrollAndResize(): void {
+    // const meta = this.getControl<Meta>("meta");
+    // if (meta) this.scrollAssistEls.push((initScrollAssist(meta.title, { pxPerSecond: 60 }), meta.title));
+    // if (meta) this.scrollAssistEls.push((initScrollAssist(meta.artist, { pxPerSecond: 30 }), meta.artist));
+    this.zonesArr.forEach((zone) => {
+      this.handleControlsView(zone);
+      this.scrollAssistEls.push((initScrollAssist(zone, { pxPerSecond: 60 }), zone));
+      this.clups.push(observeResize(zone, () => this.handleControlsView(zone)));
+      zone.addEventListener("scroll", this.handleDirtyScroll, { passive: true, signal: this.signal });
+    });
+  }
+
+  protected handleControlsView(w: HTMLElement): void {
+    if (!w.isConnected) return;
+    let spacer: HTMLElement | undefined,
+      c: HTMLElement | null = w.firstElementChild as HTMLElement | null;
+    do {
+      c?.setAttribute("data-displayed", getComputedStyle(c).display !== "none" ? "true" : "false");
+      c?.setAttribute("data-spacer", "false");
+      if (c?.dataset.displayed === "true" && !spacer) spacer = c;
+    } while ((c = (c?.nextElementSibling ?? null) as HTMLElement | null));
+    this.ctlr.config.settings.css.currentTopWrapperHeight = `${this.topW.offsetHeight}px`;
+    this.ctlr.config.settings.css.currentBottomWrapperHeight = `${this.bottomW.offsetHeight}px`;
+    if (w.dataset.scroller !== "reverse") return;
+    spacer?.setAttribute("data-spacer", "true");
+    if (w.dataset.resetScrolled === "true") w.dataset.hasScrolled = "false";
+    if (w.dataset.hasScrolled === "true" || w.scrollWidth <= w.clientWidth || w.scrollLeft === w.scrollWidth - w.clientWidth) return void (w.scrollWidth <= w.clientWidth && (w.dataset.hasScrolled = "false"));
+    w.addEventListener("scroll", () => (w.dataset.hasScrolled = "false"), { once: true, signal: this.signal });
+    w.scrollLeft = w.scrollWidth - w.clientWidth;
+  }
+
+  protected handleDirtyScroll(e: globalThis.Event): void {
+    const el = e.currentTarget as HTMLElement;
+    if (el.scrollLeft > 0) el.dataset.hasScrolled = "true";
+    el.dataset.resetScrolled = String(el.scrollLeft === (el.dataset.scroller === "reverse" ? el.scrollWidth - el.clientWidth : 0));
+  }
+
   protected onDestroy(): void {
+    this.clups.forEach((cleanup) => cleanup());
+    this.scrollAssistEls.forEach(removeScrollAssist);
     this.controls.forEach(({ instance }) => instance?.destroy());
     this.controls.clear();
   }

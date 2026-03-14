@@ -1,6 +1,7 @@
 import { BasePlug } from ".";
 import type { Event } from "../types/reactor";
-import { VideoBuild } from "../types/build";
+import type { VideoBuild } from "../types/build";
+import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";
 import { clamp } from "../utils";
 
@@ -16,16 +17,62 @@ export class BrightnessPlug extends BasePlug<Brightness> {
   protected shouldSetLastBrightness = false;
 
   public wire(): void {
-    this.ctlr.config.set("settings.brightness.value", (value) => clamp(this.shouldDark ? 0 : this.config.min, value!, this.config.max), { signal: this.signal });
+    // Variables Assignment
     const configBrightness = this.config.value ?? this.ctlr.config.settings.css.brightness ?? 100;
     this.lastBrightness = clamp(this.config.min, configBrightness, this.config.max);
     this.shouldDark = this.shouldSetLastBrightness = this.config.dark ?? false;
     this.config.value = this.shouldDark ? 0 : this.lastBrightness;
-    this.ctlr.config.on("settings.brightness.value", this.handleBrightnessChange, { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.brightness.dark", this.handleDarkChange, { signal: this.signal });
-    this.ctlr.config.on("settings.brightness.min", this.handleMinChange, { signal: this.signal });
-    this.ctlr.config.on("settings.brightness.max", this.handleMaxChange, { signal: this.signal });
+    // Ctlr Config Getters
     this.ctlr.config.get("settings.brightness.value", () => Number(this.ctlr.config.settings.css.brightness ?? 100), { signal: this.signal, lazy: true });
+    // ----------- Setters
+    this.ctlr.config.set("settings.brightness.value", (value) => clamp(this.shouldDark ? 0 : this.config.min, value!, this.config.max), { signal: this.signal });
+    // ----------- Watchers
+    this.ctlr.config.watch("settings.brightness.value", this.forwardBrightness, { signal: this.signal, immediate: true });
+    this.ctlr.config.watch("settings.brightness.dark", this.forwardDark, { signal: this.signal, immediate: true });
+    // ---- Media Listeners
+    this.ctlr.media.on("intent.brightness", this.handleBrightnessIntent, { capture: true, signal: this.signal });
+    this.ctlr.media.on("intent.dark", this.handleDarkIntent, { capture: true, signal: this.signal });
+    // ---- Config Listeners
+    this.ctlr.config.on("settings.brightness.min", this.handleMin, { signal: this.signal });
+    this.ctlr.config.on("settings.brightness.max", this.handleMax, { signal: this.signal });
+    // Post Wiring
+    this.ctlr.media.tech.features.brightness = true;
+  }
+
+  protected forwardBrightness(value: number): void {
+    this.ctlr.media.intent.brightness = value;
+  }
+  protected forwardDark(value: boolean): void {
+    this.ctlr.media.intent.dark = value;
+  }
+
+  protected handleBrightnessIntent(e: Event<CtlrMedia, "intent.brightness">): void {
+    if (e.resolved) return;
+    this.handleBrightnessState(e.value);
+    this.ctlr.media.state.brightness = e.value;
+    e.resolve(this.name);
+  }
+
+  protected handleDarkIntent(e: Event<CtlrMedia, "intent.dark">): void {
+    if (e.resolved) return;
+    this.handleDarkState(e.value);
+    this.ctlr.media.state.dark = e.value;
+    e.resolve(this.name);
+  }
+
+  protected handleMin({ target }: Event<VideoBuild, "settings.brightness.min">): void {
+    const min = target.value;
+    if (this.config.value < min) this.config.value = min;
+    if (this.lastBrightness < min) this.lastBrightness = min;
+  }
+
+  protected handleMax({ target }: Event<VideoBuild, "settings.brightness.max">): void {
+    const max = target.value;
+    if (this.config.value > max) this.config.value = max;
+    if (this.lastBrightness > max) this.lastBrightness = max;
+    this.ctlr.videoContainer.classList.toggle("tmg-video-brightness-boost", max > 100);
+    this.ctlr.config.settings.css.brightnessSliderPercent = Math.round((100 / max) * 100);
+    this.ctlr.config.settings.css.maxBrightnessRatio = max / 100;
   }
 
   protected handleBrightnessState(value: number): void {
@@ -64,30 +111,6 @@ export class BrightnessPlug extends BasePlug<Brightness> {
     }
   }
 
-  protected handleBrightnessChange({ value }: Event<VideoBuild, "settings.brightness.value">): void {
-    this.handleBrightnessState(value!);
-  }
-
-  protected handleDarkChange({ oldValue, value: dark }: Event<VideoBuild, "settings.brightness.dark">): void {
-    if (oldValue === dark) return;
-    this.handleDarkState(dark!);
-  }
-
-  protected handleMinChange({ target }: Event<VideoBuild, "settings.brightness.min">): void {
-    const min = target.value!;
-    if (this.config.value! < min) this.config.value = min;
-    if (this.lastBrightness < min) this.lastBrightness = min;
-  }
-
-  protected handleMaxChange({ target }: Event<VideoBuild, "settings.brightness.max">): void {
-    const max = target.value!;
-    if (this.config.value! > max) this.config.value = max;
-    if (this.lastBrightness > max) this.lastBrightness = max;
-    this.ctlr.videoContainer.classList.toggle("tmg-video-brightness-boost", max > 100);
-    this.ctlr.config.settings.css.brightnessSliderPercent = Math.round((100 / max) * 100);
-    this.ctlr.config.settings.css.maxBrightnessRatio = max / 100;
-  }
-
   public toggleDark(option?: "auto"): void {
     if (option === "auto" && this.shouldSetLastBrightness && !this.lastBrightness) this.lastBrightness = this.config.skip;
     this.config.dark = !this.config.dark;
@@ -96,7 +119,7 @@ export class BrightnessPlug extends BasePlug<Brightness> {
   public changeBrightness(value: number): void {
     const sign = value >= 0 ? "+" : "-";
     value = Math.abs(value);
-    let brightness = this.shouldSetLastBrightness ? this.lastBrightness : this.config.value!;
+    let brightness = this.shouldSetLastBrightness ? this.lastBrightness : this.config.value;
     if (sign === "-") {
       if (brightness > this.config.min) brightness -= brightness % value ? brightness % value : value;
       // if (brightness === 0) return this.ctlr.notify("brightnessdark");

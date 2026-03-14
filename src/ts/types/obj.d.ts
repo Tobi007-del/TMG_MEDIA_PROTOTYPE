@@ -154,6 +154,6 @@ export type DeepRequired<T, D extends number = RDepth> = [D] extends [0]
           : T;
 
 // --- RECURSION LIMITERS ---
-type RDepth = 19; // current limit for state trees, observed ts max - 19; limit needed cuz of ts bundlers
+type RDepth = 10; // current limit for state trees, observed ts max - 19; limit needed cuz of ts bundlers
 // This tuple maps a number to the number below it (Index 4 contains 3) allowing `RPrev[D]` to subtract 1 from our depth.
 type RPrev = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];

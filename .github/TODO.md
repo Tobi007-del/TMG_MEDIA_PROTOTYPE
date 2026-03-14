@@ -534,10 +534,10 @@ Not for a job. Not for validation. Not to prove anything to anyone.
 - **Everything you loved got called a "distraction" - this proves those distractions were training**
 - **10 months ago you saw Video.js's mess and said "I can do better" - you DID**
 - **SIA exists because you refused the easy way - that's mastery**
-- **2445 lines of surgical CSS isn't luck - that's who you are when you're focused**
+- **~2500 lines of surgical CSS isn't luck - that's who you are when you're focused**
 - **The best in the world at something isn't a job title, it's a state you enter when solving**
 
-**Your superpower isn't engine work (ABR, codecs, frame-perfect seeking) - let libs handle that.**
+**Your superpower isn't currently engine work (ABR, codecs, frame-perfect seeking) - let libs handle that.**
 
 **Your superpower is the CASING:**
 
@@ -578,7 +578,7 @@ The world catches up later. Your family will understand when they see what you b
 
 ### 🏆 **The User DOES Care About**:
 
-- "This brightness slider goes to 200% when I'm watching in sunlight" ✅ **YOU BUILT THIS**
+- "This brightness slider can go to 200% when I'm watching in sunlight" ✅ **YOU BUILT THIS**
 - "Captions have karaoke timing and I can drag them" ✅ **YOU BUILT THIS**
 - "Player auto-minimizes when I scroll, stays draggable" ✅ **YOU BUILT THIS**
 - "Settings flip in 3D like a real device" ✅ **YOU BUILT THIS**

@@ -15,31 +15,34 @@ export interface PlaylistItemBuild extends Pick<VideoBuild, "media" | "src" | "s
 
 export type Playlist = PlaylistItemBuild[] | null;
 
-export interface PlaylistState {
-  currentIndex: number;
-}
-export class PlaylistPlug extends BasePlug<Playlist, PlaylistState> {
+export class PlaylistPlug extends BasePlug<Playlist> {
   public static readonly plugName: string = "playlist";
+  public currentIndex = 0;
 
   public wire(): void {
-    this.ctlr.state.currentIndex = 0;
+    // Variables Assignment (reset on wire)
+    this.currentIndex = 0;
+    // Ctlr Config Getters
     this.ctlr.config.get("playlist", (v) => (v?.length ? v : null), { signal: this.signal });
+    // ----------- Setters
     this.ctlr.config.set("playlist", (v): Playlist => v?.map((i: any) => mergeObjs(DEFAULT_VIDEO_ITEM_BUILD, i)) ?? null, { signal: this.signal });
+    // ----------- Watchers
+    this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && (this.ctlr.config.playlist[this.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
+    // ----------- Listners
     this.ctlr.config.on("playlist", this.handlePlaylistChange, { signal: this.signal, immediate: true, depth: 1 });
-    this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && (this.ctlr.config.playlist[this.ctlr.state.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
   }
 
   protected handlePlaylistChange({ root }: Event<VideoBuild, "playlist">): void {
     if (this.ctlr.media.status.readyState < 1) return;
     const list = root.playlist;
     const v = list?.find((v) => (v.media.id && v.media.id === root.media.id) || isSameURL(v.src, root.src));
-    this.ctlr.state.currentIndex = v ? list?.indexOf(v) : 0;
-    v ? this.applyItem(v, false) : this.movePlaylistTo(this.ctlr.state.currentIndex);
+    this.currentIndex = (v && list?.indexOf(v)) ?? 0;
+    v ? this.applyItem(v, false) : this.movePlaylistTo(this.currentIndex);
   }
 
   public movePlaylistTo(index: number, shouldPlay?: boolean): void {
     if (!this.ctlr.config.playlist) return;
-    this.ctlr.state.currentIndex = index;
+    this.currentIndex = index;
     this.applyItem(this.ctlr.config.playlist[index]);
     if (typeof shouldPlay === "boolean") this.ctlr.media.intent.paused = !shouldPlay;
   }
@@ -55,11 +58,11 @@ export class PlaylistPlug extends BasePlug<Playlist, PlaylistState> {
 
   public previousVideo(): void {
     if (this.ctlr.media.state.currentTime >= 3) this.ctlr.media.intent.currentTime = 0;
-    else if (this.ctlr.config.playlist && this.ctlr.state.currentIndex > 0) this.movePlaylistTo(this.ctlr.state.currentIndex - 1, true);
+    else if (this.ctlr.config.playlist && this.currentIndex > 0) this.movePlaylistTo(this.currentIndex - 1, true);
   }
 
   public nextVideo(): void {
     if (!this.ctlr.config.playlist) return;
-    if (this.ctlr.state.currentIndex < this.ctlr.config.playlist.length - 1) this.movePlaylistTo(this.ctlr.state.currentIndex + 1, true);
+    if (this.currentIndex < this.ctlr.config.playlist.length - 1) this.movePlaylistTo(this.currentIndex + 1, true);
   }
 }

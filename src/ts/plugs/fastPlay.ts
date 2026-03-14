@@ -1,5 +1,4 @@
-import { BasePlug } from ".";
-import type { TimePlug } from "./time";
+import { BasePlug, type TimePlug, type OverlayPlug } from ".";
 import { setTimeout, setInterval } from "../utils";
 
 export interface FastPlay {
@@ -21,7 +20,7 @@ interface FastPlayState {
 
 export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
   public static readonly plugName: string = "fastPlay";
-  protected speedCheck = false;
+  public speedCheck = false;
   protected wasPaused = false;
   protected lastPlaybackRate = 1;
   protected rewindPlaybackRate = 0;
@@ -33,6 +32,7 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
 
   public wire(): void {
     const attachListeners = () => {
+      // Event Listeners
       this.ctlr.DOM.controlsContainer?.addEventListener("pointerdown", this.handleSpeedPointerDown, { capture: true, signal: this.signal });
     };
     if (this.ctlr.state.readyState > 1) attachListeners();
@@ -72,7 +72,7 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
 
   protected rewindVideo(): void {
     if (!this.ctlr.media.state.paused) this.ctlr.media.intent.paused = true;
-    const newTime = this.ctlr.media.state.currentTime - this.rewindPlaybackRate / this.ctlr.state.pfps,
+    const newTime = this.ctlr.media.state.currentTime - this.rewindPlaybackRate / this.ctlr.config.settings.frame.fps,
       notifier = this.ctlr.queryDOM(".tmg-video-playback-rate-notifier"),
       timePlug = this.ctlr.getPlug<TimePlug>("time");
     this.ctlr.media.intent.currentTime = newTime;
@@ -87,7 +87,7 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
       clearInterval(this.speedIntervalId);
       this.speedIntervalId = null;
     } else {
-      this.speedIntervalId = setInterval(() => this.rewindVideo(), this.ctlr.state.pframeDelay - 20, this.signal);
+      this.speedIntervalId = setInterval(() => this.rewindVideo(), Math.round(1000 / this.ctlr.config.settings.frame.fps) - 20, this.signal);
     }
   }
 
@@ -101,7 +101,7 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
     this.state.speedValue = this.lastPlaybackRate;
     this.state.isRewinding = false;
     this.ctlr.media.intent.paused = this.config.reset ? this.wasPaused : false;
-    // this.removeOverlay(); // TODO: when overlay method exists
+    this.ctlr.getPlug<OverlayPlug>("overlay")?.remove();
     // JS: this.DOM.playbackRateNotifier?.classList.remove("tmg-video-control-active", "tmg-video-rewind");
     this.ctlr.queryDOM(".tmg-video-playback-rate-notifier")?.classList.remove("tmg-video-control-active", "tmg-video-rewind");
   }

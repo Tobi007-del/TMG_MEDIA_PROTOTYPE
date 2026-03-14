@@ -24,7 +24,9 @@ export class OverlayPlug extends BasePlug<Overlay, OverlayState> {
   }
 
   public wire(): void {
+    // Ctlr Media Listeners
     this.ctlr.media.on("state.paused", ({ value }) => (value ? this.show() : this.delay()), { signal: this.signal, immediate: true });
+    // ---- Config --------
     this.ctlr.config.on("settings.overlay.curtain", this.handleCurtain, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.overlay.behavior", this.handleBehavior, { signal: this.signal, immediate: true });
   }

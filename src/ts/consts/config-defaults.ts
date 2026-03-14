@@ -1,6 +1,6 @@
 import { VideoBuild } from "../types/build";
-import { PlaylistItemBuild } from "../plugs";
 import { DeepPartial } from "../types/obj";
+import { PlaylistItemBuild } from "../plugs";
 import { IS_MOBILE } from "../utils";
 
 export const DEFAULT_VIDEO_BUILD: DeepPartial<VideoBuild> = {
@@ -11,7 +11,7 @@ export const DEFAULT_VIDEO_BUILD: DeepPartial<VideoBuild> = {
   lightState: { disabled: false, controls: ["meta", "bigplaypause", "fullscreenorientation"], preview: { usePoster: true, time: 4 } },
   debug: true,
   settings: {
-    auto: { next: { value: 20, videoPreview: { usePoster: true, time: 4, tease: true } } },
+    auto: { next: { value: 20, preview: { usePoster: true, time: 4, tease: true } } },
     css: {},
     brightness: { min: 0, max: 150, value: 100, skip: 5 },
     captions: {
@@ -172,7 +172,7 @@ export const DEFAULT_VIDEO_BUILD: DeepPartial<VideoBuild> = {
       artist: true,
       top: ["expandminiplayer", "spacer", "meta", "spacer", "capture", "fullscreenlock", "fullscreenorientation", "removeminiplayer"],
       center: ["bigprev", "bigplaypause", "bignext"],
-      bottom: { 1: [], 2: ["spacer", "timeline", "spacer"], 3: ["prev", "playpause", "next", "brightness", "volume", "timeandduration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] },
+      bottom: { 1: [], 2: ["spacer", "timeline", "spacer"] as const, 3: [...(!IS_MOBILE ? (["prev", "playpause", "next"] as const) : []), "brightness", "volume", "timeandduration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const },
       buffer: "eclipse",
       timeline: { thumbIndicator: true, seek: { relative: !IS_MOBILE, cancel: { delta: 15, timeout: 2000 } } },
       progressBar: IS_MOBILE,
@@ -196,7 +196,7 @@ export const DEFAULT_VIDEO_BUILD: DeepPartial<VideoBuild> = {
       blocks: ["Ctrl+Tab", "Ctrl+Shift+Tab", "Ctrl+PageUp", "Ctrl+PageDown", "Cmd+Option+ArrowRight", "Cmd+Option+ArrowLeft", "Ctrl+1", "Ctrl+2", "Ctrl+3", "Ctrl+4", "Ctrl+5", "Ctrl+6", "Ctrl+7", "Ctrl+8", "Ctrl+9", "Cmd+1", "Cmd+2", "Cmd+3", "Cmd+4", "Cmd+5", "Cmd+6", "Cmd+7", "Cmd+8", "Cmd+9", "Alt+ArrowLeft", "Alt+ArrowRight", "Cmd+ArrowLeft", "Cmd+ArrowRight", "Ctrl+r", "Ctrl+Shift+r", "F5", "Shift+F5", "Cmd+r", "Cmd+Shift+r", "Ctrl+h", "Ctrl+j", "Ctrl+d", "Ctrl+f", "Cmd+y", "Cmd+Option+b", "Cmd+d", "Cmd+f", "Ctrl+Shift+i", "Ctrl+Shift+j", "Ctrl+Shift+c", "Ctrl+u", "F12", "Cmd+Option+i", "Cmd+Option+j", "Cmd+Option+c", "Cmd+Option+u", "Ctrl+=", "Ctrl+-", "Ctrl+0", "Cmd+=", "Cmd+-", "Cmd+0", "Ctrl+p", "Ctrl+s", "Ctrl+o", "Cmd+p", "Cmd+s", "Cmd+o"],
     },
     locked: { disabled: true },
-    modes: { fullscreen: { disabled: false, orientationLock: "auto", onRotate: 90 }, theater: !IS_MOBILE, pictureInPicture: { disabled: false, floatingPlayer: { disabled: false, width: 500, height: 281, disallowReturnToOpener: false, preferInitialWindowPlacement: false } }, miniplayer: { disabled: false, minWindowWidth: 240 } },
+    modes: { fullscreen: { disabled: false, orientationLock: "auto", onRotate: 90 }, theater: { disabled: !IS_MOBILE }, pictureInPicture: { disabled: false, floatingPlayer: { disabled: false, width: 500, height: 281, disallowReturnToOpener: false, preferInitialWindowPlacement: false } }, miniplayer: { disabled: false, minWindowWidth: 240 } },
     notifiers: true,
     noOverride: false,
     overlay: { delay: 3000, behavior: "strict" },
@@ -204,7 +204,8 @@ export const DEFAULT_VIDEO_BUILD: DeepPartial<VideoBuild> = {
     playbackRate: { min: 0.25, max: 8, skip: 0.25 },
     playsInline: true,
     time: { min: 0, skip: 10, previews: false, mode: "elapsed", format: "digital", seekSync: false },
-    toasts: { disabled: false, captureAutoClose: 15000, maxToasts: 7, position: "bottom-left", hideProgressBar: true, closeButton: !IS_MOBILE, animation: "slide-up", dragToCloseDir: "x||y" },
+    frame: { disabled: false, fps: 30, captureAutoClose: 15000 },
+    toasts: { disabled: false, maxToasts: 7, position: "bottom-left", hideProgressBar: true, closeButton: !IS_MOBILE, animation: "slide-up", dragToCloseDir: "x||y" },
     volume: { min: 0, max: 300, skip: 5 },
   },
 };

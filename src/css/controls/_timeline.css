@@ -7,15 +7,13 @@
   cursor: pointer;
   container-type: size;
 }
-.tmg-video-container:is(:not(.tmg-video-overlay, :has(:focus-visible, .tmg-video-playback-rate-notifier.tmg-video-control-active)).tmg-video-progress-bar, [data-size-tier^="xxxxx"]) :is(.tmg-video-timeline-container, .tmg-video-seek-bars-wrapper) {
+.tmg-video-container:not(.tmg-video-overlay, :has(:focus-visible, .tmg-video-playback-rate-notifier.tmg-video-control-active)).tmg-video-progress-bar :is(.tmg-video-timeline-container, .tmg-video-seek-bars-wrapper),
+.tmg-video-container[data-size-tier^="xxxxx"] .tmg-video-bottom-controls-wrapper:not(:hover) :is(.tmg-video-timeline-container, .tmg-video-seek-bars-wrapper) {
   position: absolute;
-  bottom: 0.5px;
+  bottom: 0.1px;
   width: 100%;
   margin-inline: 0;
   border-radius: 0;
-}
-.tmg-video-container:has(.tmg-video-playback-rate-notifier.tmg-video-control-active) .tmg-video-timeline-container {
-  opacity: 1;
 }
 .tmg-video-container:not(.tmg-video-overlay, :has(:focus-visible, .tmg-video-playback-rate-notifier.tmg-video-control-active)).tmg-video-progress-bar .tmg-video-timeline-container {
   opacity: var(--tmg-video-progress-bar-opacity);
@@ -135,6 +133,7 @@
   translate: -50% 0;
   color: var(--tmg-video-text-color);
   font-weight: 500;
+  white-space: nowrap;
 }
 .tmg-media-container:is([data-size-tier^="xxxx"], .tmg-video-mobile, .tmg-video-no-previews) .tmg-video-preview-container::after {
   position: relative;

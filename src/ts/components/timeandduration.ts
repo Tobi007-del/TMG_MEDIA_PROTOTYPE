@@ -13,19 +13,25 @@ export class TimeAndDuration extends BaseComponent<TimeAndDurationConfig, Compon
   protected duration!: HTMLElement;
 
   public create() {
+    // Variables Assignments
     this.element = createEl("button", { className: "tmg-video-time-and-duration" }, { draggableControl: "", controlId: this.name });
     this.time = createEl("span", { className: "tmg-video-current-time" });
     this.bridge = createEl("span", { className: "tmg-video-time-bridge" });
     this.duration = createEl("span", { className: "tmg-video-duration-time" });
+    // DOM Injection
     this.element.append(this.time, this.bridge, this.duration);
     return this.element;
   }
 
   public wire(): void {
+    // Variables Assignments
     this.plug = this.ctlr.getPlug<TimePlug>("time");
+    // Event Listeners
     addSafeClicks(this.element, this.plug?.toggleMode, this.plug?.rotateFormat, { signal: this.signal });
+    // Ctlr Media Listeners
     this.ctlr.media.on("state.currentTime", this.updateTime, { signal: this.signal });
     this.ctlr.media.on("status.duration", this.updateDuration, { signal: this.signal });
+    // ---- Config --------
     this.ctlr.config.on("settings.time.format", this.updateUI, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.time.mode", this.updateTime, { signal: this.signal });
     this.ctlr.config.on("settings.keys.shortcuts.timeMode", this.updateARIA, { signal: this.signal, immediate: true });

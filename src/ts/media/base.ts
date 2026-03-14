@@ -52,6 +52,8 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
 
   // --- THE MANDATORY CORE 5 ---
   public wire() {
+    // Ctlr Media Listeners
+    this.ctlr.media.on("intent", this.handleIntentChange, { signal: this.signal });
     this.wireSrc();
     this.wireCurrentTime();
     this.wireDuration();
@@ -59,7 +61,7 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
     this.wireEnded();
     this.wireFeatures();
   }
-  // --- The Core 5 (CtlrMedia "Must Haves") ---
+  // --- The Core 5 (Media "Must Haves") ---
   protected abstract wireSrc(): void;
   protected abstract wireCurrentTime(): void;
   protected abstract wireDuration(): void;
@@ -68,18 +70,16 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
   // --- THE EXTENSIONS ---
   protected wireFeatures() {
     this.features.on("*", this.handleFeaturesChange, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("intent", this.handleIntentChange, { signal: this.signal });
   }
+  // --- Miscellaneous ---
   protected handleFeaturesChange({ type, target: t }: Event<MediaFeatures, "*">) {
     type === "update" ? this.wireFeature(t.key) : type === "init" && (Object.keys(t.value) as (keyof MediaFeatures)[]).forEach(this.wireFeature);
   }
   protected handleIntentChange(e: Event<CtlrMedia, "intent">) {
-    if (e.type !== "update") return;
-    if (!this.features[e.target.key as keyof MediaFeatures]) e.stopImmediatePropagation();
+    if (e.type === "update" && !this.features[e.target.key as keyof MediaFeatures] && e.value) e.stopImmediatePropagation();
   }
-  wireFeature(feature: keyof MediaFeatures): void {
-    if (this.wiredFeatures[feature]) return;
-    this.wiredFeatures[feature] = true;
-    (this as any)[`wire${capitalize(feature)}`]?.();
+  protected wireFeature(feature: keyof MediaFeatures): void {
+    !this.wiredFeatures[feature] && (this as any)[`wire${capitalize(feature)}`]?.();
+    this.wiredFeatures[feature] ||= true;
   }
 }

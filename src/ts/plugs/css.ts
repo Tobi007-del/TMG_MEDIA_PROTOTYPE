@@ -1,6 +1,6 @@
-import { BasePlug } from ".";
-import { CtlrMedia } from "../types/contract";
-import { Event } from "../types/reactor";
+import { BasePlug, type FramePlug } from ".";
+import { type CtlrMedia } from "../types/contract";
+import { type Event } from "../types/reactor";
 import { uncamelize } from "../utils";
 
 export type Css = Record<string, string | number> & {
@@ -13,32 +13,39 @@ export class CSSPlug extends BasePlug<Css> {
   public static readonly plugName: string = "css";
   public static readonly isCore: boolean = true;
   public classKeys = ["captionsCharacterEdgeStyle", "captionsTextAlignment"];
-  public CSSCache: Record<string, string> = {};
+  public CSSCache: Record<string, string | number> = {};
 
   public wire(): void {
-    this.wireCSSMediator();
+    // Variables Assignment
+    const entries = Object.entries(this.config);
     this.ctlr.config.settings.css.altImgUrl = `url(${window.TMG_VIDEO_ALT_IMG_SRC})`;
-    this.ctlr.media.watch("status.videoWidth", this.syncAspectRatio, { signal: this.signal, immediate: true });
-    this.ctlr.media.watch("status.videoHeight", this.syncAspectRatio, { signal: this.signal });
-    this.ctlr.media.on("status.loadedMetadata", this.handleLoadedMetadataChange, { signal: this.signal, immediate: true });
-    this.ctlr.state.watch("dimensions.container.width", (w) => (this.ctlr.config.settings.css.currentContainerWidth = `${w || 0}px`), { signal: this.signal, immediate: true });
-    this.ctlr.state.watch("dimensions.container.height", (h) => (this.ctlr.config.settings.css.currentContainerHeight = `${h || 0}px`), { signal: this.signal, immediate: true });
-    this.ctlr.state.on("dimensions.container.tier", ({ value: tier }) => (this.ctlr.videoContainer.dataset.sizeTier = tier || ""), { signal: this.signal, immediate: true });
-    this.ctlr.state.on("dimensions.pseudoContainer.tier", ({ value: tier }) => (this.ctlr.pseudoVideoContainer.dataset.sizeTier = tier || ""), { signal: this.signal, immediate: true });
-  }
-
-  protected wireCSSMediator() {
-    Object.keys(this.config!).forEach((k) => k !== "syncWithMedia" && this.apply(k, this.config![k]));
+    // Ctlr Config Getters
     this.ctlr.config.get("*", (val, { target: { key, path } }) => {
-      if (!path.startsWith("settings.css.")) return val;
-      if (path.includes("sync")) return val;
+      if (!path.startsWith("settings.css.") || path.includes("sync")) return val;
       const newVal = this[this.classKeys.includes(key) ? "getClassValue" : "getCSSValue"](key);
       return ((this.CSSCache[key] ||= newVal), newVal);
     });
-    this.ctlr.config.watch("*", (val, { target: { key, path } }) => {
-      if (!path.startsWith("settings.css.") || path.includes("sync")) return;
-      this.apply(key, val);
-    }); // CSSOM needs immediate updates for visual sync
+    // ---- Media Watchers
+    this.ctlr.media.watch("status.videoWidth", this.syncAspectRatio, { signal: this.signal, immediate: true });
+    this.ctlr.media.watch("status.videoHeight", this.syncAspectRatio, { signal: this.signal });
+    // ---- Config -------
+    this.ctlr.config.watch("*", (val, { target: { key, path } }) => path.startsWith("settings.css.") && !path.includes("sync") && this.apply(key, val), { signal: this.signal }); // `.watch()`: CSSOM needs immediate updates for visual sync
+    // ---- State --------
+    this.ctlr.state.watch("dimensions.container.width", (w) => (this.ctlr.config.settings.css.currentContainerWidth = `${w || 0}px`), { signal: this.signal, immediate: true });
+    this.ctlr.state.watch("dimensions.container.height", (h) => (this.ctlr.config.settings.css.currentContainerHeight = `${h || 0}px`), { signal: this.signal, immediate: true });
+    // ---- Media Listeners
+    this.ctlr.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
+    // ---- State ----------
+    this.ctlr.state.on("dimensions.container.tier", ({ value: tier }) => (this.ctlr.videoContainer.dataset.sizeTier = tier || ""), { signal: this.signal, immediate: true });
+    this.ctlr.state.on("dimensions.pseudoContainer.tier", ({ value: tier }) => (this.ctlr.pseudoVideoContainer.dataset.sizeTier = tier || ""), { signal: this.signal, immediate: true });
+    // Post Wiring
+    entries.forEach(([k, v]) => k !== "syncWithMedia" && ((this.CSSCache[k] ||= this.config[k]), this.apply(k, v)));
+  }
+
+  protected async handleLoadedMetadataStatus({ value }: Event<CtlrMedia, "status.loadedMetadata">) {
+    const color = value && (await this.ctlr.getPlug<FramePlug>("frame")?.getMainColor()),
+      keys = Object.keys(this.ctlr.config.settings.css.syncWithMedia).filter((k) => this.ctlr.config.settings.css.syncWithMedia[k]);
+    keys.forEach((k) => (this.ctlr.config.settings.css[k] = String((value ? color : null) ?? this.CSSCache[k])));
   }
 
   protected getCSSValue(key: string): string {
@@ -72,11 +79,5 @@ export class CSSPlug extends BasePlug<Css> {
   protected syncAspectRatio() {
     const { videoWidth: w, videoHeight: h } = this.ctlr.media.status;
     this.ctlr.config.settings.css.aspectRatio = w && h ? `${w} / ${h}` : "16 / 9";
-  }
-
-  protected handleLoadedMetadataChange({ value }: Event<CtlrMedia, "status.loadedMetadata">) {
-    const color = value && null, // use frame plug later instead of null
-      keys = Object.keys(this.ctlr.config.settings.css.syncWithMedia);
-    keys.forEach((k) => (this.ctlr.config.settings.css[k] = String((value ? color : null) ?? this.CSSCache[k])));
   }
 }
