@@ -77,7 +77,7 @@ Dash convention:
 public wire(): void {
   // Variables Assignment         <- plug refs, DOM refs, computed initial values
   // Event Listeners              <- native addEventListener
-
+  // Plug Listeners               <- where applicable if plug has reactive state
   // [If this.config or this.state is reactive -- own listeners come BEFORE ctlr.*]
   // Own Config Getters           <- this.config.get()
   // ----------- Setters          <- (long dashes: still own config, next op)
@@ -267,14 +267,7 @@ Canonical example: `volume.ts` on `media.intent.volume` and `media.intent.muted`
 | Plug            | File                 | Notes                                                                                         |
 | --------------- | -------------------- | --------------------------------------------------------------------------------------------- |
 | KeysPlug        | `plugs/keys.ts`      | Plugs call `keysPlug.register("action", handler)`; `settings.keys.shortcuts` grows at runtime |
-| CaptionsPlug    | `plugs/captions.ts`  | VTT, karaoke, drag, font settings |
 | NotifierPlug    | `plugs/notifiers.ts` | `.notify(key)` method, BaseNotifier component                                                 |
-
-## Existing TODOs in Code
-
-- `disabled.ts` - 2x `// TODO: when keys plug exists` -> `keysPlug.setListeners("remove"/"add")`
-- `locked.ts` - 2x same TODO + `leaveSettingsView` TODO
-- `gesture/general.ts` - `handleClick` / `handleDblClick` have commented-out mode dispatch
 
 ## Keys Design
 

@@ -1,5 +1,5 @@
 import { BasePlug } from ".";
-import type { Event } from "../types/reactor";
+import type { REvent } from "../types/reactor";
 import type { CtlrMedia } from "../types/contract";
 import { assignEl, IS_MOBILE } from "../utils";
 
@@ -11,23 +11,23 @@ export class SkeletonPlug extends BasePlug<Skeleton> {
 
   public mount(): void {
     // Properties Assignment
-    assignEl(this.ctlr.videoContainer, { role: "region", ariaLabel: "Video Player", className: `tmg-video-container tmg-media-container${IS_MOBILE ? " tmg-video-mobile" : ""}${this.ctlr.media.state.paused ? " tmg-video-paused" : ""}` }, { trackKind: "captions", volumeLevel: "muted", brightnessLevel: "dark", objectFit: this.ctlr.config.settings.css.objectFit || "contain" });
+    assignEl(this.ctlr.videoContainer, { role: "region", ariaLabel: "Video Player", className: `tmg-video-container tmg-media-container${IS_MOBILE ? " tmg-video-mobile" : ""}${this.media.state.paused ? " tmg-video-paused" : ""}` }, { trackKind: "captions", volumeLevel: "muted", brightnessLevel: "dark", objectFit: this.ctlr.settings.css.objectFit || "contain" });
     assignEl(this.ctlr.pseudoVideoContainer, { role: "status", className: "tmg-pseudo-video-container tmg-media-container" });
     assignEl(this.ctlr.pseudoVideo, { ariaHidden: "true", className: "tmg-pseudo-video tmg-media", muted: true, autoplay: false });
     // DOM Injection
     this.ctlr.pseudoVideoContainer.appendChild(this.ctlr.pseudoVideo);
-    this.ctlr.media.element.parentElement?.insertBefore(this.ctlr.videoContainer, this.ctlr.media.element);
+    this.media.element.parentElement?.insertBefore(this.ctlr.videoContainer, this.media.element);
     this.injectInterface();
-    this.ctlr.DOM.containerContent?.prepend(this.ctlr.media.element);
+    this.ctlr.DOM.containerContent?.prepend(this.media.element);
   }
 
   public wire(): void {
     // Ctlr Media Listeners
-    this.ctlr.media.on("state.paused", this.handlePausedState, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("state.currentTime", () => this.ctlr.videoContainer.classList.remove("tmg-video-replay"), { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.ended", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-replay", value), { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.waiting", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-buffering", value), { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
+    this.media.on("state.paused", this.handlePausedState, { signal: this.signal, immediate: true });
+    this.media.on("state.currentTime", () => this.ctlr.videoContainer.classList.remove("tmg-video-replay"), { signal: this.signal, immediate: true });
+    this.media.on("status.ended", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-replay", value), { signal: this.signal, immediate: true });
+    this.media.on("status.waiting", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-buffering", value), { signal: this.signal, immediate: true });
+    this.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
   }
 
   protected injectInterface(): void {
@@ -66,33 +66,33 @@ export class SkeletonPlug extends BasePlug<Skeleton> {
     this.ctlr.DOM.settingsBottomPanel = this.ctlr.queryDOM(".tmg-video-settings-bottom-panel");
   }
 
-  protected handlePausedState({ value }: Event<CtlrMedia, "state.paused">): void {
-    if (!value) for (const media of document.querySelectorAll<HTMLMediaElement>("video, audio")) media !== this.ctlr.media.element && !media.paused && media.pause();
+  protected handlePausedState({ value }: REvent<CtlrMedia, "state.paused">): void {
+    if (!value) for (const media of document.querySelectorAll<HTMLMediaElement>("video, audio")) media !== this.media.element && !media.paused && media.pause();
     this.ctlr.videoContainer.classList.toggle("tmg-video-paused", value);
   }
 
-  protected handleLoadedMetadataStatus({ value }: Event<CtlrMedia, "status.loadedMetadata">): void {
+  protected handleLoadedMetadataStatus({ value }: REvent<CtlrMedia, "status.loadedMetadata">): void {
     if (!value) return;
-    this.ctlr.pseudoVideo.src = this.ctlr.media.element.currentSrc;
-    this.ctlr.pseudoVideo.crossOrigin = this.ctlr.media.element.crossOrigin;
+    this.ctlr.pseudoVideo.src = this.media.element.currentSrc;
+    this.ctlr.pseudoVideo.crossOrigin = this.media.element.crossOrigin;
   }
 
   public activatePseudoMode(): void {
-    ((this.ctlr.pseudoVideo.id = this.ctlr.media.element.id), (this.ctlr.media.element.id = ""));
-    this.ctlr.pseudoVideo.className += " " + this.ctlr.media.element.className.replace(/tmg-media|tmg-video/g, "");
+    ((this.ctlr.pseudoVideo.id = this.media.element.id), (this.media.element.id = ""));
+    this.ctlr.pseudoVideo.className += " " + this.media.element.className.replace(/tmg-media|tmg-video/g, "");
     this.ctlr.pseudoVideoContainer.className += " " + this.ctlr.videoContainer.className.replace(/tmg-media-container|tmg-pseudo-video-container/g, "");
     this.ctlr.videoContainer.parentElement?.insertBefore(this.ctlr.pseudoVideoContainer, this.ctlr.videoContainer);
     document.body.append(this.ctlr.videoContainer);
   }
 
   public deactivatePseudoMode(destroy?: boolean): void {
-    ((this.ctlr.media.element.id = this.ctlr.pseudoVideo.id), (this.ctlr.pseudoVideo.id = ""));
+    ((this.media.element.id = this.ctlr.pseudoVideo.id), (this.ctlr.pseudoVideo.id = ""));
     this.ctlr.pseudoVideo.className = "tmg-pseudo-video tmg-media";
     this.ctlr.pseudoVideoContainer.className = "tmg-pseudo-video-container tmg-media-container";
-    this.ctlr.pseudoVideoContainer.parentElement?.replaceChild(destroy ? this.ctlr.media.element : this.ctlr.videoContainer, this.ctlr.pseudoVideoContainer);
+    this.ctlr.pseudoVideoContainer.parentElement?.replaceChild(destroy ? this.media.element : this.ctlr.videoContainer, this.ctlr.pseudoVideoContainer);
   }
 
   protected onDestroy() {
-    this.ctlr.media.element.parentElement?.replaceChild(this.ctlr.media.element, this.ctlr.videoContainer);
+    this.media.element.parentElement?.replaceChild(this.media.element, this.ctlr.videoContainer);
   }
 }

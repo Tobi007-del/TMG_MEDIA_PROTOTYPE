@@ -1,5 +1,6 @@
 export * from "./base";
 export * from "./buffer";
+export * from "./captions-view";
 export * from "./duration";
 export * from "./playPause";
 export * from "./range";

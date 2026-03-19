@@ -127,7 +127,7 @@ export class TouchModule extends BaseModule<TouchConfig> {
       this.ctlr.videoContainer.removeEventListener("touchmove", this.handleXMove);
       // JS: this.DOM.touchTimelineNotifier?.classList.remove("tmg-video-control-active");
       this.ctlr.DOM.touchTimelineNotifier?.classList.remove("tmg-video-control-active");
-      if (!this.canCancel) this.ctlr.media.intent.currentTime = this.nextTime;
+      if (!this.canCancel) this.media.intent.currentTime = this.nextTime;
     }
     if (this.yCheck) {
       this.yCheck = false;
@@ -152,15 +152,15 @@ export class TouchModule extends BaseModule<TouchConfig> {
   }
 
   protected applyTimeline({ percent, sign, multiplier }: { percent: number; sign: string; multiplier: number }): void {
-    const { currentTime } = this.ctlr.media.state,
-      { duration } = this.ctlr.media.status,
+    const { currentTime } = this.media.state,
+      { duration } = this.media.status,
       change = percent * duration * +multiplier.toFixed(1);
     this.nextTime = clamp(0, currentTime + (sign === "+" ? change : -change), duration);
   }
 
   protected applyRange(key: "volume" | "brightness", percent: number, sign: string): void {
     const plug = this.ctlr.getPlug<VolumePlug>(key),
-      range = this.ctlr.config.settings[key],
+      range = this.ctlr.settings[key],
       value = sign === "+" ? range.value! + percent * range.max : range.value! - percent * range.max;
     plug?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }

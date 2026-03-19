@@ -1,7 +1,7 @@
-import type { Event, Target, Payload, Getter, Setter, Deleter, Watcher, Listener, ListenerOptions, ListenerRecord, WatcherRecord, GetterRecord, SetterRecord, DeleterRecord, SyncOptions, ReactorOptions } from "../types/reactor";
+import type { REvent, Target, Payload, Getter, Setter, Deleter, Watcher, Listener, ListenerOptions, ListenerRecord, WatcherRecord, GetterRecord, SetterRecord, DeleterRecord, SyncOptions, ReactorOptions } from "../types/reactor";
 import type { PathBranchValue, Paths, PathKey, PathValue, WildPaths } from "../types/obj";
 import { isStrictObj, mergeObjs, getTrailPaths, getTrailRecords, parseEvOpts, inAny, getAny, setAny, deleteAny, deepClone } from "../utils";
-import { inert, isIntent, isVolatile, nuke } from "../tools/mixins";
+import { nuke } from "../tools/mixins";
 
 /***
  * ========= The S.I.A (State Intent Architecture) `Reactor` CODE PATTERN WATCHLIST =========
@@ -20,11 +20,13 @@ import { inert, isIntent, isVolatile, nuke } from "../tools/mixins";
 // The S.I.A (State Intent Architecture) Constants
 // ===========================================================================
 
+export const RAW: unique symbol = Symbol.for("S.I.A_RAW"); // "Get Original Obj" Marker
 export const INERTIA: unique symbol = Symbol.for("S.I.A_INERTIA"); // "No Proxy" Marker
 export const REJECTABLE: unique symbol = Symbol.for("S.I.A_REJECTABLE"); // "State Vs. Intent" Marker
 export const INDIFFABLE: unique symbol = Symbol.for("S.I.A_INDIFFABLE"); // "Equality Tracking" Marker
 export const TERMINATOR: unique symbol = Symbol.for("S.I.A_TERMINATOR"); // "Obj Operation Terminator" Marker
-export const RAW: unique symbol = Symbol.for("S.I.A_RAW"); // "Get Original Obj" Marker
+export const VERSION: unique symbol = Symbol.for("S.I.A_VERSION"); // "Obj Mutation Count" Marker
+export const SSVERSION: unique symbol = Symbol.for("S.I.A_SNAPSHOT_VERSION"); // "Obj Snapshot Version" Marker
 const NOOP = () => {};
 const R_BATCH = ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window);
 const R_LOG = console.log.bind(console, "[S.I.A Reactor]");
@@ -118,23 +120,28 @@ export class Reactor<T extends object> {
   protected deleters?: Map<WildPaths<T>, Array<DeleterRecord<T>>>;
   protected watchers?: Map<WildPaths<T>, Array<WatcherRecord<T>>>;
   protected listeners?: Map<WildPaths<T>, Array<ListenerRecord<T>>>;
-  protected lineage?: WeakMap<object, { parent: object; key: string }[]>; // The Engine Room: Tracks Target
+  protected lineage?: WeakMap<object, (object | string)[]>; // { parent, key }: uses maths to avoid extra allocations for pairs
   protected queue?: Set<() => void>; // Tasks to run after flush
   protected batch?: Map<Paths<T>, Payload<T>>;
-  protected isBatching = false;
-  protected isTracking = false;
   protected proxyCache = new WeakMap<object, any>();
+  protected snapshotCache?: WeakMap<object, any>;
   protected log: (...args: any[]) => void = NOOP;
-  protected _canLog = false; // keeping track so API getter doesn't slow down internal iterations in any way
-  public config: Omit<ReactorOptions<T>, "debug" | "referenceTracking"> = { crossRealms: false, eventBubbling: true, batchingFunction: R_BATCH };
-  public core: T; // `?:`s | pay the ~600 byte price upfront for what u might never use
+  public config: Omit<ReactorOptions<T>, "debug" | "referenceTracking" | "lineageTracing" | "smartCloning"> = { crossRealms: false, eventBubbling: true, batchingFunction: R_BATCH };
+  public core: T; // `?:`s | pay the ~800 byte price upfront for what u might never use
+  protected isLogging = false; // keeping track so API getter doesn't slow down internal iterations in any way
+  protected isTracing = false;
+  protected isTracking = false;
+  protected isSCloning = false; // Smart Cloning
+  protected isBatching = false;
 
   constructor(obj: T = {} as T, options?: ReactorOptions<T>) {
-    inert(this);
+    (this as any)[INERTIA] = true;
     this.core = this.proxied(obj);
     if (!options) return;
+    this.canLog = !!options.debug;
     if ((this.isTracking = !!options.referenceTracking)) this.lineage = new WeakMap(); // tracking one-time set to avoid reference issues
-    if (options.debug) this.canLog = true;
+    if ((this.isSCloning = this.isTracking && !!options.smartCloning)) this.snapshotCache = new WeakMap();
+    this.isTracing = this.isTracking && !!options.lineageTracing;
     const { get = this.config.get, set = this.config.set, delete: del = this.config.delete, crossRealms = this.config.crossRealms, eventBubbling = this.config.eventBubbling } = options;
     Object.assign(this.config, { get, set, delete: del, crossRealms, eventBubbling });
   }
@@ -145,22 +152,22 @@ export class Reactor<T extends object> {
     obj = (obj as any)[RAW] || obj; // prevents nested proxies
     if (this.isTracking && parent && key) this.link(obj, parent, key, false); // already checked types above
     if (this.proxyCache.has(obj)) return this.proxyCache.get(obj);
-    rejectable ||= isIntent(obj);
-    indiffable ||= isVolatile(obj);
+    rejectable ||= (obj as any)[REJECTABLE];
+    indiffable ||= (obj as any)[INDIFFABLE];
     const proxy = new Proxy(obj, {
       // Robust Proxy handler
       get: (object, key, receiver) => {
         if (key === RAW) return object;
         let value = (object as any)[key];
         const safeKey = String(key),
-          fullPath = this.isTracking ? undefined : ((path ? path + "." + safeKey : safeKey) as Paths<T>),
-          paths = this.isTracking ? this.trace(object, safeKey) : fullPath!;
+          fullPath = this.isTracing ? undefined : ((path ? path + "." + safeKey : safeKey) as Paths<T>),
+          paths = this.isTracing ? this.trace(object, safeKey) : fullPath!;
         this.log(`👀 [GET Trap] Initiated for "${safeKey}" on "${paths}"`);
         if (this.config.get) value = this.config.get(object as PathBranchValue<T>, key as PathKey<T>, value, receiver, paths);
         if (this.getters) {
           const wildcords = this.getters.get("*"); // wild cords
-          for (let i = 0, len = this.isTracking ? paths.length : 1; i < len; i++) {
-            const currPath = (this.isTracking ? paths[i] : fullPath!) as Paths<T>,
+          for (let i = 0, len = this.isTracing ? paths.length : 1; i < len; i++) {
+            const currPath = (this.isTracing ? paths[i] : fullPath!) as Paths<T>,
               cords = this.getters.get(currPath);
             if (!cords && !wildcords) continue;
             const target: Target<T> = { path: currPath, value, key: safeKey as PathKey<T>, object: receiver },
@@ -179,8 +186,9 @@ export class Reactor<T extends object> {
           safeOldValue,
           terminated = false;
         const safeKey = String(key),
-          fullPath = this.isTracking ? undefined : ((path ? path + "." + safeKey : safeKey) as Paths<T>),
-          paths = this.isTracking ? this.trace(object, safeKey) : fullPath!,
+          fullPath = this.isTracing ? undefined : ((path ? path + "." + safeKey : safeKey) as Paths<T>),
+          paths = this.isTracing ? this.trace(object, safeKey) : fullPath!,
+          loopLen = this.isTracing ? paths.length : 1,
           oldValue = (object as any)[key];
         if (this.isTracking || !indiffable) {
           safeOldValue = oldValue?.[RAW] || oldValue;
@@ -192,7 +200,7 @@ export class Reactor<T extends object> {
         if (this.config.set) terminated = (value = this.config.set(object as PathBranchValue<T>, key as PathKey<T>, value, oldValue, receiver, paths)) === TERMINATOR;
         if (this.setters) {
           const wildcords = this.setters.get("*");
-          for (let i = 0, len = paths.length; i < len; i++) {
+          for (let i = 0; i < loopLen; i++) {
             const currPath = (this.isTracking ? paths[i] : fullPath!) as Paths<T>,
               cords = this.setters.get(currPath);
             if (!cords && !wildcords) continue;
@@ -210,9 +218,9 @@ export class Reactor<T extends object> {
         }
         if (terminated) return (this.log(`🛡️ [SET Mediator] Terminated on "${paths}"`), true); // soft rejection if terminated: `true`
         (object as any)[key] = value;
-        if (this.isTracking && !unchanged) (this.unlink(safeOldValue, object, safeKey), this.link(safeValue, object, safeKey));
+        if (this.isTracking && !unchanged) (this.isSCloning && this.stamp(object), (this.unlink(safeOldValue, object, safeKey), this.link(safeValue, object, safeKey)));
         if (this.watchers || this.listeners)
-          for (let i = 0, len = paths.length; i < len; i++) {
+          for (let i = 0; i < loopLen; i++) {
             const currPath = (this.isTracking ? paths[i] : fullPath!) as Paths<T>,
               target: Target<T> = { path: currPath, value, oldValue, key: safeKey as PathKey<T>, object: receiver };
             this.notify(currPath, { type: "set", target, currentTarget: target, root: this.core, terminated, rejectable } as Payload<T, Paths<T>>);
@@ -224,14 +232,15 @@ export class Reactor<T extends object> {
           receiver = this.proxyCache.get(object),
           terminated = false;
         const safeKey = String(key),
-          fullPath = this.isTracking ? undefined : ((path ? path + "." + safeKey : safeKey) as Paths<T>),
-          paths = this.isTracking ? this.trace(object, safeKey) : fullPath!,
+          fullPath = this.isTracing ? undefined : ((path ? path + "." + safeKey : safeKey) as Paths<T>),
+          paths = this.isTracing ? this.trace(object, safeKey) : fullPath!,
+          loopLen = this.isTracing ? paths.length : 1,
           oldValue = (object as any)[key];
         this.log(`🗑️ [DELETE Trap] Initiated for "${safeKey}" on "${paths}"`);
         if (this.config.delete) terminated = (value = this.config.delete(object as PathBranchValue<T>, key as PathKey<T>, oldValue, receiver, paths)) === TERMINATOR;
         if (this.deleters) {
           const wildcords = this.deleters.get("*");
-          for (let i = 0, len = paths.length; i < len; i++) {
+          for (let i = 0; i < loopLen; i++) {
             const currPath = (this.isTracking ? paths[i] : fullPath!) as Paths<T>,
               cords = this.deleters.get(currPath);
             if (!cords && !wildcords) continue;
@@ -248,9 +257,9 @@ export class Reactor<T extends object> {
         }
         if (terminated) return (this.log(`🛡️ [DELETE Mediator] Terminated on "${paths}"`), true); // soft rejection if terminated: `true`
         delete (object as any)[key];
-        this.isTracking && this.unlink(oldValue?.[RAW] || oldValue, object, safeKey);
+        if (this.isTracking) (this.isSCloning && this.stamp(object), this.unlink(oldValue?.[RAW] || oldValue, object, safeKey));
         if (this.watchers || this.listeners)
-          for (let i = 0, len = paths.length; i < len; i++) {
+          for (let i = 0; i < loopLen; i++) {
             const currPath = (this.isTracking ? paths[i] : fullPath!) as Paths<T>,
               target: Target<T> = { path: currPath, value, oldValue, key: safeKey as PathKey<T>, object: receiver };
             this.notify(currPath, { type: "delete", target, currentTarget: target, root: this.core, rejectable } as Payload<T, Paths<T>>);
@@ -260,28 +269,32 @@ export class Reactor<T extends object> {
     });
     return (this.proxyCache.set(obj, proxy), proxy) as O;
   }
+
   protected trace(target: object, path: string, paths: string[] = [], visited = new WeakSet<object>()): Paths<T>[] {
     if (Object.is(target, (this.core as any)[RAW] || this.core)) return (paths.push(path), paths as Paths<T>[]);
     if (visited.has(target)) return paths as Paths<T>[]; // Stop infinite loops
     visited.add(target);
-    const parents = this.lineage!.get(target);
-    if (!parents) return paths as Paths<T>[];
-    for (let i = 0, len = parents.length; i < len; i++) {
-      const { parent, key } = parents[i];
-      this.trace(parent, key ? key + "." + path : path, paths, visited);
-    }
+    const es = this.lineage!.get(target);
+    if (!es) return paths as Paths<T>[];
+    for (let i = 0, len = es.length; i < len; i += 2) this.trace(es[i] as object, es[i + 1] ? es[i + 1] + "." + path : path, paths, visited);
     return paths as Paths<T>[];
   } // won't be called without `.isTracking` so internal guard avoided
-  protected link(target: any, parent: object, key: string, typecheck = true, es?: { parent: object; key: string }[]): void {
+  protected link(target: any, parent: object, key: string, typecheck = true, es?: (object | string)[]): void {
     if (typecheck && !(isStrictObj(target, this.config.crossRealms) || Array.isArray(target))) return;
     es = this.lineage!.get(target) ?? (this.lineage!.set(target, (es = [])), es);
-    for (let i = 0, len = es.length; i < len; i++) if (Object.is(es[i].parent, parent) && es[i].key === key) return;
-    es.push({ parent, key }); // es used as a param: needed storage perk
+    for (let i = 0, len = es.length; i < len; i += 2) if (Object.is(es[i], parent) && es[i + 1] === key) return;
+    es.push(parent, key); // es used as a param: needed storage perk
   }
   protected unlink(target: any, parent: object, key: string): void {
     if (!(isStrictObj(target, this.config.crossRealms) || Array.isArray(target))) return;
     const es = this.lineage!.get(target);
-    if (es) for (let i = 0, len = es.length; i < len; i++) if (Object.is(es[i].parent, parent) && es[i].key === key) return void es.splice(i, 1);
+    if (es) for (let i = 0, len = es.length; i < len; i += 2) if (Object.is(es[i], parent) && es[i + 1] === key) return void es.splice(i, 2);
+  }
+  protected stamp(target: any, typecheck = true): void {
+    if (typecheck && "object" !== typeof target) return;
+    target[VERSION] = (target[VERSION] || 0) + 1;
+    const es = this.lineage?.get(target);
+    if (es) for (let i = 0, len = es.length; i < len; i += 2) this.stamp(es[i]); // walk up the tree; stamp parents
   }
 
   protected mediate<P extends WildPaths<T>>(path: WildPaths<T>, payload: Payload<T, P>, type: "get", cords: GetterRecord<T>[]): PathValue<T, P>;
@@ -331,7 +344,7 @@ export class Reactor<T extends object> {
   }
 
   protected wave(path: Paths<T>, payload: Payload<T>): void {
-    const e = new ReactorEvent<T>(payload, this.config.eventBubbling, this._canLog) as Event<T>, // a wave is started only when really necessary all things considered
+    const e = new ReactorEvent<T>(payload, this.config.eventBubbling, this.isLogging) as REvent<T>, // a wave is started only when really necessary all things considered
       chain = getTrailRecords(this.core, path); // either build a large array to climb back up or have to derive each step
     // 1: CAPTURE phase (core -> parent) - intent owners reject here, capture should preferably be used to reject
     e.eventPhase = ReactorEvent.CAPTURING_PHASE;
@@ -353,7 +366,7 @@ export class Reactor<T extends object> {
     }
     // if (e.rejected) return; // 4: DEFAULT phase if ever, whole architecture can be reimagined: `State vs Intent` is my view; reactor is still dumb
   }
-  protected fire([path, object, value]: ReturnType<typeof getTrailRecords<T>>[number], e: Event<T>, isCapture: boolean, cords = this.listeners!.get(path)): void {
+  protected fire([path, object, value]: ReturnType<typeof getTrailRecords<T>>[number], e: REvent<T>, isCapture: boolean, cords = this.listeners!.get(path)): void {
     if (!cords) return; // not doing `.listeners?.` in param cuz this is called in a loop and internally, listeners are defined before this is touched
     e.type = path !== e.target.path ? "update" : e.staticType; // `update` for ancestors
     e.currentTarget = { path, value, oldValue: e.type !== "update" ? e.target.oldValue : undefined, key: (e.type !== "update" ? path : path.slice(path.lastIndexOf(".") + 1) || "") as PathKey<T>, object: object as PathBranchValue<T> };
@@ -405,119 +418,86 @@ export class Reactor<T extends object> {
     return this.queue?.delete(task);
   }
 
-  public get<P extends WildPaths<T>>(path: P, cb: Getter<T, P>, opts?: SyncOptions): Reactor<T>["noget"] {
-    this.getters ??= new Map<WildPaths<T>, Array<GetterRecord<T>>>();
-    const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR);
-    let cords = this.getters.get(path),
-      cord: GetterRecord<T> | undefined;
+  protected syncAdd<P extends WildPaths<T>>(key: "get" | "set" | "delete" | "watch", path: P, cb: any, opts: SyncOptions | undefined, onImmediate?: (immediate: boolean | "auto") => void): () => boolean | undefined {
+    const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR),
+      store = (this[`${key}${key.endsWith("t") ? "t" : ""}ers` as "getters"] ??= new Map()) as Map<WildPaths<T>, Array<GetterRecord<T> | SetterRecord<T> | DeleterRecord<T> | WatcherRecord<T>>>;
+    let cords = store.get(path),
+      cord: GetterRecord<T> | SetterRecord<T> | DeleterRecord<T> | WatcherRecord<T> | undefined;
     if (cords)
       for (let i = 0, len = cords.length; i < len; i++)
-        if (Object.is(cords![i].cb, cb)) {
-          cord = cords![i];
+        if (Object.is(cords[i].cb, cb)) {
+          cord = cords[i];
           break;
         }
     if (cord) return cord.clup;
-    cord = { cb: cb as unknown as Getter<T>, once, clup: () => (lazy && this.nostall(task), this.noget<P>(path, cb)) };
-    if (immediate) (immediate !== "auto" || inAny(this.core, path)) && getAny(this.core, path as Paths<T>);
-    const task = () => (cords ?? (this.getters!.set(path, (cords = [])), cords)).push(cord);
-    lazy ? this.stall(task) : task(); // a progressive enhancment for gets that are virtual and should not affect init
-    return this.bind(cord, signal);
+    let task: () => void;
+    cord = { cb, once, clup: () => (lazy && this.nostall(task), this[`no${key}` as "noget"](path, cb)) };
+    immediate && onImmediate?.(immediate);
+    task = () => (cords ?? (store.set(path, (cords = [])), cords)).push(cord);
+    lazy ? this.stall(task) : task();
+    return this.bind(cord!, signal);
+  }
+  protected syncDrop<P extends WildPaths<T>>(store: Map<WildPaths<T>, any[]> | undefined, path: P, cb: any): boolean | undefined {
+    const cords = store?.get(path);
+    if (!cords) return undefined;
+    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && store!.delete(path), true);
+    return false;
+  }
+
+  protected clone(obj: any, raw: boolean, visited = new WeakMap()): any {
+    if (!(isStrictObj(obj, this.config.crossRealms) || Array.isArray(obj)) || visited.has(obj)) return obj; // no circular references
+    const version = (obj as any)[VERSION] || 0,
+      cached = !raw && this.isSCloning && this.snapshotCache!.get(obj);
+    if (cached && (obj as any)[SSVERSION] === version) return cached;
+    const clone: any = !raw ? (Array.isArray(obj) ? [] : {}) : (obj as any)[RAW] || obj;
+    visited.set(obj, clone);
+    const keys = Object.keys(obj);
+    for (let i = 0, len = keys.length; i < len; i++) clone[keys[i]] = this.clone((obj as any)[keys[i]], raw, visited);
+    if (!raw && this.isSCloning) {
+      this.snapshotCache!.set(obj, clone);
+      (obj as any)[SSVERSION] = version;
+    }
+    return clone;
+  }
+
+  public get<P extends WildPaths<T>>(path: P, cb: Getter<T, P>, opts?: SyncOptions): Reactor<T>["noget"] {
+    return this.syncAdd("get", path, cb, opts, (imm) => (imm !== "auto" || inAny(this.core, path)) && getAny(this.core, path as Paths<T>)) as Reactor<T>["noget"]; // a progressive enhancment for gets that are virtual and should not affect init
   }
   public gonce<P extends WildPaths<T>>(path: P, cb: Getter<T, P>, opts?: SyncOptions): Reactor<T>["noget"] {
     return this.get<P>(path, cb, { ...parseEvOpts(opts, EV_OPTS.MEDIATOR), once: true });
   }
   public noget<P extends WildPaths<T>>(path: P, cb: Getter<T, P>): boolean | undefined {
-    const cords = this.getters?.get(path);
-    if (!cords) return undefined;
-    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.getters!.delete(path), true);
-    return false;
+    return this.syncDrop(this.getters, path, cb);
   }
 
   public set<P extends WildPaths<T>>(path: P, cb: Setter<T, P>, opts?: SyncOptions): Reactor<T>["noset"] {
-    this.setters ??= new Map<WildPaths<T>, Array<SetterRecord<T>>>();
-    const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR);
-    let cords = this.setters.get(path),
-      cord: SetterRecord<T> | undefined;
-    if (cords)
-      for (let i = 0, len = cords.length; i < len; i++)
-        if (Object.is(cords![i].cb, cb)) {
-          cord = cords![i];
-          break;
-        }
-    if (cord) return cord.clup;
-    cord = { cb: cb as unknown as Setter<T>, once, clup: () => (lazy && this.nostall(task), this.noset<P>(path, cb)) };
-    if (immediate) (immediate !== "auto" || inAny(this.core, path)) && setAny(this.core, path as Paths<T>, getAny(this.core, path as Paths<T>)!);
-    const task = () => (cords ?? (this.setters!.set(path, (cords = [])), cords)).push(cord);
-    lazy ? this.stall(task) : task();
-    return this.bind(cord, signal);
+    return this.syncAdd("set", path, cb, opts, (imm) => (imm !== "auto" || inAny(this.core, path)) && setAny(this.core, path as Paths<T>, getAny(this.core, path as Paths<T>)!)) as Reactor<T>["noset"];
   }
   public sonce<P extends WildPaths<T>>(path: P, cb: Setter<T, P>, opts?: SyncOptions): Reactor<T>["noset"] {
     return this.set<P>(path, cb, Object.assign(parseEvOpts(opts, EV_OPTS.MEDIATOR), { once: true }));
   }
   public noset<P extends WildPaths<T>>(path: P, cb: Setter<T, P>): boolean | undefined {
-    const cords = this.setters?.get(path);
-    if (!cords) return undefined;
-    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.setters!.delete(path), true);
-    return false;
+    return this.syncDrop(this.setters, path, cb);
   }
 
   public delete<P extends WildPaths<T>>(path: P, cb: Deleter<T, P>, opts?: SyncOptions): Reactor<T>["nodelete"] {
-    this.deleters ??= new Map<WildPaths<T>, Array<DeleterRecord<T>>>();
-    const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR);
-    let cords = this.deleters.get(path),
-      cord: DeleterRecord<T> | undefined;
-    if (cords)
-      for (let i = 0, len = cords.length; i < len; i++)
-        if (Object.is(cords![i].cb, cb)) {
-          cord = cords![i];
-          break;
-        }
-    if (cord) return cord.clup;
-    cord = { cb: cb as unknown as Deleter<T>, once, clup: () => (lazy && this.nostall(task), this.nodelete<P>(path, cb)) };
-    if (immediate) (immediate !== "auto" || inAny(this.core, path)) && deleteAny(this.core, path as Paths<T>, undefined);
-    const task = () => (cords ?? (this.deleters!.set(path, (cords = [])), cords)).push(cord);
-    lazy ? this.stall(task) : task();
-    return this.bind(cord, signal);
+    return this.syncAdd("delete", path, cb, opts, (imm) => (imm !== "auto" || inAny(this.core, path)) && deleteAny(this.core, path as Paths<T>, undefined)) as Reactor<T>["nodelete"];
   }
   public donce<P extends WildPaths<T>>(path: P, cb: Deleter<T, P>, opts?: SyncOptions): Reactor<T>["nodelete"] {
     return this.delete<P>(path, cb, Object.assign(parseEvOpts(opts, EV_OPTS.MEDIATOR), { once: true }));
   }
   public nodelete<P extends WildPaths<T>>(path: P, cb: Deleter<T, P>): boolean | undefined {
-    const cords = this.deleters?.get(path);
-    if (!cords) return undefined;
-    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.deleters!.delete(path), true);
-    return false;
+    return this.syncDrop(this.deleters, path, cb);
   }
 
   public watch<P extends WildPaths<T>>(path: P, cb: Watcher<T, P>, opts?: SyncOptions): Reactor<T>["nowatch"] {
-    this.watchers ??= new Map<WildPaths<T>, Array<WatcherRecord<T>>>();
-    const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR);
-    let cords = this.watchers.get(path),
-      cord: WatcherRecord<T> | undefined;
-    if (cords)
-      for (let i = 0, len = cords.length; i < len; i++)
-        if (Object.is(cords![i].cb, cb)) {
-          cord = cords![i];
-          break;
-        }
-    if (cord) return cord.clup;
-    cord = { cb: cb as Watcher<T>, once, clup: () => (lazy && this.nostall(task), this.nowatch<P>(path, cb)) };
-    if (immediate && immediate !== "auto" && inAny(this.core, path)) {
-      const target = this.getContext(path);
-      cb(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false } as Payload<T, P>);
-    }
-    const task = () => (cords ?? (this.watchers!.set(path, (cords = [])), cords)).push(cord);
-    lazy ? this.stall(task) : task();
-    return this.bind(cord, signal);
+    return this.syncAdd("watch", path, cb, opts, (imm) => imm !== "auto" && inAny(this.core, path) && ((target) => cb(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false } as Payload<T, P>))(this.getContext(path))) as Reactor<T>["nowatch"];
   }
   public wonce<P extends WildPaths<T>>(path: P, cb: Watcher<T, P>, opts?: SyncOptions): Reactor<T>["nowatch"] {
     return this.watch<P>(path, cb, Object.assign(parseEvOpts(opts, EV_OPTS.MEDIATOR), { once: true }));
   }
   public nowatch<P extends WildPaths<T>>(path: P, cb: Watcher<T, P>): boolean | undefined {
-    const cords = this.watchers?.get(path);
-    if (!cords) return undefined;
-    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.watchers!.delete(path), true);
-    return false;
+    return this.syncDrop(this.watchers, path, cb);
   }
 
   public on<P extends WildPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): Reactor<T>["off"] {
@@ -535,7 +515,7 @@ export class Reactor<T extends object> {
     cord = { cb: cb as Listener<T>, capture, depth, once, clup: () => this.off<P>(path, cb, options) };
     if (immediate && (immediate !== "auto" || inAny(this.core, path))) {
       const target = this.getContext(path) as Target<T, P>;
-      cb(new ReactorEvent<T, P>({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, this.config.eventBubbling, this._canLog) as Event<T, P>);
+      cb(new ReactorEvent<T, P>({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, this.config.eventBubbling, this.isLogging) as REvent<T, P>);
     }
     (cords ?? (this.listeners.set(path, (cords = [])), cords)).push(cord);
     return this.bind(cord, signal);
@@ -551,18 +531,8 @@ export class Reactor<T extends object> {
     return false;
   }
 
-  get canLog(): boolean {
-    return this.log === R_LOG; // more accurate check for public API just in case :)
-  }
-  set canLog(value: boolean) {
-    this.log = (this._canLog = value) ? R_LOG : NOOP;
-  }
-  get canTrackReferences(): boolean {
-    return this.isTracking;
-  }
-
-  public snapshot(): T {
-    return deepClone(this.core, !!this.config.crossRealms);
+  public snapshot(raw = !this.isSCloning, branch = this.core): T {
+    return this.clone(branch, raw); // raw is true if not smart cloning for better performace except explicitly changed
   }
   public cascade({ type, currentTarget: { path, value: news, oldValue: olds } }: ReactorEvent<T>, objSafe = true): void {
     if ((type !== "set" && type !== "delete") || !(isStrictObj(news, this.config.crossRealms) || Array.isArray(news)) || (objSafe ? !(isStrictObj(olds, this.config.crossRealms) || Array.isArray(olds)) : false)) return;
@@ -577,5 +547,21 @@ export class Reactor<T extends object> {
   }
   public destroy(): void {
     (this.reset(), nuke(this));
+  }
+
+  get canLog(): boolean {
+    return this.log === R_LOG; // more accurate check for public API just in case :)
+  }
+  set canLog(value: boolean) {
+    this.log = (this.isLogging = value) ? R_LOG : NOOP;
+  }
+  get canTrackReferences(): boolean {
+    return this.isTracking;
+  }
+  get canTraceLineage(): boolean {
+    return this.isTracing;
+  }
+  get canSmartClone(): boolean {
+    return this.isSCloning;
   }
 }

@@ -1,7 +1,7 @@
 import { Controllable } from "../core/controllable";
 import type { Controller } from "../core/controller";
 import type { CtlrMedia, MediaFeatures } from "../types/contract";
-import type { Event } from "../types/reactor";
+import type { REvent } from "../types/reactor";
 import { reactive, Reactive } from "../tools/mixins/reactive";
 import { capitalize } from "../utils";
 
@@ -53,7 +53,7 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
   // --- THE MANDATORY CORE 5 ---
   public wire() {
     // Ctlr Media Listeners
-    this.ctlr.media.on("intent", this.handleIntentChange, { signal: this.signal });
+    this.media.on("intent", this.handleIntentChange, { signal: this.signal });
     this.wireSrc();
     this.wireCurrentTime();
     this.wireDuration();
@@ -72,10 +72,10 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
     this.features.on("*", this.handleFeaturesChange, { signal: this.signal, immediate: true });
   }
   // --- Miscellaneous ---
-  protected handleFeaturesChange({ type, target: t }: Event<MediaFeatures, "*">) {
+  protected handleFeaturesChange({ type, target: t }: REvent<MediaFeatures, "*">) {
     type === "update" ? this.wireFeature(t.key) : type === "init" && (Object.keys(t.value) as (keyof MediaFeatures)[]).forEach(this.wireFeature);
   }
-  protected handleIntentChange(e: Event<CtlrMedia, "intent">) {
+  protected handleIntentChange(e: REvent<CtlrMedia, "intent">) {
     if (e.type === "update" && !this.features[e.target.key as keyof MediaFeatures] && e.value) e.stopImmediatePropagation();
   }
   protected wireFeature(feature: keyof MediaFeatures): void {

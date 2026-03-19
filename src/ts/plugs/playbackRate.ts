@@ -1,5 +1,5 @@
 import { BasePlug } from ".";
-import type { Event } from "../types/reactor";
+import type { REvent } from "../types/reactor";
 import { VideoBuild } from "../types/build";
 import type { OptRange } from "../types/generics";
 import { clamp, rotate } from "../utils";
@@ -11,7 +11,7 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
 
   public wire(): void {
     // Ctlr Media Setters
-    this.ctlr.media.set("intent.playbackRate", (value) => clamp(this.config.min, value!, this.config.max), { signal: this.signal });
+    this.media.set("intent.playbackRate", (value) => clamp(this.config.min, value!, this.config.max), { signal: this.signal });
     // ---- Config Watchers
     this.ctlr.config.watch("settings.playbackRate.value", this.forwardRate, { signal: this.signal, immediate: true });
     // ----------- Listeners
@@ -20,16 +20,14 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
   }
 
   protected forwardRate(value?: number): void {
-    this.ctlr.media.intent.playbackRate = value!;
+    this.media.intent.playbackRate = value!;
   }
 
-  protected handleMinChange({ target }: Event<VideoBuild, "settings.playbackRate.min">): void {
-    const min = target.value!;
+  protected handleMinChange({ value: min }: REvent<VideoBuild, "settings.playbackRate.min">): void {
     if (this.config.value! < min) this.config.value = min;
   }
 
-  protected handleMaxChange({ target }: Event<VideoBuild, "settings.playbackRate.max">): void {
-    const max = target.value!;
+  protected handleMaxChange({ value: max }: REvent<VideoBuild, "settings.playbackRate.max">): void {
     if (this.config.value! > max) this.config.value = max;
   }
 

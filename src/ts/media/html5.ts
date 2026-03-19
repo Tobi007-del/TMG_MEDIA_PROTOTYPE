@@ -1,5 +1,5 @@
 import { BaseTech, BaseTechConfig } from ".";
-import type { Event, ListenerOptions } from "../types/reactor";
+import type { REvent, ListenerOptions } from "../types/reactor";
 import type { Controller } from "../core/controller";
 import type { CtlrMedia, MediaIntent } from "../types/contract";
 import type { WildPaths } from "../types/obj";
@@ -111,7 +111,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
     this.config.set(`intent.current${type}Track`, (term) => getTrackIdx(this.el, type, term), { signal: this.signal }); // pass `any` term, the track will surely be found if available
     const list = (this.el as any)[`${type.toLowerCase()}Tracks`];
     list?.addEventListener("change", () => this.setCurrentTrackState(type, list), this.eOpts.REACTOR);
-    this.config.on(`intent.current${type}Track`, (e: Event<CtlrMedia, `intent.current${typeof type}Track`>) => this.handleCurrentTrackIntent(e, type), this.eOpts.REACTOR);
+    this.config.on(`intent.current${type}Track`, (e: REvent<CtlrMedia, `intent.current${typeof type}Track`>) => this.handleCurrentTrackIntent(e, type), this.eOpts.REACTOR);
   }
   protected wireCurrentAudioTrack() {
     this.wireCurrentTrack("Audio");
@@ -128,7 +128,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   }
   // --- Attribute Wiring ---
   protected bindAttr<K extends keyof MediaIntent>(key: K, isBool = false) {
-    this.config.on(`intent.${key}`, (e: Event<CtlrMedia, `intent.${K}`>) => this.handleAttributeIntent(e, key, isBool), this.eOpts.REACTOR);
+    this.config.on(`intent.${key}`, (e: REvent<CtlrMedia, `intent.${K}`>) => this.handleAttributeIntent(e, key, isBool), this.eOpts.REACTOR);
   }
   protected wirePoster() {
     this.bindAttr("poster");
@@ -174,7 +174,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   protected wireActiveCueStatus() {
     this.config.on(
       "state.currentTextTrack",
-      ({ value: curr, oldValue: prev }: Event<CtlrMedia, "state.currentTextTrack">) => {
+      ({ value: curr, oldValue: prev }: REvent<CtlrMedia, "state.currentTextTrack">) => {
         if (prev !== -1) this.el.textTracks[prev!]?.removeEventListener("cuechange", this.handleActiveCueStatus, this.eOpts.EL);
         this.el.textTracks[curr!]?.addEventListener("cuechange", this.handleActiveCueStatus, this.eOpts.EL);
         this.handleActiveCueStatus({ target: this.el.textTracks[curr!] });
@@ -226,18 +226,18 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
     this.config.status.ended = this.config.state.paused = true;
   }
   // --- Core Intents ---
-  protected handleSrcIntent(e: Event<CtlrMedia, "intent.src">) {
+  protected handleSrcIntent(e: REvent<CtlrMedia, "intent.src">) {
     if (e.resolved || isSameURL(this.el.src, e.value)) return;
     this.el.src = e.value ?? "";
     this.el.load();
     e.resolve(HTML5Tech.techName);
   }
-  protected handleCurrentTimeIntent(e: Event<CtlrMedia, "intent.currentTime">) {
+  protected handleCurrentTimeIntent(e: REvent<CtlrMedia, "intent.currentTime">) {
     if (e.resolved) return;
     this.el.currentTime = e.value;
     e.resolve(HTML5Tech.techName);
   }
-  protected handlePausedIntent(e: Event<CtlrMedia, "intent.paused">) {
+  protected handlePausedIntent(e: REvent<CtlrMedia, "intent.paused">) {
     if (e.resolved) return;
     const p = e.value ? this.el.pause() : this.el.play();
     if (p?.then) p.then(() => e.resolve(HTML5Tech.techName)).catch((err: any) => e.reject(err.message));
@@ -303,49 +303,49 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
     }
   }
   // --- Feature Intents ---
-  protected handleVolumeIntent(e: Event<CtlrMedia, "intent.volume">) {
+  protected handleVolumeIntent(e: REvent<CtlrMedia, "intent.volume">) {
     if (e.resolved) return;
     this.el.volume = e.value / 100;
     e.resolve(HTML5Tech.techName);
   }
-  protected handleMutedIntent(e: Event<CtlrMedia, "intent.muted">) {
+  protected handleMutedIntent(e: REvent<CtlrMedia, "intent.muted">) {
     if (e.resolved) return;
     this.el.muted = e.value;
     e.resolve(HTML5Tech.techName);
   }
-  protected handlePlaybackRateIntent(e: Event<CtlrMedia, "intent.playbackRate">) {
+  protected handlePlaybackRateIntent(e: REvent<CtlrMedia, "intent.playbackRate">) {
     if (e.resolved) return;
     this.el.playbackRate = e.value;
     e.resolve(HTML5Tech.techName);
   }
-  protected handlePiPIntent(e: Event<CtlrMedia, "intent.pictureInPicture">) {
+  protected handlePiPIntent(e: REvent<CtlrMedia, "intent.pictureInPicture">) {
     if (e.resolved) return;
     e.value ? this.el.requestPictureInPicture() : document.exitPictureInPicture();
     e.resolve(HTML5Tech.techName);
   }
-  protected handleFullscreenIntent(e: Event<CtlrMedia, "intent.fullscreen">) {
+  protected handleFullscreenIntent(e: REvent<CtlrMedia, "intent.fullscreen">) {
     if (e.resolved) return;
     e.value ? enterFullscreen(this.el) : exitFullscreen(this.el);
     e.resolve(HTML5Tech.techName);
   }
-  protected handleCurrentTrackIntent(e: Event<CtlrMedia, `intent.current${TrackType}Track`>, type: TrackType) {
+  protected handleCurrentTrackIntent(e: REvent<CtlrMedia, `intent.current${TrackType}Track`>, type: TrackType) {
     if (e.resolved) return;
     setCurrentTrack(this.el, type, e.value, false); // (el), (type), (idx), (no flush: `hidden` & !`disabled`)
     e.resolve(HTML5Tech.techName);
   }
-  protected handleAttributeIntent(e: Event<CtlrMedia, WildPaths<CtlrMedia>>, key: string, isBool: boolean) {
+  protected handleAttributeIntent(e: REvent<CtlrMedia, WildPaths<CtlrMedia>>, key: string, isBool: boolean) {
     if (e.resolved || (key === "poster" && isSameURL(e.value, this.config.state[key]))) return;
     const attr = key.toLowerCase();
     isBool ? this.el.toggleAttribute(attr, Boolean(e.value)) : e.value ? this.el.setAttribute(attr, e.value) : this.el.removeAttribute(attr); // (this.el as any)[key] = isBool ? Boolean(e.value) : (e.value ?? ""); // Generic handler for simple attributes
     if (key === "playsInline") this.el.toggleAttribute("webkit-playsinline", Boolean(e.value));
     e.resolve(HTML5Tech.techName);
   }
-  protected handleSourcesIntent(e: Event<CtlrMedia, "intent.sources">) {
+  protected handleSourcesIntent(e: REvent<CtlrMedia, "intent.sources">) {
     if (e.resolved) return;
     if (!isSameSources(this.config.state.sources, e.value)) (removeSources(this.el), addSources(e.value, this.el));
     e.resolve(HTML5Tech.techName);
   }
-  protected handleTracksIntent(e: Event<CtlrMedia, "intent.tracks">) {
+  protected handleTracksIntent(e: REvent<CtlrMedia, "intent.tracks">) {
     if (e.resolved) return;
     if (!isSameTracks(this.config.state.tracks, e.value)) (removeTracks(this.el), addTracks(e.value, this.el));
     e.resolve(HTML5Tech.techName);
@@ -395,14 +395,14 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
     this.config.status.activeCue = track?.activeCues?.[0] || null;
   }
   // --- Settings ---
-  protected handleDefaultMutedSetting(e: Event<CtlrMedia, "settings.defaultMuted">) {
+  protected handleDefaultMutedSetting(e: REvent<CtlrMedia, "settings.defaultMuted">) {
     this.el.defaultMuted = e.value;
   }
-  protected handleDefaultPlaybackRateSetting(e: Event<CtlrMedia, "settings.defaultPlaybackRate">) {
+  protected handleDefaultPlaybackRateSetting(e: REvent<CtlrMedia, "settings.defaultPlaybackRate">) {
     this.el.defaultPlaybackRate = e.value;
   }
   // --- Other Handlers ---
-  protected handlePiPState(e: Event<CtlrMedia, "state.disablePictureInPicture">) {
+  protected handlePiPState(e: REvent<CtlrMedia, "state.disablePictureInPicture">) {
     this.features.pictureInPicture = !e.value;
   }
 }

@@ -21,8 +21,8 @@ window.runBenchmark = async function runBenchmark() {
   log(`%c🧪 S.I.A. REACTOR PERFORMANCE EVALUATION`, "font-weight: bold; font-size: 16px; color: #4CAF50; padding-bottom: 4px;");
   log(`Initializing suite: ${TEST_CYCLES} cycles of ${TEST_ITERATIONS.toLocaleString()} operations...\n`);
 
-  const rawObj = { val: 0 };
-  const nativeProxy = new Proxy(
+  window.rawObj = { val: 0 };
+  window.nativeProxy = new Proxy(
     { val: 0 },
     {
       set(t, k, v) {
@@ -30,8 +30,8 @@ window.runBenchmark = async function runBenchmark() {
       },
     }
   );
-  const newReactor = new Reactor({ val: 0 });
-  const oldReactor = new OldReactor({ val: 0 });
+  window.newReactor = new Reactor({ val: 0 });
+  window.oldReactor = new OldReactor({ val: 0 });
 
   log(`🔥 Warming up JIT compiler to stabilize execution environments...`);
   for (let i = 0; i < TEST_WARMUP_ITERATIONS; i++) {

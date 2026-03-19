@@ -7,9 +7,9 @@ import { isObj } from "../utils";
 export abstract class Controllable<Config = any, State = any> {
   protected readonly ac = new AbortController();
   protected readonly signal = this.ac.signal;
-
   protected readonly ctlr: Controller;
   protected readonly guard: Controller["guard"];
+  protected readonly media: Controller["media"];
   public config: Config; // may be a reactive obj node or the obj itself
   public state!: State extends object ? Reactive<State> : State; // for reactivity needs of those who pass it up
 
@@ -18,8 +18,9 @@ export abstract class Controllable<Config = any, State = any> {
     this.signal = AbortSignal.any([this.signal, ctlr.signal]);
     this.ctlr = ctlr;
     this.guard = ctlr.guard;
+    this.media = ctlr.media;
     this.config = config;
-    if (state) this.state = (isObj(state) ? reactive(state) : state) as Controllable["state"];
+    this.state = (isObj(state) ? reactive(state) : state) as Controllable["state"];
   }
 
   public setup() {
@@ -29,8 +30,7 @@ export abstract class Controllable<Config = any, State = any> {
 
   public destroy() {
     !this.signal.aborted && this.ac.abort(`[TMG Controllable] Instance is being destroyed`); // incase controller already aborted, kills all listeners and timers before proper destruction below
-    this.onDestroy();
-    ((this.state as any)?.destroy?.(), (this.config as any)?.destroy?.()); // Can I clean here?... Anatoly :)
+    (this.onDestroy(), ((this.state as any)?.destroy?.(), (this.config as any)?.destroy?.())); // Can I clean here?... Anatoly :)
     nuke(this);
   }
   protected onDestroy() {}

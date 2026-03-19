@@ -1,5 +1,5 @@
 import { BasePlug } from ".";
-import type { Event } from "../types/reactor";
+import type { REvent } from "../types/reactor";
 import type { VideoBuild } from "../types/build";
 import type { ToastOptions } from "../types/t007";
 
@@ -16,11 +16,11 @@ export class ToastsPlug extends BasePlug<Toasts> {
     this.ctlr.config.on("settings.toasts", this.handleToasts, { signal: this.signal });
   }
 
-  protected handleDisabled({ value }: Event<VideoBuild, "settings.toasts.disabled">): void {
+  protected handleDisabled({ value }: REvent<VideoBuild, "settings.toasts.disabled">): void {
     value && t007?.toast?.dismissAll(this.ctlr.id);
   }
 
-  protected handleToasts({ type, target: { path, key, value } }: Event<VideoBuild, "settings.toasts">): void {
+  protected handleToasts({ type, target: { path, key, value } }: REvent<VideoBuild, "settings.toasts">): void {
     if (type !== "update" || path?.match(/disabled/) || !t007?.toast) return;
     t007.toast.doForAll("update", { [key]: value }, this.ctlr.id);
   }

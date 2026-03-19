@@ -1,7 +1,7 @@
 import { BasePlug, OverlayPlug, ControlPanelPlug, Control, BigControl } from ".";
 import type { PosterPreview } from "../types/generics";
 import type { VideoBuild } from "../types/build";
-import type { Event } from "../types/reactor";
+import type { REvent } from "../types/reactor";
 import { TERMINATOR } from "../core/reactor";
 import { inBoolArrOpt } from "../utils";
 
@@ -26,18 +26,18 @@ export class LightStatePlug extends BasePlug<LightState> {
     if (this.config.disabled) this.ctlr.setReadyState(); // warning my compadres: gesture plug & others
   }
 
-  protected handleDisabled({ value, target }: Event<VideoBuild, "lightState.disabled">): void {
+  protected handleDisabled({ value, target }: REvent<VideoBuild, "lightState.disabled">): void {
     if (value) {
-      const timeStart = this.ctlr.config.settings.time.start;
-      if (timeStart != null) this.ctlr.media.intent.currentTime = timeStart;
+      const timeStart = this.ctlr.settings.time.start;
+      if (timeStart != null) this.media.intent.currentTime = timeStart;
       this.ctlr.videoContainer.classList.remove("tmg-video-light");
-      this.ctlr.media.element.removeEventListener("play", this.remove);
+      this.media.element.removeEventListener("play", this.remove);
       this.ctlr.DOM.controlsContainer?.removeEventListener("click", this.handleLightStateClick);
       this.ctlr.setReadyState(); // you can wire now, compadre
     } else {
       this.ctlr.config.lightState.preview.usePoster = this.config.preview.usePoster;
       this.ctlr.videoContainer.classList.add("tmg-video-light");
-      this.ctlr.media.element.addEventListener("play", this.remove, { signal: this.signal });
+      this.media.element.addEventListener("play", this.remove, { signal: this.signal });
       this.ctlr.DOM.controlsContainer?.addEventListener("click", this.handleLightStateClick, { signal: this.signal });
     }
   }
@@ -46,14 +46,14 @@ export class LightStatePlug extends BasePlug<LightState> {
     this.ctlr.queryDOM("[data-control-id]", true).forEach((c) => (c.dataset.lightControl = this.isLight(c.dataset.controlId!) ? "true" : "false"));
   }
 
-  protected handleUsePoster({ target: { value, object }, root }: Event<VideoBuild, "lightState.preview.usePoster">): void {
-    if (root.lightState.disabled || (value && this.ctlr.media.state.poster)) return;
-    this.ctlr.media.intent.currentTime = object.time;
-    if (!this.ctlr.media.status.loadedMetadata) this.ctlr.media.once("status.loadedMetadata", () => (this.config.preview.usePoster = value), { signal: this.signal }); // retrigger when metadata is ready in case time is a percentage
+  protected handleUsePoster({ target: { value, object }, root }: REvent<VideoBuild, "lightState.preview.usePoster">): void {
+    if (root.lightState.disabled || (value && this.media.state.poster)) return;
+    this.media.intent.currentTime = object.time;
+    if (!this.media.status.loadedMetadata) this.media.once("status.loadedMetadata", () => (this.config.preview.usePoster = value), { signal: this.signal }); // retrigger when metadata is ready in case time is a percentage
   }
 
-  protected handleTime({ target: { object }, root }: Event<VideoBuild, "lightState.preview.time">): void {
-    !root.lightState.disabled && (!object.usePoster || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = object.time!);
+  protected handleTime({ target: { object }, root }: REvent<VideoBuild, "lightState.preview.time">): void {
+    !root.lightState.disabled && (!object.usePoster || !this.media.state.poster) && (this.media.intent.currentTime = object.time!);
   }
 
   protected add(): void {
@@ -63,7 +63,7 @@ export class LightStatePlug extends BasePlug<LightState> {
   protected remove(): void {
     this.ctlr.config.lightState.disabled = true;
     this.isLight("bigplaypause") && this.stall();
-    this.ctlr.media.intent.paused = false;
+    this.media.intent.paused = false;
   }
 
   protected handleLightStateClick({ target }: MouseEvent): void {

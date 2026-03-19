@@ -2,14 +2,12 @@ import { Controller } from "../../core/controller";
 import { BasePlug } from "..";
 import { WheelModule, type WheelConfig } from "./wheel";
 import { TouchModule, type TouchConfig } from "./touch";
-import { GeneralModule } from "./general";
+import { GeneralModule, type GeneralConfig } from "./general";
 export * from "./general";
 export * from "./touch";
 export * from "./wheel";
 
-export type Gesture = {
-  click: string;
-  dblClick: string;
+export type Gesture = GeneralConfig & {
   wheel: WheelConfig;
   touch: TouchConfig;
 };

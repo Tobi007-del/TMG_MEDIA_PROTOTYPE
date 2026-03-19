@@ -14,7 +14,6 @@ export interface FastPlay {
 }
 
 interface FastPlayState {
-  speedValue: number;
   isRewinding: boolean;
 }
 
@@ -25,7 +24,7 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
   protected lastPlaybackRate = 1;
   protected rewindPlaybackRate = 0;
   protected speedIntervalId: number | null = null;
-  protected speedPointerCheck = false;
+  protected speedPtrCheck = false;
   protected speedDirection: "forwards" | "backwards" = "forwards";
   protected speedTimeoutId: number | null = null;
   protected playTriggerCounter = 0;
@@ -42,68 +41,56 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
   public fastPlay(pos: "forwards" | "backwards"): void {
     if (this.speedCheck) return;
     this.speedCheck = true;
-    this.wasPaused = this.ctlr.media.state.paused;
-    this.lastPlaybackRate = this.ctlr.config.settings.playbackRate.value;
+    this.wasPaused = this.media.state.paused;
+    this.lastPlaybackRate = this.media.state.playbackRate;
     // JS: this.DOM.playbackRateNotifier?.classList.add("tmg-video-control-active");
-    this.ctlr.queryDOM(".tmg-video-playback-rate-notifier")?.classList.add("tmg-video-control-active");
+    // JS: this.DOM.playbackRateNotifier?.classList.add("tmg-video-control-active");
     setTimeout(pos === "backwards" && this.config.rewind ? this.rewind : this.fastForward, 0, this.signal);
   }
 
   public fastForward(rate = this.config.playbackRate): void {
-    this.ctlr.config.settings.playbackRate.value = this.state.speedValue = rate;
+    this.media.intent.playbackRate = rate;
     this.state.isRewinding = false;
-    const notifier = this.ctlr.queryDOM(".tmg-video-playback-rate-notifier"),
-      timePlug = this.ctlr.getPlug<TimePlug>("time");
     // JS: this.DOM.playbackRateNotifier?.classList.remove("tmg-video-rewind");
-    notifier?.classList.remove("tmg-video-rewind");
-    notifier?.setAttribute("data-current-time", timePlug?.toTimeText(this.ctlr.media.state.currentTime, true) ?? "0:00");
-    this.ctlr.media.intent.paused = false;
+    // JS: this.DOM.playbackRateNotifier?.setAttribute("data-current-time",this.ctlr.getPlug<TimePlug>("time")?.toTimeText(this.media.state.currentTime, true) ?? "0:00");
+    this.media.intent.paused = false;
   }
 
   public rewind(rate = this.config.playbackRate): void {
-    this.ctlr.config.settings.playbackRate.value = this.rewindPlaybackRate = this.state.speedValue = rate;
+    ((this.media.intent.playbackRate = 1), (this.rewindPlaybackRate = rate));
     this.state.isRewinding = true;
-    const notifier = this.ctlr.queryDOM(".tmg-video-playback-rate-notifier");
     // JS: this.DOM.playbackRateNotifier?.classList.add("tmg-video-rewind");
-    notifier?.classList.add("tmg-video-rewind");
-    this.ctlr.media.element.addEventListener("play", () => this.rewindReset(), { signal: this.signal });
+    this.media.element.addEventListener("play", () => this.rewindReset(), { signal: this.signal });
     this.speedIntervalId = setInterval(() => this.rewindVideo(), this.ctlr.state.pframeDelay - 20, this.signal);
   }
 
   protected rewindVideo(): void {
-    if (!this.ctlr.media.state.paused) this.ctlr.media.intent.paused = true;
-    const newTime = this.ctlr.media.state.currentTime - this.rewindPlaybackRate / this.ctlr.config.settings.frame.fps,
-      notifier = this.ctlr.queryDOM(".tmg-video-playback-rate-notifier"),
-      timePlug = this.ctlr.getPlug<TimePlug>("time");
-    this.ctlr.media.intent.currentTime = newTime;
-    this.ctlr.config.settings.css.currentPlayedPosition = this.ctlr.config.settings.css.currentThumbPosition = this.ctlr.media.state.currentTime / this.ctlr.media.status.duration;
-    notifier?.setAttribute("data-current-time", timePlug?.toTimeText(this.ctlr.media.state.currentTime, true) ?? "0:00");
+    if (!this.media.state.paused) this.media.intent.paused = true;
+    this.media.intent.currentTime = this.media.state.currentTime - this.rewindPlaybackRate / this.ctlr.settings.frame.fps;
+    this.ctlr.settings.css.currentPlayedPosition = this.ctlr.settings.css.currentThumbPosition = this.media.state.currentTime / this.media.status.duration;
+    // JS: this.DOM.playbackRateNotifier?.setAttribute("data-current-time", this.ctlr.getPlug<TimePlug>("time")?.toTimeText(this.media.state.currentTime, true) ?? "0:00");
   }
 
   protected rewindReset(): void {
     if (this.speedIntervalId) {
       // this.notify("videopause"); // TODO: when notify exists
-      this.ctlr.media.intent.paused = true;
+      this.media.intent.paused = true;
       clearInterval(this.speedIntervalId);
       this.speedIntervalId = null;
-    } else {
-      this.speedIntervalId = setInterval(() => this.rewindVideo(), Math.round(1000 / this.ctlr.config.settings.frame.fps) - 20, this.signal);
-    }
+    } else this.speedIntervalId = setInterval(() => this.rewindVideo(), Math.round(1000 / this.ctlr.settings.frame.fps) - 20, this.signal);
   }
 
   public slowDown(): void {
     if (!this.speedCheck) return;
     this.speedCheck = false;
     if (this.speedIntervalId) clearInterval(this.speedIntervalId);
-    this.ctlr.media.element.removeEventListener("play", () => this.rewindReset());
-    this.ctlr.config.settings.playbackRate.value = this.lastPlaybackRate;
+    this.media.element.removeEventListener("play", () => this.rewindReset());
+    this.media.intent.playbackRate = this.lastPlaybackRate;
     this.rewindPlaybackRate = 0;
-    this.state.speedValue = this.lastPlaybackRate;
     this.state.isRewinding = false;
-    this.ctlr.media.intent.paused = this.config.reset ? this.wasPaused : false;
+    this.media.intent.paused = this.config.reset ? this.wasPaused : false;
     this.ctlr.getPlug<OverlayPlug>("overlay")?.remove();
     // JS: this.DOM.playbackRateNotifier?.classList.remove("tmg-video-control-active", "tmg-video-rewind");
-    this.ctlr.queryDOM(".tmg-video-playback-rate-notifier")?.classList.remove("tmg-video-control-active", "tmg-video-rewind");
   }
 
   protected handleSpeedPointerDown(e: PointerEvent): void {
@@ -114,8 +101,8 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
     this.speedTimeoutId = setTimeout(
       () => {
         this.ctlr.videoContainer?.removeEventListener("touchmove", this.handleSpeedPointerUp);
-        this.speedPointerCheck = true;
-        const x = e.clientX ?? (e as any).targetTouches?.[0]?.clientX;
+        this.speedPtrCheck = true;
+        const x = e.clientX ?? (e as unknown as TouchEvent).targetTouches?.[0]?.clientX;
         const rect = this.ctlr.videoContainer.getBoundingClientRect();
         const rLeft = x - rect.left;
         this.speedDirection = rLeft >= rect.width * 0.5 ? "forwards" : "backwards";
@@ -128,13 +115,13 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
     );
   }
 
-  protected handleSpeedPointerMove(e: Event): void {
-    if ((e as any).touches?.length > 1) return;
+  protected handleSpeedPointerMove(e: globalThis.Event): void {
+    if ((e as TouchEvent).touches?.length > 1) return;
     this.ctlr.throttle(
       "speedPointerMove",
       () => {
         const rect = this.ctlr.videoContainer.getBoundingClientRect(),
-          x = (e as any).clientX ?? (e as any).targetTouches?.[0]?.clientX,
+          x = (e as MouseEvent).clientX ?? (e as TouchEvent).targetTouches?.[0]?.clientX,
           currPos = x - rect.left >= rect.width * 0.5 ? "forwards" : "backwards";
         if (currPos !== this.speedDirection) {
           this.speedDirection = currPos;
@@ -148,7 +135,7 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
 
   protected handleSpeedPointerUp(): void {
     clearTimeout(this.speedTimeoutId!);
-    this.speedPointerCheck = false;
+    this.speedPtrCheck = false;
     if (this.speedCheck && this.playTriggerCounter < 1) setTimeout(() => this.slowDown(), 0, this.signal);
     ["touchmove", "mouseup", "touchend", "touchcancel"].forEach((evt) => this.ctlr.videoContainer?.removeEventListener(evt, this.handleSpeedPointerUp));
     ["mousemove", "touchmove"].forEach((evt) => this.ctlr.videoContainer?.removeEventListener(evt, this.handleSpeedPointerMove));

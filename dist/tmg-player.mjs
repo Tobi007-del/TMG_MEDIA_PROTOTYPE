@@ -1531,6 +1531,8 @@ function observeMutation(el, cb, options) {
 var mixins_exports = {};
 __export(mixins_exports, {
   bindAllMethods: () => bindAllMethods,
+  getSnapshotVersion: () => getSnapshotVersion,
+  getVersion: () => getVersion,
   guardAllMethods: () => guardAllMethods,
   guardMethod: () => guardMethod,
   inert: () => inert,
@@ -1539,6 +1541,7 @@ __export(mixins_exports, {
   isIntent: () => isIntent,
   isVolatile: () => isVolatile,
   live: () => live,
+  methods: () => methods,
   nuke: () => nuke,
   onAllMethods: () => onAllMethods,
   reactive: () => reactive,
@@ -1581,11 +1584,13 @@ function guardMethod(fn, onError = (e) => console.error(e)) {
 }
 
 // src/ts/core/reactor.ts
+var RAW = /* @__PURE__ */ Symbol.for("S.I.A_RAW");
 var INERTIA = /* @__PURE__ */ Symbol.for("S.I.A_INERTIA");
 var REJECTABLE = /* @__PURE__ */ Symbol.for("S.I.A_REJECTABLE");
 var INDIFFABLE = /* @__PURE__ */ Symbol.for("S.I.A_INDIFFABLE");
 var TERMINATOR = /* @__PURE__ */ Symbol.for("S.I.A_TERMINATOR");
-var RAW = /* @__PURE__ */ Symbol.for("S.I.A_RAW");
+var VERSION = /* @__PURE__ */ Symbol.for("S.I.A_VERSION");
+var SSVERSION = /* @__PURE__ */ Symbol.for("S.I.A_SNAPSHOT_VERSION");
 var NOOP = () => {
 };
 var R_BATCH = ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window);
@@ -1653,20 +1658,25 @@ _ReactorEvent.AT_TARGET = 2;
 _ReactorEvent.BUBBLING_PHASE = 3;
 var ReactorEvent = _ReactorEvent;
 var Reactor = class {
-  // `?:`s | pay the ~600 byte price upfront for what u might never use
   constructor(obj = {}, options) {
-    this.isBatching = false;
-    this.isTracking = false;
     this.proxyCache = /* @__PURE__ */ new WeakMap();
     this.log = NOOP;
-    this._canLog = false;
-    // keeping track so API getter doesn't slow down internal iterations in any way
     this.config = { crossRealms: false, eventBubbling: true, batchingFunction: R_BATCH };
-    inert(this);
+    // `?:`s | pay the ~800 byte price upfront for what u might never use
+    this.isLogging = false;
+    // keeping track so API getter doesn't slow down internal iterations in any way
+    this.isTracing = false;
+    this.isTracking = false;
+    this.isSCloning = false;
+    // Smart Cloning
+    this.isBatching = false;
+    this[INERTIA] = true;
     this.core = this.proxied(obj);
     if (!options) return;
+    this.canLog = !!options.debug;
     if (this.isTracking = !!options.referenceTracking) this.lineage = /* @__PURE__ */ new WeakMap();
-    if (options.debug) this.canLog = true;
+    if (this.isSCloning = this.isTracking && !!options.smartCloning) this.snapshotCache = /* @__PURE__ */ new WeakMap();
+    this.isTracing = this.isTracking && !!options.lineageTracing;
     const { get = this.config.get, set = this.config.set, delete: del = this.config.delete, crossRealms = this.config.crossRealms, eventBubbling = this.config.eventBubbling } = options;
     Object.assign(this.config, { get, set, delete: del, crossRealms, eventBubbling });
   }
@@ -1676,20 +1686,20 @@ var Reactor = class {
     obj = obj[RAW] || obj;
     if (this.isTracking && parent && key) this.link(obj, parent, key, false);
     if (this.proxyCache.has(obj)) return this.proxyCache.get(obj);
-    rejectable || (rejectable = isIntent(obj));
-    indiffable || (indiffable = isVolatile(obj));
+    rejectable || (rejectable = obj[REJECTABLE]);
+    indiffable || (indiffable = obj[INDIFFABLE]);
     const proxy = new Proxy(obj, {
       // Robust Proxy handler
       get: (object, key2, receiver) => {
         if (key2 === RAW) return object;
         let value = object[key2];
-        const safeKey = String(key2), fullPath = this.isTracking ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracking ? this.trace(object, safeKey) : fullPath;
+        const safeKey = String(key2), fullPath = this.isTracing ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracing ? this.trace(object, safeKey) : fullPath;
         this.log(`\u{1F440} [GET Trap] Initiated for "${safeKey}" on "${paths}"`);
         if (this.config.get) value = this.config.get(object, key2, value, receiver, paths);
         if (this.getters) {
           const wildcords = this.getters.get("*");
-          for (let i = 0, len = this.isTracking ? paths.length : 1; i < len; i++) {
-            const currPath = this.isTracking ? paths[i] : fullPath, cords = this.getters.get(currPath);
+          for (let i = 0, len = this.isTracing ? paths.length : 1; i < len; i++) {
+            const currPath = this.isTracing ? paths[i] : fullPath, cords = this.getters.get(currPath);
             if (!cords && !wildcords) continue;
             const target = { path: currPath, value, key: safeKey, object: receiver }, payload = { type: "get", target, currentTarget: target, root: this.core, rejectable };
             if (cords) value = this.mediate(currPath, payload, "get", cords);
@@ -1702,7 +1712,7 @@ var Reactor = class {
       },
       set: (object, key2, value, receiver) => {
         let unchanged, safeValue, safeOldValue, terminated = false;
-        const safeKey = String(key2), fullPath = this.isTracking ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracking ? this.trace(object, safeKey) : fullPath, oldValue = object[key2];
+        const safeKey = String(key2), fullPath = this.isTracing ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracing ? this.trace(object, safeKey) : fullPath, loopLen = this.isTracing ? paths.length : 1, oldValue = object[key2];
         if (this.isTracking || !indiffable) {
           safeOldValue = oldValue?.[RAW] || oldValue;
           safeValue = value?.[RAW] || value;
@@ -1713,7 +1723,7 @@ var Reactor = class {
         if (this.config.set) terminated = (value = this.config.set(object, key2, value, oldValue, receiver, paths)) === TERMINATOR;
         if (this.setters) {
           const wildcords = this.setters.get("*");
-          for (let i = 0, len = paths.length; i < len; i++) {
+          for (let i = 0; i < loopLen; i++) {
             const currPath = this.isTracking ? paths[i] : fullPath, cords = this.setters.get(currPath);
             if (!cords && !wildcords) continue;
             const target = { path: currPath, value, oldValue, key: safeKey, object: receiver }, payload = { type: "set", target, currentTarget: target, root: this.core, terminated, rejectable };
@@ -1729,9 +1739,9 @@ var Reactor = class {
         }
         if (terminated) return this.log(`\u{1F6E1}\uFE0F [SET Mediator] Terminated on "${paths}"`), true;
         object[key2] = value;
-        if (this.isTracking && !unchanged) this.unlink(safeOldValue, object, safeKey), this.link(safeValue, object, safeKey);
+        if (this.isTracking && !unchanged) this.isSCloning && this.stamp(object), this.unlink(safeOldValue, object, safeKey), this.link(safeValue, object, safeKey);
         if (this.watchers || this.listeners)
-          for (let i = 0, len = paths.length; i < len; i++) {
+          for (let i = 0; i < loopLen; i++) {
             const currPath = this.isTracking ? paths[i] : fullPath, target = { path: currPath, value, oldValue, key: safeKey, object: receiver };
             this.notify(currPath, { type: "set", target, currentTarget: target, root: this.core, terminated, rejectable });
           }
@@ -1739,12 +1749,12 @@ var Reactor = class {
       },
       deleteProperty: (object, key2) => {
         let value, receiver = this.proxyCache.get(object), terminated = false;
-        const safeKey = String(key2), fullPath = this.isTracking ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracking ? this.trace(object, safeKey) : fullPath, oldValue = object[key2];
+        const safeKey = String(key2), fullPath = this.isTracing ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracing ? this.trace(object, safeKey) : fullPath, loopLen = this.isTracing ? paths.length : 1, oldValue = object[key2];
         this.log(`\u{1F5D1}\uFE0F [DELETE Trap] Initiated for "${safeKey}" on "${paths}"`);
         if (this.config.delete) terminated = (value = this.config.delete(object, key2, oldValue, receiver, paths)) === TERMINATOR;
         if (this.deleters) {
           const wildcords = this.deleters.get("*");
-          for (let i = 0, len = paths.length; i < len; i++) {
+          for (let i = 0; i < loopLen; i++) {
             const currPath = this.isTracking ? paths[i] : fullPath, cords = this.deleters.get(currPath);
             if (!cords && !wildcords) continue;
             const target = { path: currPath, value, oldValue, key: safeKey, object: receiver }, payload = { type: "delete", target, currentTarget: target, root: this.core, rejectable };
@@ -1759,9 +1769,9 @@ var Reactor = class {
         }
         if (terminated) return this.log(`\u{1F6E1}\uFE0F [DELETE Mediator] Terminated on "${paths}"`), true;
         delete object[key2];
-        this.isTracking && this.unlink(oldValue?.[RAW] || oldValue, object, safeKey);
+        if (this.isTracking) this.isSCloning && this.stamp(object), this.unlink(oldValue?.[RAW] || oldValue, object, safeKey);
         if (this.watchers || this.listeners)
-          for (let i = 0, len = paths.length; i < len; i++) {
+          for (let i = 0; i < loopLen; i++) {
             const currPath = this.isTracking ? paths[i] : fullPath, target = { path: currPath, value, oldValue, key: safeKey, object: receiver };
             this.notify(currPath, { type: "delete", target, currentTarget: target, root: this.core, rejectable });
           }
@@ -1774,27 +1784,30 @@ var Reactor = class {
     if (Object.is(target, this.core[RAW] || this.core)) return paths.push(path), paths;
     if (visited.has(target)) return paths;
     visited.add(target);
-    const parents = this.lineage.get(target);
-    if (!parents) return paths;
-    for (let i = 0, len = parents.length; i < len; i++) {
-      const { parent, key } = parents[i];
-      this.trace(parent, key ? key + "." + path : path, paths, visited);
-    }
+    const es = this.lineage.get(target);
+    if (!es) return paths;
+    for (let i = 0, len = es.length; i < len; i += 2) this.trace(es[i], es[i + 1] ? es[i + 1] + "." + path : path, paths, visited);
     return paths;
   }
   // won't be called without `.isTracking` so internal guard avoided
   link(target, parent, key, typecheck = true, es) {
     if (typecheck && !(isStrictObj(target, this.config.crossRealms) || Array.isArray(target))) return;
     es = this.lineage.get(target) ?? (this.lineage.set(target, es = []), es);
-    for (let i = 0, len = es.length; i < len; i++) if (Object.is(es[i].parent, parent) && es[i].key === key) return;
-    es.push({ parent, key });
+    for (let i = 0, len = es.length; i < len; i += 2) if (Object.is(es[i], parent) && es[i + 1] === key) return;
+    es.push(parent, key);
   }
   unlink(target, parent, key) {
     if (!(isStrictObj(target, this.config.crossRealms) || Array.isArray(target))) return;
     const es = this.lineage.get(target);
     if (es) {
-      for (let i = 0, len = es.length; i < len; i++) if (Object.is(es[i].parent, parent) && es[i].key === key) return void es.splice(i, 1);
+      for (let i = 0, len = es.length; i < len; i += 2) if (Object.is(es[i], parent) && es[i + 1] === key) return void es.splice(i, 2);
     }
+  }
+  stamp(target, typecheck = true) {
+    if (typecheck && "object" !== typeof target) return;
+    target[VERSION] = (target[VERSION] || 0) + 1;
+    const es = this.lineage?.get(target);
+    if (es) for (let i = 0, len = es.length; i < len; i += 2) this.stamp(es[i]);
   }
   mediate(path, payload, type, cords) {
     let terminated = false, value = payload.target.value;
@@ -1834,7 +1847,7 @@ var Reactor = class {
     if (this.queue?.size) for (const task of this.queue) task(), this.queue.delete(task);
   }
   wave(path, payload) {
-    const e = new ReactorEvent(payload, this.config.eventBubbling, this._canLog), chain = getTrailRecords(this.core, path);
+    const e = new ReactorEvent(payload, this.config.eventBubbling, this.isLogging), chain = getTrailRecords(this.core, path);
     e.eventPhase = ReactorEvent.CAPTURING_PHASE;
     for (let i = 0; i <= chain.length - 2; i++) {
       if (e.propagationStopped) break;
@@ -1898,10 +1911,10 @@ var Reactor = class {
   nostall(task) {
     return this.queue?.delete(task);
   }
-  get(path, cb, opts) {
-    this.getters ?? (this.getters = /* @__PURE__ */ new Map());
-    const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR);
-    let cords = this.getters.get(path), cord;
+  syncAdd(key, path, cb, opts, onImmediate) {
+    var _a;
+    const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR), store = this[_a = `${key}${key.endsWith("t") ? "t" : ""}ers`] ?? (this[_a] = /* @__PURE__ */ new Map());
+    let cords = store.get(path), cord;
     if (cords) {
       for (let i = 0, len = cords.length; i < len; i++)
         if (Object.is(cords[i].cb, cb)) {
@@ -1910,104 +1923,68 @@ var Reactor = class {
         }
     }
     if (cord) return cord.clup;
-    cord = { cb, once, clup: () => (lazy && this.nostall(task), this.noget(path, cb)) };
-    if (immediate) (immediate !== "auto" || inAny(this.core, path)) && getAny(this.core, path);
-    const task = () => (cords ?? (this.getters.set(path, cords = []), cords)).push(cord);
+    let task;
+    cord = { cb, once, clup: () => (lazy && this.nostall(task), this[`no${key}`](path, cb)) };
+    immediate && onImmediate?.(immediate);
+    task = () => (cords ?? (store.set(path, cords = []), cords)).push(cord);
     lazy ? this.stall(task) : task();
     return this.bind(cord, signal);
+  }
+  syncDrop(store, path, cb) {
+    const cords = store?.get(path);
+    if (!cords) return void 0;
+    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && store.delete(path), true;
+    return false;
+  }
+  clone(obj, raw, visited = /* @__PURE__ */ new WeakMap()) {
+    if (!(isStrictObj(obj, this.config.crossRealms) || Array.isArray(obj)) || visited.has(obj)) return obj;
+    const version = obj[VERSION] || 0, cached = !raw && this.isSCloning && this.snapshotCache.get(obj);
+    if (cached && obj[SSVERSION] === version) return cached;
+    const clone = !raw ? Array.isArray(obj) ? [] : {} : obj[RAW] || obj;
+    visited.set(obj, clone);
+    const keys = Object.keys(obj);
+    for (let i = 0, len = keys.length; i < len; i++) clone[keys[i]] = this.clone(obj[keys[i]], raw, visited);
+    if (!raw && this.isSCloning) {
+      this.snapshotCache.set(obj, clone);
+      obj[SSVERSION] = version;
+    }
+    return clone;
+  }
+  get(path, cb, opts) {
+    return this.syncAdd("get", path, cb, opts, (imm) => (imm !== "auto" || inAny(this.core, path)) && getAny(this.core, path));
   }
   gonce(path, cb, opts) {
     return this.get(path, cb, { ...parseEvOpts(opts, EV_OPTS.MEDIATOR), once: true });
   }
   noget(path, cb) {
-    const cords = this.getters?.get(path);
-    if (!cords) return void 0;
-    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.getters.delete(path), true;
-    return false;
+    return this.syncDrop(this.getters, path, cb);
   }
   set(path, cb, opts) {
-    this.setters ?? (this.setters = /* @__PURE__ */ new Map());
-    const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR);
-    let cords = this.setters.get(path), cord;
-    if (cords) {
-      for (let i = 0, len = cords.length; i < len; i++)
-        if (Object.is(cords[i].cb, cb)) {
-          cord = cords[i];
-          break;
-        }
-    }
-    if (cord) return cord.clup;
-    cord = { cb, once, clup: () => (lazy && this.nostall(task), this.noset(path, cb)) };
-    if (immediate) (immediate !== "auto" || inAny(this.core, path)) && setAny(this.core, path, getAny(this.core, path));
-    const task = () => (cords ?? (this.setters.set(path, cords = []), cords)).push(cord);
-    lazy ? this.stall(task) : task();
-    return this.bind(cord, signal);
+    return this.syncAdd("set", path, cb, opts, (imm) => (imm !== "auto" || inAny(this.core, path)) && setAny(this.core, path, getAny(this.core, path)));
   }
   sonce(path, cb, opts) {
     return this.set(path, cb, Object.assign(parseEvOpts(opts, EV_OPTS.MEDIATOR), { once: true }));
   }
   noset(path, cb) {
-    const cords = this.setters?.get(path);
-    if (!cords) return void 0;
-    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.setters.delete(path), true;
-    return false;
+    return this.syncDrop(this.setters, path, cb);
   }
   delete(path, cb, opts) {
-    this.deleters ?? (this.deleters = /* @__PURE__ */ new Map());
-    const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR);
-    let cords = this.deleters.get(path), cord;
-    if (cords) {
-      for (let i = 0, len = cords.length; i < len; i++)
-        if (Object.is(cords[i].cb, cb)) {
-          cord = cords[i];
-          break;
-        }
-    }
-    if (cord) return cord.clup;
-    cord = { cb, once, clup: () => (lazy && this.nostall(task), this.nodelete(path, cb)) };
-    if (immediate) (immediate !== "auto" || inAny(this.core, path)) && deleteAny(this.core, path, void 0);
-    const task = () => (cords ?? (this.deleters.set(path, cords = []), cords)).push(cord);
-    lazy ? this.stall(task) : task();
-    return this.bind(cord, signal);
+    return this.syncAdd("delete", path, cb, opts, (imm) => (imm !== "auto" || inAny(this.core, path)) && deleteAny(this.core, path, void 0));
   }
   donce(path, cb, opts) {
     return this.delete(path, cb, Object.assign(parseEvOpts(opts, EV_OPTS.MEDIATOR), { once: true }));
   }
   nodelete(path, cb) {
-    const cords = this.deleters?.get(path);
-    if (!cords) return void 0;
-    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.deleters.delete(path), true;
-    return false;
+    return this.syncDrop(this.deleters, path, cb);
   }
   watch(path, cb, opts) {
-    this.watchers ?? (this.watchers = /* @__PURE__ */ new Map());
-    const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR);
-    let cords = this.watchers.get(path), cord;
-    if (cords) {
-      for (let i = 0, len = cords.length; i < len; i++)
-        if (Object.is(cords[i].cb, cb)) {
-          cord = cords[i];
-          break;
-        }
-    }
-    if (cord) return cord.clup;
-    cord = { cb, once, clup: () => (lazy && this.nostall(task), this.nowatch(path, cb)) };
-    if (immediate && immediate !== "auto" && inAny(this.core, path)) {
-      const target = this.getContext(path);
-      cb(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false });
-    }
-    const task = () => (cords ?? (this.watchers.set(path, cords = []), cords)).push(cord);
-    lazy ? this.stall(task) : task();
-    return this.bind(cord, signal);
+    return this.syncAdd("watch", path, cb, opts, (imm) => imm !== "auto" && inAny(this.core, path) && ((target) => cb(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false }))(this.getContext(path)));
   }
   wonce(path, cb, opts) {
     return this.watch(path, cb, Object.assign(parseEvOpts(opts, EV_OPTS.MEDIATOR), { once: true }));
   }
   nowatch(path, cb) {
-    const cords = this.watchers?.get(path);
-    if (!cords) return void 0;
-    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.watchers.delete(path), true;
-    return false;
+    return this.syncDrop(this.watchers, path, cb);
   }
   on(path, cb, options) {
     this.listeners ?? (this.listeners = /* @__PURE__ */ new Map());
@@ -2024,7 +2001,7 @@ var Reactor = class {
     cord = { cb, capture, depth, once, clup: () => this.off(path, cb, options) };
     if (immediate && (immediate !== "auto" || inAny(this.core, path))) {
       const target = this.getContext(path);
-      cb(new ReactorEvent({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, this.config.eventBubbling, this._canLog));
+      cb(new ReactorEvent({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, this.config.eventBubbling, this.isLogging));
     }
     (cords ?? (this.listeners.set(path, cords = []), cords)).push(cord);
     return this.bind(cord, signal);
@@ -2039,17 +2016,8 @@ var Reactor = class {
     for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb) && cords[i].capture === capture) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.listeners.delete(path), true;
     return false;
   }
-  get canLog() {
-    return this.log === R_LOG;
-  }
-  set canLog(value) {
-    this.log = (this._canLog = value) ? R_LOG : NOOP;
-  }
-  get canTrackReferences() {
-    return this.isTracking;
-  }
-  snapshot() {
-    return deepClone(this.core, !!this.config.crossRealms);
+  snapshot(raw = !this.isSCloning, branch = this.core) {
+    return this.clone(branch, raw);
   }
   cascade({ type, currentTarget: { path, value: news, oldValue: olds } }, objSafe = true) {
     if (type !== "set" && type !== "delete" || !(isStrictObj(news, this.config.crossRealms) || Array.isArray(news)) || (objSafe ? !(isStrictObj(olds, this.config.crossRealms) || Array.isArray(olds)) : false)) return;
@@ -2064,40 +2032,34 @@ var Reactor = class {
   destroy() {
     this.reset(), nuke(this);
   }
+  get canLog() {
+    return this.log === R_LOG;
+  }
+  set canLog(value) {
+    this.log = (this.isLogging = value) ? R_LOG : NOOP;
+  }
+  get canTrackReferences() {
+    return this.isTracking;
+  }
+  get canTraceLineage() {
+    return this.isTracing;
+  }
+  get canSmartClone() {
+    return this.isSCloning;
+  }
 };
 
 // src/ts/tools/mixins/reactive.ts
-var methods = [
-  // --- Reactor public methods ---
-  "tick",
-  "stall",
-  "nostall",
-  "get",
-  "gonce",
-  "noget",
-  "set",
-  "sonce",
-  "noset",
-  "delete",
-  "donce",
-  "nodelete",
-  "watch",
-  "wonce",
-  "nowatch",
-  "on",
-  "once",
-  "off",
-  "cascade",
-  "snapshot",
-  "reset",
-  "destroy"
-];
-function reactive(target, options) {
-  const descriptors = {}, r = target instanceof Reactor ? target : new Reactor(target, options), locks = { enumerable: false, configurable: true, writable: false };
-  for (const m of methods) descriptors[m] = { value: r[m].bind(r), ...locks };
-  descriptors["__Reactor__"] = { value: r, ...locks };
-  Object.defineProperties(r.core, descriptors);
-  return r.core;
+var methods = ["tick", "stall", "nostall", "get", "gonce", "noget", "set", "sonce", "noset", "delete", "donce", "nodelete", "watch", "wonce", "nowatch", "on", "once", "off", "cascade", "snapshot", "reset", "destroy"];
+function reactive(target, options, prefs) {
+  const descriptors = {}, rtr = target instanceof Reactor ? target : new Reactor(target, options), locks = { enumerable: false, configurable: true, writable: false }, hasAffix = !!(prefs?.prefix || prefs?.suffix);
+  for (let key of methods) {
+    if (hasAffix) (prefs?.whitelist?.includes(key) ?? true) && (key = `${prefs?.prefix || ""}${key}${prefs?.suffix || ""}`);
+    else if (prefs?.whitelist?.includes(key)) continue;
+    descriptors[key] = { value: rtr[key].bind(rtr), ...locks };
+  }
+  descriptors["__Reactor__"] = { value: rtr, ...locks };
+  return Object.defineProperties(rtr.core, descriptors), rtr.core;
 }
 function inert(target) {
   target[INERTIA] = true;
@@ -2131,6 +2093,12 @@ function stable(target) {
 }
 function isVolatile(target) {
   return !!target[INDIFFABLE];
+}
+function getVersion(target) {
+  return target[VERSION] || 0;
+}
+function getSnapshotVersion(target) {
+  return target[SSVERSION] || 0;
 }
 
 // src/ts/tools/mixins/nuke.ts
@@ -2257,9 +2225,8 @@ var _ComponentRegistry = class _ComponentRegistry extends BaseRegistry {
   static init(name, ctlr, options = {}) {
     const Comp = this.instance.get(name);
     if (!Comp) return null;
-    const instance = new Comp(ctlr, options), element = instance.create();
-    instance.setup();
-    return { element, instance };
+    const instance = new Comp(ctlr, options);
+    return instance.create(), instance.setup(), instance;
   }
   static getAll() {
     return this.instance.getAll();
@@ -2285,16 +2252,16 @@ var Controllable = class {
     this.signal = AbortSignal.any([this.signal, ctlr.signal]);
     this.ctlr = ctlr;
     this.guard = ctlr.guard;
+    this.media = ctlr.media;
     this.config = config;
-    if (state2) this.state = isObj(state2) ? reactive(state2) : state2;
+    this.state = isObj(state2) ? reactive(state2) : state2;
   }
   setup() {
     this.onSetup();
   }
   destroy() {
     !this.signal.aborted && this.ac.abort(`[TMG Controllable] Instance is being destroyed`);
-    this.onDestroy();
-    this.state?.destroy?.(), this.config?.destroy?.();
+    this.onDestroy(), this.state?.destroy?.(), this.config?.destroy?.();
     nuke(this);
   }
   onDestroy() {
@@ -2335,7 +2302,7 @@ var BaseTech = class extends Controllable {
   }
   // --- THE MANDATORY CORE 5 ---
   wire() {
-    this.ctlr.media.on("intent", this.handleIntentChange, { signal: this.signal });
+    this.media.on("intent", this.handleIntentChange, { signal: this.signal });
     this.wireSrc();
     this.wireCurrentTime();
     this.wireDuration();
@@ -2789,9 +2756,9 @@ var Controller = class {
     this.signal = this.ac.signal;
     this._payload = { instance: this };
     // must use getter for payload
-    // DOM References (Utilized by Core Plugs)
-    this.videoContainer = createEl("div");
+    // DOM References (Utilized by Plugs)
     this.pseudoVideo = createEl("video");
+    this.videoContainer = createEl("div");
     this.pseudoVideoContainer = createEl("div");
     this.DOM = {};
     // To be populated with common elements for easy reach
@@ -2830,6 +2797,7 @@ var Controller = class {
       status: state(defs.status),
       settings: state(defs.settings)
     });
+    this.config.watch("settings", (value) => this.settings = value, { immediate: true, signal: this.signal });
     this.buildCache = this.config.snapshot();
     this.media.set("tech", (t) => inert(t), { signal: this.signal });
     this.boot();
@@ -2848,8 +2816,8 @@ var Controller = class {
   }
   connectPlugs() {
     for (const PlugClass of PlugRegistry.getOrdered()) {
-      const key = PlugClass.plugName, config = key in this.config ? this.config[key] : this.config.settings[key];
-      this.plugin(PlugClass, config);
+      const key = PlugClass.plugName;
+      this.plugin(PlugClass, key in this.config ? this.config[key] : this.config.settings[key]);
     }
   }
   plugin(PlugClass, config) {
@@ -2965,7 +2933,7 @@ var Controller = class {
     this.clups.forEach((cleanup) => cleanup());
     [...this.plugs.values()].reverse().forEach((p) => p.destroy());
     this.media.tech.destroy();
-    [this.plugs, this.throttleMap, this.rafLoopMap, this.rafLoopFnMap].forEach((map) => map.clear());
+    this.plugs.clear(), this.throttleMap.clear(), this.rafLoopMap.clear(), this.rafLoopFnMap.clear();
     this.media.destroy(), this.state.destroy(), this.config.destroy();
     const el = this.config.cloneOnDetach ? cloneMedia(this.media.element) : this.media.element;
     return nuke(this), el;
@@ -3433,8 +3401,10 @@ __export(plugs_exports, {
   BasePlug: () => BasePlug,
   BrightnessPlug: () => BrightnessPlug,
   CSSPlug: () => CSSPlug,
+  CaptionsPlug: () => CaptionsPlug,
   ControlPanelPlug: () => ControlPanelPlug,
   DisabledPlug: () => DisabledPlug,
+  DraggableModule: () => DraggableModule,
   ErrorMessagesPlug: () => ErrorMessagesPlug,
   FastPlayPlug: () => FastPlayPlug,
   FramePlug: () => FramePlug,
@@ -3503,7 +3473,7 @@ var SrcPlug = class extends BasePlug {
     this.ctlr.config.watch("src", this.forwardSrc, { signal: this.signal, immediate: "auto" });
   }
   forwardSrc(value) {
-    this.ctlr.media.intent.src = value;
+    this.media.intent.src = value;
   }
 };
 SrcPlug.plugName = "src";
@@ -3513,7 +3483,7 @@ var SourcesPlug = class extends BasePlug {
     this.ctlr.config.watch("sources", this.forwardSources, { signal: this.signal, immediate: "auto" });
   }
   forwardSources(value) {
-    this.ctlr.media.intent.sources = value;
+    this.media.intent.sources = value;
   }
 };
 SourcesPlug.plugName = "sources";
@@ -3523,7 +3493,7 @@ var SrcObjectPlug = class extends BasePlug {
     this.ctlr.config.watch("srcObject", this.forwardSrcObject, { signal: this.signal, immediate: "auto" });
   }
   forwardSrcObject(value) {
-    this.ctlr.media.settings.srcObject = value;
+    this.media.settings.srcObject = value;
   }
 };
 SrcObjectPlug.plugName = "srcObject";
@@ -3533,7 +3503,7 @@ var TracksPlug = class extends BasePlug {
     this.ctlr.config.watch("tracks", this.forwardTracks, { signal: this.signal, immediate: "auto" });
   }
   forwardTracks(value) {
-    this.ctlr.media.intent.tracks = value;
+    this.media.intent.tracks = value;
   }
 };
 TracksPlug.plugName = "tracks";
@@ -3543,7 +3513,7 @@ var PlaysInlinePlug = class extends BasePlug {
     this.ctlr.config.watch("settings.playsInline", this.forwardPlaysInline, { signal: this.signal, immediate: true });
   }
   forwardPlaysInline(value) {
-    this.ctlr.media.intent.playsInline = value;
+    this.media.intent.playsInline = value;
   }
 };
 PlaysInlinePlug.plugName = "playsInline";
@@ -3559,11 +3529,12 @@ var PlaylistPlug = class extends BasePlug {
     this.currentIndex = 0;
     this.ctlr.config.get("playlist", (v) => v?.length ? v : null, { signal: this.signal });
     this.ctlr.config.set("playlist", (v) => v?.map((i) => mergeObjs(DEFAULT_VIDEO_ITEM_BUILD, i)) ?? null, { signal: this.signal });
-    this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && (this.ctlr.config.playlist[this.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
+    this.ctlr.config.watch("playlist", (value) => this.config = value, { signal: this.signal });
+    this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && (this.config[this.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
     this.ctlr.config.on("playlist", this.handlePlaylistChange, { signal: this.signal, immediate: true, depth: 1 });
   }
   handlePlaylistChange({ root }) {
-    if (this.ctlr.media.status.readyState < 1) return;
+    if (this.media.status.readyState < 1) return;
     const list = root.playlist;
     const v = list?.find((v2) => v2.media.id && v2.media.id === root.media.id || isSameURL(v2.src, root.src));
     this.currentIndex = (v && list?.indexOf(v)) ?? 0;
@@ -3572,23 +3543,23 @@ var PlaylistPlug = class extends BasePlug {
   movePlaylistTo(index, shouldPlay) {
     if (!this.ctlr.config.playlist) return;
     this.currentIndex = index;
-    this.applyItem(this.ctlr.config.playlist[index]);
-    if (typeof shouldPlay === "boolean") this.ctlr.media.intent.paused = !shouldPlay;
+    this.applyItem(this.config[index]);
+    if (typeof shouldPlay === "boolean") this.media.intent.paused = !shouldPlay;
   }
   applyItem(item, reset = true) {
     this.ctlr.config.media = deepClone(item.media);
-    timeKeys.forEach((p) => this.ctlr.config.settings.time[p] = item.settings.time[p]);
+    timeKeys.forEach((p) => this.ctlr.settings.time[p] = item.settings.time[p]);
     this.ctlr.config.tracks = deepClone(item.tracks ?? []);
     if (reset) this.ctlr.config.src = item.src || "";
     if (reset && "sources" in item && item.sources) this.ctlr.config.sources = deepClone(item.sources);
   }
   previousVideo() {
-    if (this.ctlr.media.state.currentTime >= 3) this.ctlr.media.intent.currentTime = 0;
+    if (this.media.state.currentTime >= 3) this.media.intent.currentTime = 0;
     else if (this.ctlr.config.playlist && this.currentIndex > 0) this.movePlaylistTo(this.currentIndex - 1, true);
   }
   nextVideo() {
     if (!this.ctlr.config.playlist) return;
-    if (this.currentIndex < this.ctlr.config.playlist.length - 1) this.movePlaylistTo(this.currentIndex + 1, true);
+    if (this.currentIndex < this.config.length - 1) this.movePlaylistTo(this.currentIndex + 1, true);
   }
 };
 PlaylistPlug.plugName = "playlist";
@@ -3600,9 +3571,9 @@ var AutoPlug = class extends BasePlug {
     this.nextVideoPreview = null;
     this.canAutoMovePlaylist = true;
     this.autonextVideo = () => {
-      if (!this.ctlr.media.status.loadedMetadata || !this.ctlr.config.playlist || this.config.next.value < 0 || !this.canAutoMovePlaylist || this.ctlr.getPlug("playlist").currentIndex >= this.ctlr.config.playlist.length - 1 || this.ctlr.media.state.paused || this.ctlr.media.status.waiting) return;
+      if (!this.media.status.loadedMetadata || !this.ctlr.config.playlist || this.config.next.value < 0 || !this.canAutoMovePlaylist || this.ctlr.getPlug("playlist").currentIndex >= this.ctlr.config.playlist.length - 1 || this.media.state.paused || this.media.status.waiting) return;
       this.canAutoMovePlaylist = false;
-      const count = clamp(1, Math.round((this.ctlr.config.settings.time.end ?? this.ctlr.media.status.duration) - this.ctlr.media.state.currentTime), this.config.next.value), v = this.ctlr.config.playlist[this.ctlr.getPlug("playlist").currentIndex + 1], toastsPlug = this.ctlr.getPlug("toasts"), timePlug = this.ctlr.getPlug("time");
+      const count = clamp(1, Math.round((this.ctlr.settings.time.end ?? this.media.status.duration) - this.media.state.currentTime), this.config.next.value), v = this.ctlr.config.playlist[this.ctlr.getPlug("playlist").currentIndex + 1], toastsPlug = this.ctlr.getPlug("toasts"), timePlug = this.ctlr.getPlug("time");
       const nVTId = toastsPlug?.toast?.("", {
         autoClose: count * 1e3,
         hideProgressBar: false,
@@ -3623,29 +3594,29 @@ var AutoPlug = class extends BasePlug {
         onClose: (timeElapsed) => (removeListeners(), timeElapsed && this.ctlr.getPlug("playlist")?.nextVideo()),
         tag: "tmg-anvi"
       });
-      const cleanUp = (permanent = false) => (nVTId && window.t007?.toast.dismiss(nVTId, "instant"), this.nextVideoPreview = null, this.canAutoMovePlaylist = !permanent), cleanUpWhenNeeded = () => !this.ctlr.media.element.ended && cleanUp(), autoCleanUpToast = () => Math.floor((this.ctlr.config.settings.time.end ?? this.ctlr.media.status.duration) - this.ctlr.media.state.currentTime) > this.config.next.value && cleanUp(), removeListeners = () => ["timeupdate", "pause", "waiting"].forEach((e, i) => this.ctlr.media.element.removeEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
-      ["timeupdate", "pause", "waiting"].forEach((e, i) => this.ctlr.media.element.addEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
+      const cleanUp = (permanent = false) => (nVTId && window.t007?.toast.dismiss(nVTId, "instant"), this.nextVideoPreview = null, this.canAutoMovePlaylist = !permanent), cleanUpWhenNeeded = () => !this.media.element.ended && cleanUp(), autoCleanUpToast = () => Math.floor((this.ctlr.settings.time.end ?? this.media.status.duration) - this.media.state.currentTime) > this.config.next.value && cleanUp(), removeListeners = () => ["timeupdate", "pause", "waiting"].forEach((e, i) => this.media.element.removeEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
+      ["timeupdate", "pause", "waiting"].forEach((e, i) => this.media.element.addEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
       const nVP = this.nextVideoPreview = this.ctlr.queryDOM(".tmg-video-next-preview");
       if (v.sources?.length) addSources(v.sources, nVP);
       ["loadedmetadata", "loaded", "durationchange"].forEach((e) => nVP?.addEventListener(e, ({ target: p }) => p.nextElementSibling.textContent = timePlug?.toTimeText(p.duration) ?? "0:00"));
-      this.ctlr.config.settings.auto.next.preview = this.config.next.preview;
+      this.ctlr.settings.auto.next.preview = this.config.next.preview;
       nVP?.previousElementSibling?.addEventListener("click", () => (cleanUp(true), this.ctlr.getPlug("playlist")?.nextVideo()), { capture: true });
     };
   }
   wire() {
     this.ctlr.config.watch("settings.auto.play", this.forwardAutoPlay, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("state.currentTime", this.handleTimeUpdate, { signal: this.signal, immediate: true });
+    this.media.on("state.currentTime", this.handleTimeUpdate, { signal: this.signal, immediate: true });
     this.ctlr.state.on("mediaParentIntersecting", this.handleIntersectionChange, { signal: this.signal });
     this.ctlr.config.on("settings.auto.next.preview.usePoster", this.handlePreviewUsePoster, { signal: this.signal });
     this.ctlr.config.on("settings.auto.next.preview.tease", this.handlePreviewTease, { signal: this.signal });
     this.ctlr.config.on("settings.auto.next.preview.time", this.handlePreviewTime, { signal: this.signal });
   }
   forwardAutoPlay(value) {
-    this.ctlr.media.element.autoplay = typeof value === "string" ? false : !!value;
+    this.media.element.autoplay = typeof value === "string" ? false : !!value;
   }
   handleTimeUpdate({ target }) {
-    const dur = this.ctlr.media.status.duration, curr = target.value;
-    if (this.ctlr.media.status.readyState && curr && this.ctlr.state.readyState > 1 && Math.floor((this.ctlr.config.settings.time.end ?? dur) - curr) <= this.config.next.value) this.autonextVideo();
+    const dur = this.media.status.duration, curr = target.value;
+    if (this.media.status.readyState && curr && this.ctlr.state.readyState > 1 && Math.floor((this.ctlr.settings.time.end ?? dur) - curr) <= this.config.next.value) this.autonextVideo();
   }
   handleIntersectionChange() {
     this.mediaAptAutoplay(this.config.pause, false);
@@ -3653,7 +3624,7 @@ var AutoPlug = class extends BasePlug {
   }
   handlePreviewUsePoster({ target: { value, object } }) {
     if (!this.nextVideoPreview || value && this.nextVideoPreview.poster) return;
-    if (object.tease) this.ctlr.config.settings.auto.next.preview.tease = true;
+    if (object.tease) this.ctlr.settings.auto.next.preview.tease = true;
     else this.nextVideoPreview.currentTime = object.time;
   }
   handlePreviewTease({ target: { value, object } }) {
@@ -3666,8 +3637,8 @@ var AutoPlug = class extends BasePlug {
     this.nextVideoPreview.currentTime = Number(value);
   }
   mediaAptAutoplay(auto = this.config.play, bool = true, p = this.ctlr.state.mediaParentIntersecting ? "in" : "out") {
-    if (auto === `${p}-view-always`) this.ctlr.media.intent.paused = !bool;
-    else if (auto === `${p}-view` && this.ctlr.state.readyState < 3) this.ctlr.media.intent.paused = !bool;
+    if (auto === `${p}-view-always`) this.media.intent.paused = !bool;
+    else if (auto === `${p}-view` && this.ctlr.state.readyState < 3) this.media.intent.paused = !bool;
   }
 };
 AutoPlug.plugName = "auto";
@@ -3681,26 +3652,29 @@ var CSSPlug = class extends BasePlug {
   }
   wire() {
     const entries = Object.entries(this.config);
-    this.ctlr.config.settings.css.altImgUrl = `url(${window.TMG_VIDEO_ALT_IMG_SRC})`;
+    this.ctlr.settings.css.altImgUrl = `url(${window.TMG_VIDEO_ALT_IMG_SRC})`;
     this.ctlr.config.get("*", (val, { target: { key, path } }) => {
       var _a;
       if (!path.startsWith("settings.css.") || path.includes("sync")) return val;
       const newVal = this[this.classKeys.includes(key) ? "getClassValue" : "getCSSValue"](key);
       return (_a = this.CSSCache)[key] || (_a[key] = newVal), newVal;
     });
-    this.ctlr.media.watch("status.videoWidth", this.syncAspectRatio, { signal: this.signal, immediate: true });
-    this.ctlr.media.watch("status.videoHeight", this.syncAspectRatio, { signal: this.signal });
+    this.media.watch("status.videoWidth", this.syncAspectRatio, { signal: this.signal, immediate: true });
+    this.media.watch("status.videoHeight", this.syncAspectRatio, { signal: this.signal });
     this.ctlr.config.watch("*", (val, { target: { key, path } }) => path.startsWith("settings.css.") && !path.includes("sync") && this.apply(key, val), { signal: this.signal });
-    this.ctlr.state.watch("dimensions.container.width", (w2) => this.ctlr.config.settings.css.currentContainerWidth = `${w2 || 0}px`, { signal: this.signal, immediate: true });
-    this.ctlr.state.watch("dimensions.container.height", (h) => this.ctlr.config.settings.css.currentContainerHeight = `${h || 0}px`, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
+    this.ctlr.state.watch("dimensions.container.width", (w2) => this.ctlr.settings.css.currentContainerWidth = `${w2 || 0}px`, { signal: this.signal, immediate: true });
+    this.ctlr.state.watch("dimensions.container.height", (h) => this.ctlr.settings.css.currentContainerHeight = `${h || 0}px`, { signal: this.signal, immediate: true });
+    this.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
     this.ctlr.state.on("dimensions.container.tier", ({ value: tier }) => this.ctlr.videoContainer.dataset.sizeTier = tier || "", { signal: this.signal, immediate: true });
     this.ctlr.state.on("dimensions.pseudoContainer.tier", ({ value: tier }) => this.ctlr.pseudoVideoContainer.dataset.sizeTier = tier || "", { signal: this.signal, immediate: true });
-    entries.forEach(([k, v]) => k !== "syncWithMedia" && (this.CSSCache[k] = this.config[k], this.apply(k, v)));
+    entries.forEach(([k, v]) => {
+      var _a;
+      return k !== "syncWithMedia" && ((_a = this.CSSCache)[k] || (_a[k] = this.config[k]), this.apply(k, v));
+    });
   }
   async handleLoadedMetadataStatus({ value }) {
-    const color = value && await this.ctlr.getPlug("frame")?.getMainColor(), keys = Object.keys(this.ctlr.config.settings.css.syncWithMedia).filter((k) => this.ctlr.config.settings.css.syncWithMedia[k]);
-    keys.forEach((k) => this.ctlr.config.settings.css[k] = String((value ? color : null) ?? this.CSSCache[k]));
+    const color = value && await this.ctlr.getPlug("frame")?.getMainColor(), keys = Object.keys(this.ctlr.settings.css.syncWithMedia).filter((k) => this.ctlr.settings.css.syncWithMedia[k]);
+    keys.forEach((k) => this.ctlr.settings.css[k] = String((value ? color : null) ?? this.CSSCache[k]));
   }
   getCSSValue(key) {
     const cssVar = `--tmg-video-${uncamelize(key, "-")}`, val = getComputedStyle(this.ctlr.videoContainer).getPropertyValue(cssVar);
@@ -3723,8 +3697,8 @@ var CSSPlug = class extends BasePlug {
     this.ctlr.videoContainer.classList.add(`${pre}-${value}`);
   }
   syncAspectRatio() {
-    const { videoWidth: w2, videoHeight: h } = this.ctlr.media.status;
-    this.ctlr.config.settings.css.aspectRatio = w2 && h ? `${w2} / ${h}` : "16 / 9";
+    const { videoWidth: w2, videoHeight: h } = this.media.status;
+    this.ctlr.settings.css.aspectRatio = w2 && h ? `${w2} / ${h}` : "16 / 9";
   }
 };
 CSSPlug.plugName = "css";
@@ -3733,20 +3707,20 @@ CSSPlug.isCore = true;
 // src/ts/plugs/skeleton.ts
 var SkeletonPlug = class extends BasePlug {
   mount() {
-    assignEl(this.ctlr.videoContainer, { role: "region", ariaLabel: "Video Player", className: `tmg-video-container tmg-media-container${IS_MOBILE ? " tmg-video-mobile" : ""}${this.ctlr.media.state.paused ? " tmg-video-paused" : ""}` }, { trackKind: "captions", volumeLevel: "muted", brightnessLevel: "dark", objectFit: this.ctlr.config.settings.css.objectFit || "contain" });
+    assignEl(this.ctlr.videoContainer, { role: "region", ariaLabel: "Video Player", className: `tmg-video-container tmg-media-container${IS_MOBILE ? " tmg-video-mobile" : ""}${this.media.state.paused ? " tmg-video-paused" : ""}` }, { trackKind: "captions", volumeLevel: "muted", brightnessLevel: "dark", objectFit: this.ctlr.settings.css.objectFit || "contain" });
     assignEl(this.ctlr.pseudoVideoContainer, { role: "status", className: "tmg-pseudo-video-container tmg-media-container" });
     assignEl(this.ctlr.pseudoVideo, { ariaHidden: "true", className: "tmg-pseudo-video tmg-media", muted: true, autoplay: false });
     this.ctlr.pseudoVideoContainer.appendChild(this.ctlr.pseudoVideo);
-    this.ctlr.media.element.parentElement?.insertBefore(this.ctlr.videoContainer, this.ctlr.media.element);
+    this.media.element.parentElement?.insertBefore(this.ctlr.videoContainer, this.media.element);
     this.injectInterface();
-    this.ctlr.DOM.containerContent?.prepend(this.ctlr.media.element);
+    this.ctlr.DOM.containerContent?.prepend(this.media.element);
   }
   wire() {
-    this.ctlr.media.on("state.paused", this.handlePausedState, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("state.currentTime", () => this.ctlr.videoContainer.classList.remove("tmg-video-replay"), { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.ended", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-replay", value), { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.waiting", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-buffering", value), { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
+    this.media.on("state.paused", this.handlePausedState, { signal: this.signal, immediate: true });
+    this.media.on("state.currentTime", () => this.ctlr.videoContainer.classList.remove("tmg-video-replay"), { signal: this.signal, immediate: true });
+    this.media.on("status.ended", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-replay", value), { signal: this.signal, immediate: true });
+    this.media.on("status.waiting", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-buffering", value), { signal: this.signal, immediate: true });
+    this.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
   }
   injectInterface() {
     this.ctlr.videoContainer.insertAdjacentHTML(
@@ -3784,54 +3758,164 @@ var SkeletonPlug = class extends BasePlug {
     this.ctlr.DOM.settingsBottomPanel = this.ctlr.queryDOM(".tmg-video-settings-bottom-panel");
   }
   handlePausedState({ value }) {
-    if (!value) for (const media of document.querySelectorAll("video, audio")) media !== this.ctlr.media.element && !media.paused && media.pause();
+    if (!value) for (const media of document.querySelectorAll("video, audio")) media !== this.media.element && !media.paused && media.pause();
     this.ctlr.videoContainer.classList.toggle("tmg-video-paused", value);
   }
   handleLoadedMetadataStatus({ value }) {
     if (!value) return;
-    this.ctlr.pseudoVideo.src = this.ctlr.media.element.currentSrc;
-    this.ctlr.pseudoVideo.crossOrigin = this.ctlr.media.element.crossOrigin;
+    this.ctlr.pseudoVideo.src = this.media.element.currentSrc;
+    this.ctlr.pseudoVideo.crossOrigin = this.media.element.crossOrigin;
   }
   activatePseudoMode() {
-    this.ctlr.pseudoVideo.id = this.ctlr.media.element.id, this.ctlr.media.element.id = "";
-    this.ctlr.pseudoVideo.className += " " + this.ctlr.media.element.className.replace(/tmg-media|tmg-video/g, "");
+    this.ctlr.pseudoVideo.id = this.media.element.id, this.media.element.id = "";
+    this.ctlr.pseudoVideo.className += " " + this.media.element.className.replace(/tmg-media|tmg-video/g, "");
     this.ctlr.pseudoVideoContainer.className += " " + this.ctlr.videoContainer.className.replace(/tmg-media-container|tmg-pseudo-video-container/g, "");
     this.ctlr.videoContainer.parentElement?.insertBefore(this.ctlr.pseudoVideoContainer, this.ctlr.videoContainer);
     document.body.append(this.ctlr.videoContainer);
   }
   deactivatePseudoMode(destroy) {
-    this.ctlr.media.element.id = this.ctlr.pseudoVideo.id, this.ctlr.pseudoVideo.id = "";
+    this.media.element.id = this.ctlr.pseudoVideo.id, this.ctlr.pseudoVideo.id = "";
     this.ctlr.pseudoVideo.className = "tmg-pseudo-video tmg-media";
     this.ctlr.pseudoVideoContainer.className = "tmg-pseudo-video-container tmg-media-container";
-    this.ctlr.pseudoVideoContainer.parentElement?.replaceChild(destroy ? this.ctlr.media.element : this.ctlr.videoContainer, this.ctlr.pseudoVideoContainer);
+    this.ctlr.pseudoVideoContainer.parentElement?.replaceChild(destroy ? this.media.element : this.ctlr.videoContainer, this.ctlr.pseudoVideoContainer);
   }
   onDestroy() {
-    this.ctlr.media.element.parentElement?.replaceChild(this.ctlr.media.element, this.ctlr.videoContainer);
+    this.media.element.parentElement?.replaceChild(this.media.element, this.ctlr.videoContainer);
   }
 };
 SkeletonPlug.plugName = "skeleton";
 SkeletonPlug.isCore = true;
 
-// src/ts/plugs/controlPanel.ts
-var rowsArr = [1, 2, 3];
-var ControlPanelPlug = class extends BasePlug {
+// src/ts/plugs/controlPanel/draggable.ts
+var DraggableModule = class extends BaseModule {
   constructor() {
     super(...arguments);
+    // only ctl panel plug will instantiate after all
+    this.draggingEl = null;
+    this.replaced = null;
+    this.safeTimeoutId = -1;
+  }
+  wire() {
+    this.plug = this.ctlr.getPlug("controlPanel");
+    this.ctlr.config.watch("settings.controlPanel.draggable", (value) => this.config = value, { signal: this.signal });
+    this.ctlr.config.on("settings.controlPanel.draggable", ({ value }) => this.setDragEventListeners(value ? "add" : "remove"), { signal: this.signal, immediate: true });
+  }
+  setDragEventListeners(action) {
+    this.ctlr.queryDOM("[data-draggable-control]", true).forEach((c) => {
+      c.dataset.dragId = c.dataset.dragId ?? "";
+      const act = !inBoolArrOpt(this.config, c.dataset.dragId) ? "remove" : action;
+      c.dataset.draggableControl = String(c.draggable = act === "add");
+      c[`${act}EventListener`]("dragstart", this.handleDragStart, { signal: this.signal });
+      c[`${act}EventListener`]("drag", this.handleDrag, { signal: this.signal });
+      c[`${act}EventListener`]("dragend", this.handleDragEnd, { signal: this.signal });
+    });
+    [...this.ctlr.queryDOM("[data-drop-zone][data-drag-id]", true), ...this.plug.zonesArr].forEach((c) => {
+      c.dataset.dragId = c.dataset.dragId ?? "";
+      const act = !inBoolArrOpt(this.config, c.dataset.dragId) ? "remove" : action;
+      c.dataset.dropZone = String(act === "add");
+      c[`${act}EventListener`]("dragenter", this.handleDragEnter, { signal: this.signal });
+      c[`${act}EventListener`]("dragover", this.handleDragOver, { signal: this.signal });
+      c[`${act}EventListener`]("drop", this.handleDrop, { signal: this.signal });
+      c[`${act}EventListener`]("dragleave", this.handleDragLeave, { signal: this.signal });
+    });
+  }
+  getUIZoneWCoord(target, zoneW = false) {
+    let key = "";
+    const pos = { 0: "left", 1: "center", 2: "right" }[[...target.parentElement.children].indexOf(target)], cws = this.ctlr.queryDOM(".tmg-video-top-controls-wrapper, .tmg-video-bottom-sub-controls-wrapper", true);
+    cws.forEach((w2, i) => w2.contains(target) && (key = { 0: "top.", 1: "bottom.1.", 2: "bottom.2.", 3: "bottom.3." }[i]));
+    return zoneW ? { coord: key + pos, zoneW: getAny(this.plug.zoneWs, key + pos) } : key + pos;
+  }
+  syncControlPanelToUI() {
+    const id = (el) => el.dataset.controlId;
+    const derive = (zoneW, center = false) => [center ? "spacer" : "", ...zoneW instanceof HTMLElement ? [id(zoneW)] : Array.from(zoneW.zone.children, id), center && (zoneW instanceof HTMLElement ? true : zoneW.zone.children.length) ? "spacer" : ""].filter(Boolean);
+    this.ctlr.settings.controlPanel.top = [...derive(this.plug.cZoneWs.top.left), ...derive(this.plug.cZoneWs.top.center, true), ...derive(this.plug.cZoneWs.top.right)];
+    this.ctlr.settings.controlPanel.center = derive(this.plug.zoneWs.center);
+    this.ctlr.settings.controlPanel.bottom = {
+      1: [...derive(this.plug.cZoneWs.bottom[1].left), ...derive(this.plug.cZoneWs.bottom[1].center, true), ...derive(this.plug.cZoneWs.bottom[1].right)],
+      2: [...derive(this.plug.cZoneWs.bottom[2].left), ...derive(this.plug.cZoneWs.bottom[2].center, true), ...derive(this.plug.cZoneWs.bottom[2].right)],
+      3: [...derive(this.plug.cZoneWs.bottom[3].left), ...derive(this.plug.cZoneWs.bottom[3].center, true), ...derive(this.plug.cZoneWs.bottom[3].right)]
+    };
+  }
+  noDropOff(t, drop = this.draggingEl) {
+    return t.dataset.dropZone !== "true" || !drop?.tagName || t.dataset.dragId !== drop.dataset.dragId;
+  }
+  handleDragStart(e) {
+    const { target: t, dataTransfer } = e;
+    if (t.dataset.draggableControl !== "true" || !t?.tagName) return;
+    if (t.matches(":has(input:is(:hover, :active))")) return e.preventDefault();
+    dataTransfer.effectAllowed = "move";
+    this.draggingEl = t;
+    requestAnimationFrame(() => t.classList.add("tmg-video-control-draggingEl"));
+    this.safeTimeoutId = setTimeout2(() => t.classList.remove("tmg-video-control-draggingEl"), 1e3, this.signal);
+    if (t.dataset.dragId !== "wrapper" || t.parentElement?.dataset.dragId !== "wrapper") return;
+    const { coord, zoneW } = this.getUIZoneWCoord(t, true);
+    setAny(this.plug.cZoneWs, coord, zoneW);
+    this.replaced = { target: t.parentElement, child: zoneW.cover };
+  }
+  handleDrag() {
+    this.ctlr.getPlug("overlay")?.delay();
+    clearTimeout(this.safeTimeoutId);
+  }
+  handleDragEnd(e) {
+    const t = e.target;
+    t.classList.remove("tmg-video-control-draggingEl");
+    this.replaced = this.draggingEl = null;
+    if (t.dataset.dragId === "wrapper" && t.parentElement?.dataset.dragId === "wrapper") setAny(this.plug.cZoneWs, this.getUIZoneWCoord(t), t);
+    this.syncControlPanelToUI();
+  }
+  handleDragEnter(e) {
+    !this.noDropOff(e.target) && this.draggingEl && e.target.classList.add("tmg-video-dragover");
+  }
+  handleDragOver(e) {
+    const { target: t, clientX: x, dataTransfer } = e;
+    if (this.noDropOff(t)) return;
+    e.preventDefault();
+    dataTransfer.dropEffect = "move";
+    this.ctlr.throttle(
+      "dragOver",
+      () => {
+        if (t.dataset.dragId === "wrapper") {
+          const atWrapper = getElSiblingAt(x, "x", t.querySelectorAll('.tmg-video-side-controls-wrapper-cover:has([data-drop-zone="true"][data-drag-id=""]:empty)'), "at");
+          if (!atWrapper) return;
+          this.replaced?.target.replaceChild(this.replaced.child, this.draggingEl);
+          this.replaced = { target: t, child: atWrapper };
+          return t.replaceChild(this.draggingEl, atWrapper);
+        }
+        const afterControl = getElSiblingAt(x, "x", t.querySelectorAll("[draggable=true]:not(.tmg-video-control-draggingEl)"));
+        afterControl ? t.insertBefore(this.draggingEl, afterControl) : t.append(this.draggingEl);
+        !t.dataset.dragId && this.plug.zonesArr.forEach(this.plug.handleControlsView);
+      },
+      500,
+      false
+    );
+  }
+  handleDrop(e) {
+    !this.noDropOff(e.target) && e.target.classList.remove("tmg-video-dragover");
+  }
+  handleDragLeave(e) {
+    !this.noDropOff(e.target) && e.target.classList.remove("tmg-video-dragover");
+  }
+};
+DraggableModule.moduleName = "controlPanelDrag";
+
+// src/ts/plugs/controlPanel/index.ts
+var rowsArr = [1, 2, 3];
+var ControlPanelPlug = class extends BasePlug {
+  constructor(ctlr, config) {
+    super(ctlr, config);
     this.controls = /* @__PURE__ */ new Map();
     this.scrollAssistEls = [];
-    this.dragging = null;
-    this.dragReplaced = null;
-    this.dragSafeTimeoutId = -1;
     this.clups = [];
+    this.draggable = new DraggableModule(this.ctlr, this.config.draggable);
   }
   getControl(name) {
-    return this.controls.get(name)?.instance;
+    return this.controls.get(name);
   }
   getControlEl(name) {
     return this.getControl(name)?.element;
   }
   mount() {
-    const cc = this.ctlr.DOM.controlsContainer, buffer = ComponentRegistry.init("buffer", this.ctlr);
+    const buffer = ComponentRegistry.init("buffer", this.ctlr);
     this.topW = createEl("div", { className: "tmg-video-top-controls-wrapper tmg-video-apt-controls-wrapper" }, { dropZone: "", dragId: "wrapper" });
     this.bottomW = createEl("div", { className: "tmg-video-bottom-controls-wrapper" });
     buffer && this.controls.set("buffer", buffer);
@@ -3840,15 +3924,16 @@ var ControlPanelPlug = class extends BasePlug {
     this.zoneWs.top = { left: this.buildWSkel("left"), center: this.buildWSkel("center"), right: this.buildWSkel("right") };
     this.zoneWs.center = { zone: createEl("div", { className: "tmg-video-big-controls-wrapper" }, { dropZone: "", dragId: "big" }) };
     rowsArr.forEach((i) => this.zoneWs.bottom[i] = { left: this.buildWSkel("left"), center: this.buildWSkel("center"), right: this.buildWSkel("right") });
+    this.cZoneWs = { top: {}, center: this.zoneWs.center, bottom: { 1: {}, 2: {}, 3: {} } };
     this.zonesArr = [...Object.values(this.zoneWs.top), ...Object.values(this.zoneWs.bottom).map((v) => Object.values(v))].flat().map((w2) => w2.zone);
-    buffer && cc?.prepend(buffer.element);
+    buffer?.mount?.();
     this.topW.append(this.zoneWs.top.left.cover, this.zoneWs.top.center.cover, this.zoneWs.top.right.cover);
     rowsArr.forEach((i) => {
       const row = createEl("div", { className: `tmg-video-bottom-sub-controls-wrapper tmg-video-bottom-${i}-sub-controls-wrapper tmg-video-apt-controls-wrapper` }, { dropZone: "", dragId: "wrapper" });
       row.append(this.zoneWs.bottom[i].left.cover, this.zoneWs.bottom[i].center.cover, this.zoneWs.bottom[i].right.cover);
       this.bottomW.append(row);
     });
-    cc?.append(this.topW, this.zoneWs.center.zone, this.bottomW);
+    this.ctlr.DOM.controlsContainer?.append(this.topW, this.zoneWs.center.zone, this.bottomW);
   }
   wire() {
     this.ctlr.config.set("settings.controlPanel.bottom", (value) => parsePanelBottomObj(value), { immediate: true });
@@ -3860,7 +3945,6 @@ var ControlPanelPlug = class extends BasePlug {
     this.ctlr.config.on("settings.controlPanel.timeline.thumbIndicator", ({ value }) => this.ctlr.videoContainer.dataset.thumbIndicator = String(value), { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.timeline.seek", this.handleTimelineSeek, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.progressBar", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", !!value), { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.controlPanel.draggable", ({ value }) => this.setDragEventListeners(value ? "add" : "remove"), { signal: this.signal, immediate: true });
     this.initScrollAndResize();
   }
   handleMetaLayout({ target: { key, value } }) {
@@ -3868,21 +3952,19 @@ var ControlPanelPlug = class extends BasePlug {
   handleTopLayout({ value }) {
     if (!value || typeof value === "boolean") return;
     const { left, center, right } = this.getSplitControls(value);
-    this.fillZone(this.zoneWs.top.left, left);
-    this.fillZone(this.zoneWs.top.center, center);
-    this.fillZone(this.zoneWs.top.right, right);
+    this.fillSWrapper(this.topW, [this.cZoneWs.top.left = this.getZoneW(left, this.zoneWs.top.left), this.cZoneWs.top.center = this.getZoneW(center, this.zoneWs.top.center), this.cZoneWs.top.right = this.getZoneW(right, this.zoneWs.top.right)]);
+    this.fillZone(this.cZoneWs.top.left, left), this.fillZone(this.cZoneWs.top.center, center), this.fillZone(this.cZoneWs.top.right, right);
   }
   handleCenterLayout({ value }) {
     if (!value || typeof value === "boolean") return;
-    this.fillZone(this.zoneWs.center, value);
+    this.fillZone(this.cZoneWs.center, value);
   }
   handleBottomLayout({ value }) {
     if (!value || typeof value === "boolean") return;
     [1, 2, 3].forEach((i) => {
-      const { left, center, right } = this.getSplitControls(value[i] ?? []);
-      this.fillZone(this.zoneWs.bottom[i].left, left);
-      this.fillZone(this.zoneWs.bottom[i].center, center);
-      this.fillZone(this.zoneWs.bottom[i].right, right);
+      const { left, center, right } = this.getSplitControls(value[i]);
+      this.fillSWrapper(this.bottomW.children[i - 1], [this.cZoneWs.bottom[i].left = this.getZoneW(left, this.zoneWs.bottom[i].left), this.cZoneWs.bottom[i].center = this.getZoneW(center, this.zoneWs.bottom[i].center), this.cZoneWs.bottom[i].right = this.getZoneW(right, this.zoneWs.bottom[i].right)]);
+      this.fillZone(this.cZoneWs.bottom[i].left, left), this.fillZone(this.cZoneWs.bottom[i].center, center), this.fillZone(this.cZoneWs.bottom[i].right, right);
     });
   }
   handleTimelineSeek({ currentTarget: { value } }) {
@@ -3899,112 +3981,18 @@ var ControlPanelPlug = class extends BasePlug {
     const s1 = row.indexOf("spacer"), s2 = row.indexOf("spacer", s1 + 1);
     return s1 === -1 ? { left: row, center: [], right: [] } : s2 === -1 ? { left: row.slice(0, s1), center: [], right: row.slice(s1 + 1) } : { left: row.slice(0, s1), center: row.slice(s1 + 1, s2), right: row.slice(s2 + 1) };
   }
+  getZoneW(ids, fallback) {
+    return ids.length === 1 ? ids.includes("meta") ? this.getControlEl("meta") ?? fallback : ids.includes("timeline") ? this.getControlEl("timeline") ?? fallback : fallback : fallback;
+  }
+  fillSWrapper(wrapper, zoneWs) {
+    wrapper.innerHTML = "";
+    wrapper.append(...zoneWs.map((zoneW) => zoneW instanceof HTMLElement ? zoneW : zoneW.cover ?? zoneW.zone));
+  }
   fillZone(zoneW, ids) {
-    if (!zoneW.zone) return;
+    if (zoneW instanceof HTMLElement || !zoneW.zone) return;
     zoneW.zone.innerHTML = "";
     ids.forEach((id) => this.controls.get(id)?.element && zoneW.zone.append(this.controls.get(id).element));
     this.handleControlsView(zoneW.zone);
-  }
-  setDragEventListeners(action) {
-    const draggable = this.ctlr.config.settings.controlPanel.draggable;
-    this.ctlr.queryDOM("[data-draggable-control]", true).forEach((c) => {
-      c.dataset.dragId = c.dataset.dragId ?? "";
-      const act = !inBoolArrOpt(draggable, c.dataset.dragId) ? "remove" : action;
-      c.dataset.draggableControl = String(c.draggable = act === "add");
-      c[`${act}EventListener`]("dragstart", this.handleDragStart, { signal: this.signal });
-      c[`${act}EventListener`]("drag", this.handleDrag, { signal: this.signal });
-      c[`${act}EventListener`]("dragend", this.handleDragEnd, { signal: this.signal });
-    });
-    [...this.ctlr.queryDOM("[data-drop-zone][data-drag-id]", true), ...this.zonesArr].forEach((c) => {
-      c.dataset.dragId = c.dataset.dragId ?? "";
-      const act = !inBoolArrOpt(draggable, c.dataset.dragId) ? "remove" : action;
-      c.dataset.dropZone = String(act === "add");
-      c[`${act}EventListener`]("dragenter", this.handleDragEnter, { signal: this.signal });
-      c[`${act}EventListener`]("dragover", this.handleDragOver, { signal: this.signal });
-      c[`${act}EventListener`]("drop", this.handleDrop, { signal: this.signal });
-      c[`${act}EventListener`]("dragleave", this.handleDragLeave, { signal: this.signal });
-    });
-  }
-  getUIZoneWCoord(target, zoneW = false) {
-    let key = "";
-    const pos = { 0: "left", 1: "center", 2: "right" }[[...target.parentElement.children].indexOf(target)];
-    const cws = this.ctlr.queryDOM(".tmg-video-top-controls-wrapper, .tmg-video-bottom-sub-controls-wrapper", true);
-    cws.forEach((w2, i) => w2.contains(target) && (key = { 0: "top.", 1: "bottom.1.", 2: "bottom.2.", 3: "bottom.3." }[i]));
-    return zoneW ? { coord: key + pos, zoneW: getAny(this.zoneWs, key + pos) } : key + pos;
-  }
-  syncControlPanelToUI() {
-    const id = (el) => el.dataset.controlId;
-    const derive = (zoneW, center = false) => {
-      const zone = "zone" in zoneW ? zoneW.zone : zoneW;
-      return [center ? "spacer" : "", ...zone ? Array.from(zone.children, id) : [id(zoneW)], center && (zone ? zone.children.length : true) ? "spacer" : ""].filter(Boolean);
-    };
-    this.ctlr.config.settings.controlPanel.top = [...derive(this.cZoneWs.top.left), ...derive(this.cZoneWs.top.center, true), ...derive(this.cZoneWs.top.right)];
-    this.ctlr.config.settings.controlPanel.center = derive(this.zoneWs.center);
-    this.ctlr.config.settings.controlPanel.bottom = {
-      1: [...derive(this.cZoneWs.bottom[1].left), ...derive(this.cZoneWs.bottom[1].center, true), ...derive(this.cZoneWs.bottom[1].right)],
-      2: [...derive(this.cZoneWs.bottom[2].left), ...derive(this.cZoneWs.bottom[2].center, true), ...derive(this.cZoneWs.bottom[2].right)],
-      3: [...derive(this.cZoneWs.bottom[3].left), ...derive(this.cZoneWs.bottom[3].center, true), ...derive(this.cZoneWs.bottom[3].right)]
-    };
-  }
-  noDropOff(t, drop = this.dragging) {
-    return t.dataset.dropZone !== "true" || !drop?.tagName || t.dataset.dragId !== drop.dataset.dragId;
-  }
-  handleDragStart(e) {
-    const t = e.target;
-    if (t.dataset.draggableControl !== "true" || !t?.tagName) return;
-    if (t.matches(":has(input:is(:hover, :active))")) return e.preventDefault();
-    e.dataTransfer.effectAllowed = "move";
-    this.dragging = t;
-    requestAnimationFrame(() => t.classList.add("tmg-video-control-dragging"));
-    this.dragSafeTimeoutId = setTimeout2(() => t.classList.remove("tmg-video-control-dragging"), 1e3, this.signal);
-    if (t.dataset.dragId !== "wrapper" || t.parentElement?.dataset.dragId !== "wrapper") return;
-    const { coord, zoneW } = this.getUIZoneWCoord(t, true);
-    setAny(this.cZoneWs, coord, zoneW);
-    this.dragReplaced = { target: t.parentElement, child: zoneW.cover };
-  }
-  handleDrag() {
-    this.ctlr.getPlug("overlay")?.delay();
-    clearTimeout(this.dragSafeTimeoutId);
-  }
-  handleDragEnd(e) {
-    const t = e.target;
-    t.classList.remove("tmg-video-control-dragging");
-    this.dragReplaced = this.dragging = null;
-    if (t.dataset.dragId === "wrapper" && t.parentElement?.dataset.dragId === "wrapper") setAny(this.cZoneWs, this.getUIZoneWCoord(t), t);
-    this.syncControlPanelToUI();
-  }
-  handleDragEnter(e) {
-    !this.noDropOff(e.target) && this.dragging && e.target.classList.add("tmg-video-dragover");
-  }
-  handleDragOver(e) {
-    const t = e.target;
-    const x = e.clientX;
-    if (this.noDropOff(t)) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    this.ctlr.throttle(
-      "dragOver",
-      () => {
-        if (t.dataset.dragId === "wrapper") {
-          const atWrapper = getElSiblingAt(x, "x", t.querySelectorAll('.tmg-video-side-controls-wrapper-cover:has([data-drop-zone="true"][data-drag-id=""]:empty)'), "at");
-          if (!atWrapper) return;
-          this.dragReplaced?.target.replaceChild(this.dragReplaced.child, this.dragging);
-          this.dragReplaced = { target: t, child: atWrapper };
-          return t.replaceChild(this.dragging, atWrapper);
-        }
-        const afterControl = getElSiblingAt(x, "x", t.querySelectorAll("[draggable=true]:not(.tmg-video-control-dragging)"));
-        afterControl ? t.insertBefore(this.dragging, afterControl) : t.append(this.dragging);
-        !t.dataset.dragId && this.zonesArr.forEach(this.handleControlsView);
-      },
-      500,
-      false
-    );
-  }
-  handleDrop(e) {
-    !this.noDropOff(e.target) && e.target.classList.remove("tmg-video-dragover");
-  }
-  handleDragLeave(e) {
-    !this.noDropOff(e.target) && e.target.classList.remove("tmg-video-dragover");
   }
   initScrollAndResize() {
     this.zonesArr.forEach((zone) => {
@@ -4022,8 +4010,8 @@ var ControlPanelPlug = class extends BasePlug {
       c?.setAttribute("data-spacer", "false");
       if (c?.dataset.displayed === "true" && !spacer) spacer = c;
     } while (c = c?.nextElementSibling ?? null);
-    this.ctlr.config.settings.css.currentTopWrapperHeight = `${this.topW.offsetHeight}px`;
-    this.ctlr.config.settings.css.currentBottomWrapperHeight = `${this.bottomW.offsetHeight}px`;
+    this.ctlr.settings.css.currentTopWrapperHeight = `${this.topW.offsetHeight}px`;
+    this.ctlr.settings.css.currentBottomWrapperHeight = `${this.bottomW.offsetHeight}px`;
     if (w2.dataset.scroller !== "reverse") return;
     spacer?.setAttribute("data-spacer", "true");
     if (w2.dataset.resetScrolled === "true") w2.dataset.hasScrolled = "false";
@@ -4037,10 +4025,10 @@ var ControlPanelPlug = class extends BasePlug {
     el.dataset.resetScrolled = String(el.scrollLeft === (el.dataset.scroller === "reverse" ? el.scrollWidth - el.clientWidth : 0));
   }
   onDestroy() {
+    this.draggable?.destroy();
     this.clups.forEach((cleanup) => cleanup());
     this.scrollAssistEls.forEach(removeScrollAssist);
-    this.controls.forEach(({ instance }) => instance?.destroy());
-    this.controls.clear();
+    this.controls.forEach((instance) => instance.destroy()), this.controls.clear();
   }
 };
 ControlPanelPlug.plugName = "controlPanel";
@@ -4053,7 +4041,7 @@ var OverlayPlug2 = class extends BasePlug {
     this.overlayDelayId = -1;
   }
   wire() {
-    this.ctlr.media.on("state.paused", ({ value }) => value ? this.show() : this.delay(), { signal: this.signal, immediate: true });
+    this.media.on("state.paused", ({ value }) => value ? this.show() : this.delay(), { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.overlay.curtain", this.handleCurtain, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.overlay.behavior", this.handleBehavior, { signal: this.signal, immediate: true });
   }
@@ -4065,10 +4053,10 @@ var OverlayPlug2 = class extends BasePlug {
     value === "hidden" && this.remove("force");
   }
   shouldShow() {
-    return this.config.behavior !== "hidden" && !this.ctlr.config.settings.locked && !this.ctlr.isUIActive("playerDragging");
+    return this.config.behavior !== "hidden" && !this.ctlr.settings.locked && !this.ctlr.isUIActive("playerDragging");
   }
   shouldRemove(manner) {
-    return this.config.behavior !== "persistent" && (manner === "force" || !this.ctlr.isUIActive("pictureInPicture") && !this.ctlr.isUIActive("settings") && (IS_MOBILE ? !this.ctlr.media.status.waiting && !this.ctlr.media.state.paused : this.config.behavior === "strict" ? true : !this.ctlr.media.state.paused));
+    return this.config.behavior !== "persistent" && (manner === "force" || !this.ctlr.isUIActive("pictureInPicture") && !this.ctlr.isUIActive("settings") && (IS_MOBILE ? !this.media.status.waiting && !this.media.state.paused : this.config.behavior === "strict" ? true : !this.media.state.paused));
   }
   show() {
     if (!this.shouldShow()) return;
@@ -4099,8 +4087,8 @@ var MediaPlug = class extends BasePlug {
     this.ctlr.config.watch("media.title", this.forwardTitle, { immediate: true, signal: this.signal });
     this.ctlr.config.watch("media.artist", this.forwardArtist, { immediate: true, signal: this.signal });
     this.ctlr.config.watch("media.profile", this.forwardProfile, { immediate: true, signal: this.signal });
-    this.ctlr.media.on("state.paused", ({ value }) => !value && this.syncSession(), { signal: this.signal });
-    this.ctlr.media.on("status.loadedMetadata", () => this.autoGenerate(), { signal: this.signal });
+    this.media.on("state.paused", ({ value }) => !value && this.syncSession(), { signal: this.signal });
+    this.media.on("status.loadedMetadata", () => this.autoGenerate(), { signal: this.signal });
     this.ctlr.config.on("media.links.title", this.handleMediaLink, { immediate: true, signal: this.signal });
     this.ctlr.config.on("media.links.artist", this.handleMediaLink, { immediate: true, signal: this.signal });
     this.ctlr.config.on("media.links.profile", this.handleMediaLink, { immediate: true, signal: this.signal });
@@ -4108,33 +4096,33 @@ var MediaPlug = class extends BasePlug {
     this.ctlr.config.on("media", this.handleMedia, { immediate: true, signal: this.signal });
   }
   forwardTitle(value) {
-    this.ctlr.config.settings.controlPanel.title = value;
+    this.ctlr.settings.controlPanel.title = value;
   }
   forwardArtist(value) {
-    this.ctlr.config.settings.controlPanel.artist = value;
+    this.ctlr.settings.controlPanel.artist = value;
   }
   forwardProfile(value) {
-    this.ctlr.config.settings.controlPanel.profile = value;
+    this.ctlr.settings.controlPanel.profile = value;
   }
   handleMediaLink({ target: { key, value } }) {
     const el = key !== "profile" ? this.ctlr.DOM[`video${capitalize(key)}`] : this.ctlr.DOM.videoProfile?.parentElement;
     el && Object.entries({ href: value, "tab-index": value ? "0" : null, target: value ? "_blank" : null, rel: value ? "noopener noreferrer" : null }).forEach(([attr, val]) => val ? el.setAttribute(attr, val) : el.removeAttribute(attr));
   }
   handleArtwork({ currentTarget: { value } }) {
-    this.ctlr.media.intent.poster = value?.[0]?.src || "";
+    this.media.intent.poster = value?.[0]?.src || "";
   }
   handleMedia() {
-    if (!this.ctlr.media.state.paused) this.syncSession();
+    if (!this.media.state.paused) this.syncSession();
   }
   syncSession() {
     if (!navigator.mediaSession || document.pictureInPictureElement && !this.ctlr.isUIActive("pictureInPicture")) return;
     if (this.config) navigator.mediaSession.metadata = new MediaMetadata(this.config);
     const set = (...args) => navigator.mediaSession.setActionHandler(...args);
-    set("play", () => this.ctlr.media.intent.paused = false);
-    set("pause", () => this.ctlr.media.intent.paused = true);
+    set("play", () => this.media.intent.paused = false);
+    set("pause", () => this.media.intent.paused = true);
     const timePlug = this.ctlr.getPlug("time");
-    set("seekbackward", timePlug ? () => timePlug.skip(-this.ctlr.config.settings.time.skip) : null);
-    set("seekforward", timePlug ? () => timePlug.skip(this.ctlr.config.settings.time.skip) : null);
+    set("seekbackward", timePlug ? () => timePlug.skip(-this.ctlr.settings.time.skip) : null);
+    set("seekforward", timePlug ? () => timePlug.skip(this.ctlr.settings.time.skip) : null);
     const playlistPlug = this.ctlr.getPlug("playlist"), playlist = this.ctlr.config.playlist, currentIndex = this.ctlr.getPlug("playlist")?.currentIndex ?? 0;
     set("previoustrack", playlist && currentIndex > 0 && playlistPlug ? playlistPlug.previousVideo : null);
     set("nexttrack", playlist && currentIndex < (playlist?.length ?? 0) - 1 && playlistPlug ? playlistPlug.nextVideo : null);
@@ -4161,16 +4149,16 @@ var LightStatePlug = class extends BasePlug {
   }
   handleDisabled({ value, target }) {
     if (value) {
-      const timeStart = this.ctlr.config.settings.time.start;
-      if (timeStart != null) this.ctlr.media.intent.currentTime = timeStart;
+      const timeStart = this.ctlr.settings.time.start;
+      if (timeStart != null) this.media.intent.currentTime = timeStart;
       this.ctlr.videoContainer.classList.remove("tmg-video-light");
-      this.ctlr.media.element.removeEventListener("play", this.remove);
+      this.media.element.removeEventListener("play", this.remove);
       this.ctlr.DOM.controlsContainer?.removeEventListener("click", this.handleLightStateClick);
       this.ctlr.setReadyState();
     } else {
       this.ctlr.config.lightState.preview.usePoster = this.config.preview.usePoster;
       this.ctlr.videoContainer.classList.add("tmg-video-light");
-      this.ctlr.media.element.addEventListener("play", this.remove, { signal: this.signal });
+      this.media.element.addEventListener("play", this.remove, { signal: this.signal });
       this.ctlr.DOM.controlsContainer?.addEventListener("click", this.handleLightStateClick, { signal: this.signal });
     }
   }
@@ -4178,12 +4166,12 @@ var LightStatePlug = class extends BasePlug {
     this.ctlr.queryDOM("[data-control-id]", true).forEach((c) => c.dataset.lightControl = this.isLight(c.dataset.controlId) ? "true" : "false");
   }
   handleUsePoster({ target: { value, object }, root }) {
-    if (root.lightState.disabled || value && this.ctlr.media.state.poster) return;
-    this.ctlr.media.intent.currentTime = object.time;
-    if (!this.ctlr.media.status.loadedMetadata) this.ctlr.media.once("status.loadedMetadata", () => this.config.preview.usePoster = value, { signal: this.signal });
+    if (root.lightState.disabled || value && this.media.state.poster) return;
+    this.media.intent.currentTime = object.time;
+    if (!this.media.status.loadedMetadata) this.media.once("status.loadedMetadata", () => this.config.preview.usePoster = value, { signal: this.signal });
   }
   handleTime({ target: { object }, root }) {
-    !root.lightState.disabled && (!object.usePoster || !this.ctlr.media.state.poster) && (this.ctlr.media.intent.currentTime = object.time);
+    !root.lightState.disabled && (!object.usePoster || !this.media.state.poster) && (this.media.intent.currentTime = object.time);
   }
   add() {
     this.ctlr.config.lightState.disabled = false;
@@ -4191,7 +4179,7 @@ var LightStatePlug = class extends BasePlug {
   remove() {
     this.ctlr.config.lightState.disabled = true;
     this.isLight("bigplaypause") && this.stall();
-    this.ctlr.media.intent.paused = false;
+    this.media.intent.paused = false;
   }
   handleLightStateClick({ target }) {
     target === this.ctlr.DOM.controlsContainer && this.remove();
@@ -4225,7 +4213,7 @@ var WheelModule = class extends BaseModule {
     this.ctlr.videoContainer.addEventListener("wheel", this.handleWheel, { passive: false, signal: this.signal });
   }
   canHandle(e) {
-    return !this.ctlr.config.settings.locked && !this.ctlr.config.disabled && e.target === this.ctlr.DOM.controlsContainer && !this.ctlr.getPlug("gesture")?.touch.xCheck && !this.ctlr.getPlug("gesture")?.touch.yCheck && !this.ctlr.getPlug("fastPlay")?.speedCheck;
+    return !this.ctlr.settings.locked && !this.ctlr.config.disabled && e.target === this.ctlr.DOM.controlsContainer && !this.ctlr.getPlug("gesture")?.touch.xCheck && !this.ctlr.getPlug("gesture")?.touch.yCheck && !this.ctlr.getPlug("fastPlay")?.speedCheck;
   }
   handleWheel(e) {
     if (!this.canHandle(e)) return;
@@ -4271,15 +4259,15 @@ var WheelModule = class extends BaseModule {
     if (this.yCheck) this.yCheck = false;
     if (this.xCheck) {
       this.xCheck = false;
-      this.ctlr.media.intent.currentTime = this.nextTime;
+      this.media.intent.currentTime = this.nextTime;
     }
   }
   applyTimeline(percent, sign, multiplier) {
-    const { currentTime } = this.ctlr.media.state, { duration } = this.ctlr.media.status, change = percent * duration * +multiplier.toFixed(1);
+    const { currentTime } = this.media.state, { duration } = this.media.status, change = percent * duration * +multiplier.toFixed(1);
     this.nextTime = clamp(0, currentTime + (sign === "+" ? change : -change), duration);
   }
   applyRange(key, percent, sign) {
-    const plug = this.ctlr.getPlug(key), range = this.ctlr.config.settings[key], value = range.value + (sign === "+" ? percent : -percent) * range.max;
+    const plug = this.ctlr.getPlug(key), range = this.ctlr.settings[key], value = range.value + (sign === "+" ? percent : -percent) * range.max;
     plug?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }
 };
@@ -4369,7 +4357,7 @@ var TouchModule = class extends BaseModule {
       this.xCheck = false;
       this.ctlr.videoContainer.removeEventListener("touchmove", this.handleXMove);
       this.ctlr.DOM.touchTimelineNotifier?.classList.remove("tmg-video-control-active");
-      if (!this.canCancel) this.ctlr.media.intent.currentTime = this.nextTime;
+      if (!this.canCancel) this.media.intent.currentTime = this.nextTime;
     }
     if (this.yCheck) {
       this.yCheck = false;
@@ -4391,11 +4379,11 @@ var TouchModule = class extends BaseModule {
     ["touchend", "touchcancel"].forEach((evt) => this.ctlr.videoContainer.removeEventListener(evt, this.handleEnd));
   }
   applyTimeline({ percent, sign, multiplier }) {
-    const { currentTime } = this.ctlr.media.state, { duration } = this.ctlr.media.status, change = percent * duration * +multiplier.toFixed(1);
+    const { currentTime } = this.media.state, { duration } = this.media.status, change = percent * duration * +multiplier.toFixed(1);
     this.nextTime = clamp(0, currentTime + (sign === "+" ? change : -change), duration);
   }
   applyRange(key, percent, sign) {
-    const plug = this.ctlr.getPlug(key), range = this.ctlr.config.settings[key], value = sign === "+" ? range.value + percent * range.max : range.value - percent * range.max;
+    const plug = this.ctlr.getPlug(key), range = this.ctlr.settings[key], value = sign === "+" ? range.value + percent * range.max : range.value - percent * range.max;
     plug?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }
 };
@@ -4447,7 +4435,7 @@ var GeneralModule = class extends BaseModule {
     const { target } = e;
     if (target !== this.ctlr.DOM.controlsContainer) return;
     const onClick = this.config.click;
-    this.ctlr.media.intent.paused = !this.ctlr.media.state.paused;
+    this.media.intent.paused = !this.media.state.paused;
   }
   handleDblClick(e) {
     const { clientX: x, target, detail } = e;
@@ -4459,12 +4447,12 @@ var GeneralModule = class extends BaseModule {
     }
     if (pos === "center") {
       const onDblClick = this.config.dblClick;
-      this.ctlr.media.intent.paused = !this.ctlr.media.state.paused;
+      this.media.intent.paused = !this.media.state.paused;
       return;
     }
     if (this.state.skipPersist && detail === 2) return;
     if (!this.state.skipPersist) this.activateSkipPersist(pos);
-    this.ctlr.getPlug("time")?.skip(pos === "right" ? this.ctlr.config.settings.time.skip : -this.ctlr.config.settings.time.skip);
+    this.ctlr.getPlug("time")?.skip(pos === "right" ? this.ctlr.settings.time.skip : -this.ctlr.settings.time.skip);
   }
   activateSkipPersist(pos) {
     this.state.skipPersist = true;
@@ -4511,7 +4499,7 @@ var FastPlayPlug = class extends BasePlug {
     this.lastPlaybackRate = 1;
     this.rewindPlaybackRate = 0;
     this.speedIntervalId = null;
-    this.speedPointerCheck = false;
+    this.speedPtrCheck = false;
     this.speedDirection = "forwards";
     this.speedTimeoutId = null;
     this.playTriggerCounter = 0;
@@ -4526,55 +4514,43 @@ var FastPlayPlug = class extends BasePlug {
   fastPlay(pos) {
     if (this.speedCheck) return;
     this.speedCheck = true;
-    this.wasPaused = this.ctlr.media.state.paused;
-    this.lastPlaybackRate = this.ctlr.config.settings.playbackRate.value;
-    this.ctlr.queryDOM(".tmg-video-playback-rate-notifier")?.classList.add("tmg-video-control-active");
+    this.wasPaused = this.media.state.paused;
+    this.lastPlaybackRate = this.media.state.playbackRate;
     setTimeout2(pos === "backwards" && this.config.rewind ? this.rewind : this.fastForward, 0, this.signal);
   }
   fastForward(rate = this.config.playbackRate) {
-    this.ctlr.config.settings.playbackRate.value = this.state.speedValue = rate;
+    this.media.intent.playbackRate = rate;
     this.state.isRewinding = false;
-    const notifier = this.ctlr.queryDOM(".tmg-video-playback-rate-notifier"), timePlug = this.ctlr.getPlug("time");
-    notifier?.classList.remove("tmg-video-rewind");
-    notifier?.setAttribute("data-current-time", timePlug?.toTimeText(this.ctlr.media.state.currentTime, true) ?? "0:00");
-    this.ctlr.media.intent.paused = false;
+    this.media.intent.paused = false;
   }
   rewind(rate = this.config.playbackRate) {
-    this.ctlr.config.settings.playbackRate.value = this.rewindPlaybackRate = this.state.speedValue = rate;
+    this.media.intent.playbackRate = 1, this.rewindPlaybackRate = rate;
     this.state.isRewinding = true;
-    const notifier = this.ctlr.queryDOM(".tmg-video-playback-rate-notifier");
-    notifier?.classList.add("tmg-video-rewind");
-    this.ctlr.media.element.addEventListener("play", () => this.rewindReset(), { signal: this.signal });
+    this.media.element.addEventListener("play", () => this.rewindReset(), { signal: this.signal });
     this.speedIntervalId = setInterval(() => this.rewindVideo(), this.ctlr.state.pframeDelay - 20, this.signal);
   }
   rewindVideo() {
-    if (!this.ctlr.media.state.paused) this.ctlr.media.intent.paused = true;
-    const newTime = this.ctlr.media.state.currentTime - this.rewindPlaybackRate / this.ctlr.config.settings.frame.fps, notifier = this.ctlr.queryDOM(".tmg-video-playback-rate-notifier"), timePlug = this.ctlr.getPlug("time");
-    this.ctlr.media.intent.currentTime = newTime;
-    this.ctlr.config.settings.css.currentPlayedPosition = this.ctlr.config.settings.css.currentThumbPosition = this.ctlr.media.state.currentTime / this.ctlr.media.status.duration;
-    notifier?.setAttribute("data-current-time", timePlug?.toTimeText(this.ctlr.media.state.currentTime, true) ?? "0:00");
+    if (!this.media.state.paused) this.media.intent.paused = true;
+    this.media.intent.currentTime = this.media.state.currentTime - this.rewindPlaybackRate / this.ctlr.settings.frame.fps;
+    this.ctlr.settings.css.currentPlayedPosition = this.ctlr.settings.css.currentThumbPosition = this.media.state.currentTime / this.media.status.duration;
   }
   rewindReset() {
     if (this.speedIntervalId) {
-      this.ctlr.media.intent.paused = true;
+      this.media.intent.paused = true;
       clearInterval(this.speedIntervalId);
       this.speedIntervalId = null;
-    } else {
-      this.speedIntervalId = setInterval(() => this.rewindVideo(), Math.round(1e3 / this.ctlr.config.settings.frame.fps) - 20, this.signal);
-    }
+    } else this.speedIntervalId = setInterval(() => this.rewindVideo(), Math.round(1e3 / this.ctlr.settings.frame.fps) - 20, this.signal);
   }
   slowDown() {
     if (!this.speedCheck) return;
     this.speedCheck = false;
     if (this.speedIntervalId) clearInterval(this.speedIntervalId);
-    this.ctlr.media.element.removeEventListener("play", () => this.rewindReset());
-    this.ctlr.config.settings.playbackRate.value = this.lastPlaybackRate;
+    this.media.element.removeEventListener("play", () => this.rewindReset());
+    this.media.intent.playbackRate = this.lastPlaybackRate;
     this.rewindPlaybackRate = 0;
-    this.state.speedValue = this.lastPlaybackRate;
     this.state.isRewinding = false;
-    this.ctlr.media.intent.paused = this.config.reset ? this.wasPaused : false;
+    this.media.intent.paused = this.config.reset ? this.wasPaused : false;
     this.ctlr.getPlug("overlay")?.remove();
-    this.ctlr.queryDOM(".tmg-video-playback-rate-notifier")?.classList.remove("tmg-video-control-active", "tmg-video-rewind");
   }
   handleSpeedPointerDown(e) {
     if (!this.config.pointer.type.match(new RegExp(`all|${e.pointerType}`)) || e.target !== this.ctlr.DOM.controlsContainer || this.speedCheck) return;
@@ -4584,7 +4560,7 @@ var FastPlayPlug = class extends BasePlug {
     this.speedTimeoutId = setTimeout2(
       () => {
         this.ctlr.videoContainer?.removeEventListener("touchmove", this.handleSpeedPointerUp);
-        this.speedPointerCheck = true;
+        this.speedPtrCheck = true;
         const x = e.clientX ?? e.targetTouches?.[0]?.clientX;
         const rect = this.ctlr.videoContainer.getBoundingClientRect();
         const rLeft = x - rect.left;
@@ -4614,7 +4590,7 @@ var FastPlayPlug = class extends BasePlug {
   }
   handleSpeedPointerUp() {
     clearTimeout(this.speedTimeoutId);
-    this.speedPointerCheck = false;
+    this.speedPtrCheck = false;
     if (this.speedCheck && this.playTriggerCounter < 1) setTimeout2(() => this.slowDown(), 0, this.signal);
     ["touchmove", "mouseup", "touchend", "touchcancel"].forEach((evt) => this.ctlr.videoContainer?.removeEventListener(evt, this.handleSpeedPointerUp));
     ["mousemove", "touchmove"].forEach((evt) => this.ctlr.videoContainer?.removeEventListener(evt, this.handleSpeedPointerMove));
@@ -4644,40 +4620,39 @@ var VolumePlug3 = class extends BasePlug {
     else this.ctlr.state.once("audioContextReady", this.setupAudio, { signal: this.signal });
   }
   wire() {
-    const configVolume = this.config.value ?? this.ctlr.media.state.volume * 100;
+    const configVolume = this.config.value ?? this.media.state.volume * 100;
     this.lastVolume = clamp(this.config.min, configVolume, this.config.max);
-    this.shouldMute = this.shouldSetLastVolume = this.ctlr.media.element?.muted ?? false;
+    this.shouldMute = this.shouldSetLastVolume = this.media.element?.muted ?? false;
     this.config.value = this.shouldMute ? 0 : this.lastVolume;
-    this.ctlr.media.element.addEventListener("volumechange", this.handleNativeVolumeChange, { signal: this.signal });
-    this.ctlr.config.get("settings.volume.value", (value) => this.gainNode ? Math.round((this.gainNode.gain?.value ?? 2) / 2 * 100) : value, true);
+    this.media.element.addEventListener("volumechange", this.handleNativeVolumeChange, { signal: this.signal });
     this.ctlr.config.set("settings.volume.value", (value) => clamp(this.config.min, value, this.config.max), { signal: this.signal });
     this.ctlr.config.watch("settings.volume.value", this.forwardVolume, { signal: this.signal, immediate: true });
     this.ctlr.config.watch("settings.volume.muted", this.forwardMuted, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("intent.volume", this.handleVolumeIntent, { capture: true, signal: this.signal });
-    this.ctlr.media.on("intent.muted", this.handleMutedIntent, { capture: true, signal: this.signal });
+    this.media.on("intent.volume", this.handleVolumeIntent, { capture: true, signal: this.signal });
+    this.media.on("intent.muted", this.handleMutedIntent, { capture: true, signal: this.signal });
     this.ctlr.config.on("settings.volume.min", this.handleMin, { signal: this.signal });
     this.ctlr.config.on("settings.volume.max", this.handleMax, { signal: this.signal });
-    this.ctlr.media.tech.features.volume = true;
+    this.media.tech.features.volume = true;
   }
   forwardVolume(value) {
-    this.ctlr.media.intent.volume = value;
+    this.media.intent.volume = value;
   }
   forwardMuted(value) {
-    this.ctlr.media.intent.muted = value;
+    this.media.intent.muted = value;
   }
   handleVolumeIntent(e) {
     if (e.resolved) return;
-    if (this.ctlr.media.element !== this.ctlr.media.tech.element) return e.reject(this.name);
+    if (this.media.element !== this.media.tech.element) return e.reject(this.name);
     this.handleVolumeState(e.value);
-    this.ctlr.media.state.volume = e.value;
+    this.media.state.volume = e.value;
     e.resolve(this.name);
   }
   handleMutedIntent(e) {
     if (e.resolved) return;
-    if (this.ctlr.media.element !== this.ctlr.media.tech.element) return e.reject(this.name);
+    if (this.media.element !== this.media.tech.element) return e.reject(this.name);
     if (e.oldValue === e.value) return e.resolve(this.name);
     this.handleMutedState(e.value);
-    this.ctlr.media.state.muted = e.value;
+    this.media.state.muted = e.value;
     e.resolve(this.name);
   }
   handleMin({ target }) {
@@ -4690,26 +4665,26 @@ var VolumePlug3 = class extends BasePlug {
     if (this.config.value > max) this.config.value = max;
     if (this.lastVolume > max) this.lastVolume = max;
     this.ctlr.videoContainer.classList.toggle("tmg-video-volume-boost", max > 100);
-    this.ctlr.config.settings.css.volumeSliderPercent = Math.round(100 / max * 100);
-    this.ctlr.config.settings.css.maxVolumeRatio = max / 100;
+    this.ctlr.settings.css.volumeSliderPercent = Math.round(100 / max * 100);
+    this.ctlr.settings.css.maxVolumeRatio = max / 100;
   }
   handleVolumeState(volume) {
     const v = clamp(this.shouldMute ? 0 : this.config.min, volume * 100, this.config.max), vLevel = v === 0 ? "muted" : v < 50 ? "low" : v <= 100 ? "high" : "boost", vPercent = (v - 0) / (this.config.max - 0);
     if (this.gainNode) this.gainNode.gain.setTargetAtTime(v / 100 * 2, this.ctime, 0.05);
-    this.ctlr.media.element.muted = this.ctlr.media.element.defaultMuted = this.config.muted = v === 0;
+    this.media.element.muted = this.media.element.defaultMuted = this.config.muted = v === 0;
     this.ctlr.videoContainer.dataset.volumeLevel = vLevel;
-    this.ctlr.config.settings.css.currentVolumeTooltipPosition = `${10.5 + vPercent * 79.5}%`;
+    this.ctlr.settings.css.currentVolumeTooltipPosition = `${10.5 + vPercent * 79.5}%`;
     if (this.config.max > 100) {
       if (v <= 100) {
-        this.ctlr.config.settings.css.currentVolumeSliderPosition = (v - 0) / (100 - 0);
-        this.ctlr.config.settings.css.currentVolumeSliderBoostPosition = 0;
-        this.ctlr.config.settings.css.volumeSliderBoostPercent = 0;
+        this.ctlr.settings.css.currentVolumeSliderPosition = (v - 0) / (100 - 0);
+        this.ctlr.settings.css.currentVolumeSliderBoostPosition = 0;
+        this.ctlr.settings.css.volumeSliderBoostPercent = 0;
       } else {
-        this.ctlr.config.settings.css.currentVolumeSliderPosition = 1;
-        this.ctlr.config.settings.css.currentVolumeSliderBoostPosition = (v - 100) / (this.config.max - 100);
-        this.ctlr.config.settings.css.volumeSliderBoostPercent = this.ctlr.config.settings.css.volumeSliderPercent;
+        this.ctlr.settings.css.currentVolumeSliderPosition = 1;
+        this.ctlr.settings.css.currentVolumeSliderBoostPosition = (v - 100) / (this.config.max - 100);
+        this.ctlr.settings.css.volumeSliderBoostPercent = this.ctlr.settings.css.volumeSliderPercent;
       }
-    } else this.ctlr.config.settings.css.currentVolumeSliderPosition = vPercent;
+    } else this.ctlr.settings.css.currentVolumeSliderPosition = vPercent;
   }
   handleMutedState(muted) {
     if (muted) {
@@ -4718,23 +4693,23 @@ var VolumePlug3 = class extends BasePlug {
         this.shouldSetLastVolume = true;
       }
       this.shouldMute = true;
-      if (this.config.value) this.ctlr.media.intent.volume = 0;
+      if (this.config.value) this.media.intent.volume = 0;
     } else {
       const restore = this.shouldSetLastVolume ? this.lastVolume : this.config.value;
-      this.ctlr.media.intent.volume = (restore ? restore : this.sliderAptVolume) / 100;
+      this.media.intent.volume = (restore ? restore : this.sliderAptVolume) / 100;
       this.shouldMute = this.shouldSetLastVolume = false;
     }
   }
   setupAudio() {
-    if (this.audioSetup || connectMediaToAudioManager(this.ctlr.media.element) === "unavailable") return;
-    this.gainNode = this.ctlr.media.element._tmgGainNode;
-    const DCN = this.ctlr.media.element._tmgDynamicsCompressorNode;
+    if (this.audioSetup || connectMediaToAudioManager(this.media.element) === "unavailable") return;
+    this.gainNode = this.media.element._tmgGainNode;
+    const DCN = this.media.element._tmgDynamicsCompressorNode;
     if (DCN) DCN.threshold.value = -30, DCN.knee.value = 20, DCN.ratio.value = 12, DCN.attack.value = 3e-3, DCN.release.value = 0.25;
     this.audioSetup = true;
   }
   cancelAudio() {
-    this.ctlr.media.intent.volume = clamp(0, (this.gainNode?.gain?.value ?? 2) / 2, 1);
-    this.ctlr.media.element.mediaElementSourceNode?.disconnect();
+    this.media.intent.volume = clamp(0, (this.gainNode?.gain?.value ?? 2) / 2, 1);
+    this.media.element.mediaElementSourceNode?.disconnect();
     this.gainNode?.disconnect();
     this.audioSetup = false;
   }
@@ -4761,8 +4736,8 @@ var VolumePlug3 = class extends BasePlug {
     if (volume > 5) this.sliderAptVolume = volume;
   }
   handleNativeVolumeChange() {
-    this.ctlr.media.element.volume = 1;
-    if (this.config.muted !== this.ctlr.media.element.muted) this.toggleMute();
+    this.media.element.volume = 1;
+    if (this.config.muted !== this.media.element.muted) this.toggleMute();
   }
 };
 VolumePlug3.plugName = "volume";
@@ -4777,36 +4752,35 @@ var BrightnessPlug = class extends BasePlug {
     this.shouldSetLastBrightness = false;
   }
   wire() {
-    const configBrightness = this.config.value ?? this.ctlr.config.settings.css.brightness ?? 100;
+    const configBrightness = this.config.value ?? this.ctlr.settings.css.brightness ?? 100;
     this.lastBrightness = clamp(this.config.min, configBrightness, this.config.max);
     this.shouldDark = this.shouldSetLastBrightness = this.config.dark ?? false;
     this.config.value = this.shouldDark ? 0 : this.lastBrightness;
-    this.ctlr.config.get("settings.brightness.value", () => Number(this.ctlr.config.settings.css.brightness ?? 100), { signal: this.signal, lazy: true });
     this.ctlr.config.set("settings.brightness.value", (value) => clamp(this.shouldDark ? 0 : this.config.min, value, this.config.max), { signal: this.signal });
     this.ctlr.config.watch("settings.brightness.value", this.forwardBrightness, { signal: this.signal, immediate: true });
     this.ctlr.config.watch("settings.brightness.dark", this.forwardDark, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("intent.brightness", this.handleBrightnessIntent, { capture: true, signal: this.signal });
-    this.ctlr.media.on("intent.dark", this.handleDarkIntent, { capture: true, signal: this.signal });
+    this.media.on("intent.brightness", this.handleBrightnessIntent, { capture: true, signal: this.signal });
+    this.media.on("intent.dark", this.handleDarkIntent, { capture: true, signal: this.signal });
     this.ctlr.config.on("settings.brightness.min", this.handleMin, { signal: this.signal });
     this.ctlr.config.on("settings.brightness.max", this.handleMax, { signal: this.signal });
-    this.ctlr.media.tech.features.brightness = true;
+    this.media.tech.features.brightness = true;
   }
   forwardBrightness(value) {
-    this.ctlr.media.intent.brightness = value;
+    this.media.intent.brightness = value;
   }
   forwardDark(value) {
-    this.ctlr.media.intent.dark = value;
+    this.media.intent.dark = value;
   }
   handleBrightnessIntent(e) {
     if (e.resolved) return;
     this.handleBrightnessState(e.value);
-    this.ctlr.media.state.brightness = e.value;
+    this.media.state.brightness = e.value;
     e.resolve(this.name);
   }
   handleDarkIntent(e) {
     if (e.resolved) return;
     this.handleDarkState(e.value);
-    this.ctlr.media.state.dark = e.value;
+    this.media.state.dark = e.value;
     e.resolve(this.name);
   }
   handleMin({ target }) {
@@ -4819,26 +4793,26 @@ var BrightnessPlug = class extends BasePlug {
     if (this.config.value > max) this.config.value = max;
     if (this.lastBrightness > max) this.lastBrightness = max;
     this.ctlr.videoContainer.classList.toggle("tmg-video-brightness-boost", max > 100);
-    this.ctlr.config.settings.css.brightnessSliderPercent = Math.round(100 / max * 100);
-    this.ctlr.config.settings.css.maxBrightnessRatio = max / 100;
+    this.ctlr.settings.css.brightnessSliderPercent = Math.round(100 / max * 100);
+    this.ctlr.settings.css.maxBrightnessRatio = max / 100;
   }
   handleBrightnessState(value) {
     const b = clamp(this.shouldDark ? 0 : this.config.min, value, this.config.max), bLevel = b === 0 ? "dark" : b < 50 ? "low" : b <= 100 ? "high" : "boost", bPercent = (b - 0) / (this.config.max - 0);
-    this.ctlr.config.settings.css.brightness = b;
+    this.ctlr.settings.css.brightness = b;
     this.config.dark = b === 0;
     this.ctlr.videoContainer.dataset.brightnessLevel = bLevel;
-    this.ctlr.config.settings.css.currentBrightnessTooltipPosition = `${10.5 + bPercent * 79.5}%`;
+    this.ctlr.settings.css.currentBrightnessTooltipPosition = `${10.5 + bPercent * 79.5}%`;
     if (this.config.max > 100) {
       if (b <= 100) {
-        this.ctlr.config.settings.css.currentBrightnessSliderPosition = (b - 0) / (100 - 0);
-        this.ctlr.config.settings.css.currentBrightnessSliderBoostPosition = 0;
-        this.ctlr.config.settings.css.brightnessSliderBoostPercent = 0;
+        this.ctlr.settings.css.currentBrightnessSliderPosition = (b - 0) / (100 - 0);
+        this.ctlr.settings.css.currentBrightnessSliderBoostPosition = 0;
+        this.ctlr.settings.css.brightnessSliderBoostPercent = 0;
       } else {
-        this.ctlr.config.settings.css.currentBrightnessSliderPosition = 1;
-        this.ctlr.config.settings.css.currentBrightnessSliderBoostPosition = (b - 100) / (this.config.max - 100);
-        this.ctlr.config.settings.css.brightnessSliderBoostPercent = this.ctlr.config.settings.css.brightnessSliderPercent;
+        this.ctlr.settings.css.currentBrightnessSliderPosition = 1;
+        this.ctlr.settings.css.currentBrightnessSliderBoostPosition = (b - 100) / (this.config.max - 100);
+        this.ctlr.settings.css.brightnessSliderBoostPercent = this.ctlr.settings.css.brightnessSliderPercent;
       }
-    } else this.ctlr.config.settings.css.currentBrightnessSliderPosition = bPercent;
+    } else this.ctlr.settings.css.currentBrightnessSliderPosition = bPercent;
   }
   handleDarkState(dark) {
     if (dark) {
@@ -4880,20 +4854,18 @@ BrightnessPlug.plugName = "brightness";
 // src/ts/plugs/playbackRate.ts
 var PlaybackRatePlug = class extends BasePlug {
   wire() {
-    this.ctlr.media.set("intent.playbackRate", (value) => clamp(this.config.min, value, this.config.max), { signal: this.signal });
+    this.media.set("intent.playbackRate", (value) => clamp(this.config.min, value, this.config.max), { signal: this.signal });
     this.ctlr.config.watch("settings.playbackRate.value", this.forwardRate, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.playbackRate.min", this.handleMinChange, { signal: this.signal });
     this.ctlr.config.on("settings.playbackRate.max", this.handleMaxChange, { signal: this.signal });
   }
   forwardRate(value) {
-    this.ctlr.media.intent.playbackRate = value;
+    this.media.intent.playbackRate = value;
   }
-  handleMinChange({ target }) {
-    const min = target.value;
+  handleMinChange({ value: min }) {
     if (this.config.value < min) this.config.value = min;
   }
-  handleMaxChange({ target }) {
-    const max = target.value;
+  handleMaxChange({ value: max }) {
     if (this.config.value > max) this.config.value = max;
   }
   rotateRate(dir = "forwards") {
@@ -4912,6 +4884,111 @@ var PlaybackRatePlug = class extends BasePlug {
 };
 PlaybackRatePlug.plugName = "playbackRate";
 
+// src/ts/plugs/captions.ts
+var STYLE_PROPS = ["font.family", "font.size", "font.color", "font.opacity", "font.weight", "font.variant", "background.color", "background.opacity", "window.color", "window.opacity", "characterEdgeStyle", "textAlignment"];
+var CaptionsPlug = class extends BasePlug {
+  constructor() {
+    super(...arguments);
+    this.view = null;
+    this.infoView = null;
+  }
+  mount() {
+    this.view = ComponentRegistry.init("captions", this.ctlr);
+    this.infoView = ComponentRegistry.init("captions", this.ctlr);
+    if (this.view) this.ctlr.DOM.captionsContainer = this.view.element;
+    this.view?.mount(), this.infoView?.mount();
+  }
+  wire() {
+    STYLE_PROPS.forEach((prop) => {
+      this.ctlr.config.watch(`settings.captions.${prop}.value`, (value) => (this.ctlr.settings.css[camelize(`captions.${prop}`, /\./)] = value, this.view?.syncSize()), { signal: this.signal, immediate: true });
+    });
+    this.media.on("status.loadedMetadata", this.syncUIState, { signal: this.signal, immediate: true });
+    this.media.on("status.textTracks", this.syncUIState, { signal: this.signal });
+    this.media.on("state.currentTextTrack", this.handleCurrentTextTrackState, { signal: this.signal, immediate: true });
+    this.media.on("status.activeCue", this.handleActiveCueStatus, { signal: this.signal, immediate: true });
+    this.view && this.media.on("state.currentTime", this.view.syncKaraoke, { signal: this.signal });
+    this.ctlr.config.on("settings.captions.font.size.min", this.handleFontSizeMin, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.captions.font.size.max", this.handleFontSizeMax, { signal: this.signal, immediate: true });
+    this.ctlr.settings.css.currentCaptionsX, this.ctlr.settings.css.currentCaptionsY;
+  }
+  handleDisabledConfig({ value }) {
+    const cssPlug = this.ctlr.getPlug("css");
+    this.ctlr.settings.css.currentCaptionsX = cssPlug?.CSSCache.currentCaptionsX, this.ctlr.settings.css.currentCaptionsY = cssPlug?.CSSCache.currentCaptionsY;
+    if (!this.media.status.textTracks[this.media.state.currentTextTrack]) return;
+    !value ? this.ctlr.videoContainer.classList.add("tmg-video-captions") : this.ctlr.videoContainer.classList.remove("tmg-video-captions", "tmg-video-captions-preview");
+    !value && this.infoView?.preview({ text: `${this.media.status.textTracks[this.media.state.currentTextTrack]?.label} ${this.ctlr.videoContainer.dataset.trackKind} 
+ Click \u2699 for settings`, region: { viewportAnchorX: 10, viewportAnchorY: 10 } });
+  }
+  handleFontSizeMin({ value: min }) {
+    if (this.config.font.size.value < min) this.config.font.size.value = min;
+  }
+  handleFontSizeMax({ value: max }) {
+    if (this.config.font.size.value > max) this.config.font.size.value = max;
+  }
+  handleCurrentTextTrackState({ value }) {
+    this.ctlr.videoContainer.dataset.trackKind = this.media.status.textTracks[value]?.kind || "captions";
+  }
+  handleActiveCueStatus({ value }) {
+    !(!this.ctlr.isUIActive("captions") && this.ctlr.isUIActive("captionsPreview")) && this.view?.render(value);
+  }
+  syncUIState() {
+    this.ctlr.videoContainer.classList.toggle("tmg-video-captions", this.media.status.textTracks.length > 0 && !this.config.disabled);
+    this.ctlr.videoContainer.dataset.trackKind = this.media.status.textTracks[this.media.state.currentTextTrack]?.kind || "captions";
+  }
+  toggleCaptions() {
+    if (!this.media.status.textTracks[this.media.state.currentTextTrack]) return this.view?.preview("No captions available for this video");
+    this.config.disabled = !this.config.disabled;
+  }
+  changeFontSize(value) {
+    const sign = value >= 0 ? "+" : "-";
+    value = Math.abs(value);
+    const size = Number(this.ctlr.settings.css.captionsFontSize);
+    switch (sign) {
+      case "-":
+        if (size > this.config.font.size.min) this.config.font.size.value = size - (size % value ? size % value : value);
+        break;
+      default:
+        if (size < this.config.font.size.max) this.config.font.size.value = size + (size % value ? size % value : value);
+    }
+    this.view && this.ctlr.config.stall(this.view.preview);
+  }
+  rotateProp(steps, prop, numeric = true) {
+    if (!steps.length) return;
+    const curr = this.ctlr.settings.css[camelize(prop.replace(".value", ""), /\./)];
+    setAny(this.ctlr.settings, prop, rotate(numeric ? Number(curr) : String(curr), steps));
+    this.view && this.ctlr.config.stall(this.view.preview);
+  }
+  rotateFontFamily() {
+    this.rotateProp(parseUIObj(this.config).font.family.values, "captions.font.family.value", false);
+  }
+  rotateFontWeight() {
+    this.rotateProp(parseUIObj(this.config).font.weight.values, "captions.font.weight.value", false);
+  }
+  rotateFontVariant() {
+    this.rotateProp(parseUIObj(this.config).font.variant.values, "captions.font.variant.value", false);
+  }
+  rotateFontOpacity() {
+    this.rotateProp(parseUIObj(this.config).font.opacity.values, "captions.font.opacity.value");
+  }
+  rotateBackgroundOpacity() {
+    this.rotateProp(parseUIObj(this.config).background.opacity.values, "captions.background.opacity.value");
+  }
+  rotateWindowOpacity() {
+    this.rotateProp(parseUIObj(this.config).window.opacity.values, "captions.window.opacity.value");
+  }
+  rotateCharacterEdgeStyle() {
+    this.rotateProp(parseUIObj(this.config).characterEdgeStyle.values, "captions.characterEdgeStyle.value", false);
+  }
+  rotateTextAlignment() {
+    this.rotateProp(parseUIObj(this.config).textAlignment.values, "captions.textAlignment.value", false);
+  }
+  onDestroy() {
+    this.view?.destroy();
+    if (this.ctlr.DOM.captionsContainer === this.view?.element) this.ctlr.DOM.captionsContainer = null;
+  }
+};
+CaptionsPlug.plugName = "captions";
+
 // src/ts/plugs/time.ts
 var TimePlug = class extends BasePlug {
   constructor() {
@@ -4926,31 +5003,31 @@ var TimePlug = class extends BasePlug {
   wire() {
     this.pseudoStart = this.config.start ?? 0;
     this.guardTimeValues();
-    this.ctlr.media.set("intent.currentTime", () => clamp(this.config.min, this.config.value, this.config.max), { signal: this.signal });
+    this.media.set("intent.currentTime", () => clamp(this.config.min, this.config.value, this.config.max), { signal: this.signal });
     this.ctlr.config.watch("settings.time.value", this.forwardTimeValue, { signal: this.signal, immediate: "auto" });
     this.ctlr.config.watch("settings.time.start", (v) => v !== this.pseudoStart && (this.actualStart = +v), { signal: this.signal, immediate: true });
-    this.ctlr.media.on("state.currentTime", this.handleCurrentTimeState, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.waiting", this.handleWaitingStatus, { signal: this.signal });
+    this.media.on("state.currentTime", this.handleCurrentTimeState, { signal: this.signal, immediate: true });
+    this.media.on("status.waiting", this.handleWaitingStatus, { signal: this.signal });
   }
   forwardTimeValue(value) {
-    this.ctlr.media.intent.currentTime = value;
+    this.media.intent.currentTime = value;
   }
   handleCurrentTimeState({ target }) {
-    const curr = target.value, min = this.config.min, max = this.config.max, dur = this.ctlr.media.status.duration, end = this.config.end;
+    const curr = target.value, min = this.config.min, max = this.config.max, dur = this.media.status.duration, end = this.config.end;
     if (curr < min || curr > max) {
-      this.ctlr.media.intent.currentTime = this.config.loop ? min : curr;
-      if (!this.config.loop) this.ctlr.media.intent.paused = true;
+      this.media.intent.currentTime = this.config.loop ? min : curr;
+      if (!this.config.loop) this.media.intent.paused = true;
     }
-    if (this.ctlr.media.status.readyState && curr && this.ctlr.state.readyState > 1) this.config.start = this.pseudoStart = curr > 3 && curr < (end ?? dur) - 3 ? curr : this.actualStart;
+    if (this.media.status.readyState && curr && this.ctlr.state.readyState > 1) this.config.start = this.pseudoStart = curr > 3 && curr < (end ?? dur) - 3 ? curr : this.actualStart;
   }
   handleWaitingStatus({ value }) {
-    if (value && IS_MOBILE && this.currentSkipNotifier) this.ctlr.media.once("status.waiting", () => this.ctlr.getPlug("overlay")?.remove(), { signal: this.signal });
+    if (value && IS_MOBILE && this.currentSkipNotifier) this.media.once("status.waiting", () => this.ctlr.getPlug("overlay")?.remove(), { signal: this.signal });
   }
   toTimeVal(value) {
-    return parseIfPercent(value ?? 0, this.ctlr.media.status.duration);
+    return parseIfPercent(value ?? 0, this.media.status.duration);
   }
-  toTimeText(time = this.ctlr.media.state.currentTime, useMode = false, showMs = false) {
-    const format = this.config.format, duration = this.ctlr.media.status.duration;
+  toTimeText(time = this.media.state.currentTime, useMode = false, showMs = false) {
+    const format = this.config.format, duration = this.media.status.duration;
     if (!useMode || this.config.mode !== "remaining") return formatMediaTime({ time, format, elapsed: true, showMs });
     return `-${formatMediaTime({ time: duration - time, format, elapsed: false, showMs })}`;
   }
@@ -4969,9 +5046,9 @@ var TimePlug = class extends BasePlug {
   }
   skip(duration) {
     const overlay = this.ctlr.getPlug("overlay"), notifier = duration > 0 ? this.ctlr.queryDOM(".tmg-video-fwd-notifier") : this.ctlr.queryDOM(".tmg-video-bwd-notifier");
-    duration = duration > 0 ? this.ctlr.media.status.duration - this.ctlr.media.state.currentTime > duration ? duration : this.ctlr.media.status.duration - this.ctlr.media.state.currentTime : duration < 0 ? this.ctlr.media.state.currentTime > Math.abs(duration) ? duration : -this.ctlr.media.state.currentTime : 0;
-    this.ctlr.media.intent.currentTime = this.ctlr.media.state.currentTime + duration;
-    this.ctlr.config.settings.css.currentPlayedPosition = this.ctlr.config.settings.css.currentThumbPosition = safeNum(this.ctlr.media.intent.currentTime / this.ctlr.media.status.duration);
+    duration = duration > 0 ? this.media.status.duration - this.media.state.currentTime > duration ? duration : this.media.status.duration - this.media.state.currentTime : duration < 0 ? this.media.state.currentTime > Math.abs(duration) ? duration : -this.media.state.currentTime : 0;
+    this.media.intent.currentTime = this.media.state.currentTime + duration;
+    this.ctlr.settings.css.currentPlayedPosition = this.ctlr.settings.css.currentThumbPosition = safeNum(this.media.intent.currentTime / this.media.status.duration);
     const mdle = this.ctlr.getPlug("gesture")?.general;
     if (mdle?.state.skipPersist) {
       if (this.currentSkipNotifier && notifier !== this.currentSkipNotifier) {
@@ -4989,9 +5066,9 @@ var TimePlug = class extends BasePlug {
           notifier?.classList.remove("tmg-video-control-persist");
           this.skipDuration = 0;
           this.currentSkipNotifier = null;
-          !this.ctlr.media.state.paused ? overlay?.remove() : overlay?.show();
+          !this.media.state.paused ? overlay?.remove() : overlay?.show();
         },
-        parseCSSTime(this.ctlr.config.settings.css.notifiersAnimationTime),
+        parseCSSTime(this.ctlr.settings.css.notifiersAnimationTime),
         this.signal
       );
       return void notifier?.setAttribute("data-skip", String(Math.trunc(this.skipDuration)));
@@ -5015,21 +5092,21 @@ var FullscreenModule = class extends BaseModule {
     this.ctlr.state.watch("docInFullscreen", this.handleDocInFullscreen, { signal: this.signal });
     this.ctlr.state.watch("screenOrientation", this.handleScreenOrientation, { signal: this.signal });
     this.ctlr.config.on("settings.modes.fullscreen.disabled", this.handleDisabledConfig, { signal: this.signal });
-    this.ctlr.media.on("intent.fullscreen", this.handleFullscreenIntent, { capture: true, signal: this.signal });
-    this.ctlr.media.tech.features.fullscreen = !this.config.disabled;
+    this.media.on("intent.fullscreen", this.handleFullscreenIntent, { capture: true, signal: this.signal });
+    this.media.tech.features.fullscreen = !this.config.disabled;
   }
   handleDisabledConfig({ value }) {
-    this.ctlr.media.tech.features.fullscreen = !value;
-    if (value && this.ctlr.isUIActive("fullscreen")) this.ctlr.media.intent.fullscreen = false;
+    this.media.tech.features.fullscreen = !value;
+    if (value && this.ctlr.isUIActive("fullscreen")) this.media.intent.fullscreen = false;
   }
   handleFullscreenIntent(e) {
     if (e.resolved) return;
     if (this.config.disabled && !this.inFullscreen) return e.resolve(this.name);
     if (!this.ctlr.isUIActive("fullscreen")) {
       const fW = this.ctlr.getPlug("modes")?.pip?.floatingWindow;
-      if (this.ctlr.isUIActive("floatingPlayer")) return fW?.addEventListener("pagehide", this.enter), fW?.close(), e.resolve(this.name);
-      if (this.ctlr.isUIActive("pictureInPicture")) this.ctlr.media.intent.pictureInPicture = false;
-      this.ctlr.media.intent.miniplayer = false;
+      if (this.ctlr.isUIActive("floatingPlayer")) return fW?.addEventListener("pagehide", this.enter, { signal: this.signal }), fW?.close(), e.resolve(this.name);
+      if (this.ctlr.isUIActive("pictureInPicture")) this.media.intent.pictureInPicture = false;
+      this.media.intent.miniplayer = false;
       this.enter();
     } else {
       exitFullscreen(this.ctlr.videoContainer);
@@ -5045,25 +5122,25 @@ var FullscreenModule = class extends BaseModule {
     const inFs = docInFs && queryFullscreenEl() === this.ctlr.videoContainer;
     if (inFs) {
       this.ctlr.videoContainer.classList.add("tmg-video-fullscreen");
-      this.ctlr.media.state.fullscreen = true;
+      this.media.state.fullscreen = true;
     } else if (this.ctlr.isUIActive("fullscreen")) {
       this.ctlr.videoContainer.classList.remove("tmg-video-fullscreen");
-      this.ctlr.config.settings.locked.disabled = true;
+      this.ctlr.settings.locked.disabled = true;
       this.inFullscreen = false;
-      this.ctlr.media.intent.miniplayer = "auto";
-      this.ctlr.media.state.fullscreen = false;
+      this.media.intent.miniplayer = "auto";
+      this.media.state.fullscreen = false;
     }
     if (IS_MOBILE) await this.changeScreenOrientation(inFs ? this.config.orientationLock : false);
   }
   handleScreenOrientation(orientation) {
     if (!this.ctlr.state.mediaParentIntersecting || !IS_MOBILE || this.ctlr.state.readyState < 2 || this.config.onRotate === false || this.ctlr.isUIActive("fullscreen") || this.ctlr.isUIActive("miniplayer")) return;
     const deg = typeof this.config.onRotate === "boolean" ? 90 : parseInt(String(this.config.onRotate));
-    if (orientation.angle === deg || orientation.angle === 360 - deg) this.ctlr.media.intent.fullscreen = !this.inFullscreen;
+    if (orientation.angle === deg || orientation.angle === 360 - deg) this.media.intent.fullscreen = !this.inFullscreen;
   }
   async changeScreenOrientation(option = true) {
     const orientation = screen.orientation;
     if (option === false) return void orientation?.unlock?.();
-    await orientation?.lock?.(option === "auto" ? this.ctlr.media.status.videoHeight > this.ctlr.media.status.videoWidth ? "portrait" : "landscape" : option === true ? orientation.angle === 0 ? "landscape" : "portrait" : option);
+    await orientation?.lock?.(option === "auto" ? this.media.status.videoHeight > this.media.status.videoWidth ? "portrait" : "landscape" : option === true ? orientation.angle === 0 ? "landscape" : "portrait" : option);
   }
 };
 FullscreenModule.moduleName = "fullscreen";
@@ -5072,18 +5149,18 @@ FullscreenModule.moduleName = "fullscreen";
 var TheaterModule = class extends BaseModule {
   wire() {
     this.ctlr.config.on("settings.modes.theater.disabled", this.handleDisabledConfig, { signal: this.signal });
-    this.ctlr.media.on("intent.theater", this.handleTheaterIntent, { capture: true, signal: this.signal });
-    this.ctlr.media.tech.features.theater = !this.config.disabled;
+    this.media.on("intent.theater", this.handleTheaterIntent, { capture: true, signal: this.signal });
+    this.media.tech.features.theater = !this.config.disabled;
   }
   handleDisabledConfig({ value }) {
-    this.ctlr.media.tech.features.theater = !value;
-    if (value && this.ctlr.isUIActive("theater")) this.ctlr.media.intent.theater = false;
+    this.media.tech.features.theater = !value;
+    if (value && this.ctlr.isUIActive("theater")) this.media.intent.theater = false;
   }
   handleTheaterIntent(e) {
     if (e.resolved) return;
     if (this.config.disabled && this.ctlr.isUIActive("theater")) return e.resolve(this.name);
     this.ctlr.videoContainer.classList.toggle("tmg-video-theater", e.value);
-    this.ctlr.media.state.theater = e.value;
+    this.media.state.theater = e.value;
     e.resolve(this.name);
   }
 };
@@ -5101,19 +5178,19 @@ var PictureInPictureModule = class extends BaseModule {
   }
   wire() {
     this.ctlr.config.on("settings.modes.pictureInPicture.disabled", this.handleDisabledConfig, { signal: this.signal });
-    this.ctlr.media.on("intent.pictureInPicture", this.handlePictureInPictureIntent, { capture: true, signal: this.signal });
-    this.ctlr.media.on("state.pictureInPicture", this.handlePictureInPictureState, { signal: this.signal });
-    this.ctlr.media.tech.features.pictureInPicture = !this.config.disabled;
+    this.media.on("intent.pictureInPicture", this.handlePictureInPictureIntent, { capture: true, signal: this.signal });
+    this.media.on("state.pictureInPicture", this.handlePictureInPictureState, { signal: this.signal });
+    this.media.tech.features.pictureInPicture = !this.config.disabled;
   }
   handleDisabledConfig({ value }) {
-    this.ctlr.media.tech.features.pictureInPicture = !value;
-    if (value && (this.ctlr.isUIActive("pictureInPicture") || this.ctlr.isUIActive("floatingPlayer"))) this.ctlr.media.intent.pictureInPicture = false;
+    this.media.tech.features.pictureInPicture = !value;
+    if (value && (this.ctlr.isUIActive("pictureInPicture") || this.ctlr.isUIActive("floatingPlayer"))) this.media.intent.pictureInPicture = false;
   }
   handlePictureInPictureIntent(e) {
     if (e.resolved) return;
-    if (this.ctlr.media.element !== this.ctlr.media.tech.element && this.config.floatingPlayer.disabled) return e.reject(this.name);
+    if (this.media.element !== this.media.tech.element && this.config.floatingPlayer.disabled) return e.reject(this.name);
     if (this.config.disabled && !this.ctlr.isUIActive("pictureInPicture") && !this.inFloatingPlayer) return e.resolve(this.name);
-    if (this.ctlr.isUIActive("fullscreen")) this.ctlr.media.intent.fullscreen = false;
+    if (this.ctlr.isUIActive("fullscreen")) this.media.intent.fullscreen = false;
     if (!this.ctlr.isUIActive("pictureInPicture") && window.documentPictureInPicture && !this.config.floatingPlayer.disabled) {
       !this.inFloatingPlayer ? this.initFloatingPlayer() : this.floatingWindow?.close();
       e.resolve(this.name);
@@ -5124,22 +5201,22 @@ var PictureInPictureModule = class extends BaseModule {
     if (value) {
       this.ctlr.videoContainer.classList.add("tmg-video-picture-in-picture");
       this.ctlr.getPlug("overlay")?.show();
-      this.ctlr.media.intent.miniplayer = false;
+      this.media.intent.miniplayer = false;
       this.ctlr.getPlug("media")?.syncSession();
     } else {
       await mockAsync(180);
       this.ctlr.videoContainer.classList.remove("tmg-video-picture-in-picture");
-      this.ctlr.media.intent.miniplayer = "auto";
+      this.media.intent.miniplayer = "auto";
       this.ctlr.getPlug("overlay")?.delay();
     }
   }
   async initFloatingPlayer() {
     if (this.inFloatingPlayer) return;
     window.documentPictureInPicture?.window?.close?.();
-    this.ctlr.media.intent.miniplayer = false;
+    this.media.intent.miniplayer = false;
     this.floatingWindow = await window.documentPictureInPicture.requestWindow(this.config.floatingPlayer);
     this.inFloatingPlayer = true;
-    this.floatingWindow.document.documentElement.style.cssText = `height:100%; background:url(${this.ctlr.config.media?.profile}) center / 32px no-repeat, url(${this.ctlr.media.state.poster}) center / ${this.ctlr.config.settings.css.bgSafeObjectFit} no-repeat, black;`;
+    this.floatingWindow.document.documentElement.style.cssText = `height:100%; background:url(${this.ctlr.config.media?.profile}) center / 32px no-repeat, url(${this.media.state.poster}) center / ${this.ctlr.settings.css.bgSafeObjectFit} no-repeat, black;`;
     await breath(this.floatingWindow);
     const cssTexts = [], whitelist = Object.keys(window.t007?._resourceCache ?? {}).concat(this.whitelist);
     for (const sheet of document.styleSheets) {
@@ -5159,17 +5236,22 @@ var PictureInPictureModule = class extends BaseModule {
     this.floatingWindow.document.documentElement.className = document.documentElement.className;
     document.documentElement.getAttributeNames().forEach((attr) => this.floatingWindow.document.documentElement.setAttribute(attr, document.documentElement.getAttribute(attr)));
     this.signal.addEventListener("abort", observeMutation(this.floatingWindow.document.documentElement, handleDOMMutation, { childList: true, subtree: true }), { once: true });
-    this.floatingWindow.addEventListener("pagehide", this.handleFloatingPlayerClose);
-    this.ctlr.media.state.pictureInPicture = true;
+    this.floatingWindow.addEventListener("resize", this.handleFloatingPlayerResize, { signal: this.signal });
+    this.floatingWindow.addEventListener("pagehide", this.handleFloatingPlayerClose, { signal: this.signal });
+    this.media.state.pictureInPicture = true;
+  }
+  handleFloatingPlayerResize() {
+    this.config.floatingPlayer.width = this.floatingWindow?.innerWidth ?? this.config.floatingPlayer.width;
+    this.config.floatingPlayer.height = this.floatingWindow?.innerHeight ?? this.config.floatingPlayer.height;
   }
   handleFloatingPlayerClose() {
     this.inFloatingPlayer = false;
     this.floatingWindow = null;
-    this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", this.ctlr.config.settings.controlPanel.progressBar);
+    this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", this.ctlr.settings.controlPanel.progressBar);
     this.ctlr.videoContainer.classList.remove("tmg-video-floating-player");
     this.ctlr.getPlug("skeleton")?.deactivatePseudoMode();
-    this.ctlr.media.intent.miniplayer = "auto";
-    this.ctlr.media.state.pictureInPicture = false;
+    this.media.intent.miniplayer = "auto";
+    this.media.state.pictureInPicture = false;
   }
 };
 PictureInPictureModule.moduleName = "pictureInPicture";
@@ -5191,67 +5273,67 @@ var MiniplayerModule = class extends BaseModule {
     this.ctlr.state.watch("dimensions.window.width", this.handleWindowWidth, { signal: this.signal });
     this.ctlr.state.on("mediaParentIntersecting", this.handleMediaParentIntersecting, { signal: this.signal });
     this.ctlr.config.on("settings.modes.miniplayer.disabled", this.handleDisabledConfig, { signal: this.signal });
-    this.ctlr.media.on("intent.miniplayer", this.handleMiniplayerIntent, { capture: true, signal: this.signal });
-    this.ctlr.media.on("state.paused", this.handlePaused, { signal: this.signal, immediate: true });
-    this.ctlr.media.tech.features.miniplayer = !this.config.disabled;
+    this.media.on("intent.miniplayer", this.handleMiniplayerIntent, { capture: true, signal: this.signal });
+    this.media.on("state.paused", this.handlePaused, { signal: this.signal, immediate: true });
+    this.media.tech.features.miniplayer = !this.config.disabled;
   }
   handleWindowWidth(width) {
-    if (!this.ctlr.isUIActive("fullscreen")) this.ctlr.media.intent.miniplayer = "auto";
+    if (!this.ctlr.isUIActive("fullscreen")) this.media.intent.miniplayer = "auto";
   }
   handleMediaParentIntersecting() {
-    if (this.ctlr.state.readyState > 2) this.ctlr.media.intent.miniplayer = "auto";
+    if (this.ctlr.state.readyState > 2) this.media.intent.miniplayer = "auto";
   }
   handleDisabledConfig({ value }) {
-    this.ctlr.media.tech.features.miniplayer = !value;
-    if (value) this.ctlr.media.intent.miniplayer = false;
+    this.media.tech.features.miniplayer = !value;
+    if (value) this.media.intent.miniplayer = false;
   }
   handlePaused({ value }) {
-    if (!value) this.ctlr.media.intent.miniplayer = "auto";
+    if (!value) this.media.intent.miniplayer = "auto";
   }
   handleMiniplayerIntent(e) {
     if (e.resolved) return;
     const active = this.ctlr.isUIActive("miniplayer");
     if (this.config.disabled && !active) return e.resolve(this.name);
     const modes3 = this.ctlr.getPlug("modes");
-    if (e.value === true && !active || !active && !this.ctlr.isUIActive("pictureInPicture") && !modes3?.pip.inFloatingPlayer && !modes3?.fullscreen.inFullscreen && !this.ctlr.state.mediaParentIntersecting && window.innerWidth >= this.config.minWindowWidth && !this.ctlr.media.state.paused) this.enter();
+    if (e.value === true && !active || !active && !this.ctlr.isUIActive("pictureInPicture") && !modes3?.pip.inFloatingPlayer && !modes3?.fullscreen.inFullscreen && !this.ctlr.state.mediaParentIntersecting && window.innerWidth >= this.config.minWindowWidth && !this.media.state.paused) this.enter();
     else if (e.value === false && active || active && this.ctlr.state.mediaParentIntersecting || active && window.innerWidth < this.config.minWindowWidth) this.exit();
     e.resolve(this.name);
   }
   enter() {
     this.ctlr.getPlug("skeleton")?.activatePseudoMode();
     this.ctlr.videoContainer.classList.add("tmg-video-miniplayer", "tmg-video-progress-bar");
-    ["mousedown", "touchstart"].forEach((type) => this.ctlr.videoContainer.addEventListener(type, this.handleDragStart));
-    this.ctlr.media.state.miniplayer = true;
+    ["mousedown", "touchstart"].forEach((type) => this.ctlr.videoContainer.addEventListener(type, this.handleDragStart, { signal: this.signal }));
+    this.media.state.miniplayer = true;
   }
   exit(behavior) {
     if (behavior && inDocView(this.ctlr.pseudoVideoContainer)) this.ctlr.pseudoVideoContainer.scrollIntoView({ behavior, block: "center", inline: "center" });
     this.ctlr.getPlug("skeleton")?.deactivatePseudoMode();
     this.ctlr.videoContainer.classList.remove("tmg-video-miniplayer");
-    this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", this.ctlr.config.settings.controlPanel.progressBar);
+    this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", this.ctlr.settings.controlPanel.progressBar);
     ["mousedown", "touchstart"].forEach((type) => this.ctlr.videoContainer.removeEventListener(type, this.handleDragStart));
-    this.ctlr.media.state.miniplayer = false;
+    this.media.state.miniplayer = false;
   }
   expand() {
     if (!this.ctlr.videoContainer.classList.contains("tmg-video-miniplayer")) return;
     this.exit("smooth");
-    this.ctlr.media.state.miniplayer = false;
+    this.media.state.miniplayer = false;
   }
   remove() {
-    this.ctlr.media.intent.paused = true;
+    this.media.intent.paused = true;
     this.exit();
-    this.ctlr.media.state.miniplayer = false;
+    this.media.state.miniplayer = false;
   }
   handleDragStart(e) {
     const target = e.target, clientX = e.clientX ?? e.targetTouches?.[0]?.clientX ?? 0, clientY = e.clientY ?? e.targetTouches?.[0]?.clientY ?? 0;
-    if (!this.ctlr.isUIActive("miniplayer") || target.scrollWidth > target.clientWidth || [this.ctlr.DOM.topControlsWrapper, inBoolArrOpt(this.ctlr.config.settings.controlPanel.draggable, "big") ? this.ctlr.DOM.bigControlsWrapper : null, this.ctlr.DOM.bottomControlsWrapper, this.ctlr.DOM.captionsContainer].some((w2) => w2?.contains(target)) || target.closest("[class$='toast-container']")) return;
+    if (!this.ctlr.isUIActive("miniplayer") || target.scrollWidth > target.clientWidth || [this.ctlr.DOM.topControlsWrapper, inBoolArrOpt(this.ctlr.settings.controlPanel.draggable, "big") ? this.ctlr.DOM.bigControlsWrapper : null, this.ctlr.DOM.bottomControlsWrapper, this.ctlr.DOM.captionsContainer].some((w2) => w2?.contains(target)) || target.closest("[class$='toast-container']")) return;
     const { left, bottom } = getComputedStyle(this.ctlr.videoContainer);
     this.lastMiniplayerPosX = parseFloat(left), this.lastMiniplayerPosY = parseFloat(bottom);
     this.lastMiniplayerPtrX = clientX, this.lastMiniplayerPtrY = clientY;
-    this.nextMiniplayerX = this.ctlr.config.settings.css.currentMiniplayerX, this.nextMiniplayerY = this.ctlr.config.settings.css.currentMiniplayerY;
+    this.nextMiniplayerX = this.ctlr.settings.css.currentMiniplayerX, this.nextMiniplayerY = this.ctlr.settings.css.currentMiniplayerY;
     this.wildMiniplayerX = this.nextMiniplayerX, this.wildMiniplayerY = this.nextMiniplayerY;
-    document.addEventListener("mousemove", this.handleDragging);
-    document.addEventListener("touchmove", this.handleDragging, { passive: false });
-    ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach((type) => document.addEventListener(type, this.handleDragEnd));
+    document.addEventListener("mousemove", this.handleDragging, { signal: this.signal });
+    document.addEventListener("touchmove", this.handleDragging, { passive: false, signal: this.signal });
+    ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach((type) => document.addEventListener(type, this.handleDragEnd, { signal: this.signal }));
     this.ctlr.videoContainer.style.setProperty("transition", "none", "important");
   }
   handleDragging(e) {
@@ -5260,9 +5342,7 @@ var MiniplayerModule = class extends BaseModule {
     this.ctlr.getPlug("overlay")?.remove("force");
     this.ctlr.videoContainer.classList.add("tmg-video-player-dragging");
     this.ctlr.RAFLoop("miniplayerDragging", () => {
-      const me = e, che = e;
-      const { innerWidth: ww, innerHeight: wh } = window, { offsetWidth: w2, offsetHeight: h } = this.ctlr.videoContainer;
-      const x = me.clientX ?? che.changedTouches?.[0]?.clientX ?? 0, y = me.clientY ?? che.changedTouches?.[0]?.clientY ?? 0, newX = this.lastMiniplayerPosX + (x - this.lastMiniplayerPtrX), newY = this.lastMiniplayerPosY - (y - this.lastMiniplayerPtrY), posX = clamp(w2 / 2, newX, ww - w2 / 2), posY = clamp(h / 2, newY, wh - h / 2);
+      const { innerWidth: ww, innerHeight: wh } = window, { offsetWidth: w2, offsetHeight: h } = this.ctlr.videoContainer, x = e.clientX ?? e.changedTouches?.[0]?.clientX ?? 0, y = e.clientY ?? e.changedTouches?.[0]?.clientY ?? 0, newX = this.lastMiniplayerPosX + (x - this.lastMiniplayerPtrX), newY = this.lastMiniplayerPosY - (y - this.lastMiniplayerPtrY), posX = clamp(w2 / 2, newX, ww - w2 / 2), posY = clamp(h / 2, newY, wh - h / 2);
       this.ctlr.videoContainer.style.setProperty("transform", `translate(${x - this.lastMiniplayerPtrX}px, ${y - this.lastMiniplayerPtrY}px)`, "important");
       this.nextMiniplayerX = `${posX / ww * 100}%`, this.nextMiniplayerY = `${posY / wh * 100}%`;
       this.wildMiniplayerX = `${newX / ww * 100}%`, this.wildMiniplayerY = `${newY / wh * 100}%`;
@@ -5276,7 +5356,7 @@ var MiniplayerModule = class extends BaseModule {
     this.ctlr.videoContainer.style.removeProperty("transform");
     setTimeout2(
       () => {
-        this.ctlr.config.settings.css.currentMiniplayerX = this.nextMiniplayerX, this.ctlr.config.settings.css.currentMiniplayerY = this.nextMiniplayerY;
+        this.ctlr.settings.css.currentMiniplayerX = this.nextMiniplayerX, this.ctlr.settings.css.currentMiniplayerY = this.nextMiniplayerY;
         ["transition", "left", "bottom"].forEach((prop) => this.ctlr.videoContainer.style.removeProperty(prop));
       },
       0,
@@ -5303,6 +5383,7 @@ var ModesPlug = class extends BasePlug {
     this.theater = new TheaterModule(this.ctlr, this.config.theater);
     this.pip = new PictureInPictureModule(this.ctlr, this.config.pictureInPicture);
     this.miniplayer = new MiniplayerModule(this.ctlr, this.config.miniplayer);
+    if (this.ctlr.config.initialMode) this.media.intent[this.ctlr.config.initialMode] = true;
   }
   wire() {
     this.fullscreen.wire();
@@ -5368,8 +5449,8 @@ var LockedPlug = class extends BasePlug {
       this.ctlr.getPlug("overlay")?.remove("force");
     } else {
       this.removeOverlay();
-      await mockAsync(parseCSSTime(this.ctlr.config.settings.css.switchTransitionTime));
-      this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", this.ctlr.config.settings.controlPanel.progressBar);
+      await mockAsync(parseCSSTime(this.ctlr.settings.css.switchTransitionTime));
+      this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", this.ctlr.settings.controlPanel.progressBar);
       this.ctlr.videoContainer.classList.remove("tmg-video-locked");
       this.ctlr.getPlug("overlay")?.show();
     }
@@ -5385,10 +5466,10 @@ var LockedPlug = class extends BasePlug {
   }
   delayOverlay() {
     clearTimeout(this.lockOverlayDelayId);
-    this.lockOverlayDelayId = setTimeout2(this.removeOverlay, this.ctlr.config.settings.overlay.delay, this.signal);
+    this.lockOverlayDelayId = setTimeout2(this.removeOverlay, this.ctlr.settings.overlay.delay, this.signal);
   }
   onDestroy() {
-    this.control?.instance?.destroy();
+    this.control?.destroy();
   }
 };
 LockedPlug.plugName = "locked";
@@ -5400,9 +5481,9 @@ var FramePlug = class extends BasePlug {
     this.exportCanvas = createEl("canvas");
     this.exportContext = this.exportCanvas.getContext("2d", { willReadFrequently: true });
   }
-  async getFrame(display = "", time = this.ctlr.media.state.currentTime, raw = false, min = 0, video = this.ctlr.pseudoVideo) {
+  async getFrame(display = "", time = this.media.state.currentTime, raw = false, min = 0, video = this.ctlr.pseudoVideo) {
     var _a;
-    if (video !== this.ctlr.media.element) {
+    if (video !== this.media.element) {
       await this.ctlr.state.frameReadyPromise;
       if (Math.abs(video.currentTime - time) > 0.01 || !video.readyState) {
         (_a = this.ctlr.state).frameReadyPromise ?? (_a.frameReadyPromise = new Promise((res) => video.addEventListener(video.readyState ? "timeupdate" : "loadeddata", () => res(null), { once: true, signal: this.signal })));
@@ -5411,7 +5492,7 @@ var FramePlug = class extends BasePlug {
       this.ctlr.state.frameReadyPromise = await this.ctlr.state.frameReadyPromise;
     }
     this.exportCanvas.width = video.videoWidth || min, this.exportCanvas.height = video.videoHeight || min;
-    this.exportContext.filter = this.ctlr.config.settings.css.filter;
+    this.exportContext.filter = this.ctlr.settings.css.filter;
     display === "monochrome" && (this.exportContext.filter = `${this.exportContext.filter} grayscale(100%)`);
     this.exportContext.drawImage(video, 0, 0, this.exportCanvas.width, this.exportCanvas.height);
     this.exportContext.filter = "none";
@@ -5419,8 +5500,8 @@ var FramePlug = class extends BasePlug {
     const blob = (this.exportCanvas.width || this.exportCanvas.height) && await new Promise((res) => this.exportCanvas.toBlob(res));
     return { blob: blob || false, url: blob ? URL.createObjectURL(blob) : false };
   }
-  async captureFrame(display = "", time = this.ctlr.media.state.currentTime) {
-    const toast = this.ctlr.getPlug("toasts")?.toast, tTxt = formatMediaTime({ time, format: "human", showMs: true }), fTxt = `video frame ${display === "monochrome" ? "in b&w " : ""}at ${tTxt}`, frameToastId = toast?.loading(`Capturing ${fTxt}...`, { delay: parseCSSTime(this.ctlr.config.settings.css.notifiersAnimationTime), image: window.TMG_VIDEO_ALT_IMG_SRC, tag: `tmg-${this.ctlr.config.media.title ?? "Video"}fcpa${tTxt}${display}` }), frame = await this.getFrame(display, time, false, 0, this.ctlr.media.element), filename = `${this.ctlr.config.media.title ?? "Video"}_${display === "monochrome" ? `black&white_` : ""}at_${tTxt}.png`.replace(/[\/:*?"<>|\s]+/g, "_");
+  async captureFrame(display = "", time = this.media.state.currentTime) {
+    const toast = this.ctlr.getPlug("toasts")?.toast, tTxt = formatMediaTime({ time, format: "human", showMs: true }), fTxt = `video frame ${display === "monochrome" ? "in b&w " : ""}at ${tTxt}`, frameToastId = toast?.loading(`Capturing ${fTxt}...`, { delay: parseCSSTime(this.ctlr.settings.css.notifiersAnimationTime), image: window.TMG_VIDEO_ALT_IMG_SRC, tag: `tmg-${this.ctlr.config.media.title ?? "Video"}fcpa${tTxt}${display}` }), frame = await this.getFrame(display, time, false, 0, this.media.element), filename = `${this.ctlr.config.media.title ?? "Video"}_${display === "monochrome" ? `black&white_` : ""}at_${tTxt}.png`.replace(/[\/:*?"<>|\s]+/g, "_");
     const Save = () => {
       toast?.loading(frameToastId, { render: `Saving ${fTxt}`, actions: {} });
       createEl("a", { href: frame.url, download: filename })?.click?.();
@@ -5435,19 +5516,19 @@ var FramePlug = class extends BasePlug {
     };
     frame?.url ? toast?.success(frameToastId, { render: `Captured ${fTxt}`, image: frame.url, autoClose: this.config.captureAutoClose, actions: { Save, Share }, onClose: () => URL.revokeObjectURL(frame.url) }) : toast?.error(frameToastId, { render: `Failed capturing ${fTxt}` });
   }
-  async findGoodTime({ time: t = this.ctlr.media.state.currentTime, secondsLimit: s = 25, saturation: sat = 12, brightness: bri = 40 } = {}) {
-    const end = clamp(0, t + s, this.ctlr.media.status.duration);
+  async findGoodTime({ time: t = this.media.state.currentTime, secondsLimit: s = 25, saturation: sat = 12, brightness: bri = 40 } = {}) {
+    const end = clamp(0, t + s, this.media.status.duration);
     for (; t <= end; t += 0.333) {
       const rgb = await getDominantColor((await this.getFrame("", t, true, 1)).canvas, "rgb", true);
       if (rgb && getRGBBri(rgb) > bri && getRGBSat(rgb) > sat) return t;
     }
     return null;
   }
-  async getMainColor(time, poster = this.ctlr.media.element.poster, config = {}) {
+  async getMainColor(time, poster = this.media.element.poster, config = {}) {
     return getDominantColor(poster ? poster : (await this.getFrame("", time ? time : await this.findGoodTime(config) ?? void 0, true, 1)).canvas);
   }
   moveFrame(dir = "forwards") {
-    this.ctlr.media.state.paused && this.ctlr.throttle("frameStepping", () => this.ctlr.media.intent.currentTime = clamp(0, Math.round(this.ctlr.media.state.currentTime * this.config.fps) + (dir === "backwards" ? -1 : 1), Math.floor(this.ctlr.media.status.duration * this.config.fps)) / this.config.fps, Math.round(1e3 / this.config.fps));
+    this.media.state.paused && this.ctlr.throttle("frameStepping", () => this.media.intent.currentTime = clamp(0, Math.round(this.media.state.currentTime * this.config.fps) + (dir === "backwards" ? -1 : 1), Math.floor(this.media.status.duration * this.config.fps)) / this.config.fps, Math.round(1e3 / this.config.fps));
   }
 };
 FramePlug.plugName = "frame";
@@ -5455,14 +5536,14 @@ FramePlug.plugName = "frame";
 // src/ts/plugs/disabled.ts
 var DisabledPlug = class extends BasePlug {
   wire() {
-    this.ctlr.media.on("state.paused", ({ value }) => !value && this.ctlr.media.status.loadedMetadata && this.reactivate(), { signal: this.signal });
+    this.media.on("state.paused", ({ value }) => !value && this.media.status.loadedMetadata && this.reactivate(), { signal: this.signal });
     this.ctlr.config.on("disabled", this.handleDisabled, { immediate: true, signal: this.signal });
   }
   handleDisabled({ value }) {
     if (value) {
       this.ctlr.cancelAllLoops();
       this.ctlr.videoContainer.classList.add("tmg-video-disabled");
-      this.ctlr.media.intent.paused = true;
+      this.media.intent.paused = true;
       this.ctlr.getPlug("overlay")?.show();
       this.ctlr.DOM.containerContent?.setAttribute("inert", "");
       this.ctlr.getPlug("toasts")?.toast?.warn("You cannot access the custom controls when disabled");
@@ -5484,7 +5565,7 @@ var DisabledPlug = class extends BasePlug {
     this.ctlr.videoContainer.classList.add("tmg-video-inactive");
   }
   reactivate() {
-    if (!this.ctlr.videoContainer.classList.contains("tmg-video-inactive") || !this.ctlr.media.status.loadedMetadata) return;
+    if (!this.ctlr.videoContainer.classList.contains("tmg-video-inactive") || !this.media.status.loadedMetadata) return;
     this.state.message = null;
     this.ctlr.DOM.containerContent?.removeAttribute("data-message");
     this.ctlr.videoContainer.classList.remove("tmg-video-inactive");
@@ -5495,7 +5576,7 @@ DisabledPlug.plugName = "disabled";
 // src/ts/plugs/errorMessages.ts
 var ErrorMessagesPlug = class extends BasePlug {
   wire() {
-    this.ctlr.media.on("status.error", this.handleError, { signal: this.signal, immediate: true });
+    this.media.on("status.error", this.handleError, { signal: this.signal, immediate: true });
   }
   handleError({ value }) {
     if (!value) return;
@@ -5518,7 +5599,7 @@ var PersistPlug = class extends BasePlug {
     this.adapter?.remove("settings");
     this.adapter = new (value || LocalStorageAdapter)(this.ctlr.id);
     const saved = this.adapter.get("settings");
-    if (saved) this.ctlr.config.settings = mergeObjs(this.ctlr.config.settings, saved);
+    if (saved) this.ctlr.settings = mergeObjs(this.ctlr.settings, saved);
   }
   handleDisabledChange({ value }) {
     this.ctlr.config.off("settings", this.throttleSave);
@@ -5529,7 +5610,7 @@ var PersistPlug = class extends BasePlug {
     this.ctlr.throttle("persist_save", () => this.adapter.set("settings", settings), this.config.throttle ?? 5e3);
   }
   onDestroy() {
-    !this.config.disabled && this.adapter?.set("settings", this.ctlr.config.settings);
+    !this.config.disabled && this.adapter?.set("settings", this.ctlr.settings);
   }
 };
 PersistPlug.plugName = "persist";
@@ -5550,11 +5631,11 @@ var TimeTravelPlug = class extends BasePlug {
     this.playbackTimer = null;
   }
   onSetup() {
-    this.initialState = this.ctlr.media.snapshot();
+    this.initialState = this.media.snapshot();
     const opts = { signal: this.signal, capture: false };
-    this.ctlr.media.on("intent", this.record, opts);
-    this.ctlr.media.on("state", this.record, opts);
-    this.ctlr.media.on("settings", this.record, opts);
+    this.media.on("intent", this.record, opts);
+    this.media.on("state", this.record, opts);
+    this.media.on("settings", this.record, opts);
   }
   /**
    * RECORD: Chronicling the lifecycle of the system.
@@ -5619,8 +5700,8 @@ var TimeTravelPlug = class extends BasePlug {
     }
     snapshot.forEach((entry, path) => {
       const isState = path.startsWith("state");
-      entry.type === "delete" ? deleteAny(this.ctlr.media, path) : setAny(this.ctlr.media, path, entry.value);
-      isState && this.ctlr.media.tick(path.replace("state.", ""));
+      entry.type === "delete" ? deleteAny(this.media, path) : setAny(this.media, path, entry.value);
+      isState && this.media.tick(path.replace("state.", ""));
     });
     this.isReplaying = false;
   }
@@ -5643,8 +5724,8 @@ var TimeTravelPlug = class extends BasePlug {
    */
   applyEntry(e) {
     const isState = e.path.startsWith("state");
-    e.type === "delete" ? deleteAny(this.ctlr.media, e.path) : setAny(this.ctlr.media, e.path, e.value);
-    isState && this.ctlr.media.tick(e.path.replace("state.", ""));
+    e.type === "delete" ? deleteAny(this.media, e.path) : setAny(this.media, e.path, e.value);
+    isState && this.media.tick(e.path.replace("state.", ""));
     if (e.rejected) this.ctlr.log(`Replaying REJECTED ${e.path}`, "warn");
   }
 };
@@ -5655,6 +5736,7 @@ var components_exports = {};
 __export(components_exports, {
   BaseComponent: () => BaseComponent,
   Buffer: () => Buffer2,
+  CaptionsView: () => CaptionsView,
   Duration: () => Duration,
   PlayPause: () => PlayPause,
   RangeSlider: () => RangeSlider,
@@ -5721,8 +5803,139 @@ var Buffer2 = class extends BaseComponent {
   create() {
     return this.element = createEl("div", { className: "tmg-video-buffer", innerHTML: `<div class="tmg-video-buffer-accent"></div><div class="tmg-video-buffer-eclipse"><div class="tmg-video-buffer-left"><div class="tmg-video-buffer-circle"></div></div><div class="tmg-video-buffer-right"><div class="tmg-video-buffer-circle"></div></div></div>` });
   }
+  mount() {
+    this.ctlr.DOM.controlsContainer?.prepend(this.element);
+  }
 };
 Buffer2.componentName = "buffer";
+
+// src/ts/components/captions-view.ts
+var CaptionsView = class extends BaseComponent {
+  constructor() {
+    super(...arguments);
+    this.isMain = false;
+    this.lastCue = null;
+    this.karaokeNodes = null;
+    this.lastPreview = "";
+    this.previewTimeoutId = -1;
+    this.charW = 0;
+    this.lineHPx = 0;
+    this.lastPosX = 0;
+    this.lastPosY = 0;
+    this.lastPtrX = 0;
+    this.lastPtrY = 0;
+  }
+  create() {
+    return this.element = createEl("div", { className: "tmg-video-captions-container" }, { part: "region" });
+  }
+  mount() {
+    this.ctlr.DOM.controlsContainer.prepend(this.element);
+  }
+  wire() {
+    this.isMain = this.element === this.ctlr.DOM.captionsContainer;
+    this.element.addEventListener("pointerdown", this.handleDragStart, { signal: this.signal });
+    this.ctlr.state.watch("dimensions.container.width", () => (this.syncSize(), this.preview("")), { signal: this.signal, immediate: true });
+  }
+  syncSize() {
+    this.element.style.setProperty("display", "block", "important");
+    const measurer = createEl("span", { className: "tmg-video-captions-text", innerHTML: "abcdefghijklmnopqrstuvwxyz".repeat(2) }, {}, { visibility: "hidden" });
+    this.element.append(measurer);
+    this.charW = measurer.offsetWidth / 52;
+    const { lineHeight, fontSize } = getComputedStyle(measurer);
+    this.lineHPx = !safeNum(parseFloat(lineHeight), 0) ? safeNum(parseFloat(fontSize), 16) * 1.2 : parseFloat(lineHeight);
+    measurer.remove(), this.element.style.removeProperty("display");
+  }
+  preview(preview = `${capitalize(this.ctlr.videoContainer.dataset.trackKind || "captions")} look like this`, flush = this.element.textContent.replace(/\s/g, "") === this.lastPreview?.replace(/\s/g, "")) {
+    const text = "string" === typeof preview ? preview : preview.text || "", should = flush || !this.ctlr.isUIActive("captions") || !this.element.textContent;
+    should && this.ctlr.videoContainer.classList.add("tmg-video-captions-preview");
+    this.render(should ? isObj(preview) ? preview : { text: preview } : this.lastCue);
+    clearTimeout(this.previewTimeoutId);
+    this.previewTimeoutId = setTimeout2(
+      (flush2 = this.element.textContent.replace(/\s/g, "") === text.replace(/\s/g, "")) => {
+        this.ctlr.videoContainer.classList.remove("tmg-video-captions-preview");
+        if (flush2) this.element.innerHTML = "";
+      },
+      this.ctlr.settings.captions.previewTimeout,
+      this.signal
+    );
+    this.lastPreview = text;
+  }
+  render(cue) {
+    const existing = this.element.querySelector(".tmg-video-captions-wrapper");
+    if (!cue) return existing?.remove();
+    const wrapper = existing ?? createEl("div", { className: "tmg-video-captions-wrapper", ariaLive: "off", ariaAtomic: "true" }, { part: "cue-display" }), { offsetWidth: vCWidth, offsetHeight: vCHeight } = this.ctlr.videoContainer, allowOverride = this.ctlr.settings.captions.allowVideoOverride || !this.isMain;
+    ["style", "data-active", "data-scroll"].forEach((attr) => this.element.removeAttribute(attr));
+    wrapper.innerHTML = "", cue.text || (cue.text = ""), this.lastCue = cue;
+    const lines = cue.text.replace(/(<br\s*\/>)|\\N/gi, "\n").split(/\n/);
+    lines.forEach((p) => formatVttLine(p, Math.floor(vCWidth / this.charW)).forEach((l) => wrapper.append(createEl("div", { className: "tmg-video-captions-line" }, cue.id ? { part: "cue", id: cue.id } : { part: "cue" }, allowOverride && cue.align ? { textAlign: cue.align } : void 0).appendChild(createEl("span", { className: "tmg-video-captions-text", innerHTML: parseVttText(l) })).parentElement)));
+    !existing && this.element.append(wrapper);
+    const { offsetWidth: cWidth, offsetHeight: cHeight } = this.element;
+    this.isMain ? this.ctlr.settings.css.currentCaptionsContainerHeight = `${cHeight}px` : this.element.style.setProperty("--tmg-video-current-captions-container-height", `${cHeight}px`);
+    this.isMain ? this.ctlr.settings.css.currentCaptionsContainerWidth = `${cWidth}px` : this.element.style.setProperty("--tmg-video-current-captions-container-width", `${cWidth}px`);
+    if (allowOverride) {
+      if (cue.region) {
+        this.element.setAttribute("data-active", "");
+        const { width, lines: regionLines, viewportAnchorX: vpAnX, viewportAnchorY: vpAnY, scroll } = cue.region;
+        if (isDef(vpAnX)) this.element.style.setProperty("--tmg-video-current-captions-x", `${vpAnX}%`);
+        if (isDef(vpAnY)) this.element.style.setProperty("--tmg-video-current-captions-y", `${100 - Number(vpAnY)}%`);
+        if (isDef(width)) this.element.style.maxWidth = `${width}%`;
+        if (isDef(regionLines)) this.element.style.maxHeight = `${Number(regionLines) * (this.lineHPx / vCHeight * 100)}%`;
+        if (scroll === "up") {
+          this.element.style.maxHeight = `${regionLines * (this.lineHPx / vCHeight * 100)}%`;
+          this.element.dataset.scroll = scroll;
+          this.ctlr.config.stall(() => this.element.scrollTop = wrapper.scrollHeight);
+        }
+      } else {
+        if (isDef(cue.position) && cue.position !== "auto") {
+          const elHalfWPct = cWidth / vCWidth * 100 / 2, posOffset = cue.positionAlign === "line-left" ? 0 : cue.positionAlign === "line-right" ? -2 * elHalfWPct : -elHalfWPct;
+          this.element.style.setProperty("--tmg-video-current-captions-x", `calc(${cue.position}% + ${posOffset}% + ${elHalfWPct}%)`);
+        }
+        if (isDef(cue.line) && cue.line !== "auto") {
+          const line = parseIfPercent(cue.line, 100), lhPct = this.lineHPx / vCHeight * 100, elHalfHPct = cHeight / vCHeight * 100 / 2, lAlign = cue.lineAlign && cue.lineAlign !== "auto" ? cue.lineAlign : line < 0 ? "end" : "start", lineOffset = lAlign === "start" ? -2 * elHalfHPct : lAlign === "end" ? 0 : -elHalfHPct, bottomVal = cue.snapToLines ? line < 0 ? (Math.abs(line) - 1) * lhPct : 100 - line * lhPct : 100 - line;
+          this.element.style.setProperty("--tmg-video-current-captions-y", `calc(${bottomVal}% + ${lineOffset}% + ${elHalfHPct}%)`);
+        }
+        if (isDef(cue.size) && cue.size !== 100) this.element.style.maxWidth = `${cue.size}%`;
+      }
+      if (cue.vertical) this.element.style.writingMode = cue.vertical === "lr" ? "vertical-lr" : "vertical-rl";
+    }
+    this.karaokeNodes = Array.from(wrapper.querySelectorAll("[data-part='timed']")).map((el) => {
+      const [, m, s, ms] = (el.dataset.time || "").match(/(\d+):(\d+)\.(\d+)/) || [];
+      return { el, time: m ? +m * 60 + +s + +ms / 1e3 : 0 };
+    });
+    this.syncKaraoke();
+  }
+  syncKaraoke() {
+    if (!this.karaokeNodes) return;
+    for (const { el, time } of this.karaokeNodes) {
+      const isPast = this.media.state.currentTime > time;
+      el.toggleAttribute("data-past", isPast), el.toggleAttribute("data-future", !isPast);
+    }
+  }
+  handleDragStart(e) {
+    this.element.setPointerCapture(e.pointerId);
+    const { left, bottom } = getComputedStyle(this.element);
+    this.lastPosX = parseFloat(left), this.lastPosY = parseFloat(bottom);
+    this.lastPtrX = e.clientX, this.lastPtrY = e.clientY;
+    this.element.addEventListener("pointermove", this.handleDragging, { signal: this.signal });
+    this.element.addEventListener("pointerup", this.handleDragEnd, { signal: this.signal });
+  }
+  handleDragging(e) {
+    this.ctlr.videoContainer.classList.add("tmg-video-captions-dragging");
+    this.ctlr.RAFLoop("captionsDragging", () => {
+      const { offsetWidth: ww, offsetHeight: hh } = this.ctlr.videoContainer, { offsetWidth: w2, offsetHeight: h } = this.element, posX = clamp(w2 / 2, this.lastPosX + (e.clientX - this.lastPtrX), ww - w2 / 2), posY = clamp(h / 2, this.lastPosY - (e.clientY - this.lastPtrY), hh - h / 2);
+      this.isMain ? this.ctlr.settings.css.currentCaptionsX = `${posX / ww * 100}%` : this.element.style.setProperty("--tmg-video-current-captions-x", `${posX / ww * 100}%`);
+      this.isMain ? this.ctlr.settings.css.currentCaptionsY = `${posY / hh * 100}%` : this.element.style.setProperty("--tmg-video-current-captions-y", `${posY / hh * 100}%`);
+    });
+  }
+  handleDragEnd() {
+    this.ctlr.cancelRAFLoop("captionsDragging");
+    this.ctlr.videoContainer.classList.remove("tmg-video-captions-dragging");
+    this.element.removeEventListener("pointermove", this.handleDragging);
+    this.element.removeEventListener("pointerup", this.handleDragEnd);
+  }
+};
+CaptionsView.componentName = "captions";
+CaptionsView.isControl = false;
 
 // src/ts/components/duration.ts
 var Duration = class extends BaseComponent {
@@ -5732,15 +5945,15 @@ var Duration = class extends BaseComponent {
   wire() {
     this.plug = this.ctlr.getPlug("time");
     this.plug && this.element.addEventListener("click", this.plug?.rotateFormat, { signal: this.signal });
-    this.ctlr.media.on("status.duration", this.updateUI, { signal: this.signal, immediate: true });
+    this.media.on("status.duration", this.updateUI, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.time.format", this.updateARIA, { signal: this.signal, immediate: true });
   }
   updateUI() {
-    this.element.textContent = this.plug?.toTimeText(this.ctlr.media.status.duration) ?? "--:--";
+    this.element.textContent = this.plug?.toTimeText(this.media.status.duration) ?? "--:--";
   }
   updateARIA() {
     this.state.label = "Switch time format";
-    this.state.cmd = formatKeyForDisplay(this.ctlr.config.settings.time.format);
+    this.state.cmd = formatKeyForDisplay(this.ctlr.settings.time.format);
     this.el.title = this.state.label;
     this.setBtnARIA();
   }
@@ -5755,24 +5968,24 @@ var PlayPause = class extends BaseComponent {
   }
   wire() {
     this.el.addEventListener("click", this.togglePlay, { signal: this.signal });
-    this.ctlr.media.on("state.paused", this.updateUI, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.ended", this.updateUI, { signal: this.signal });
+    this.media.on("state.paused", this.updateUI, { signal: this.signal, immediate: true });
+    this.media.on("status.ended", this.updateUI, { signal: this.signal });
     this.ctlr.config.on("settings.keys.shortcuts.playPause", this.updateARIA, { signal: this.signal });
   }
   updateUI() {
     this.updateARIA();
   }
   updateARIA() {
-    this.state.label = this.ctlr.media.status.ended ? "Replay" : this.ctlr.media.state.paused ? "Play" : "Pause";
-    this.state.cmd = formatKeyForDisplay(this.ctlr.config.settings.keys.shortcuts.playPause);
+    this.state.label = this.media.status.ended ? "Replay" : this.media.state.paused ? "Play" : "Pause";
+    this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.playPause);
     this.el.title = this.state.label + this.state.cmd;
     this.setBtnARIA();
   }
   togglePlay() {
-    if (this.ctlr.media.status.ended) {
-      this.ctlr.media.intent.currentTime = 0;
-      this.ctlr.media.intent.paused = false;
-    } else this.ctlr.media.intent.paused = !this.ctlr.media.state.paused;
+    if (this.media.status.ended) {
+      this.media.intent.currentTime = 0;
+      this.media.intent.paused = false;
+    } else this.media.intent.paused = !this.media.state.paused;
   }
 };
 PlayPause.componentName = "playPause";
@@ -5780,14 +5993,14 @@ PlayPause.isControl = true;
 
 // src/ts/components/range.ts
 var RangeSlider = class extends BaseComponent {
-  constructor(ctlr, options = {}) {
+  constructor(ctlr, config = {}) {
     const defaults = { label: "Range", min: 0, max: 100, value: 0, previewValue: 50, step: 1, scrub: { sync: false, relative: true, cancel: { delta: 15, timeout: 2e3 }, wheel: { disabled: false, axisRatio: 6 } } };
-    super(ctlr, reactive({ ...defaults, ...options }), { scrubbing: false, shouldCancelScrub: false, stallCancelScrub: false });
-    this.lastPointerP = 0;
-    this.lastThumbPosition = 0;
-    this.cancelScrubTimeoutId = null;
+    super(ctlr, reactive({ ...defaults, ...config }), { scrubbing: false, shouldCancelScrub: false, stallCancelScrub: false });
     this.isVertical = false;
     this.isRTL = false;
+    this.lastPtrPos = 0;
+    this.lastThumbPos = 0;
+    this.cancelScrubTimeoutId = null;
     this.handleKeyDown = (e) => {
       const key = e.key?.toLowerCase();
       if (["arrowleft", "arrowdown", "arrowright", "arrowup"].includes(key)) {
@@ -5836,7 +6049,7 @@ var RangeSlider = class extends BaseComponent {
     const s = window.getComputedStyle(this.container);
     this.isVertical = s.writingMode.includes("vertical");
     this.isRTL = s.direction === "rtl";
-    this.lastPointerP = this.getPos(e), this.lastThumbPosition = this.getValueAsPos();
+    this.lastPtrPos = this.getPos(e), this.lastThumbPos = this.getValueAsPos();
     this.handleInput(e);
     this.container.addEventListener("pointermove", this.handleInput, { signal: this.signal });
     this.container.addEventListener("pointerup", this.stopScrubbing, { signal: this.signal });
@@ -5844,7 +6057,7 @@ var RangeSlider = class extends BaseComponent {
   stopScrubbing() {
     if (!this.state.scrubbing) return;
     this.state.scrubbing = false;
-    const newValue = this.state.shouldCancelScrub ? this.getPosAsValue(this.lastThumbPosition) : this.config.value;
+    const newValue = this.state.shouldCancelScrub ? this.getPosAsValue(this.lastThumbPos) : this.config.value;
     this.seek(newValue);
     this.allowScrubbing();
     this.state.stallCancelScrub = true;
@@ -5868,12 +6081,12 @@ var RangeSlider = class extends BaseComponent {
     this.ctlr.throttle(
       `${this.config.label}RangeInput`,
       () => {
-        const dimension = this.isVertical ? this.rect.height : this.rect.width, progress = this.getPos(e), pos = clamp(0, !this.state.scrubbing || this.config.scrub.relative ? progress : this.lastThumbPosition + progress - this.lastPointerP, 1), value = this.getPosAsValue(pos);
+        const dimension = this.isVertical ? this.rect.height : this.rect.width, progress = this.getPos(e), pos = clamp(0, !this.state.scrubbing || this.config.scrub.relative ? progress : this.lastThumbPos + progress - this.lastPtrPos, 1), value = this.getPosAsValue(pos);
         this.config.previewValue = value;
         if (this.state.scrubbing) {
           if (!this.config.scrub.sync) this.updateThumbPosition(pos);
           else this.seek(value);
-          Math.abs(pos - this.lastThumbPosition) < this.config.scrub.cancel.delta / dimension ? this.cancelScrubbing() : this.allowScrubbing();
+          Math.abs(pos - this.lastThumbPos) < this.config.scrub.cancel.delta / dimension ? this.cancelScrubbing() : this.allowScrubbing();
         }
         this.onInput(e, pos);
       },
@@ -5932,7 +6145,7 @@ var ScreenLocked = class extends BaseComponent {
   handleClick(e) {
     e.stopPropagation();
     this.plug?.delayOverlay();
-    if (this.el.classList.contains("tmg-video-control-unlock")) this.ctlr.config.settings.locked.disabled = true;
+    if (this.el.classList.contains("tmg-video-control-unlock")) this.ctlr.settings.locked.disabled = true;
     else this.el.classList.add("tmg-video-control-unlock");
   }
 };
@@ -5946,19 +6159,19 @@ var Time = class extends BaseComponent {
   wire() {
     this.plug = this.ctlr.getPlug("time");
     addSafeClicks(this.element, this.plug?.toggleMode, this.plug?.rotateFormat, { signal: this.signal });
-    this.ctlr.media.on("state.currentTime", this.updateUI, { signal: this.signal, immediate: true });
+    this.media.on("state.currentTime", this.updateUI, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.time.mode", this.updateUI, { signal: this.signal });
     this.ctlr.config.on("settings.time.format", this.updateUI, { signal: this.signal });
     this.ctlr.config.on("settings.keys.shortcuts.timeMode", this.updateARIA, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.keys.shortcuts.timeFormat", this.updateARIA, { signal: this.signal });
   }
   updateUI() {
-    this.element.textContent = this.plug?.toTimeText(this.ctlr.media.state.currentTime, true) || "-:--";
+    this.element.textContent = this.plug?.toTimeText(this.media.state.currentTime, true) || "-:--";
   }
   updateARIA() {
     this.state.label = `Show ${this.plug?.nextMode} time`;
-    this.state.cmd = formatKeyForDisplay(this.ctlr.config.settings.time.mode);
-    this.el.title = `Switch (mode${this.state.cmd} / DblClick\u2192format${formatKeyForDisplay(this.ctlr.config.settings.keys.shortcuts.timeFormat)})`;
+    this.state.cmd = formatKeyForDisplay(this.ctlr.settings.time.mode);
+    this.el.title = `Switch (mode${this.state.cmd} / DblClick\u2192format${formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.timeFormat)})`;
     this.setBtnARIA("Switch time format");
   }
 };
@@ -5978,28 +6191,28 @@ var TimeAndDuration = class extends BaseComponent {
   wire() {
     this.plug = this.ctlr.getPlug("time");
     addSafeClicks(this.element, this.plug?.toggleMode, this.plug?.rotateFormat, { signal: this.signal });
-    this.ctlr.media.on("state.currentTime", this.updateTime, { signal: this.signal });
-    this.ctlr.media.on("status.duration", this.updateDuration, { signal: this.signal });
+    this.media.on("state.currentTime", this.updateTime, { signal: this.signal });
+    this.media.on("status.duration", this.updateDuration, { signal: this.signal });
     this.ctlr.config.on("settings.time.format", this.updateUI, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.time.mode", this.updateTime, { signal: this.signal });
     this.ctlr.config.on("settings.keys.shortcuts.timeMode", this.updateARIA, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.keys.shortcuts.timeFormat", this.updateARIA, { signal: this.signal });
   }
   updateUI() {
-    const bridgeText = { digital: "/", human: "of", "human-long": "out of" }[this.ctlr.config.settings.time.format];
+    const bridgeText = { digital: "/", human: "of", "human-long": "out of" }[this.ctlr.settings.time.format];
     this.bridge.textContent = bridgeText || "/";
     this.updateTime(), this.updateDuration();
   }
   updateTime() {
-    this.time.textContent = this.plug?.toTimeText(this.ctlr.media.state.currentTime, true) || "-:--";
+    this.time.textContent = this.plug?.toTimeText(this.media.state.currentTime, true) || "-:--";
   }
   updateDuration() {
-    this.duration.textContent = this.plug?.toTimeText(this.ctlr.media.status.duration) || "--:--";
+    this.duration.textContent = this.plug?.toTimeText(this.media.status.duration) || "--:--";
   }
   updateARIA() {
     this.state.label = `Show ${this.plug?.nextMode} time`;
-    this.state.cmd = formatKeyForDisplay(this.ctlr.config.settings.time.mode);
-    this.el.title = `Switch (mode${this.state.cmd} / DblClick\u2192format${formatKeyForDisplay(this.ctlr.config.settings.keys.shortcuts.timeFormat)})`;
+    this.state.cmd = formatKeyForDisplay(this.ctlr.settings.time.mode);
+    this.el.title = `Switch (mode${this.state.cmd} / DblClick\u2192format${formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.timeFormat)})`;
     this.setBtnARIA("Switch time format");
   }
 };
@@ -6009,7 +6222,7 @@ TimeAndDuration.isControl = true;
 // src/ts/components/timeline.ts
 var Timeline = class extends RangeSlider {
   constructor(ctlr, options = {}) {
-    super(ctlr, { label: "Video timeline", ...{ ...options, previews: options.previews } });
+    super(ctlr, { label: "Video timeline", ...options });
     this.previewContext = null;
     this.thumbnailContext = null;
     this.wasPaused = false;
@@ -6017,14 +6230,14 @@ var Timeline = class extends RangeSlider {
   }
   create() {
     const element = super.create();
-    this.thumbnailImg = createEl("div", { className: "tmg-video-thumbnail" });
-    this.thumbnailCanvas = createEl("canvas", { className: "tmg-video-thumbnail" });
     this.timeline = createEl("div", { className: "tmg-video-timeline" });
     this.bufferedBar = createEl("div", { className: "tmg-video-bar tmg-video-buffered-bar" });
     this.previewBar = createEl("div", { className: "tmg-video-bar tmg-video-preview-bar" });
     this.previewContainer = createEl("div", { className: "tmg-video-preview-container" });
     this.previewImg = createEl("div", { className: "tmg-video-preview" });
     this.previewCanvas = createEl("canvas", { className: "tmg-video-preview" });
+    this.thumbnailImg = createEl("div", { className: "tmg-video-thumbnail" });
+    this.thumbnailCanvas = createEl("canvas", { className: "tmg-video-thumbnail" });
     this.container.dataset.controlId = this.name;
     this.previewContainer.append(this.previewImg, this.previewCanvas);
     this.barsWrapper.append(this.bufferedBar, this.previewBar);
@@ -6045,12 +6258,12 @@ var Timeline = class extends RangeSlider {
     this.config.on("previews", this.handlePreviewChange, { signal: this.signal });
     this.ctlr.config.watch("settings.time.previews", (value) => this.config.previews = value, { signal: this.signal, immediate: true });
     this.ctlr.config.watch("settings.time.seekSync", (value) => this.config.scrub.sync = value, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("state.paused", this.handlePausedState, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("state.currentTime", this.handleCurrentTimeState, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.buffered", this.handleBufferedStatus, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.duration", this.handleDurationStatus, { signal: this.signal, immediate: true });
-    this.ctlr.media.on("status.error", this.handleErrorStatus, { signal: this.signal, immediate: true });
+    this.media.on("state.paused", this.handlePausedState, { signal: this.signal, immediate: true });
+    this.media.on("state.currentTime", this.handleCurrentTimeState, { signal: this.signal, immediate: true });
+    this.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
+    this.media.on("status.buffered", this.handleBufferedStatus, { signal: this.signal, immediate: true });
+    this.media.on("status.duration", this.handleDurationStatus, { signal: this.signal, immediate: true });
+    this.media.on("status.error", this.handleErrorStatus, { signal: this.signal, immediate: true });
     this.ctlr.state.on("dimensions.container", this.syncThumbnailSize, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.time.format", this.updatePreviewTime, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.time.mode", this.updatePreviewTime, { signal: this.signal });
@@ -6059,24 +6272,24 @@ var Timeline = class extends RangeSlider {
   }
   seek(value) {
     super.seek(value);
-    this.ctlr.media.intent.currentTime = safeNum(value / 100 * this.ctlr.media.status.duration);
+    this.media.intent.currentTime = safeNum(value / 100 * this.media.status.duration);
   }
   handlePausedState({ value }) {
     !value ? this.ctlr.RAFLoop("timelineUpdating", this.handleTimeUpdateLoop) : this.ctlr.cancelRAFLoop("timelineUpdating");
   }
   handleCurrentTimeState({ target }) {
     if (this.state.scrubbing) return;
-    if (this.ctlr.media.state.paused) this.handleTimeUpdateLoop(false);
-    this.container.ariaValueText = `${formatMediaTime({ time: target.value, format: "human-long" })} out of ${formatMediaTime({ time: this.ctlr.media.status.duration, format: "human-long" })}`;
+    if (this.media.state.paused) this.handleTimeUpdateLoop(false);
+    this.container.ariaValueText = `${formatMediaTime({ time: target.value, format: "human-long" })} out of ${formatMediaTime({ time: this.media.status.duration, format: "human-long" })}`;
   }
   handleLoadedMetadataStatus() {
     this.ctlr.pseudoVideo.addEventListener("timeupdate", (e) => e.target.ontimeupdate = this.syncCanvasPreviews, { signal: this.signal, once: true });
   }
   handleBufferedStatus() {
-    const buffered = this.ctlr.media.status.buffered;
+    const buffered = this.media.status.buffered;
     for (let i = 0; i < buffered.length; i++) {
-      if (buffered.start(buffered.length - 1 - i) < this.ctlr.media.state.currentTime) {
-        this.bufferedBar.style.width = `${safeNum(buffered.end(buffered.length - 1 - i) / this.ctlr.media.status.duration) * 100}%`;
+      if (buffered.start(buffered.length - 1 - i) < this.media.state.currentTime) {
+        this.bufferedBar.style.width = `${safeNum(buffered.end(buffered.length - 1 - i) / this.media.status.duration) * 100}%`;
         break;
       }
     }
@@ -6089,18 +6302,18 @@ var Timeline = class extends RangeSlider {
   }
   handleTimeUpdateLoop(optimize = true) {
     if (optimize && !this.ctlr.state.mediaIntersecting) return;
-    const duration = safeNum(this.ctlr.media.status.duration, 60);
-    if (!this.state.scrubbing) this.config.value = safeNum(this.ctlr.media.state.currentTime / duration) * 100;
+    const duration = safeNum(this.media.status.duration, 60);
+    if (!this.state.scrubbing) this.config.value = safeNum(this.media.state.currentTime / duration) * 100;
   }
   handleScrubbingChange({ value }) {
     if (!value) {
-      this.ctlr.media.intent.paused = this.wasPaused;
+      this.media.intent.paused = this.wasPaused;
       cancelAnimationFrame(this.scrubbingId);
       this.ctlr.videoContainer.classList.remove("tmg-video-scrubbing");
     } else {
-      this.wasPaused = this.ctlr.media.state.paused;
+      this.wasPaused = this.media.state.paused;
       this.scrubbingId = requestAnimationFrame(() => {
-        this.ctlr.media.intent.paused = true;
+        this.media.intent.paused = true;
         this.ctlr.videoContainer.classList.add("tmg-video-scrubbing");
       });
     }
@@ -6112,15 +6325,15 @@ var Timeline = class extends RangeSlider {
     if (!value) return void (this.ctlr.videoContainer.dataset.previewType = "none");
     const manual = value.address && (value.spf || value.cols && value.rows), type = manual ? value.cols && value.rows ? "sprite" : "image" : "canvas";
     this.ctlr.videoContainer.dataset.previewType = type;
-    if (type === "sprite" && value.address) this.ctlr.config.settings.css.currentPreviewUrl = this.ctlr.config.settings.css.currentThumbnailUrl = `url(${value.address})`;
-    else this.ctlr.config.settings.css.currentPreviewPosition = this.ctlr.config.settings.css.currentThumbnailPosition = "center";
-    if (this.ctlr.media.status.loadedMetadata) return;
+    if (type === "sprite" && value.address) this.ctlr.settings.css.currentPreviewUrl = this.ctlr.settings.css.currentThumbnailUrl = `url(${value.address})`;
+    else this.ctlr.settings.css.currentPreviewPosition = this.ctlr.settings.css.currentThumbnailPosition = "center";
+    if (this.media.status.loadedMetadata) return;
     this.ctlr.setCanvasFallback(this.previewCanvas, this.previewContext), this.ctlr.setCanvasFallback(this.thumbnailCanvas, this.thumbnailContext);
     this.ctlr.pseudoVideo.ontimeupdate = null;
   }
   stopScrubbing() {
     if (!this.state.scrubbing) return;
-    if (!this.state.shouldCancelScrub) this.ctlr.media.intent.currentTime = this.config.value;
+    if (!this.state.shouldCancelScrub) this.media.intent.currentTime = this.config.value;
     super.stopScrubbing();
   }
   stopPreview() {
@@ -6128,21 +6341,20 @@ var Timeline = class extends RangeSlider {
   }
   onInput(e, pos) {
     this.ctlr.videoContainer.classList.add("tmg-video-previewing");
-    const previewImgMin = this.previewContainer.offsetWidth / 2 / this.rect.width;
-    const previewImgPos = clamp(previewImgMin, pos, 1 - previewImgMin);
+    const previewImgMin = this.previewContainer.offsetWidth / 2 / this.rect.width, previewImgPos = clamp(previewImgMin, pos, 1 - previewImgMin);
     this.previewContainer.style.left = `${previewImgPos * 100}%`;
     this.previewBar.style.width = `${pos * 100}%`;
     const previewConfig = this.config.previews, type = this.ctlr.videoContainer.dataset.previewType;
     if (type === "sprite" && previewConfig && typeof previewConfig !== "boolean" && previewConfig.cols && previewConfig.rows) {
-      const duration = this.ctlr.media.status.duration, spf = previewConfig.spf || 1, frameIndex = Math.floor(pos * (duration || 0) / spf) || 1, { cols, rows } = previewConfig, clampedI = Math.min(frameIndex, cols * rows - 1), xPercent = clampedI % cols * 100 / (cols - 1 || 1), yPercent = Math.floor(clampedI / cols) * 100 / (rows - 1 || 1);
-      if (!IS_MOBILE) this.ctlr.config.settings.css.currentPreviewPosition = `${xPercent}% ${yPercent}%`;
-      if (this.state.scrubbing) this.ctlr.config.settings.css.currentThumbnailPosition = `${xPercent}% ${yPercent}%`;
+      const duration = this.media.status.duration, spf = previewConfig.spf || 1, frameIndex = Math.floor(pos * (duration || 0) / spf) || 1, { cols, rows } = previewConfig, clampedI = Math.min(frameIndex, cols * rows - 1), xPercent = clampedI % cols * 100 / (cols - 1 || 1), yPercent = Math.floor(clampedI / cols) * 100 / (rows - 1 || 1);
+      if (!IS_MOBILE) this.ctlr.settings.css.currentPreviewPosition = `${xPercent}% ${yPercent}%`;
+      if (this.state.scrubbing) this.ctlr.settings.css.currentThumbnailPosition = `${xPercent}% ${yPercent}%`;
     } else if (type === "image" && previewConfig && typeof previewConfig !== "boolean" && previewConfig.address) {
-      const duration = this.ctlr.media.status.duration, spf = previewConfig.spf || 1, frameIndex = Math.floor(pos * (duration || 0) / spf) || 1, url = `url(${previewConfig.address.replace("$", String(frameIndex))})`;
-      if (!IS_MOBILE) this.ctlr.config.settings.css.currentPreviewUrl = url;
-      if (this.state.scrubbing) this.ctlr.config.settings.css.currentThumbnailUrl = url;
+      const duration = this.media.status.duration, spf = previewConfig.spf || 1, frameIndex = Math.floor(pos * (duration || 0) / spf) || 1, url = `url(${previewConfig.address.replace("$", String(frameIndex))})`;
+      if (!IS_MOBILE) this.ctlr.settings.css.currentPreviewUrl = url;
+      if (this.state.scrubbing) this.ctlr.settings.css.currentThumbnailUrl = url;
     } else if (previewConfig && !this.ctlr.state.frameReadyPromise && this.ctlr.pseudoVideo) {
-      const duration = this.ctlr.media.status.duration;
+      const duration = this.media.status.duration;
       this.ctlr.pseudoVideo.currentTime = pos * (duration || 0);
     }
   }
@@ -6150,7 +6362,7 @@ var Timeline = class extends RangeSlider {
     if (this.plug) this.previewContainer.dataset.previewTime = this.plug.toTimeText(this.config.previewValue, true);
   }
   syncCanvasPreviews() {
-    if (!this.ctlr.media.status.loadedData || this.ctlr.state.frameReadyPromise || !this.ctlr.pseudoVideo) return;
+    if (!this.media.status.loadedData || this.ctlr.state.frameReadyPromise || !this.ctlr.pseudoVideo) return;
     this.ctlr.throttle(
       "canvasPreviewSync",
       () => {
@@ -6166,9 +6378,9 @@ var Timeline = class extends RangeSlider {
   }
   syncThumbnailSize() {
     if (!this.thumbnailCanvas || !this.thumbnailImg) return;
-    const { width = this.ctlr.videoContainer.offsetWidth, height = this.ctlr.videoContainer.offsetHeight } = getRenderedBox(this.ctlr.media.element);
-    this.ctlr.config.settings.css.currentThumbnailHeight = height + 1 + "px";
-    this.ctlr.config.settings.css.currentThumbnailWidth = width + 1 + "px";
+    const { width = this.ctlr.videoContainer.offsetWidth, height = this.ctlr.videoContainer.offsetHeight } = getRenderedBox(this.media.element);
+    this.ctlr.settings.css.currentThumbnailHeight = height + 1 + "px";
+    this.ctlr.settings.css.currentThumbnailWidth = width + 1 + "px";
   }
 };
 Timeline.componentName = "timeline";
@@ -6233,9 +6445,11 @@ export {
   REJECTABLE,
   Reactor,
   ReactorEvent,
+  SSVERSION,
   StorageAdapter,
   TERMINATOR,
   TechRegistry,
+  VERSION,
   components_exports as comps,
   connectMediaToAudioManager,
   consts_exports as consts,

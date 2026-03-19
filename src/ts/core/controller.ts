@@ -29,12 +29,13 @@ export class Controller {
   public config: Reactive<Volatile<VideoBuild>>;
   public state: Reactive<RuntimeState> & Record<string, any>; // runtime state and states to be populated for easy reach
   public media: Reactive<CtlrMedia>;
+  public settings!: VideoBuild["settings"]; // for easy reach, better devx
   // --- MEMORY ---
   public buildCache: VideoBuild;
   private _payload: LifePayload = { instance: this } as any; // must use getter for payload
-  // DOM References (Utilized by Core Plugs)
-  public videoContainer: HTMLElement = createEl("div");
+  // DOM References (Utilized by Plugs)
   public pseudoVideo: HTMLVideoElement = createEl("video");
+  public videoContainer: HTMLElement = createEl("div");
   public pseudoVideoContainer: HTMLElement = createEl("div");
   public DOM: Record<string, HTMLElement | null> = {}; // To be populated with common elements for easy reach
   // --- UTILS CACHE ---
@@ -69,6 +70,7 @@ export class Controller {
       status: state(defs.status),
       settings: state(defs.settings),
     });
+    this.config.watch("settings", (value) => (this.settings = value), { immediate: true, signal: this.signal }); // COMPUTED: settings can lose reference
     this.buildCache = this.config.snapshot();
     this.media.set("tech", (t) => inert(t!), { signal: this.signal });
     this.boot();
@@ -86,9 +88,8 @@ export class Controller {
 
   private connectPlugs() {
     for (const PlugClass of PlugRegistry.getOrdered()) {
-      const key = PlugClass.plugName,
-        config = key in this.config ? (this.config as any)[key] : (this.config.settings as any)[key];
-      this.plugin(PlugClass, config);
+      const key = PlugClass.plugName;
+      this.plugin(PlugClass, key in this.config ? (this.config as any)[key] : (this.config.settings as any)[key]);
     }
   }
   public plugin(PlugClass: PlugConstructor, config?: any): void {
@@ -223,7 +224,7 @@ export class Controller {
     this.clups.forEach((cleanup) => cleanup());
     [...this.plugs.values()].reverse().forEach((p) => p.destroy());
     this.media.tech.destroy();
-    [this.plugs, this.throttleMap, this.rafLoopMap, this.rafLoopFnMap].forEach((map) => map.clear());
+    (this.plugs.clear(), this.throttleMap.clear(), this.rafLoopMap.clear(), this.rafLoopFnMap.clear());
     (this.media.destroy(), this.state.destroy(), this.config.destroy());
     const el = this.config.cloneOnDetach ? cloneMedia(this.media.element) : this.media.element;
     return (nuke(this), el);

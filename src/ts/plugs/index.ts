@@ -13,7 +13,7 @@ export * from "./fastPlay";
 export * from "./volume";
 export * from "./brightness";
 export * from "./playbackRate";
-// export * from "./captions";
+export * from "./captions";
 export * from "./time";
 export * from "./modes";
 // export * from "./keys";

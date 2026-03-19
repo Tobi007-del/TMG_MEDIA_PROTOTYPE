@@ -1,6 +1,6 @@
 import { BasePlug } from ".";
 import type { VideoBuild, Settings } from "../types/build";
-import type { Event } from "../types/reactor";
+import type { REvent } from "../types/reactor";
 import { DEFAULT_VIDEO_ITEM_BUILD } from "../consts/config-defaults";
 import { mergeObjs, isSameURL, deepClone } from "../utils";
 
@@ -23,17 +23,18 @@ export class PlaylistPlug extends BasePlug<Playlist> {
     // Variables Assignment (reset on wire)
     this.currentIndex = 0;
     // Ctlr Config Getters
-    this.ctlr.config.get("playlist", (v) => (v?.length ? v : null), { signal: this.signal });
+    this.ctlr.config.get("playlist", (v) => (v?.length ? v : null), { signal: this.signal }); // #VIRTUAL: reliable optional chaining
     // ----------- Setters
     this.ctlr.config.set("playlist", (v): Playlist => v?.map((i: any) => mergeObjs(DEFAULT_VIDEO_ITEM_BUILD, i)) ?? null, { signal: this.signal });
     // ----------- Watchers
-    this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && (this.ctlr.config.playlist[this.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
+    this.ctlr.config.watch("playlist", (value) => (this.config = value), { signal: this.signal }); // #COMPUTED: config can lose reference
+    this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && (this.config![this.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
     // ----------- Listners
     this.ctlr.config.on("playlist", this.handlePlaylistChange, { signal: this.signal, immediate: true, depth: 1 });
   }
 
-  protected handlePlaylistChange({ root }: Event<VideoBuild, "playlist">): void {
-    if (this.ctlr.media.status.readyState < 1) return;
+  protected handlePlaylistChange({ root }: REvent<VideoBuild, "playlist">): void {
+    if (this.media.status.readyState < 1) return;
     const list = root.playlist;
     const v = list?.find((v) => (v.media.id && v.media.id === root.media.id) || isSameURL(v.src, root.src));
     this.currentIndex = (v && list?.indexOf(v)) ?? 0;
@@ -43,13 +44,13 @@ export class PlaylistPlug extends BasePlug<Playlist> {
   public movePlaylistTo(index: number, shouldPlay?: boolean): void {
     if (!this.ctlr.config.playlist) return;
     this.currentIndex = index;
-    this.applyItem(this.ctlr.config.playlist[index]);
-    if (typeof shouldPlay === "boolean") this.ctlr.media.intent.paused = !shouldPlay;
+    this.applyItem(this.config![index]);
+    if (typeof shouldPlay === "boolean") this.media.intent.paused = !shouldPlay;
   }
 
   protected applyItem(item: PlaylistItemBuild, reset = true): void {
     this.ctlr.config.media = deepClone(item.media);
-    timeKeys.forEach((p) => (this.ctlr.config.settings.time[p] = item.settings.time[p] as any));
+    timeKeys.forEach((p) => (this.ctlr.settings.time[p] = item.settings.time[p] as any));
     this.ctlr.config.tracks = deepClone(item.tracks ?? []);
     if (reset) this.ctlr.config.src = item.src || "";
     if (reset && "sources" in item && item.sources) this.ctlr.config.sources = deepClone(item.sources);
@@ -57,12 +58,12 @@ export class PlaylistPlug extends BasePlug<Playlist> {
   }
 
   public previousVideo(): void {
-    if (this.ctlr.media.state.currentTime >= 3) this.ctlr.media.intent.currentTime = 0;
+    if (this.media.state.currentTime >= 3) this.media.intent.currentTime = 0;
     else if (this.ctlr.config.playlist && this.currentIndex > 0) this.movePlaylistTo(this.currentIndex - 1, true);
   }
 
   public nextVideo(): void {
     if (!this.ctlr.config.playlist) return;
-    if (this.currentIndex < this.ctlr.config.playlist.length - 1) this.movePlaylistTo(this.currentIndex + 1, true);
+    if (this.currentIndex < this.config!.length - 1) this.movePlaylistTo(this.currentIndex + 1, true);
   }
 }

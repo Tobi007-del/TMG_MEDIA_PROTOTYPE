@@ -161,8 +161,7 @@ class Boombox {
     if (value <= this.state.audio.volume.value) this.state.audio.volume.value = value;
     this.volumeSlider.max = value;
   }
-  onMuted(muted, { target: { oldValue } }) {
-    if (muted === oldValue) return TERMINATOR;
+  onMuted(muted) {
     if (muted) {
       this.lastVolume = this.state.audio.volume.value;
       this.state.audio.volume.value = 0;

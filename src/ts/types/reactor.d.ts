@@ -58,7 +58,7 @@ export interface UpdatePayload<T, P extends WildPaths<T> = WildPaths<T>> extends
 }
 
 // Discriminated Event Type (Creates the IDE magic)
-export type Event<T, P extends WildPaths<T> = WildPaths<T>> =
+export type REvent<T, P extends WildPaths<T> = WildPaths<T>> =
   | (Omit<ReactorEvent<T, P>, OverrideEvProp> &
       DirectPayload<T, P> &
       OverrideEvPart<DirectPayload<T, P>>)
@@ -98,7 +98,7 @@ export type Watcher<T, P extends WildPaths<T> = WildPaths<T>> = (
   payload: Payload<T, P>,
 ) => void;
 
-export type Listener<T, P extends WildPaths<T> = WildPaths<T>> = (event: Event<T, P>) => void;
+export type Listener<T, P extends WildPaths<T> = WildPaths<T>> = (event: REvent<T, P>) => void;
 
 // ===========================================================================
 // ENGINE RECORDS (Internal Storage)
@@ -178,7 +178,9 @@ export interface ReactorOptions<T extends object, P extends Paths<T> = Paths<T>>
   ) => typeof TERMINATOR | undefined;
   debug?: boolean;
   crossRealms?: boolean; // needed for object type detection if using across realms e.g, iframes or other environments
+  smartCloning?: boolean; // one-time set for structural sharing, needs `.referenceTracking: true`
   eventBubbling?: boolean; // default true, set to false to prevent bubbling (not recommended if you want power)
-  batchingFunction?: (cb: () => void) => void; // for listener's notifications, e.g: `queueMicrotask`, `unstable_batchedUpdates` from ReactDOM
-  referenceTracking?: boolean; // one-time set activates lineage tracing
+  lineageTracing?: boolean; // one-time set for tree walking to search for refs on property access, needs `.referenceTracking = true`
+  batchingFunction?: (cb: () => void) => void; // one-time set for listener's notifications, e.g: `queueMicrotask`, `unstable_batchedUpdates` from ReactDOM
+  referenceTracking?: boolean; // one-time set to activate
 } // debating making use of the Reflect API opt-in

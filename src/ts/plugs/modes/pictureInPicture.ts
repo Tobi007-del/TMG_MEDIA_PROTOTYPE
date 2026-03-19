@@ -1,9 +1,8 @@
 import { BaseModule, MediaPlug, OverlayPlug, SkeletonPlug } from "../";
-import type { Event } from "../../types/reactor";
+import type { REvent } from "../../types/reactor";
 import type { CtlrMedia } from "../../types/contract";
 import type { VideoBuild } from "../../types/build";
-import type { ModesPlug } from "./";
-import { mockAsync, breath, loadResource, observeMutation, exitFullscreen, isSameURL, createEl } from "../../utils";
+import { mockAsync, breath, loadResource, observeMutation, isSameURL, createEl } from "../../utils";
 import { handleDOMMutation } from "../../tools/runtime";
 
 export interface FloatingPlayerConfig {
@@ -29,40 +28,40 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
     // Ctlr Config Listeners
     this.ctlr.config.on("settings.modes.pictureInPicture.disabled", this.handleDisabledConfig, { signal: this.signal });
     // ---- Media --------
-    this.ctlr.media.on("intent.pictureInPicture", this.handlePictureInPictureIntent, { capture: true, signal: this.signal });
+    this.media.on("intent.pictureInPicture", this.handlePictureInPictureIntent, { capture: true, signal: this.signal });
     // ---- State --------
-    this.ctlr.media.on("state.pictureInPicture", this.handlePictureInPictureState, { signal: this.signal });
+    this.media.on("state.pictureInPicture", this.handlePictureInPictureState, { signal: this.signal });
     // Post Wiring
-    this.ctlr.media.tech.features.pictureInPicture = !this.config.disabled;
+    this.media.tech.features.pictureInPicture = !this.config.disabled;
   }
 
-  protected handleDisabledConfig({ value }: Event<VideoBuild, "settings.modes.pictureInPicture.disabled">): void {
-    this.ctlr.media.tech.features.pictureInPicture = !value;
-    if (value && (this.ctlr.isUIActive("pictureInPicture") || this.ctlr.isUIActive("floatingPlayer"))) this.ctlr.media.intent.pictureInPicture = false;
+  protected handleDisabledConfig({ value }: REvent<VideoBuild, "settings.modes.pictureInPicture.disabled">): void {
+    this.media.tech.features.pictureInPicture = !value;
+    if (value && (this.ctlr.isUIActive("pictureInPicture") || this.ctlr.isUIActive("floatingPlayer"))) this.media.intent.pictureInPicture = false;
   }
 
-  protected handlePictureInPictureIntent(e: Event<CtlrMedia, "intent.pictureInPicture">): void {
+  protected handlePictureInPictureIntent(e: REvent<CtlrMedia, "intent.pictureInPicture">): void {
     if (e.resolved) return;
-    if (this.ctlr.media.element !== this.ctlr.media.tech.element && this.config.floatingPlayer.disabled) return e.reject(this.name);
+    if (this.media.element !== this.media.tech.element && this.config.floatingPlayer.disabled) return e.reject(this.name);
     if (this.config.disabled && !this.ctlr.isUIActive("pictureInPicture") && !this.inFloatingPlayer) return e.resolve(this.name);
-    if (this.ctlr.isUIActive("fullscreen")) this.ctlr.media.intent.fullscreen = false;
+    if (this.ctlr.isUIActive("fullscreen")) this.media.intent.fullscreen = false;
     if (!this.ctlr.isUIActive("pictureInPicture") && (window as any).documentPictureInPicture && !this.config.floatingPlayer.disabled) {
       !this.inFloatingPlayer ? this.initFloatingPlayer() : this.floatingWindow?.close();
       e.resolve(this.name);
     } // tech will handle PIP toggle if not using floating player
   }
 
-  protected async handlePictureInPictureState({ value }: Event<CtlrMedia, "state.pictureInPicture">): Promise<void> {
+  protected async handlePictureInPictureState({ value }: REvent<CtlrMedia, "state.pictureInPicture">): Promise<void> {
     if (this.floatingWindow) return;
     if (value) {
       this.ctlr.videoContainer.classList.add("tmg-video-picture-in-picture");
       this.ctlr.getPlug<OverlayPlug>("overlay")?.show();
-      this.ctlr.media.intent.miniplayer = false;
+      this.media.intent.miniplayer = false;
       this.ctlr.getPlug<MediaPlug>("media")?.syncSession();
     } else {
       await mockAsync(180);
       this.ctlr.videoContainer.classList.remove("tmg-video-picture-in-picture");
-      this.ctlr.media.intent.miniplayer = "auto";
+      this.media.intent.miniplayer = "auto";
       this.ctlr.getPlug<OverlayPlug>("overlay")?.delay();
     }
   }
@@ -70,10 +69,10 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
   protected async initFloatingPlayer(): Promise<void> {
     if (this.inFloatingPlayer) return;
     (window as any).documentPictureInPicture?.window?.close?.();
-    this.ctlr.media.intent.miniplayer = false;
+    this.media.intent.miniplayer = false;
     this.floatingWindow = await (window as any).documentPictureInPicture.requestWindow(this.config.floatingPlayer);
     this.inFloatingPlayer = true;
-    this.floatingWindow!.document.documentElement.style.cssText = `height:100%; background:url(${this.ctlr.config.media?.profile}) center / 32px no-repeat, url(${this.ctlr.media.state.poster}) center / ${this.ctlr.config.settings.css.bgSafeObjectFit} no-repeat, black;`;
+    this.floatingWindow!.document.documentElement.style.cssText = `height:100%; background:url(${this.ctlr.config.media?.profile}) center / 32px no-repeat, url(${this.media.state.poster}) center / ${this.ctlr.settings.css.bgSafeObjectFit} no-repeat, black;`;
     await breath(this.floatingWindow! as Window & typeof globalThis);
     const cssTexts: string[] = [],
       whitelist = Object.keys(window.t007?._resourceCache ?? {}).concat(this.whitelist);
@@ -94,18 +93,24 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
     this.floatingWindow!.document.documentElement.className = document.documentElement.className;
     document.documentElement.getAttributeNames().forEach((attr) => this.floatingWindow!.document.documentElement.setAttribute(attr, document.documentElement.getAttribute(attr)!));
     this.signal.addEventListener("abort", observeMutation(this.floatingWindow!.document.documentElement, handleDOMMutation, { childList: true, subtree: true }), { once: true });
-    this.floatingWindow!.addEventListener("pagehide", this.handleFloatingPlayerClose);
+    this.floatingWindow!.addEventListener("resize", this.handleFloatingPlayerResize, { signal: this.signal });
+    this.floatingWindow!.addEventListener("pagehide", this.handleFloatingPlayerClose, { signal: this.signal });
     // JS: this.ctlr.setKeyEventListeners?.("add");
-    this.ctlr.media.state.pictureInPicture = true;
+    this.media.state.pictureInPicture = true;
+  }
+
+  protected handleFloatingPlayerResize(): void {
+    this.config.floatingPlayer.width = this.floatingWindow?.innerWidth ?? this.config.floatingPlayer.width;
+    this.config.floatingPlayer.height = this.floatingWindow?.innerHeight ?? this.config.floatingPlayer.height;
   }
 
   protected handleFloatingPlayerClose(): void {
     this.inFloatingPlayer = false;
     this.floatingWindow = null;
-    this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", this.ctlr.config.settings.controlPanel.progressBar);
+    this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", this.ctlr.settings.controlPanel.progressBar);
     this.ctlr.videoContainer.classList.remove("tmg-video-floating-player");
     this.ctlr.getPlug<SkeletonPlug>("skeleton")?.deactivatePseudoMode();
-    this.ctlr.media.intent.miniplayer = "auto";
-    this.ctlr.media.state.pictureInPicture = false;
+    this.media.intent.miniplayer = "auto";
+    this.media.state.pictureInPicture = false;
   }
 }

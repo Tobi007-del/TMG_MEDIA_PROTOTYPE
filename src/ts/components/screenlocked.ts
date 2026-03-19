@@ -35,7 +35,7 @@ export class ScreenLocked extends BaseComponent<ScreenLockedConfig, ComponentSta
   protected handleClick(e: MouseEvent): void {
     e.stopPropagation();
     this.plug?.delayOverlay();
-    if (this.el.classList.contains("tmg-video-control-unlock")) this.ctlr.config.settings.locked.disabled = true;
+    if (this.el.classList.contains("tmg-video-control-unlock")) this.ctlr.settings.locked.disabled = true;
     else this.el.classList.add("tmg-video-control-unlock");
   }
 }

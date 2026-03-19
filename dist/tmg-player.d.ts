@@ -194,11 +194,13 @@ export type RPrev = [
  * 6. `cord` is an alias for record and `es` for entries, avoided object pooling incase of logs
  * 7. it's all progressive: light at creation then grows during the user of desired features
  **/
+export declare const RAW: unique symbol;
 export declare const INERTIA: unique symbol;
 export declare const REJECTABLE: unique symbol;
 export declare const INDIFFABLE: unique symbol;
 export declare const TERMINATOR: unique symbol;
-export declare const RAW: unique symbol;
+export declare const VERSION: unique symbol;
+export declare const SSVERSION: unique symbol;
 export declare class ReactorEvent<T, P extends WildPaths<T> = WildPaths<T>> {
 	static readonly NONE = 0;
 	static readonly CAPTURING_PHASE = 1;
@@ -238,27 +240,25 @@ export declare class Reactor<T extends object> {
 	protected deleters?: Map<WildPaths<T>, Array<DeleterRecord<T>>>;
 	protected watchers?: Map<WildPaths<T>, Array<WatcherRecord<T>>>;
 	protected listeners?: Map<WildPaths<T>, Array<ListenerRecord<T>>>;
-	protected lineage?: WeakMap<object, {
-		parent: object;
-		key: string;
-	}[]>;
+	protected lineage?: WeakMap<object, (object | string)[]>;
 	protected queue?: Set<() => void>;
 	protected batch?: Map<Paths<T>, Payload<T>>;
-	protected isBatching: boolean;
-	protected isTracking: boolean;
 	protected proxyCache: WeakMap<object, any>;
+	protected snapshotCache?: WeakMap<object, any>;
 	protected log: (...args: any[]) => void;
-	protected _canLog: boolean;
-	config: Omit<ReactorOptions<T>, "debug" | "referenceTracking">;
+	config: Omit<ReactorOptions<T>, "debug" | "referenceTracking" | "lineageTracing" | "smartCloning">;
 	core: T;
+	protected isLogging: boolean;
+	protected isTracing: boolean;
+	protected isTracking: boolean;
+	protected isSCloning: boolean;
+	protected isBatching: boolean;
 	constructor(obj?: T, options?: ReactorOptions<T>);
 	protected proxied<O extends object>(obj: O, rejectable?: boolean, indiffable?: boolean, parent?: object, key?: string, path?: string): O;
 	protected trace(target: object, path: string, paths?: string[], visited?: WeakSet<object>): Paths<T>[];
-	protected link(target: any, parent: object, key: string, typecheck?: boolean, es?: {
-		parent: object;
-		key: string;
-	}[]): void;
+	protected link(target: any, parent: object, key: string, typecheck?: boolean, es?: (object | string)[]): void;
 	protected unlink(target: any, parent: object, key: string): void;
+	protected stamp(target: any, typecheck?: boolean): void;
 	protected mediate<P extends WildPaths<T>>(path: WildPaths<T>, payload: Payload<T, P>, type: "get", cords: GetterRecord<T>[]): PathValue<T, P>;
 	protected mediate<P extends WildPaths<T>>(path: WildPaths<T>, payload: Payload<T, P>, type: "set", cords: SetterRecord<T>[]): PathValue<T, P>;
 	protected mediate<P extends WildPaths<T>>(path: WildPaths<T>, payload: Payload<T, P>, type: "delete", cords: DeleterRecord<T>[]): PathValue<T, P>;
@@ -267,13 +267,16 @@ export declare class Reactor<T extends object> {
 	protected initBatching(): void;
 	protected flush(): void;
 	protected wave(path: Paths<T>, payload: Payload<T>): void;
-	protected fire([path, object, value]: ReturnType<typeof getTrailRecords<T>>[number], e: Event$1<T>, isCapture: boolean, cords?: ListenerRecord<T>[] | undefined): void;
+	protected fire([path, object, value]: ReturnType<typeof getTrailRecords<T>>[number], e: REvent<T>, isCapture: boolean, cords?: ListenerRecord<T>[] | undefined): void;
 	protected bind<Cb>(cord: GetterRecord<T> | SetterRecord<T> | DeleterRecord<T> | WatcherRecord<T> | ListenerRecord<T>, signal?: AbortSignal): Cb;
 	protected getContext<P extends WildPaths<T>>(path: P): Target<T, P>;
 	getDepth(p: string, d?: number): number;
 	tick(paths?: Paths<T> | Iterable<Paths<T>>): void;
 	stall(task: () => any): void;
 	nostall(task: () => any): boolean | undefined;
+	protected syncAdd<P extends WildPaths<T>>(key: "get" | "set" | "delete" | "watch", path: P, cb: any, opts: SyncOptions | undefined, onImmediate?: (immediate: boolean | "auto") => void): () => boolean | undefined;
+	protected syncDrop<P extends WildPaths<T>>(store: Map<WildPaths<T>, any[]> | undefined, path: P, cb: any): boolean | undefined;
+	protected clone(obj: any, raw: boolean, visited?: WeakMap<WeakKey, any>): any;
 	get<P extends WildPaths<T>>(path: P, cb: Getter<T, P>, opts?: SyncOptions): Reactor<T>["noget"];
 	gonce<P extends WildPaths<T>>(path: P, cb: Getter<T, P>, opts?: SyncOptions): Reactor<T>["noget"];
 	noget<P extends WildPaths<T>>(path: P, cb: Getter<T, P>): boolean | undefined;
@@ -289,13 +292,15 @@ export declare class Reactor<T extends object> {
 	on<P extends WildPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): Reactor<T>["off"];
 	once<P extends WildPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): Reactor<T>["off"];
 	off<P extends WildPaths<T>>(path: P, cb: Listener<T, P>, options?: ListenerOptions): boolean | undefined;
-	get canLog(): boolean;
-	set canLog(value: boolean);
-	get canTrackReferences(): boolean;
-	snapshot(): T;
+	snapshot(raw?: boolean, branch?: T): T;
 	cascade({ type, currentTarget: { path, value: news, oldValue: olds } }: ReactorEvent<T>, objSafe?: boolean): void;
 	reset(): void;
 	destroy(): void;
+	get canLog(): boolean;
+	set canLog(value: boolean);
+	get canTrackReferences(): boolean;
+	get canTraceLineage(): boolean;
+	get canSmartClone(): boolean;
 }
 declare function onAllMethods(owner: any, callback: (method: string, owner: any) => void): void;
 declare function bindAllMethods(owner: any): void;
@@ -325,10 +330,38 @@ declare const methods: readonly [
 	"reset",
 	"destroy"
 ];
-export type Reactive<T extends object> = T & Pick<Reactor<T>, (typeof methods)[number]> & {
+export type Method = (typeof methods)[number];
+export type Prefix<P extends ReactivePrefs | undefined> = P extends {
+	prefix?: infer X extends string;
+} ? X : "";
+export type Suffix<P extends ReactivePrefs | undefined> = P extends {
+	suffix?: infer X extends string;
+} ? X : "";
+export type Whitelist<P extends ReactivePrefs | undefined> = P extends {
+	whitelist?: infer W extends readonly Method[];
+} ? W[number] : never;
+export type ReactiveMethodMap<T extends object, P extends ReactivePrefs | undefined> = {
+	[K in Method as [
+		Prefix<P>,
+		Suffix<P>
+	] extends [
+		"",
+		""
+	] ? (P extends {
+		whitelist: readonly Method[];
+	} ? (K extends Whitelist<P> ? never : K) : K) : P extends {
+		whitelist: readonly Method[];
+	} ? (K extends Whitelist<P> ? `${Prefix<P>}${K}${Suffix<P>}` : K) : `${Prefix<P>}${K}${Suffix<P>}`]: Pick<Reactor<T>, Method>[K];
+};
+export interface ReactivePrefs {
+	prefix?: string;
+	suffix?: string;
+	whitelist?: readonly Method[];
+}
+export type Reactive<T extends object, P extends ReactivePrefs | undefined = undefined> = T & ReactiveMethodMap<T, P> & {
 	__Reactor__: Reactor<T>;
 };
-declare function reactive<T extends object>(target: T | Reactor<T>, options?: ReactorOptions<T>): Reactive<T>;
+declare function reactive<T extends object, const P extends ReactivePrefs | undefined = undefined>(target: T | Reactor<T>, options?: ReactorOptions<T>, prefs?: P): Reactive<T, P>;
 declare function inert<T extends object>(target: T): Inert<T>;
 declare function live<T extends object>(target: T): Live<T>;
 declare function isInert<T extends object>(target: T): target is Inert<T>;
@@ -338,6 +371,8 @@ declare function isIntent<T extends object>(target: T): target is Intent<T>;
 declare function volatile<T extends object>(target: T): Volatile<T>;
 declare function stable<T extends object>(target: T): Stable<T>;
 declare function isVolatile<T extends object>(target: T): target is Volatile<T>;
+declare function getVersion<T extends object>(target: T): number;
+declare function getSnapshotVersion<T extends object>(target: T): number;
 declare function nuke(target: any): void;
 // ===========================================================================
 // CORE MARKERS & STATE WRAPPERS
@@ -380,7 +415,8 @@ export interface UpdatePayload<T, P extends WildPaths<T> = WildPaths<T>> extends
 	type: "update";
 	target: Target<T, ChildPaths<T, P>>; // Target is strictly one of the child paths!
 }
-type Event$1<T, P extends WildPaths<T> = WildPaths<T>> = (Omit<ReactorEvent<T, P>, OverrideEvProp> & DirectPayload<T, P> & OverrideEvPart<DirectPayload<T, P>>) | (Omit<ReactorEvent<T, P>, OverrideEvProp> & UpdatePayload<T, P> & OverrideEvPart<UpdatePayload<T, P>>);
+// Discriminated Event Type (Creates the IDE magic)
+export type REvent<T, P extends WildPaths<T> = WildPaths<T>> = (Omit<ReactorEvent<T, P>, OverrideEvProp> & DirectPayload<T, P> & OverrideEvPart<DirectPayload<T, P>>) | (Omit<ReactorEvent<T, P>, OverrideEvProp> & UpdatePayload<T, P> & OverrideEvPart<UpdatePayload<T, P>>);
 export type OverrideEvProp = "type" | "target" | "value" | "oldValue" | "path";
 export interface OverrideEvPart<PL extends {
 	target: {
@@ -400,7 +436,7 @@ export type Getter<T, P extends WildPaths<T> = WildPaths<T>> = (value: PathValue
 export type Setter<T, P extends WildPaths<T> = WildPaths<T>> = (value: PathValue<T, P>, terminated: boolean, payload: Payload<T, P>) => PathValue<T, P> | typeof TERMINATOR | undefined;
 export type Deleter<T, P extends WildPaths<T> = WildPaths<T>> = (terminated: boolean, payload: Payload<T, P>) => typeof TERMINATOR | undefined;
 export type Watcher<T, P extends WildPaths<T> = WildPaths<T>> = (value: PathValue<T, P>, payload: Payload<T, P>) => void;
-export type Listener<T, P extends WildPaths<T> = WildPaths<T>> = (event: Event$1<T, P>) => void;
+export type Listener<T, P extends WildPaths<T> = WildPaths<T>> = (event: REvent<T, P>) => void;
 // ===========================================================================
 // ENGINE RECORDS (Internal Storage)
 // ===========================================================================
@@ -451,15 +487,18 @@ export interface ReactorOptions<T extends object, P extends Paths<T> = Paths<T>>
 	delete?: (object: PathBranchValue<T, P>, key: PathKey<T, P>, oldValue: PathValue<T, P>, receiver: Reactive<T>, path: Paths<T> | Paths<T>[]) => typeof TERMINATOR | undefined;
 	debug?: boolean;
 	crossRealms?: boolean; // needed for object type detection if using across realms e.g, iframes or other environments
+	smartCloning?: boolean; // one-time set for structural sharing, needs `.referenceTracking: true`
 	eventBubbling?: boolean; // default true, set to false to prevent bubbling (not recommended if you want power)
-	batchingFunction?: (cb: () => void) => void; // for listener's notifications, e.g: `queueMicrotask`, `unstable_batchedUpdates` from ReactDOM
-	referenceTracking?: boolean; // one-time set activates lineage tracing
+	lineageTracing?: boolean; // one-time set for tree walking to search for refs on property access, needs `.referenceTracking = true`
+	batchingFunction?: (cb: () => void) => void; // one-time set for listener's notifications, e.g: `queueMicrotask`, `unstable_batchedUpdates` from ReactDOM
+	referenceTracking?: boolean; // one-time set to activate
 } // debating making use of the Reflect API opt-in
 export declare abstract class Controllable<Config = any, State = any> {
 	protected readonly ac: AbortController;
 	protected readonly signal: AbortSignal;
 	protected readonly ctlr: Controller;
 	protected readonly guard: Controller["guard"];
+	protected readonly media: Controller["media"];
 	config: Config;
 	state: State extends object ? Reactive<State> : State;
 	constructor(ctlr: Controller, config: Config, state?: State);
@@ -535,22 +574,6 @@ declare class PlaysInlinePlug extends BasePlug<PlaysInline> {
 	wire(): void;
 	protected forwardPlaysInline(value: boolean): void;
 }
-export type UIOption<T> = T | {
-	value: T;
-	display: string;
-};
-export interface UISettings<T> {
-	value: T;
-	options: UIOption<T>[];
-	[key: string]: any;
-}
-export interface UIConfig<T> {
-	values: T[];
-	displays: string[];
-}
-export type UIObject<T> = {
-	[K in keyof T as T[K] extends object ? K : never]: T[K] extends UISettings<infer U> ? UIConfig<U> : UIObject<T[K]>;
-};
 declare const FN_KEY = "tmg_fn_registry";
 declare const LUID_KEY = "tmg_local_uid";
 declare const whiteListedKeys: readonly [
@@ -691,30 +714,6 @@ export interface OptRange {
 	skip: number;
 }
 // NOTE: Use deep partial util where necessary after imports
-export interface Captions {
-	disabled: boolean;
-	allowVideoOverride: boolean;
-	font: {
-		family: UISettings<string>;
-		size: OptRange & {
-			options: UIOption<number>[];
-		};
-		color: UISettings<string>;
-		opacity: UISettings<number>;
-		weight: UISettings<string | number>;
-		variant: UISettings<string>;
-	};
-	window: {
-		color: UISettings<string>;
-		opacity: UISettings<number>;
-	};
-	background: {
-		color: UISettings<string>;
-		opacity: UISettings<number>;
-	};
-	characterEdgeStyle: UISettings<"none" | "raised" | "depressed" | "outline" | "drop-shadow">;
-	textAlignment: UISettings<"left" | "center" | "right">;
-}
 export interface Settings {
 	noOverride: keyof Settings | boolean;
 	auto: Auto;
@@ -784,7 +783,7 @@ declare class PlaylistPlug extends BasePlug<Playlist> {
 	static readonly plugName: string;
 	currentIndex: number;
 	wire(): void;
-	protected handlePlaylistChange({ root }: Event$1<VideoBuild, "playlist">): void;
+	protected handlePlaylistChange({ root }: REvent<VideoBuild, "playlist">): void;
 	movePlaylistTo(index: number, shouldPlay?: boolean): void;
 	protected applyItem(item: PlaylistItemBuild, reset?: boolean): void;
 	previousVideo(): void;
@@ -804,17 +803,17 @@ declare class AutoPlug extends BasePlug<Auto> {
 	protected canAutoMovePlaylist: boolean;
 	wire(): void;
 	protected forwardAutoPlay(value?: boolean | AptAutoplayOption): void;
-	protected handleTimeUpdate({ target }: Event$1<CtlrMedia, "state.currentTime">): void;
+	protected handleTimeUpdate({ target }: REvent<CtlrMedia, "state.currentTime">): void;
 	protected handleIntersectionChange(): void;
-	protected handlePreviewUsePoster({ target: { value, object } }: Event$1<VideoBuild, "settings.auto.next.preview.usePoster">): void;
-	protected handlePreviewTease({ target: { value, object } }: Event$1<VideoBuild, "settings.auto.next.preview.tease">): void;
-	protected handlePreviewTime({ target: { value, object } }: Event$1<VideoBuild, "settings.auto.next.preview.time">): void;
+	protected handlePreviewUsePoster({ target: { value, object } }: REvent<VideoBuild, "settings.auto.next.preview.usePoster">): void;
+	protected handlePreviewTease({ target: { value, object } }: REvent<VideoBuild, "settings.auto.next.preview.tease">): void;
+	protected handlePreviewTime({ target: { value, object } }: REvent<VideoBuild, "settings.auto.next.preview.time">): void;
 	protected mediaAptAutoplay(auto?: string | boolean, bool?: boolean, p?: string): void;
 	protected autonextVideo: () => void;
 }
 export type Css = Record<string, string | number> & {
-	captionsCharacterEdgeStyle: "none" | "raised" | "depressed" | "uniform" | "dropshadow";
-	captionsTextAlignment: "start" | "center" | "end";
+	captionsCharacterEdgeStyle: "none" | "raised" | "depressed" | "outline" | "drop-shadow";
+	captionsTextAlignment: "left" | "center" | "right";
 	syncWithMedia: Record<keyof Css, boolean>;
 };
 declare class CSSPlug extends BasePlug<Css> {
@@ -823,7 +822,7 @@ declare class CSSPlug extends BasePlug<Css> {
 	classKeys: string[];
 	CSSCache: Record<string, string | number>;
 	wire(): void;
-	protected handleLoadedMetadataStatus({ value }: Event$1<CtlrMedia, "status.loadedMetadata">): Promise<void>;
+	protected handleLoadedMetadataStatus({ value }: REvent<CtlrMedia, "status.loadedMetadata">): Promise<void>;
 	protected getCSSValue(key: string): string;
 	protected getClassValue(key: string): string;
 	protected apply(key: string, value: any): void;
@@ -838,8 +837,8 @@ declare class SkeletonPlug extends BasePlug<Skeleton> {
 	mount(): void;
 	wire(): void;
 	protected injectInterface(): void;
-	protected handlePausedState({ value }: Event$1<CtlrMedia, "state.paused">): void;
-	protected handleLoadedMetadataStatus({ value }: Event$1<CtlrMedia, "status.loadedMetadata">): void;
+	protected handlePausedState({ value }: REvent<CtlrMedia, "state.paused">): void;
+	protected handleLoadedMetadataStatus({ value }: REvent<CtlrMedia, "status.loadedMetadata">): void;
 	activatePseudoMode(): void;
 	deactivatePseudoMode(destroy?: boolean): void;
 	protected onDestroy(): void;
@@ -875,11 +874,251 @@ declare abstract class BaseComponent<Config = any, State extends ComponentState 
 	protected getIcon(name: string): string;
 	protected setBtnARIA(doubleKeyAction?: string): void;
 }
+export type BufferConfig = undefined;
+declare class Buffer$1 extends BaseComponent<BufferConfig, ComponentState, HTMLDivElement> {
+	static readonly componentName = "buffer";
+	create(): HTMLDivElement;
+	mount(): void;
+}
+export type CaptionsViewConfig = undefined;
+export type CueLike = (TextTrackCue | {
+	text: string;
+}) & DeepPartial<{
+	id: string;
+	text: string;
+	align: string;
+	region: {
+		width: number;
+		lines: number;
+		viewportAnchorX: number;
+		viewportAnchorY: number;
+		scroll: string;
+	};
+	position: number | "auto";
+	positionAlign: string;
+	line: number | string;
+	lineAlign: string;
+	snapToLines: boolean;
+	size: number;
+	vertical: "" | "lr" | "rl";
+}>;
+export type KaraokeNode = {
+	el: HTMLElement;
+	time: number;
+};
+declare class CaptionsView extends BaseComponent<CaptionsViewConfig, ComponentState, HTMLDivElement> {
+	static readonly componentName: string;
+	static readonly isControl: boolean;
+	protected isMain: boolean;
+	protected lastCue: CueLike | null;
+	protected karaokeNodes: KaraokeNode[] | null;
+	protected lastPreview: string;
+	protected previewTimeoutId: number;
+	protected charW: number;
+	protected lineHPx: number;
+	protected lastPosX: number;
+	protected lastPosY: number;
+	protected lastPtrX: number;
+	protected lastPtrY: number;
+	create(): HTMLDivElement;
+	mount(): void;
+	wire(): void;
+	syncSize(): void;
+	preview(preview?: CueLike | string, flush?: boolean): void;
+	render(cue: CueLike | null): void;
+	syncKaraoke(): void;
+	protected handleDragStart(e: PointerEvent): void;
+	protected handleDragging(e: PointerEvent): void;
+	protected handleDragEnd(): void;
+}
+export type DurationConfig = undefined;
+declare class Duration extends BaseComponent<DurationConfig, ComponentState, HTMLButtonElement> {
+	static readonly componentName: string;
+	static readonly isControl: boolean;
+	protected plug?: TimePlug;
+	create(): HTMLButtonElement;
+	wire(): void;
+	protected updateUI(): void;
+	protected updateARIA(): void;
+}
+export type PlayPauseConfig = undefined;
+declare class PlayPause extends BaseComponent<PlayPauseConfig, ComponentState, HTMLButtonElement> {
+	static readonly componentName: string;
+	static readonly isControl: boolean;
+	create(): HTMLButtonElement;
+	wire(): void;
+	protected updateUI(): void;
+	protected updateARIA(): void;
+	protected togglePlay(): void;
+}
+export interface RangeConfig extends AptRange {
+	value: number;
+	previewValue: number;
+	label: string;
+	scrub: {
+		sync: boolean;
+		relative: boolean;
+		cancel: {
+			delta: number;
+			timeout: number;
+		};
+	};
+	wheel: {
+		disabled: boolean;
+		axisRatio: number;
+	};
+}
+export interface RangeState extends ComponentState {
+	scrubbing: boolean;
+	shouldCancelScrub: boolean;
+	stallCancelScrub: boolean;
+}
+declare class RangeSlider<Config extends RangeConfig = RangeConfig, State extends RangeState = RangeState> extends BaseComponent<Reactive<Config>, State> {
+	config: Reactive<Config> & Reactive<RangeConfig>;
+	static readonly componentName: string;
+	container: HTMLElement;
+	barsWrapper: HTMLElement;
+	baseBar: HTMLElement;
+	valueBar: HTMLElement;
+	thumbIndicator: HTMLElement;
+	isVertical: boolean;
+	isRTL: boolean;
+	protected lastPtrPos: number;
+	protected lastThumbPos: number;
+	protected cancelScrubTimeoutId: number | null;
+	protected rect: DOMRect;
+	constructor(ctlr: Controller, config?: Partial<Config>);
+	create(): HTMLElement;
+	wire(): void;
+	protected seek(value: number): void;
+	protected handleValueChange({ target }: REvent<RangeConfig, "value">): void;
+	protected handlePointerDown(e: PointerEvent): void;
+	protected stopScrubbing(): void;
+	protected stopPreview(): void;
+	protected cancelScrubbing(): void;
+	protected allowScrubbing(reset?: boolean): void;
+	protected handleInput(e: MouseEvent | PointerEvent): void;
+	protected onInput(e: MouseEvent | PointerEvent, pos: number): void;
+	protected handleWheel(e: WheelEvent): void;
+	protected handleKeyDown: (e: KeyboardEvent) => void;
+	protected updateThumbPosition(pos: number): void;
+	protected updateValueBar(pos: number): void;
+	protected getValueAsPos(value?: number): number;
+	protected getPosAsValue(pos: number): number;
+	protected getPos(e: MouseEvent | PointerEvent): number;
+}
+export type ScreenLockedConfig = undefined;
+declare class ScreenLocked extends BaseComponent<ScreenLockedConfig, ComponentState, HTMLButtonElement> {
+	static readonly componentName: string;
+	protected plug?: LockedPlug;
+	create(): HTMLButtonElement;
+	wire(): void;
+	protected updateUI(): void;
+	protected handleClick(e: MouseEvent): void;
+}
+export type TimeConfig = undefined;
+declare class Time extends BaseComponent<TimeConfig, ComponentState, HTMLButtonElement> {
+	static readonly componentName: string;
+	static readonly isControl: boolean;
+	protected plug?: TimePlug;
+	create(): HTMLButtonElement;
+	wire(): void;
+	protected updateUI(): void;
+	protected updateARIA(): void;
+}
+export type TimeAndDurationConfig = undefined;
+declare class TimeAndDuration extends BaseComponent<TimeAndDurationConfig, ComponentState, HTMLButtonElement> {
+	static readonly componentName: string;
+	static readonly isControl: boolean;
+	protected plug?: TimePlug;
+	protected time: HTMLElement;
+	protected bridge: HTMLElement;
+	protected duration: HTMLElement;
+	create(): HTMLButtonElement;
+	wire(): void;
+	protected updateUI(): void;
+	protected updateTime(): void;
+	protected updateDuration(): void;
+	protected updateARIA(): void;
+}
+export type PreviewConfig = boolean | {
+	address?: string;
+	cols?: number;
+	rows?: number;
+	spf?: number;
+	type?: "sprite" | "image" | "canvas" | "none";
+};
+export interface TimelineConfig extends RangeConfig {
+	previews: PreviewConfig;
+}
+declare class Timeline extends RangeSlider<TimelineConfig> {
+	static readonly componentName: string;
+	static readonly isControl: boolean;
+	timeline: HTMLElement;
+	bufferedBar: HTMLElement;
+	previewBar: HTMLElement;
+	previewContainer: HTMLElement;
+	previewImg: HTMLElement;
+	previewCanvas: HTMLCanvasElement;
+	thumbnailImg: HTMLElement;
+	thumbnailCanvas: HTMLCanvasElement;
+	previewContext: CanvasRenderingContext2D | null;
+	thumbnailContext: CanvasRenderingContext2D | null;
+	protected plug?: TimePlug;
+	protected wasPaused: boolean;
+	protected scrubbingId: number;
+	constructor(ctlr: Controller, options?: Partial<TimelineConfig>);
+	create(): HTMLElement;
+	mount(): void;
+	wire(): void;
+	protected seek(value: number): void;
+	protected handlePausedState({ value }: REvent<CtlrMedia, "state.paused">): void;
+	protected handleCurrentTimeState({ target }: REvent<CtlrMedia, "state.currentTime">): void;
+	protected handleLoadedMetadataStatus(): void;
+	protected handleBufferedStatus(): void;
+	protected handleDurationStatus({ value }: REvent<CtlrMedia, "status.duration">): void;
+	protected handleErrorStatus({ value }: REvent<CtlrMedia, "status.error">): void;
+	protected handleTimeUpdateLoop(optimize?: boolean): void;
+	protected handleScrubbingChange({ value }: REvent<RangeState, "scrubbing">): void;
+	protected handlePreviewChange({ target }: REvent<TimelineConfig, "previews">): void;
+	stopScrubbing(): void;
+	protected stopPreview(): void;
+	protected onInput(e: MouseEvent | PointerEvent, pos: number): void;
+	protected updatePreviewTime(): void;
+	protected syncCanvasPreviews(): void;
+	protected syncThumbnailSize(): void;
+}
+export type DraggableModuleConfig = ("" | "big" | "wrapper")[] | boolean;
+declare class DraggableModule extends BaseModule<DraggableModuleConfig> {
+	static readonly moduleName: string;
+	protected plug: ControlPanelPlug;
+	protected draggingEl: HTMLElement | null;
+	protected replaced: {
+		target: HTMLElement;
+		child: HTMLElement;
+	} | null;
+	protected safeTimeoutId: number;
+	wire(): void;
+	setDragEventListeners(action: "add" | "remove"): void;
+	protected getUIZoneWCoord(target: HTMLElement, zoneW?: boolean): string | {
+		coord: string;
+		zoneW: ZoneW;
+	};
+	protected syncControlPanelToUI(): void;
+	protected noDropOff(t: HTMLElement, drop?: HTMLElement | null): boolean;
+	protected handleDragStart(e: DragEvent): void;
+	protected handleDrag(): void;
+	protected handleDragEnd(e: DragEvent): void;
+	protected handleDragEnter(e: DragEvent): void;
+	protected handleDragOver(e: DragEvent): void;
+	protected handleDrop(e: DragEvent): void;
+	protected handleDragLeave(e: DragEvent): void;
+}
 export type Control = (typeof controls)[number];
 export type SControl = Control | "spacer";
 export type BigControl = (typeof bigControls)[number];
 export type ControlPanelBottomTuple = Record<1 | 2 | 3, SControl[]>;
-export interface ControlPanel {
+export type ControlPanel = {
 	profile: string | boolean;
 	title: string | boolean;
 	artist: string | boolean;
@@ -898,78 +1137,62 @@ export interface ControlPanel {
 		};
 	};
 	progressBar: boolean;
-	draggable: ("" | "big" | "wrapper")[] | boolean;
-}
+	draggable: DraggableModuleConfig;
+};
 declare const rowsArr: readonly [
 	1,
 	2,
 	3
 ];
+export type Row = (typeof rowsArr)[number];
 export type ZoneW = {
 	cover?: HTMLElement;
 	zone: HTMLElement;
 };
-export type Row = (typeof rowsArr)[number];
+export type ZoneSlot = ZoneW | HTMLElement;
+export type ControlPanelZoneWs = {
+	top: Record<"left" | "center" | "right", ZoneW>;
+	center: ZoneW;
+	bottom: Record<Row, Record<"left" | "center" | "right", ZoneW>>;
+};
+export type ControlPanelCurrentZoneWs = {
+	top: Record<"left" | "center" | "right", ZoneSlot>;
+	center: ZoneSlot;
+	bottom: Record<Row, Record<"left" | "center" | "right", ZoneSlot>>;
+};
 declare class ControlPanelPlug extends BasePlug<ControlPanel> {
 	static readonly plugName: string;
 	static readonly isCore: boolean;
-	controls: Map<string, {
-		element: HTMLElement;
-		instance: BaseComponent<any, any> | null;
-	}>;
-	getControl<T extends BaseComponent = BaseComponent>(name: string): T | undefined;
-	getControlEl<T extends HTMLElement = HTMLElement>(name: string): T | undefined;
+	controls: Map<string, BaseComponent<any, any, HTMLElement>>;
+	draggable: DraggableModule;
+	zoneWs: ControlPanelZoneWs;
+	cZoneWs: ControlPanelCurrentZoneWs;
+	zonesArr: HTMLElement[];
 	protected topW: HTMLElement;
 	protected bottomW: HTMLElement;
-	protected zoneWs: {
-		top: Record<"left" | "center" | "right", ZoneW>;
-		center: ZoneW;
-		bottom: Record<Row, Record<"left" | "center" | "right", ZoneW>>;
-	};
-	protected cZoneWs: {
-		top: Record<"left" | "center" | "right", ZoneW>;
-		center: ZoneW;
-		bottom: Record<Row, Record<"left" | "center" | "right", ZoneW>>;
-	};
-	protected zonesArr: HTMLElement[];
 	protected scrollAssistEls: HTMLElement[];
-	protected dragging: HTMLElement | null;
-	protected dragReplaced: {
-		target: HTMLElement;
-		child: HTMLElement;
-	} | null;
-	protected dragSafeTimeoutId: number;
 	protected clups: (() => void)[];
+	getControl<T extends BaseComponent = BaseComponent>(name: string): T | undefined;
+	getControlEl<T extends HTMLElement = HTMLElement>(name: string): T | undefined;
+	constructor(ctlr: Controller, config: ControlPanel);
 	mount(): void;
 	wire(): void;
-	protected handleMetaLayout({ target: { key, value } }: Event$1<VideoBuild, "settings.controlPanel.title" | "settings.controlPanel.artist" | "settings.controlPanel.profile">): void;
-	protected handleTopLayout({ value }: Event$1<VideoBuild, "settings.controlPanel.top">): void;
-	protected handleCenterLayout({ value }: Event$1<VideoBuild, "settings.controlPanel.center">): void;
-	protected handleBottomLayout({ value }: Event$1<VideoBuild, "settings.controlPanel.bottom">): void;
-	protected handleTimelineSeek({ currentTarget: { value } }: Event$1<VideoBuild, "settings.controlPanel.timeline.seek">): void;
+	protected handleMetaLayout({ target: { key, value } }: REvent<VideoBuild, "settings.controlPanel.title" | "settings.controlPanel.artist" | "settings.controlPanel.profile">): void;
+	protected handleTopLayout({ value }: REvent<VideoBuild, "settings.controlPanel.top">): void;
+	protected handleCenterLayout({ value }: REvent<VideoBuild, "settings.controlPanel.center">): void;
+	protected handleBottomLayout({ value }: REvent<VideoBuild, "settings.controlPanel.bottom">): void;
+	protected handleTimelineSeek({ currentTarget: { value } }: REvent<VideoBuild, "settings.controlPanel.timeline.seek">): void;
 	protected buildWSkel(side: string): ZoneW;
 	protected getSplitControls(row: SControl[]): {
 		left: SControl[];
 		center: SControl[];
 		right: SControl[];
 	};
-	protected fillZone(zoneW: ZoneW, ids: SControl[] | BigControl[]): void;
-	protected setDragEventListeners(action: "add" | "remove"): void;
-	protected getUIZoneWCoord(target: HTMLElement, zoneW?: boolean): string | {
-		coord: string;
-		zoneW: ZoneW;
-	};
-	protected syncControlPanelToUI(): void;
-	protected noDropOff(t: HTMLElement, drop?: HTMLElement | null): boolean;
-	protected handleDragStart(e: DragEvent): void;
-	protected handleDrag(): void;
-	protected handleDragEnd(e: DragEvent): void;
-	protected handleDragEnter(e: DragEvent): void;
-	protected handleDragOver(e: DragEvent): void;
-	protected handleDrop(e: DragEvent): void;
-	protected handleDragLeave(e: DragEvent): void;
+	protected getZoneW(ids: SControl[], fallback: ZoneW): ZoneSlot;
+	protected fillSWrapper(wrapper: HTMLElement, zoneWs: ZoneSlot[]): void;
+	protected fillZone(zoneW: ZoneSlot, ids: SControl[] | BigControl[]): void;
 	protected initScrollAndResize(): void;
-	protected handleControlsView(w: HTMLElement): void;
+	handleControlsView(w: HTMLElement): void;
 	protected handleDirtyScroll(e: globalThis.Event): void;
 	protected onDestroy(): void;
 }
@@ -986,8 +1209,8 @@ declare class OverlayPlug extends BasePlug<Overlay, OverlayState> {
 	overlayDelayId: number;
 	constructor(ctlr: Controller, config: Overlay);
 	wire(): void;
-	protected handleCurtain({ value }: Event$1<VideoBuild, "settings.overlay.curtain">): void;
-	protected handleBehavior({ value }: Event$1<VideoBuild, "settings.overlay.behavior">): void;
+	protected handleCurtain({ value }: REvent<VideoBuild, "settings.overlay.curtain">): void;
+	protected handleBehavior({ value }: REvent<VideoBuild, "settings.overlay.behavior">): void;
 	shouldShow(): boolean;
 	shouldRemove(manner?: "force"): boolean;
 	show(): void;
@@ -1025,8 +1248,8 @@ declare class MediaPlug extends BasePlug<Media> {
 	protected forwardTitle(value: string): void;
 	protected forwardArtist(value: string): void;
 	protected forwardProfile(value: string): void;
-	protected handleMediaLink({ target: { key, value } }: Event$1<VideoBuild, "media.links.title" | "media.links.artist" | "media.links.profile">): void;
-	protected handleArtwork({ currentTarget: { value } }: Event$1<VideoBuild, "media.artwork">): void;
+	protected handleMediaLink({ target: { key, value } }: REvent<VideoBuild, "media.links.title" | "media.links.artist" | "media.links.profile">): void;
+	protected handleArtwork({ currentTarget: { value } }: REvent<VideoBuild, "media.artwork">): void;
 	protected handleMedia(): void;
 	syncSession(): void;
 	autoGenerate(): Promise<void>;
@@ -1039,10 +1262,10 @@ export interface LightState {
 declare class LightStatePlug extends BasePlug<LightState> {
 	static readonly plugName: string;
 	wire(): void;
-	protected handleDisabled({ value, target }: Event$1<VideoBuild, "lightState.disabled">): void;
+	protected handleDisabled({ value, target }: REvent<VideoBuild, "lightState.disabled">): void;
 	protected handleControls(): void;
-	protected handleUsePoster({ target: { value, object }, root }: Event$1<VideoBuild, "lightState.preview.usePoster">): void;
-	protected handleTime({ target: { object }, root }: Event$1<VideoBuild, "lightState.preview.time">): void;
+	protected handleUsePoster({ target: { value, object }, root }: REvent<VideoBuild, "lightState.preview.usePoster">): void;
+	protected handleTime({ target: { object }, root }: REvent<VideoBuild, "lightState.preview.time">): void;
 	protected add(): void;
 	protected remove(): void;
 	protected handleLightStateClick({ target }: MouseEvent): void;
@@ -1147,9 +1370,7 @@ declare class GeneralModule extends BaseModule<GeneralConfig> {
 	activateSkipPersist(pos: "left" | "right"): void;
 	deactivateSkipPersist(): void;
 }
-export type Gesture = {
-	click: string;
-	dblClick: string;
+export type Gesture = GeneralConfig & {
 	wheel: WheelConfig;
 	touch: TouchConfig;
 };
@@ -1174,7 +1395,6 @@ export interface FastPlay {
 	rewind: boolean;
 }
 export interface FastPlayState {
-	speedValue: number;
 	isRewinding: boolean;
 }
 declare class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
@@ -1184,7 +1404,7 @@ declare class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
 	protected lastPlaybackRate: number;
 	protected rewindPlaybackRate: number;
 	protected speedIntervalId: number | null;
-	protected speedPointerCheck: boolean;
+	protected speedPtrCheck: boolean;
 	protected speedDirection: "forwards" | "backwards";
 	protected speedTimeoutId: number | null;
 	protected playTriggerCounter: number;
@@ -1196,7 +1416,7 @@ declare class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
 	protected rewindReset(): void;
 	slowDown(): void;
 	protected handleSpeedPointerDown(e: PointerEvent): void;
-	protected handleSpeedPointerMove(e: Event): void;
+	protected handleSpeedPointerMove(e: globalThis.Event): void;
 	protected handleSpeedPointerUp(): void;
 	protected handleSpeedPointerOut(): void;
 }
@@ -1216,10 +1436,10 @@ declare class VolumePlug extends BasePlug<Volume> {
 	wire(): void;
 	protected forwardVolume(value: number): void;
 	protected forwardMuted(value: boolean): void;
-	protected handleVolumeIntent(e: Event$1<CtlrMedia, "intent.volume">): void;
-	protected handleMutedIntent(e: Event$1<CtlrMedia, "intent.muted">): void;
-	protected handleMin({ target }: Event$1<VideoBuild, "settings.volume.min">): void;
-	protected handleMax({ target }: Event$1<VideoBuild, "settings.volume.max">): void;
+	protected handleVolumeIntent(e: REvent<CtlrMedia, "intent.volume">): void;
+	protected handleMutedIntent(e: REvent<CtlrMedia, "intent.muted">): void;
+	protected handleMin({ target }: REvent<VideoBuild, "settings.volume.min">): void;
+	protected handleMax({ target }: REvent<VideoBuild, "settings.volume.max">): void;
 	protected handleVolumeState(volume: number): void;
 	protected handleMutedState(muted: boolean): void;
 	protected setupAudio(): void;
@@ -1241,10 +1461,10 @@ declare class BrightnessPlug extends BasePlug<Brightness> {
 	wire(): void;
 	protected forwardBrightness(value: number): void;
 	protected forwardDark(value: boolean): void;
-	protected handleBrightnessIntent(e: Event$1<CtlrMedia, "intent.brightness">): void;
-	protected handleDarkIntent(e: Event$1<CtlrMedia, "intent.dark">): void;
-	protected handleMin({ target }: Event$1<VideoBuild, "settings.brightness.min">): void;
-	protected handleMax({ target }: Event$1<VideoBuild, "settings.brightness.max">): void;
+	protected handleBrightnessIntent(e: REvent<CtlrMedia, "intent.brightness">): void;
+	protected handleDarkIntent(e: REvent<CtlrMedia, "intent.dark">): void;
+	protected handleMin({ target }: REvent<VideoBuild, "settings.brightness.min">): void;
+	protected handleMax({ target }: REvent<VideoBuild, "settings.brightness.max">): void;
 	protected handleBrightnessState(value: number): void;
 	protected handleDarkState(dark: boolean): void;
 	toggleDark(option?: "auto"): void;
@@ -1257,171 +1477,87 @@ declare class PlaybackRatePlug extends BasePlug<PlaybackRate> {
 	static readonly plugName: string;
 	wire(): void;
 	protected forwardRate(value?: number): void;
-	protected handleMinChange({ target }: Event$1<VideoBuild, "settings.playbackRate.min">): void;
-	protected handleMaxChange({ target }: Event$1<VideoBuild, "settings.playbackRate.max">): void;
+	protected handleMinChange({ value: min }: REvent<VideoBuild, "settings.playbackRate.min">): void;
+	protected handleMaxChange({ value: max }: REvent<VideoBuild, "settings.playbackRate.max">): void;
 	rotateRate(dir?: "forwards" | "backwards"): void;
 	changeRate(value: number): void;
 }
-declare class Buffer$1 extends BaseComponent {
-	static componentName: string;
-	create(): HTMLElement;
-}
-export type DurationConfig = undefined;
-declare class Duration extends BaseComponent<DurationConfig, ComponentState, HTMLButtonElement> {
-	static readonly componentName: string;
-	static readonly isControl: boolean;
-	protected plug?: TimePlug;
-	create(): HTMLButtonElement;
-	wire(): void;
-	protected updateUI(): void;
-	protected updateARIA(): void;
-}
-export type PlayPauseConfig = undefined;
-declare class PlayPause extends BaseComponent<PlayPauseConfig, ComponentState, HTMLButtonElement> {
-	static readonly componentName: string;
-	static readonly isControl: boolean;
-	create(): HTMLButtonElement;
-	wire(): void;
-	protected updateUI(): void;
-	protected updateARIA(): void;
-	protected togglePlay(): void;
-}
-export interface RangeConfig extends AptRange {
-	value: number;
-	previewValue: number;
-	label: string;
-	scrub: {
-		sync: boolean;
-		relative: boolean;
-		cancel: {
-			delta: number;
-			timeout: number;
-		};
-	};
-	wheel: {
-		disabled: boolean;
-		axisRatio: number;
-	};
-}
-export interface RangeState extends ComponentState {
-	scrubbing: boolean;
-	shouldCancelScrub: boolean;
-	stallCancelScrub: boolean;
-}
-declare class RangeSlider<Config extends RangeConfig = RangeConfig, State extends RangeState = RangeState> extends BaseComponent<Reactive<Config>, State> {
-	config: Reactive<Config> & Reactive<RangeConfig>;
-	static readonly componentName: string;
-	protected container: HTMLElement;
-	protected barsWrapper: HTMLElement;
-	protected baseBar: HTMLElement;
-	protected valueBar: HTMLElement;
-	protected thumbIndicator: HTMLElement;
-	protected lastPointerP: number;
-	protected lastThumbPosition: number;
-	protected cancelScrubTimeoutId: number | null;
-	protected rect: DOMRect;
-	protected isVertical: boolean;
-	protected isRTL: boolean;
-	constructor(ctlr: Controller, options?: Partial<Config>);
-	create(): HTMLElement;
-	wire(): void;
-	protected seek(value: number): void;
-	protected handleValueChange({ target }: Event$1<RangeConfig, "value">): void;
-	protected handlePointerDown(e: PointerEvent): void;
-	protected stopScrubbing(): void;
-	protected stopPreview(): void;
-	protected cancelScrubbing(): void;
-	protected allowScrubbing(reset?: boolean): void;
-	protected handleInput(e: MouseEvent | PointerEvent): void;
-	protected onInput(e: MouseEvent | PointerEvent, pos: number): void;
-	protected handleWheel(e: WheelEvent): void;
-	protected handleKeyDown: (e: KeyboardEvent) => void;
-	protected updateThumbPosition(pos: number): void;
-	protected updateValueBar(pos: number): void;
-	protected getValueAsPos(value?: number): number;
-	protected getPosAsValue(pos: number): number;
-	protected getPos(e: MouseEvent | PointerEvent): number;
-}
-export type ScreenLockedConfig = undefined;
-declare class ScreenLocked extends BaseComponent<ScreenLockedConfig, ComponentState, HTMLButtonElement> {
-	static readonly componentName: string;
-	protected plug?: LockedPlug;
-	create(): HTMLButtonElement;
-	wire(): void;
-	protected updateUI(): void;
-	protected handleClick(e: MouseEvent): void;
-}
-export type TimeConfig = undefined;
-declare class Time extends BaseComponent<TimeConfig, ComponentState, HTMLButtonElement> {
-	static readonly componentName: string;
-	static readonly isControl: boolean;
-	protected plug?: TimePlug;
-	create(): HTMLButtonElement;
-	wire(): void;
-	protected updateUI(): void;
-	protected updateARIA(): void;
-}
-export type TimeAndDurationConfig = undefined;
-declare class TimeAndDuration extends BaseComponent<TimeAndDurationConfig, ComponentState, HTMLButtonElement> {
-	static readonly componentName: string;
-	static readonly isControl: boolean;
-	protected plug?: TimePlug;
-	protected time: HTMLElement;
-	protected bridge: HTMLElement;
-	protected duration: HTMLElement;
-	create(): HTMLButtonElement;
-	wire(): void;
-	protected updateUI(): void;
-	protected updateTime(): void;
-	protected updateDuration(): void;
-	protected updateARIA(): void;
-}
-export type PreviewConfig = boolean | {
-	address?: string;
-	cols?: number;
-	rows?: number;
-	spf?: number;
-	type?: "sprite" | "image" | "canvas" | "none";
+export type UIOption<T> = T | {
+	value: T;
+	display: string;
 };
-export interface TimelineConfig extends RangeConfig {
-	previews: PreviewConfig;
+export interface UISettings<T> {
+	value: T;
+	options: UIOption<T>[];
+	[key: string]: any;
 }
-declare class Timeline extends RangeSlider<TimelineConfig> {
-	static readonly componentName: string;
-	static readonly isControl: boolean;
-	protected plug?: TimePlug;
-	protected timeline: HTMLElement;
-	protected previewContainer: HTMLElement;
-	protected previewImg: HTMLElement;
-	protected previewCanvas: HTMLCanvasElement;
-	protected thumbnailImg: HTMLElement;
-	protected thumbnailCanvas: HTMLCanvasElement;
-	protected bufferedBar: HTMLElement;
-	protected previewBar: HTMLElement;
-	protected previewContext: CanvasRenderingContext2D | null;
-	protected thumbnailContext: CanvasRenderingContext2D | null;
-	protected wasPaused: boolean;
-	protected scrubbingId: number;
-	constructor(ctlr: Controller, options?: Partial<TimelineConfig>);
-	create(): HTMLElement;
+export interface UIConfig<T> {
+	values: T[];
+	displays: string[];
+}
+export type UIObject<T> = {
+	[K in keyof T as T[K] extends object ? K : never]: T[K] extends UISettings<infer U> ? UIConfig<U> : UIObject<T[K]>;
+};
+export interface Captions {
+	disabled: boolean;
+	font: {
+		family: UISettings<string>;
+		size: OptRange & {
+			options: UIOption<number>[];
+		};
+		color: UISettings<string>;
+		opacity: UISettings<number>;
+		weight: UISettings<string | number>;
+		variant: UISettings<string>;
+	};
+	window: {
+		color: UISettings<string>;
+		opacity: UISettings<number>;
+	};
+	background: {
+		color: UISettings<string>;
+		opacity: UISettings<number>;
+	};
+	characterEdgeStyle: UISettings<"none" | "raised" | "depressed" | "outline" | "drop-shadow">;
+	textAlignment: UISettings<"left" | "center" | "right">;
+	allowVideoOverride: boolean;
+	previewTimeout: 1500;
+}
+declare const ROTATE_PATHS: readonly [
+	"captions.font.family.value",
+	"captions.font.weight.value",
+	"captions.font.variant.value",
+	"captions.font.opacity.value",
+	"captions.background.opacity.value",
+	"captions.window.opacity.value",
+	"captions.characterEdgeStyle.value",
+	"captions.textAlignment.value"
+];
+export type CaptionsRotatePath = (typeof ROTATE_PATHS)[number];
+declare class CaptionsPlug extends BasePlug<Captions> {
+	static readonly plugName: string;
+	protected view: CaptionsView | null;
+	protected infoView: CaptionsView | null;
 	mount(): void;
 	wire(): void;
-	protected seek(value: number): void;
-	protected handlePausedState({ value }: Event$1<CtlrMedia, "state.paused">): void;
-	protected handleCurrentTimeState({ target }: Event$1<CtlrMedia, "state.currentTime">): void;
-	protected handleLoadedMetadataStatus(): void;
-	protected handleBufferedStatus(): void;
-	protected handleDurationStatus({ value }: Event$1<CtlrMedia, "status.duration">): void;
-	protected handleErrorStatus({ value }: Event$1<CtlrMedia, "status.error">): void;
-	protected handleTimeUpdateLoop(optimize?: boolean): void;
-	protected handleScrubbingChange({ value }: Event$1<RangeState, "scrubbing">): void;
-	protected handlePreviewChange({ target }: Event$1<TimelineConfig, "previews">): void;
-	stopScrubbing(): void;
-	protected stopPreview(): void;
-	protected onInput(e: MouseEvent | PointerEvent, pos: number): void;
-	protected updatePreviewTime(): void;
-	protected syncCanvasPreviews(): void;
-	protected syncThumbnailSize(): void;
+	protected handleDisabledConfig({ value }: REvent<VideoBuild, "settings.captions.disabled">): void;
+	protected handleFontSizeMin({ value: min }: REvent<VideoBuild, "settings.captions.font.size.min">): void;
+	protected handleFontSizeMax({ value: max }: REvent<VideoBuild, "settings.captions.font.size.max">): void;
+	protected handleCurrentTextTrackState({ value }: REvent<CtlrMedia, "state.currentTextTrack">): void;
+	protected handleActiveCueStatus({ value }: REvent<CtlrMedia, "status.activeCue">): void;
+	protected syncUIState(): void;
+	toggleCaptions(): void;
+	changeFontSize(value: number): void;
+	protected rotateProp(steps: PathValue<VideoBuild["settings"], CaptionsRotatePath>[], prop: CaptionsRotatePath, numeric?: boolean): void;
+	rotateFontFamily(): void;
+	rotateFontWeight(): void;
+	rotateFontVariant(): void;
+	rotateFontOpacity(): void;
+	rotateBackgroundOpacity(): void;
+	rotateWindowOpacity(): void;
+	rotateCharacterEdgeStyle(): void;
+	rotateTextAlignment(): void;
+	protected onDestroy(): void;
 }
 export interface CTime extends OptRange {
 	mode: "elapsed" | "remaining";
@@ -1449,8 +1585,8 @@ declare class TimePlug extends BasePlug<CTime> {
 	];
 	wire(): void;
 	protected forwardTimeValue(value?: number): void;
-	protected handleCurrentTimeState({ target }: Event$1<CtlrMedia, "state.currentTime">): void;
-	protected handleWaitingStatus({ value }: Event$1<CtlrMedia, "status.waiting">): void;
+	protected handleCurrentTimeState({ target }: REvent<CtlrMedia, "state.currentTime">): void;
+	protected handleWaitingStatus({ value }: REvent<CtlrMedia, "status.waiting">): void;
 	toTimeVal(value?: number | string | null): number;
 	toTimeText(time?: number, useMode?: boolean, showMs?: boolean): string;
 	get nextMode(): CTime["mode"];
@@ -1469,8 +1605,8 @@ declare class FullscreenModule extends BaseModule<FullscreenModuleConfig> {
 	static readonly moduleName = "fullscreen";
 	inFullscreen: boolean;
 	wire(): void;
-	protected handleDisabledConfig({ value }: Event$1<VideoBuild, "settings.modes.fullscreen.disabled">): void;
-	protected handleFullscreenIntent(e: Event$1<CtlrMedia, "intent.fullscreen">): void;
+	protected handleDisabledConfig({ value }: REvent<VideoBuild, "settings.modes.fullscreen.disabled">): void;
+	protected handleFullscreenIntent(e: REvent<CtlrMedia, "intent.fullscreen">): void;
 	protected enter(): Promise<void>;
 	protected handleDocInFullscreen(docInFs: boolean): Promise<void>;
 	protected handleScreenOrientation(orientation: ScreenOrientation): void;
@@ -1482,8 +1618,8 @@ export type TheaterConfig = {
 declare class TheaterModule extends BaseModule<TheaterConfig> {
 	static readonly moduleName = "theater";
 	wire(): void;
-	protected handleDisabledConfig({ value }: Event$1<VideoBuild, "settings.modes.theater.disabled">): void;
-	protected handleTheaterIntent(e: Event$1<CtlrMedia, "intent.theater">): void;
+	protected handleDisabledConfig({ value }: REvent<VideoBuild, "settings.modes.theater.disabled">): void;
+	protected handleTheaterIntent(e: REvent<CtlrMedia, "intent.theater">): void;
 }
 export interface FloatingPlayerConfig {
 	disabled: boolean;
@@ -1503,10 +1639,11 @@ declare class PictureInPictureModule extends BaseModule<PictureInPictureModuleCo
 	whitelist: string[];
 	blacklist: string[];
 	wire(): void;
-	protected handleDisabledConfig({ value }: Event$1<VideoBuild, "settings.modes.pictureInPicture.disabled">): void;
-	protected handlePictureInPictureIntent(e: Event$1<CtlrMedia, "intent.pictureInPicture">): void;
-	protected handlePictureInPictureState({ value }: Event$1<CtlrMedia, "state.pictureInPicture">): Promise<void>;
+	protected handleDisabledConfig({ value }: REvent<VideoBuild, "settings.modes.pictureInPicture.disabled">): void;
+	protected handlePictureInPictureIntent(e: REvent<CtlrMedia, "intent.pictureInPicture">): void;
+	protected handlePictureInPictureState({ value }: REvent<CtlrMedia, "state.pictureInPicture">): Promise<void>;
 	protected initFloatingPlayer(): Promise<void>;
+	protected handleFloatingPlayerResize(): void;
 	protected handleFloatingPlayerClose(): void;
 }
 export type MiniplayerModeConfig = {
@@ -1526,9 +1663,9 @@ declare class MiniplayerModule extends BaseModule<MiniplayerModeConfig> {
 	wire(): void;
 	protected handleWindowWidth(width: number): void;
 	protected handleMediaParentIntersecting(): void;
-	protected handleDisabledConfig({ value }: Event$1<VideoBuild, "settings.modes.miniplayer.disabled">): void;
-	protected handlePaused({ value }: Event$1<CtlrMedia, "state.paused">): void;
-	protected handleMiniplayerIntent(e: Event$1<CtlrMedia, "intent.miniplayer">): void;
+	protected handleDisabledConfig({ value }: REvent<VideoBuild, "settings.modes.miniplayer.disabled">): void;
+	protected handlePaused({ value }: REvent<CtlrMedia, "state.paused">): void;
+	protected handleMiniplayerIntent(e: REvent<CtlrMedia, "intent.miniplayer">): void;
 	protected enter(): void;
 	protected exit(behavior?: ScrollBehavior): void;
 	expand(): void;
@@ -1608,8 +1745,8 @@ export interface Toasts extends ToastOptions {
 declare class ToastsPlug extends BasePlug<Toasts> {
 	static readonly plugName: string;
 	wire(): void;
-	protected handleDisabled({ value }: Event$1<VideoBuild, "settings.toasts.disabled">): void;
-	protected handleToasts({ type, target: { path, key, value } }: Event$1<VideoBuild, "settings.toasts">): void;
+	protected handleDisabled({ value }: REvent<VideoBuild, "settings.toasts.disabled">): void;
+	protected handleToasts({ type, target: { path, key, value } }: REvent<VideoBuild, "settings.toasts">): void;
 	get toast(): ToastInstance | null;
 }
 export type Locked = {
@@ -1621,15 +1758,12 @@ export interface LockedState {
 declare class LockedPlug extends BasePlug<Locked, LockedState> {
 	static readonly plugName: string;
 	lockOverlayDelayId: number;
-	protected control: {
-		element: HTMLElement;
-		instance: ScreenLocked;
-	} | null;
+	protected control: ScreenLocked | null;
 	constructor(ctlr: Controller, config: Locked);
 	mount(): void;
 	wire(): void;
 	protected handleScreenClick(): void;
-	protected handleLockChange({ value }: Event$1<VideoBuild, "settings.locked.disabled">): Promise<void>;
+	protected handleLockChange({ value }: REvent<VideoBuild, "settings.locked.disabled">): Promise<void>;
 	showOverlay(): void;
 	removeOverlay(): void;
 	delayOverlay(): void;
@@ -1672,7 +1806,7 @@ export interface DisabledState {
 declare class DisabledPlug extends BasePlug<Disabled, DisabledState> {
 	static readonly plugName: string;
 	wire(): void;
-	protected handleDisabled({ value }: Event$1<VideoBuild, "disabled">): void;
+	protected handleDisabled({ value }: REvent<VideoBuild, "disabled">): void;
 	deactivate(message: string): void;
 	reactivate(): void;
 }
@@ -1680,7 +1814,7 @@ export type ErrorMessages = Record<ErrorCode, string>;
 declare class ErrorMessagesPlug extends BasePlug<ErrorMessages> {
 	static readonly plugName: string;
 	wire(): void;
-	protected handleError({ value }: Event$1<CtlrMedia, "status.error">): void;
+	protected handleError({ value }: REvent<CtlrMedia, "status.error">): void;
 }
 export interface StorageAdapterConstructor {
 	new (namespace: string): StorageAdapter;
@@ -1706,9 +1840,9 @@ declare class PersistPlug extends BasePlug<Persist> {
 	static readonly plugName: string;
 	adapter: StorageAdapter;
 	wire(): void;
-	protected handleAdapterChange({ value }: Event$1<VideoBuild, "settings.persist.adapter">): void;
-	protected handleDisabledChange({ value }: Event$1<VideoBuild, "settings.persist.disabled">): void;
-	protected throttleSave({ root: { settings } }: Event$1<VideoBuild, "settings">): void;
+	protected handleAdapterChange({ value }: REvent<VideoBuild, "settings.persist.adapter">): void;
+	protected handleDisabledChange({ value }: REvent<VideoBuild, "settings.persist.disabled">): void;
+	protected throttleSave({ root: { settings } }: REvent<VideoBuild, "settings">): void;
 	protected onDestroy(): void;
 }
 /**
@@ -1736,7 +1870,7 @@ declare class TimeTravelPlug extends BasePlug<TimeTravel> {
 	/**
 	 * RECORD: Chronicling the lifecycle of the system.
 	 */
-	protected record(e: Event$1<CtlrMedia, "intent" | "state" | "settings">): void;
+	protected record(e: REvent<CtlrMedia, "intent" | "state" | "settings">): void;
 	exportSession(): string;
 	loadSession(json: string): void;
 	/**
@@ -1787,8 +1921,8 @@ declare abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, 
 	protected abstract wirePaused(): void;
 	protected abstract wireEnded(): void;
 	protected wireFeatures(): void;
-	protected handleFeaturesChange({ type, target: t }: Event$1<MediaFeatures, "*">): void;
-	protected handleIntentChange(e: Event$1<CtlrMedia, "intent">): void;
+	protected handleFeaturesChange({ type, target: t }: REvent<MediaFeatures, "*">): void;
+	protected handleIntentChange(e: REvent<CtlrMedia, "intent">): void;
 	protected wireFeature(feature: keyof MediaFeatures): void;
 }
 declare class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
@@ -1839,9 +1973,9 @@ declare class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
 	protected setPlayState(): void;
 	protected setPauseState(): void;
 	protected setEndedState(): void;
-	protected handleSrcIntent(e: Event$1<CtlrMedia, "intent.src">): void;
-	protected handleCurrentTimeIntent(e: Event$1<CtlrMedia, "intent.currentTime">): void;
-	protected handlePausedIntent(e: Event$1<CtlrMedia, "intent.paused">): void;
+	protected handleSrcIntent(e: REvent<CtlrMedia, "intent.src">): void;
+	protected handleCurrentTimeIntent(e: REvent<CtlrMedia, "intent.currentTime">): void;
+	protected handlePausedIntent(e: REvent<CtlrMedia, "intent.paused">): void;
 	protected setVolumeChangeState(): void;
 	protected setRateChangeState(): void;
 	protected setEnterPiPState(): void;
@@ -1851,15 +1985,15 @@ declare class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
 	protected setWebkitEndFullscreenState(): void;
 	protected setCurrentTrackState(type: TrackType, list: any): void;
 	protected setHTMLStateFromMutation(mutations: MutationRecord[]): string | boolean | DOMTokenList | null | undefined;
-	protected handleVolumeIntent(e: Event$1<CtlrMedia, "intent.volume">): void;
-	protected handleMutedIntent(e: Event$1<CtlrMedia, "intent.muted">): void;
-	protected handlePlaybackRateIntent(e: Event$1<CtlrMedia, "intent.playbackRate">): void;
-	protected handlePiPIntent(e: Event$1<CtlrMedia, "intent.pictureInPicture">): void;
-	protected handleFullscreenIntent(e: Event$1<CtlrMedia, "intent.fullscreen">): void;
-	protected handleCurrentTrackIntent(e: Event$1<CtlrMedia, `intent.current${TrackType}Track`>, type: TrackType): void;
-	protected handleAttributeIntent(e: Event$1<CtlrMedia, WildPaths<CtlrMedia>>, key: string, isBool: boolean): void;
-	protected handleSourcesIntent(e: Event$1<CtlrMedia, "intent.sources">): void;
-	protected handleTracksIntent(e: Event$1<CtlrMedia, "intent.tracks">): void;
+	protected handleVolumeIntent(e: REvent<CtlrMedia, "intent.volume">): void;
+	protected handleMutedIntent(e: REvent<CtlrMedia, "intent.muted">): void;
+	protected handlePlaybackRateIntent(e: REvent<CtlrMedia, "intent.playbackRate">): void;
+	protected handlePiPIntent(e: REvent<CtlrMedia, "intent.pictureInPicture">): void;
+	protected handleFullscreenIntent(e: REvent<CtlrMedia, "intent.fullscreen">): void;
+	protected handleCurrentTrackIntent(e: REvent<CtlrMedia, `intent.current${TrackType}Track`>, type: TrackType): void;
+	protected handleAttributeIntent(e: REvent<CtlrMedia, WildPaths<CtlrMedia>>, key: string, isBool: boolean): void;
+	protected handleSourcesIntent(e: REvent<CtlrMedia, "intent.sources">): void;
+	protected handleTracksIntent(e: REvent<CtlrMedia, "intent.tracks">): void;
 	protected handleLoadStatus(): void;
 	protected handleLoadedMetadataStatus(): void;
 	protected handleLoadedDataStatus(): void;
@@ -1873,9 +2007,9 @@ declare class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
 	protected handleActiveCueStatus(e?: globalThis.Event | {
 		target?: TextTrack;
 	}): void;
-	protected handleDefaultMutedSetting(e: Event$1<CtlrMedia, "settings.defaultMuted">): void;
-	protected handleDefaultPlaybackRateSetting(e: Event$1<CtlrMedia, "settings.defaultPlaybackRate">): void;
-	protected handlePiPState(e: Event$1<CtlrMedia, "state.disablePictureInPicture">): void;
+	protected handleDefaultMutedSetting(e: REvent<CtlrMedia, "settings.defaultMuted">): void;
+	protected handleDefaultPlaybackRateSetting(e: REvent<CtlrMedia, "settings.defaultPlaybackRate">): void;
+	protected handlePiPState(e: REvent<CtlrMedia, "state.disablePictureInPicture">): void;
 }
 export interface MediaContract {
 	// "Must Haves" to be even considered media
@@ -2240,10 +2374,11 @@ export declare class Controller {
 	config: Reactive<Volatile<VideoBuild>>;
 	state: Reactive<RuntimeState> & Record<string, any>;
 	media: Reactive<CtlrMedia>;
+	settings: VideoBuild["settings"];
 	buildCache: VideoBuild;
 	private _payload;
-	videoContainer: HTMLElement;
 	pseudoVideo: HTMLVideoElement;
+	videoContainer: HTMLElement;
 	pseudoVideoContainer: HTMLElement;
 	DOM: Record<string, HTMLElement | null>;
 	private throttleMap;
@@ -2350,10 +2485,7 @@ export declare class ComponentRegistry extends BaseRegistry<ComponentConstructor
 	private static instance;
 	static get<T extends BaseComponent = BaseComponent>(name: string): ComponentConstructor<T> | undefined;
 	static register(Comp: ComponentConstructor): void;
-	static init<T extends BaseComponent = BaseComponent>(name: string, ctlr: any, options?: {}): {
-		element: HTMLElement;
-		instance: T;
-	} | null;
+	static init<T extends BaseComponent = BaseComponent>(name: string, ctlr: any, options?: {}): T | null;
 	static getAll(): ComponentConstructor[];
 }
 export interface QueueJob<T = any> {
@@ -2387,16 +2519,16 @@ declare namespace utils {
 	export { ANDROID_VERSION, ArrowNavConfig, ArrowNavHandle, CHROME_VERSION, CHROMIUM_VERSION, DUMMY_VID, Dataset, Dimensions, IE_VERSION, IOS_VERSION, IS_ANDROID, IS_CHROME, IS_CHROMECAST_RECEIVER, IS_CHROMIUM, IS_EDGE, IS_FIREFOX, IS_IE, IS_IOS, IS_IPAD, IS_IPHONE, IS_IPOD, IS_MOBILE, IS_SAFARI, IS_SMART_TV, IS_TIZEN, IS_WEBOS, IS_WINDOWS, Style, TOUCH_ENABLED, TimeRange, TrackType, addSafeClicks, addSources, addTracks, assignEl, breath, camelize, canVidAudioTracks, canVidCtrlRate, canVidCtrlVolume, canVidMuteVolume, canVidTextTracks, canVidVideoTracks, capitalize, clamp, clampRGBBri, cleanKeyCombo, cloneMedia, convertToMonoChrome, createEl, createTimeRanges, deepBreath, deepClone, deleteAny, deprecate, deprecateForMajor, enterFullscreen, exitFullscreen, formatKeyForDisplay, formatKeyShortcutsForDisplay, formatMediaTime, formatSize, formatVttLine, getAny, getDominantColor, getElSiblingAt, getExtension, getMediaReport, getMimeTypeFromExtension, getRGBBri, getRGBSat, getRenderedBox, getSizeTier, getSources, getTermsForKey, getTrackIdx, getTracks, getTrailPaths, getTrailRecords, getWindow, inAny, inBoolArrOpt, inDocView, initArrowFocusNav, initScrollAssist, initVScrollerator, intersectionObserver, isArr, isDef, isIter, isObj, isSameSources, isSameTracks, isSameURL, isStrictObj, isUISetting, isValidNum, keyEventAllowed, limited, loadResource, luid, matchKeys, mergeObjs, mockAsync, mutationObserver, noExtension, observeIntersection, observeMutation, observeResize, onceEver, oncePerSession, parseAnyObj, parseCSSTime, parseCSSUnit, parseEvOpts, parseForARIAKS, parseIfPercent, parseKeyCombo, parsePanelBottomObj, parseUIObj, parseVttText, putSourceDetails, putTrackDetails, queryFullscreen, queryFullscreenEl, queryMediaMobile, queryPictureInPicture, queryPictureInPictureEl, remToPx, removeSafeClicks, removeScrollAssist, removeSources, removeTracks, requestAnimationFrame$1 as requestAnimationFrame, resizeObserver, rippleHandler, rotate, safeNum, setAny, setCurrentTrack, setHTMLConfig, setInterval$1 as setInterval, setTimeout$1 as setTimeout, srtToVtt, stepNum, stringifyKeyCombo, stripTags, supportsFullscreen, supportsPictureInPicture, uid, uncamelize };
 }
 declare namespace mixins {
-	export { Reactive, bindAllMethods, guardAllMethods, guardMethod, inert, intent, isInert, isIntent, isVolatile, live, nuke, onAllMethods, reactive, stable, state, volatile };
+	export { Reactive, ReactivePrefs, bindAllMethods, getSnapshotVersion, getVersion, guardAllMethods, guardMethod, inert, intent, isInert, isIntent, isVolatile, live, methods, nuke, onAllMethods, reactive, stable, state, volatile };
 }
 declare namespace media {
 	export { BaseTech, BaseTechConfig, HTML5Tech, TechConstructor };
 }
 declare namespace plugs {
-	export { Auto, AutoPlug, BaseModule, BasePlug, BigControl, Brightness, BrightnessPlug, CSSPlug, CTime, Control, ControlPanel, ControlPanelBottomTuple, ControlPanelPlug, Css, Disabled, DisabledPlug, ErrorMessages, ErrorMessagesPlug, FastPlay, FastPlayPlug, FloatingPlayerConfig, Frame, FramePlug, FullscreenModule, FullscreenModuleConfig, GeneralConfig, GeneralModule, Gesture, GesturePlug, LightState, LightStatePlug, Locked, LockedPlug, LockedState, Media, MediaPlug, MiniplayerModeConfig, MiniplayerModule, Modes, ModesPlug, Overlay, OverlayPlug, Persist, PersistPlug, PictureInPictureModule, PictureInPictureModuleConfig, PlaybackRate, PlaybackRatePlug, Playlist, PlaylistItemBuild, PlaylistItemTimeKey, PlaylistPlug, PlaysInline, PlaysInlinePlug, PlugConstructor, SControl, Skeleton, SkeletonPlug, Source, Sources, SourcesPlug, Src, SrcObject, SrcObjectPlug, SrcPlug, TheaterConfig, TheaterModule, TimePlug, TimeTravel, TimeTravelPlug, Toasts, ToastsPlug, TouchConfig, TouchModule, Track, Tracks, TracksPlug, Volume, VolumePlug, WheelConfig, WheelModule };
+	export { Auto, AutoPlug, BaseModule, BasePlug, BigControl, Brightness, BrightnessPlug, CSSPlug, CTime, Captions, CaptionsPlug, Control, ControlPanel, ControlPanelBottomTuple, ControlPanelCurrentZoneWs, ControlPanelPlug, ControlPanelZoneWs, Css, Disabled, DisabledPlug, DraggableModule, DraggableModuleConfig, ErrorMessages, ErrorMessagesPlug, FastPlay, FastPlayPlug, FloatingPlayerConfig, Frame, FramePlug, FullscreenModule, FullscreenModuleConfig, GeneralConfig, GeneralModule, Gesture, GesturePlug, LightState, LightStatePlug, Locked, LockedPlug, LockedState, Media, MediaPlug, MiniplayerModeConfig, MiniplayerModule, Modes, ModesPlug, Overlay, OverlayPlug, Persist, PersistPlug, PictureInPictureModule, PictureInPictureModuleConfig, PlaybackRate, PlaybackRatePlug, Playlist, PlaylistItemBuild, PlaylistItemTimeKey, PlaylistPlug, PlaysInline, PlaysInlinePlug, PlugConstructor, Row, SControl, Skeleton, SkeletonPlug, Source, Sources, SourcesPlug, Src, SrcObject, SrcObjectPlug, SrcPlug, TheaterConfig, TheaterModule, TimePlug, TimeTravel, TimeTravelPlug, Toasts, ToastsPlug, TouchConfig, TouchModule, Track, Tracks, TracksPlug, Volume, VolumePlug, WheelConfig, WheelModule, ZoneSlot, ZoneW };
 }
 declare namespace comps {
-	export { BaseComponent, Buffer$1 as Buffer, ComponentConstructor, ComponentState, Duration, DurationConfig, PlayPause, PlayPauseConfig, PreviewConfig, RangeConfig, RangeSlider, RangeState, ScreenLocked, ScreenLockedConfig, Time, TimeAndDuration, TimeAndDurationConfig, TimeConfig, Timeline, TimelineConfig };
+	export { BaseComponent, Buffer$1 as Buffer, BufferConfig, CaptionsView, CaptionsViewConfig, ComponentConstructor, ComponentState, CueLike, Duration, DurationConfig, PlayPause, PlayPauseConfig, PreviewConfig, RangeConfig, RangeSlider, RangeState, ScreenLocked, ScreenLockedConfig, Time, TimeAndDuration, TimeAndDurationConfig, TimeConfig, Timeline, TimelineConfig };
 }
 declare namespace consts {
 	export { DEFAULT_MEDIA_INTENT, DEFAULT_MEDIA_SETTINGS, DEFAULT_MEDIA_STATE, DEFAULT_MEDIA_STATUS, DEFAULT_VIDEO_BUILD, DEFAULT_VIDEO_ITEM_BUILD, FN_KEY, LUID_KEY, aptAutoplayOptions, bigControls, controls, errorCodes, keyShortcutActions, moddedKeyShortcutActions, modes, orientationOptions, whiteListedKeys };

@@ -1,41 +1,36 @@
-import { Reactor, INERTIA, REJECTABLE, INDIFFABLE } from "../../core/reactor";
+import { Reactor, INERTIA, REJECTABLE, INDIFFABLE, VERSION, SSVERSION } from "../../core/reactor";
 import type { ReactorOptions, Inert, Intent, Live, State, Volatile, Stable } from "../../types/reactor";
 
-const methods = [
-  // --- Reactor public methods ---
-  "tick",
-  "stall",
-  "nostall",
-  "get",
-  "gonce",
-  "noget",
-  "set",
-  "sonce",
-  "noset",
-  "delete",
-  "donce",
-  "nodelete",
-  "watch",
-  "wonce",
-  "nowatch",
-  "on",
-  "once",
-  "off",
-  "cascade",
-  "snapshot",
-  "reset",
-  "destroy",
-] as const;
-export type Reactive<T extends object> = T & Pick<Reactor<T>, (typeof methods)[number]> & { __Reactor__: Reactor<T> };
+// --- Reactor public methods ---
+export const methods = ["tick", "stall", "nostall", "get", "gonce", "noget", "set", "sonce", "noset", "delete", "donce", "nodelete", "watch", "wonce", "nowatch", "on", "once", "off", "cascade", "snapshot", "reset", "destroy"] as const;
 
-export function reactive<T extends object>(target: T | Reactor<T>, options?: ReactorOptions<T>): Reactive<T> {
+type Method = (typeof methods)[number];
+type Prefix<P extends ReactivePrefs | undefined> = P extends { prefix?: infer X extends string } ? X : "";
+type Suffix<P extends ReactivePrefs | undefined> = P extends { suffix?: infer X extends string } ? X : "";
+type Whitelist<P extends ReactivePrefs | undefined> = P extends { whitelist?: infer W extends readonly Method[] } ? W[number] : never;
+type ReactiveMethodMap<T extends object, P extends ReactivePrefs | undefined> = {
+  [K in Method as [Prefix<P>, Suffix<P>] extends ["", ""] ? (P extends { whitelist: readonly Method[] } ? (K extends Whitelist<P> ? never : K) : K) : P extends { whitelist: readonly Method[] } ? (K extends Whitelist<P> ? `${Prefix<P>}${K}${Suffix<P>}` : K) : `${Prefix<P>}${K}${Suffix<P>}`]: Pick<Reactor<T>, Method>[K];
+};
+
+export interface ReactivePrefs {
+  prefix?: string;
+  suffix?: string;
+  whitelist?: readonly Method[]; // keys you're already using
+}
+export type Reactive<T extends object, P extends ReactivePrefs | undefined = undefined> = T & ReactiveMethodMap<T, P> & { __Reactor__: Reactor<T> };
+
+export function reactive<T extends object, const P extends ReactivePrefs | undefined = undefined>(target: T | Reactor<T>, options?: ReactorOptions<T>, prefs?: P): Reactive<T, P> {
   const descriptors: PropertyDescriptorMap = {},
-    r = target instanceof Reactor ? target : new Reactor(target, options),
-    locks = { enumerable: false, configurable: true, writable: false };
-  for (const m of methods) descriptors[m] = { value: r[m].bind(r), ...locks };
-  descriptors["__Reactor__"] = { value: r, ...locks };
-  Object.defineProperties(r.core, descriptors);
-  return r.core as Reactive<T>;
+    rtr = target instanceof Reactor ? target : new Reactor(target, options),
+    locks = { enumerable: false, configurable: true, writable: false },
+    hasAffix = !!(prefs?.prefix || prefs?.suffix);
+  for (let key of methods) {
+    if (hasAffix) (prefs?.whitelist?.includes(key) ?? true) && (key = `${prefs?.prefix || ""}${key}${prefs?.suffix || ""}` as Method);
+    else if (prefs?.whitelist?.includes(key)) continue;
+    descriptors[key] = { value: rtr[key].bind(rtr), ...locks };
+  }
+  descriptors["__Reactor__"] = { value: rtr, ...locks };
+  return (Object.defineProperties(rtr.core, descriptors), rtr.core as Reactive<T, P>);
 }
 
 export function inert<T extends object>(target: T): Inert<T> {
@@ -72,4 +67,11 @@ export function stable<T extends object>(target: T): Stable<T> {
 }
 export function isVolatile<T extends object>(target: T): target is Volatile<T> {
   return !!(target as any)[INDIFFABLE];
+}
+
+export function getVersion<T extends object>(target: T): number {
+  return (target as any)[VERSION] || 0;
+}
+export function getSnapshotVersion<T extends object>(target: T): number {
+  return (target as any)[SSVERSION] || 0;
 }

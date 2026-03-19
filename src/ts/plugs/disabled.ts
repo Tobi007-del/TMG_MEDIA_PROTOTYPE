@@ -1,5 +1,5 @@
 import { BasePlug } from ".";
-import type { Event } from "../types/reactor";
+import type { REvent } from "../types/reactor";
 import type { VideoBuild } from "../types/build";
 import type { OverlayPlug, ToastsPlug, ControlPanelPlug } from ".";
 import type { Timeline } from "../components";
@@ -15,17 +15,17 @@ export class DisabledPlug extends BasePlug<Disabled, DisabledState> {
 
   public wire(): void {
     // Ctlr Media Listeners
-    this.ctlr.media.on("state.paused", ({ value }) => !value && this.ctlr.media.status.loadedMetadata && this.reactivate(), { signal: this.signal });
+    this.media.on("state.paused", ({ value }) => !value && this.media.status.loadedMetadata && this.reactivate(), { signal: this.signal });
     // ---------- Listeners
     this.ctlr.config.on("disabled", this.handleDisabled, { immediate: true, signal: this.signal });
   }
 
-  protected handleDisabled({ value }: Event<VideoBuild, "disabled">): void {
+  protected handleDisabled({ value }: REvent<VideoBuild, "disabled">): void {
     if (value) {
       // JS: this.leaveSettingsView();
       this.ctlr.cancelAllLoops();
       this.ctlr.videoContainer.classList.add("tmg-video-disabled");
-      this.ctlr.media.intent.paused = true;
+      this.media.intent.paused = true;
       this.ctlr.getPlug<OverlayPlug>("overlay")?.show();
       this.ctlr.DOM.containerContent?.setAttribute("inert", "");
       // JS: this.setKeyEventListeners("remove");
@@ -51,7 +51,7 @@ export class DisabledPlug extends BasePlug<Disabled, DisabledState> {
   }
 
   public reactivate(): void {
-    if (!this.ctlr.videoContainer.classList.contains("tmg-video-inactive") || !this.ctlr.media.status.loadedMetadata) return;
+    if (!this.ctlr.videoContainer.classList.contains("tmg-video-inactive") || !this.media.status.loadedMetadata) return;
     this.state.message = null;
     this.ctlr.DOM.containerContent?.removeAttribute("data-message");
     this.ctlr.videoContainer.classList.remove("tmg-video-inactive");

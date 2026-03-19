@@ -1,5 +1,5 @@
 import { BasePlug } from ".";
-import type { Event } from "../types/reactor";
+import type { REvent } from "../types/reactor";
 import type { VideoBuild } from "../types/build";
 import { StorageAdapter, LocalStorageAdapter, type StorageAdapterConstructor } from "../core/storage";
 import { mergeObjs } from "../utils";
@@ -24,27 +24,27 @@ export class PersistPlug extends BasePlug<Persist> {
     this.ctlr.config.on("settings.persist.disabled", this.handleDisabledChange, { signal: this.signal, immediate: true });
   }
 
-  protected handleAdapterChange({ value }: Event<VideoBuild, "settings.persist.adapter">) {
+  protected handleAdapterChange({ value }: REvent<VideoBuild, "settings.persist.adapter">) {
     if (this.adapter && value === this.adapter.constructor) return; // No change
     this.adapter?.remove("settings"); // Cleanup old adapter storage, disabled will handle refresh
     this.adapter = new (value || LocalStorageAdapter)(this.ctlr.id);
     const saved = this.adapter.get("settings"); // Hydration: Restore saved state immediately
-    if (saved) this.ctlr.config.settings = mergeObjs(this.ctlr.config.settings, saved); // this.ctlr.log("Settings hydrated from storage", "log")
+    if (saved) this.ctlr.settings = mergeObjs(this.ctlr.settings, saved); // this.ctlr.log("Settings hydrated from storage", "log")
   }
 
-  protected handleDisabledChange({ value }: Event<VideoBuild, "settings.persist.disabled">) {
+  protected handleDisabledChange({ value }: REvent<VideoBuild, "settings.persist.disabled">) {
     this.ctlr.config.off("settings", this.throttleSave); // Always unbind first to be safe (prevent double-binding)
     if (value) this.adapter?.remove("settings");
     else this.ctlr.config.on("settings", this.throttleSave, { signal: this.signal, immediate: true }); // Enabled: Start listening
   }
 
-  protected throttleSave({ root: { settings } }: Event<VideoBuild, "settings">) {
+  protected throttleSave({ root: { settings } }: REvent<VideoBuild, "settings">) {
     // We use the root 'settings' object from the event context
     this.ctlr.throttle("persist_save", () => this.adapter.set("settings", settings), this.config.throttle ?? 5000);
   }
 
   protected onDestroy() {
     // One last save before the lights go out or rather; plane crashes
-    !this.config.disabled && this.adapter?.set("settings", this.ctlr.config.settings);
+    !this.config.disabled && this.adapter?.set("settings", this.ctlr.settings);
   }
 }

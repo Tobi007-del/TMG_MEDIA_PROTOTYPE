@@ -29,9 +29,9 @@ export class SrcPlug extends BasePlug<Src> {
     // Ctlr Config Watchers
     this.ctlr.config.watch("src", this.forwardSrc, { signal: this.signal, immediate: "auto" });
   }
-  
+
   protected forwardSrc(value: string) {
-    this.ctlr.media.intent.src = value;
+    this.media.intent.src = value;
   }
 }
 
@@ -44,7 +44,7 @@ export class SourcesPlug extends BasePlug<Sources> {
   }
 
   protected forwardSources(value: Sources) {
-    this.ctlr.media.intent.sources = value;
+    this.media.intent.sources = value;
   }
 }
 
@@ -58,7 +58,7 @@ export class SrcObjectPlug extends BasePlug<SrcObject> {
   }
 
   protected forwardSrcObject(value: SrcObject) {
-    this.ctlr.media.settings.srcObject = value;
+    this.media.settings.srcObject = value;
   }
 }
 
@@ -72,7 +72,7 @@ export class TracksPlug extends BasePlug<Tracks> {
   }
 
   protected forwardTracks(value: Tracks) {
-    this.ctlr.media.intent.tracks = value;
+    this.media.intent.tracks = value;
   }
 }
 
@@ -85,6 +85,6 @@ export class PlaysInlinePlug extends BasePlug<PlaysInline> {
   }
 
   protected forwardPlaysInline(value: boolean) {
-    this.ctlr.media.intent.playsInline = value;
+    this.media.intent.playsInline = value;
   }
 }

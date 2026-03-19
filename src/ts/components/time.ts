@@ -19,7 +19,7 @@ export class Time extends BaseComponent<TimeConfig, ComponentState, HTMLButtonEl
     // Event Listeners
     addSafeClicks(this.element, this.plug?.toggleMode, this.plug?.rotateFormat, { signal: this.signal });
     // Ctlr Media Listeners
-    this.ctlr.media.on("state.currentTime", this.updateUI, { signal: this.signal, immediate: true });
+    this.media.on("state.currentTime", this.updateUI, { signal: this.signal, immediate: true });
     // ---- Config --------
     this.ctlr.config.on("settings.time.mode", this.updateUI, { signal: this.signal });
     this.ctlr.config.on("settings.time.format", this.updateUI, { signal: this.signal });
@@ -28,12 +28,12 @@ export class Time extends BaseComponent<TimeConfig, ComponentState, HTMLButtonEl
   }
 
   protected updateUI(): void {
-    this.element.textContent = this.plug?.toTimeText(this.ctlr.media.state.currentTime, true) || "-:--";
+    this.element.textContent = this.plug?.toTimeText(this.media.state.currentTime, true) || "-:--";
   }
   protected updateARIA() {
     this.state.label = `Show ${this.plug?.nextMode} time`;
-    this.state.cmd = formatKeyForDisplay(this.ctlr.config.settings.time.mode);
-    this.el.title = `Switch (mode${this.state.cmd} / DblClick→format${formatKeyForDisplay(this.ctlr.config.settings.keys.shortcuts.timeFormat)})`;
+    this.state.cmd = formatKeyForDisplay(this.ctlr.settings.time.mode);
+    this.el.title = `Switch (mode${this.state.cmd} / DblClick→format${formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.timeFormat)})`;
     this.setBtnARIA("Switch time format");
   }
 }

@@ -1,5 +1,5 @@
 import { BasePlug } from ".";
-import type { Event } from "../types/reactor";
+import type { REvent } from "../types/reactor";
 import type { VideoBuild } from "../types/build";
 import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";
@@ -28,66 +28,66 @@ export class VolumePlug extends BasePlug<Volume> {
 
   public wire(): void {
     // Variables Assignment
-    const configVolume = this.config.value ?? this.ctlr.media.state.volume * 100;
+    const configVolume = this.config.value ?? this.media.state.volume * 100;
     this.lastVolume = clamp(this.config.min, configVolume, this.config.max);
-    this.shouldMute = this.shouldSetLastVolume = this.ctlr.media.element?.muted ?? false;
+    this.shouldMute = this.shouldSetLastVolume = this.media.element?.muted ?? false;
     this.config.value = this.shouldMute ? 0 : this.lastVolume;
     // Event Listeners
-    this.ctlr.media.element.addEventListener("volumechange", this.handleNativeVolumeChange, { signal: this.signal });
+    this.media.element.addEventListener("volumechange", this.handleNativeVolumeChange, { signal: this.signal });
     // Ctlr Config Getters
-    this.ctlr.config.get("settings.volume.value", (value) => (this.gainNode ? Math.round(((this.gainNode.gain?.value ?? 2) / 2) * 100) : value), true);
+    // this.ctlr.config.get("settings.volume.value", (value) => (this.gainNode ? Math.round(((this.gainNode.gain?.value ?? 2) / 2) * 100) : value), true);  // VIRTUAL: reliable return value
     // ----------- Setters
     this.ctlr.config.set("settings.volume.value", (value) => clamp(this.config.min, value, this.config.max), { signal: this.signal });
     // ----------- Watchers
     this.ctlr.config.watch("settings.volume.value", this.forwardVolume, { signal: this.signal, immediate: true });
     this.ctlr.config.watch("settings.volume.muted", this.forwardMuted, { signal: this.signal, immediate: true });
     // ---- Media Listeners
-    this.ctlr.media.on("intent.volume", this.handleVolumeIntent, { capture: true, signal: this.signal });
-    this.ctlr.media.on("intent.muted", this.handleMutedIntent, { capture: true, signal: this.signal });
+    this.media.on("intent.volume", this.handleVolumeIntent, { capture: true, signal: this.signal });
+    this.media.on("intent.muted", this.handleMutedIntent, { capture: true, signal: this.signal });
     // ---- Config --------
     this.ctlr.config.on("settings.volume.min", this.handleMin, { signal: this.signal });
     this.ctlr.config.on("settings.volume.max", this.handleMax, { signal: this.signal });
     // Post Wiring
-    this.ctlr.media.tech.features.volume = true;
+    this.media.tech.features.volume = true;
   }
 
   protected forwardVolume(value: number): void {
-    this.ctlr.media.intent.volume = value;
+    this.media.intent.volume = value;
   }
   protected forwardMuted(value: boolean): void {
-    this.ctlr.media.intent.muted = value;
+    this.media.intent.muted = value;
   }
 
-  protected handleVolumeIntent(e: Event<CtlrMedia, "intent.volume">): void {
+  protected handleVolumeIntent(e: REvent<CtlrMedia, "intent.volume">): void {
     if (e.resolved) return;
-    if (this.ctlr.media.element !== this.ctlr.media.tech.element) return e.reject(this.name);
+    if (this.media.element !== this.media.tech.element) return e.reject(this.name);
     this.handleVolumeState(e.value);
-    this.ctlr.media.state.volume = e.value;
+    this.media.state.volume = e.value;
     e.resolve(this.name);
   }
 
-  protected handleMutedIntent(e: Event<CtlrMedia, "intent.muted">): void {
+  protected handleMutedIntent(e: REvent<CtlrMedia, "intent.muted">): void {
     if (e.resolved) return;
-    if (this.ctlr.media.element !== this.ctlr.media.tech.element) return e.reject(this.name);
+    if (this.media.element !== this.media.tech.element) return e.reject(this.name);
     if (e.oldValue === e.value) return e.resolve(this.name);
     this.handleMutedState(e.value);
-    this.ctlr.media.state.muted = e.value;
+    this.media.state.muted = e.value;
     e.resolve(this.name);
   }
 
-  protected handleMin({ target }: Event<VideoBuild, "settings.volume.min">): void {
+  protected handleMin({ target }: REvent<VideoBuild, "settings.volume.min">): void {
     const min = target.value;
     if (this.config.value < min) this.config.value = min;
     if (this.lastVolume < min) this.lastVolume = min;
   }
 
-  protected handleMax({ target }: Event<VideoBuild, "settings.volume.max">): void {
+  protected handleMax({ target }: REvent<VideoBuild, "settings.volume.max">): void {
     const max = target.value;
     if (this.config.value > max) this.config.value = max;
     if (this.lastVolume > max) this.lastVolume = max;
     this.ctlr.videoContainer.classList.toggle("tmg-video-volume-boost", max > 100);
-    this.ctlr.config.settings.css.volumeSliderPercent = Math.round((100 / max) * 100);
-    this.ctlr.config.settings.css.maxVolumeRatio = max / 100;
+    this.ctlr.settings.css.volumeSliderPercent = Math.round((100 / max) * 100);
+    this.ctlr.settings.css.maxVolumeRatio = max / 100;
   }
 
   protected handleVolumeState(volume: number): void {
@@ -95,20 +95,20 @@ export class VolumePlug extends BasePlug<Volume> {
       vLevel = v === 0 ? "muted" : v < 50 ? "low" : v <= 100 ? "high" : "boost",
       vPercent = (v - 0) / (this.config.max - 0);
     if (this.gainNode) this.gainNode.gain.setTargetAtTime((v / 100) * 2, this.ctime, 0.05); // doubling for dat Android Feel
-    this.ctlr.media.element.muted = this.ctlr.media.element.defaultMuted = this.config.muted = v === 0;
+    this.media.element.muted = this.media.element.defaultMuted = this.config.muted = v === 0;
     this.ctlr.videoContainer.dataset.volumeLevel = vLevel;
-    this.ctlr.config.settings.css.currentVolumeTooltipPosition = `${10.5 + vPercent * 79.5}%`;
+    this.ctlr.settings.css.currentVolumeTooltipPosition = `${10.5 + vPercent * 79.5}%`;
     if (this.config.max > 100) {
       if (v <= 100) {
-        this.ctlr.config.settings.css.currentVolumeSliderPosition = (v - 0) / (100 - 0);
-        this.ctlr.config.settings.css.currentVolumeSliderBoostPosition = 0;
-        this.ctlr.config.settings.css.volumeSliderBoostPercent = 0;
+        this.ctlr.settings.css.currentVolumeSliderPosition = (v - 0) / (100 - 0);
+        this.ctlr.settings.css.currentVolumeSliderBoostPosition = 0;
+        this.ctlr.settings.css.volumeSliderBoostPercent = 0;
       } else {
-        this.ctlr.config.settings.css.currentVolumeSliderPosition = 1;
-        this.ctlr.config.settings.css.currentVolumeSliderBoostPosition = (v - 100) / (this.config.max - 100);
-        this.ctlr.config.settings.css.volumeSliderBoostPercent = this.ctlr.config.settings.css.volumeSliderPercent;
+        this.ctlr.settings.css.currentVolumeSliderPosition = 1;
+        this.ctlr.settings.css.currentVolumeSliderBoostPosition = (v - 100) / (this.config.max - 100);
+        this.ctlr.settings.css.volumeSliderBoostPercent = this.ctlr.settings.css.volumeSliderPercent;
       }
-    } else this.ctlr.config.settings.css.currentVolumeSliderPosition = vPercent;
+    } else this.ctlr.settings.css.currentVolumeSliderPosition = vPercent;
   }
 
   protected handleMutedState(muted: boolean): void {
@@ -118,25 +118,25 @@ export class VolumePlug extends BasePlug<Volume> {
         this.shouldSetLastVolume = true;
       }
       this.shouldMute = true;
-      if (this.config.value) this.ctlr.media.intent.volume = 0;
+      if (this.config.value) this.media.intent.volume = 0;
     } else {
       const restore = this.shouldSetLastVolume ? this.lastVolume : this.config.value;
-      this.ctlr.media.intent.volume = (restore ? restore : this.sliderAptVolume) / 100;
+      this.media.intent.volume = (restore ? restore : this.sliderAptVolume) / 100;
       this.shouldMute = this.shouldSetLastVolume = false;
     }
   }
 
   protected setupAudio(): void {
-    if (this.audioSetup || connectMediaToAudioManager(this.ctlr.media.element) === "unavailable") return;
-    this.gainNode = (this.ctlr.media.element as any)._tmgGainNode;
-    const DCN = (this.ctlr.media.element as any)._tmgDynamicsCompressorNode;
+    if (this.audioSetup || connectMediaToAudioManager(this.media.element) === "unavailable") return;
+    this.gainNode = (this.media.element as any)._tmgGainNode;
+    const DCN = (this.media.element as any)._tmgDynamicsCompressorNode;
     if (DCN) ((DCN.threshold.value = -30), (DCN.knee.value = 20), (DCN.ratio.value = 12), (DCN.attack.value = 0.003), (DCN.release.value = 0.25));
     this.audioSetup = true;
   }
 
   protected cancelAudio(): void {
-    this.ctlr.media.intent.volume = clamp(0, (this.gainNode?.gain?.value ?? 2) / 2, 1);
-    (this.ctlr.media.element as any).mediaElementSourceNode?.disconnect();
+    this.media.intent.volume = clamp(0, (this.gainNode?.gain?.value ?? 2) / 2, 1);
+    (this.media.element as any).mediaElementSourceNode?.disconnect();
     this.gainNode?.disconnect();
     this.audioSetup = false;
   }
@@ -170,7 +170,7 @@ export class VolumePlug extends BasePlug<Volume> {
   }
 
   protected handleNativeVolumeChange(): void {
-    this.ctlr.media.element.volume = 1; // there are always edge cases even in advanced systems
-    if (this.config.muted !== this.ctlr.media.element.muted) this.toggleMute();
+    this.media.element.volume = 1; // there are always edge cases even in advanced systems
+    if (this.config.muted !== this.media.element.muted) this.toggleMute();
   }
 }

@@ -62,7 +62,7 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
     if (target !== this.ctlr.DOM.controlsContainer) return;
     const onClick = this.config.click;
     // if (onClick === "togglePlay")
-    this.ctlr.media.intent.paused = !this.ctlr.media.state.paused;
+    this.media.intent.paused = !this.media.state.paused;
     // else if (onClick === "fullscreen")
     //   this.ctlr.getPlug<Mode>("mode")?.toggleFullscreen();
     // else if (onClick === "pictureInPicture")
@@ -81,7 +81,7 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
     if (pos === "center") {
       const onDblClick = this.config.dblClick;
       // if (onDblClick === "togglePlay")
-      this.ctlr.media.intent.paused = !this.ctlr.media.state.paused;
+      this.media.intent.paused = !this.media.state.paused;
       //  else if (onDblClick === "fullscreen")
       //   this.ctlr.getPlug<Mode>("mode")?.toggleFullscreen();
       //  else if (onDblClick === "pictureInPicture")
@@ -90,7 +90,7 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
     }
     if (this.state.skipPersist && detail === 2) return;
     if (!this.state.skipPersist) this.activateSkipPersist(pos as "left" | "right");
-    this.ctlr.getPlug<TimePlug>("time")?.skip(pos === "right" ? this.ctlr.config.settings.time.skip : -this.ctlr.config.settings.time.skip);
+    this.ctlr.getPlug<TimePlug>("time")?.skip(pos === "right" ? this.ctlr.settings.time.skip : -this.ctlr.settings.time.skip);
   }
 
   public activateSkipPersist(pos: "left" | "right"): void {

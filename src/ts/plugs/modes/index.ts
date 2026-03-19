@@ -29,6 +29,7 @@ export class ModesPlug extends BasePlug<Modes> {
     this.theater = new TheaterModule(this.ctlr, this.config.theater);
     this.pip = new PictureInPictureModule(this.ctlr, this.config.pictureInPicture);
     this.miniplayer = new MiniplayerModule(this.ctlr, this.config.miniplayer);
+    if (this.ctlr.config.initialMode) this.media.intent[this.ctlr.config.initialMode] = true; // one-time courtesy, use for theater mode maybe
   }
 
   public wire(): void {

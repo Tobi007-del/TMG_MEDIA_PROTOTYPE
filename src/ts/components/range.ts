@@ -2,7 +2,7 @@ import { BaseComponent, ComponentState } from "./";
 import { reactive, type Reactive } from "../tools/mixins";
 import { createEl, clamp, setTimeout, stepNum } from "../utils";
 import type { Controller } from "../core/controller";
-import type { Event } from "../types/reactor";
+import type { REvent } from "../types/reactor";
 import type { AptRange } from "../types/generics";
 
 export interface RangeConfig extends AptRange {
@@ -29,21 +29,21 @@ export interface RangeState extends ComponentState {
 export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends RangeState = RangeState> extends BaseComponent<Reactive<Config>, State> {
   declare public config: Reactive<Config> & Reactive<RangeConfig>;
   public static readonly componentName: string = "Range";
-  protected container!: HTMLElement;
-  protected barsWrapper!: HTMLElement;
-  protected baseBar!: HTMLElement;
-  protected valueBar!: HTMLElement;
-  protected thumbIndicator!: HTMLElement;
-  protected lastPointerP = 0;
-  protected lastThumbPosition = 0;
+  public container!: HTMLElement;
+  public barsWrapper!: HTMLElement;
+  public baseBar!: HTMLElement;
+  public valueBar!: HTMLElement;
+  public thumbIndicator!: HTMLElement;
+  public isVertical = false;
+  public isRTL = false;
+  protected lastPtrPos = 0;
+  protected lastThumbPos = 0;
   protected cancelScrubTimeoutId: number | null = null;
   protected rect!: DOMRect;
-  protected isVertical = false;
-  protected isRTL = false;
 
-  constructor(ctlr: Controller, options: Partial<Config> = {}) {
+  constructor(ctlr: Controller, config: Partial<Config> = {}) {
     const defaults = { label: "Range", min: 0, max: 100, value: 0, previewValue: 50, step: 1, scrub: { sync: false, relative: true, cancel: { delta: 15, timeout: 2000 }, wheel: { disabled: false, axisRatio: 6 } } };
-    super(ctlr, reactive({ ...defaults, ...options }) as unknown as Reactive<Config>, { scrubbing: false, shouldCancelScrub: false, stallCancelScrub: false } as State);
+    super(ctlr, reactive({ ...defaults, ...config }) as unknown as Reactive<Config>, { scrubbing: false, shouldCancelScrub: false, stallCancelScrub: false } as State);
   }
 
   public create(): HTMLElement {
@@ -78,7 +78,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
     this.config.value = value;
   }
 
-  protected handleValueChange({ target }: Event<RangeConfig, "value">): void {
+  protected handleValueChange({ target }: REvent<RangeConfig, "value">): void {
     const pos = this.getValueAsPos();
     (this.updateThumbPosition(pos), this.updateValueBar(pos));
     if (!this.state.scrubbing) this.container.ariaValueNow = String(target.value!);
@@ -92,7 +92,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
     const s = window.getComputedStyle(this.container);
     this.isVertical = s.writingMode.includes("vertical");
     this.isRTL = s.direction === "rtl";
-    ((this.lastPointerP = this.getPos(e)), (this.lastThumbPosition = this.getValueAsPos()));
+    ((this.lastPtrPos = this.getPos(e)), (this.lastThumbPos = this.getValueAsPos()));
     this.handleInput(e);
     this.container.addEventListener("pointermove", this.handleInput, { signal: this.signal });
     this.container.addEventListener("pointerup", this.stopScrubbing, { signal: this.signal });
@@ -101,7 +101,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
   protected stopScrubbing(): void {
     if (!this.state.scrubbing) return;
     this.state.scrubbing = false;
-    const newValue = this.state.shouldCancelScrub ? this.getPosAsValue(this.lastThumbPosition) : this.config.value;
+    const newValue = this.state.shouldCancelScrub ? this.getPosAsValue(this.lastThumbPos) : this.config.value;
     this.seek(newValue);
     this.allowScrubbing();
     this.state.stallCancelScrub = true;
@@ -127,13 +127,13 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
       () => {
         const dimension = this.isVertical ? this.rect.height : this.rect.width,
           progress = this.getPos(e),
-          pos = clamp(0, !this.state.scrubbing || this.config.scrub.relative ? progress : this.lastThumbPosition + progress - this.lastPointerP, 1),
+          pos = clamp(0, !this.state.scrubbing || this.config.scrub.relative ? progress : this.lastThumbPos + progress - this.lastPtrPos, 1),
           value = this.getPosAsValue(pos);
         this.config.previewValue = value;
         if (this.state.scrubbing) {
           if (!this.config.scrub.sync) this.updateThumbPosition(pos);
           else this.seek(value);
-          Math.abs(pos - this.lastThumbPosition) < this.config.scrub.cancel.delta / dimension ? this.cancelScrubbing() : this.allowScrubbing();
+          Math.abs(pos - this.lastThumbPos) < this.config.scrub.cancel.delta / dimension ? this.cancelScrubbing() : this.allowScrubbing();
         }
         this.onInput(e, pos);
       },

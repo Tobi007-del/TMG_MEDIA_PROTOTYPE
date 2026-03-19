@@ -1,5 +1,4 @@
-import type { UIOption, UISettings } from "./UIOptions";
-import type { Mode, ModdedKeyShortcutAction, KeyShortcutAction, OptRange } from "./generics";
+import type { Mode, ModdedKeyShortcutAction, KeyShortcutAction } from "./generics";
 import type {
   Sources,
   Src,
@@ -19,6 +18,7 @@ import type {
   CTime,
   Brightness,
   PlaybackRate,
+  Captions,
   Auto,
   Toasts,
   PlaysInline,
@@ -31,29 +31,6 @@ import type {
 } from "../plugs";
 
 // NOTE: Use deep partial util where necessary after imports
-
-export interface Captions {
-  disabled: boolean;
-  allowVideoOverride: boolean;
-  font: {
-    family: UISettings<string>;
-    size: OptRange & { options: UIOption<number>[] };
-    color: UISettings<string>;
-    opacity: UISettings<number>;
-    weight: UISettings<string | number>;
-    variant: UISettings<string>;
-  };
-  window: {
-    color: UISettings<string>;
-    opacity: UISettings<number>;
-  };
-  background: {
-    color: UISettings<string>;
-    opacity: UISettings<number>;
-  };
-  characterEdgeStyle: UISettings<"none" | "raised" | "depressed" | "outline" | "drop-shadow">;
-  textAlignment: UISettings<"left" | "center" | "right">;
-}
 
 export interface Settings {
   noOverride: keyof Settings | boolean;

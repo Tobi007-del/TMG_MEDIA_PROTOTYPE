@@ -27,7 +27,7 @@ export class WheelModule extends BaseModule<WheelConfig> {
   }
 
   protected canHandle(e: WheelEvent): boolean {
-    return !this.ctlr.config.settings.locked && !this.ctlr.config.disabled && e.target === this.ctlr.DOM.controlsContainer && !this.ctlr.getPlug<GesturePlug>("gesture")?.touch.xCheck && !this.ctlr.getPlug<GesturePlug>("gesture")?.touch.yCheck && !this.ctlr.getPlug<FastPlayPlug>("fastPlay")?.speedCheck;
+    return !this.ctlr.settings.locked && !this.ctlr.config.disabled && e.target === this.ctlr.DOM.controlsContainer && !this.ctlr.getPlug<GesturePlug>("gesture")?.touch.xCheck && !this.ctlr.getPlug<GesturePlug>("gesture")?.touch.yCheck && !this.ctlr.getPlug<FastPlayPlug>("fastPlay")?.speedCheck;
   }
 
   protected handleWheel(e: WheelEvent): void {
@@ -82,20 +82,20 @@ export class WheelModule extends BaseModule<WheelConfig> {
     if (this.yCheck) this.yCheck = false;
     if (this.xCheck) {
       this.xCheck = false;
-      this.ctlr.media.intent.currentTime = this.nextTime;
+      this.media.intent.currentTime = this.nextTime;
     }
   }
 
   protected applyTimeline(percent: number, sign: string, multiplier: number): void {
-    const { currentTime } = this.ctlr.media.state,
-      { duration } = this.ctlr.media.status,
+    const { currentTime } = this.media.state,
+      { duration } = this.media.status,
       change = percent * duration * +multiplier.toFixed(1);
     this.nextTime = clamp(0, currentTime + (sign === "+" ? change : -change), duration);
   }
 
   protected applyRange(key: "volume" | "brightness", percent: number, sign: string): void {
     const plug = this.ctlr.getPlug<VolumePlug>(key),
-      range = this.ctlr.config.settings[key],
+      range = this.ctlr.settings[key],
       value = range.value! + (sign === "+" ? percent : -percent) * range.max;
     plug?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }

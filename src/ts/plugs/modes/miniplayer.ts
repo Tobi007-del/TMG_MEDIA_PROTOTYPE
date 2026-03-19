@@ -1,5 +1,5 @@
 import { BaseModule, OverlayPlug, SkeletonPlug } from "../";
-import type { Event } from "../../types/reactor";
+import type { REvent } from "../../types/reactor";
 import type { CtlrMedia } from "../../types/contract";
 import type { VideoBuild } from "../../types/build";
 import type { ModesPlug } from "./";
@@ -29,35 +29,35 @@ export class MiniplayerModule extends BaseModule<MiniplayerModeConfig> {
     // ---- Config --------
     this.ctlr.config.on("settings.modes.miniplayer.disabled", this.handleDisabledConfig, { signal: this.signal });
     // ---- Media  --------
-    this.ctlr.media.on("intent.miniplayer", this.handleMiniplayerIntent, { capture: true, signal: this.signal });
-    this.ctlr.media.on("state.paused", this.handlePaused, { signal: this.signal, immediate: true });
+    this.media.on("intent.miniplayer", this.handleMiniplayerIntent, { capture: true, signal: this.signal });
+    this.media.on("state.paused", this.handlePaused, { signal: this.signal, immediate: true });
     // Post Wiring
-    this.ctlr.media.tech.features.miniplayer = !this.config.disabled;
+    this.media.tech.features.miniplayer = !this.config.disabled;
   }
 
   protected handleWindowWidth(width: number): void {
-    if (!this.ctlr.isUIActive("fullscreen")) this.ctlr.media.intent.miniplayer = "auto";
+    if (!this.ctlr.isUIActive("fullscreen")) this.media.intent.miniplayer = "auto";
   }
 
   protected handleMediaParentIntersecting(): void {
-    if (this.ctlr.state.readyState > 2) this.ctlr.media.intent.miniplayer = "auto";
+    if (this.ctlr.state.readyState > 2) this.media.intent.miniplayer = "auto";
   }
 
-  protected handleDisabledConfig({ value }: Event<VideoBuild, "settings.modes.miniplayer.disabled">): void {
-    this.ctlr.media.tech.features.miniplayer = !value;
-    if (value) this.ctlr.media.intent.miniplayer = false;
+  protected handleDisabledConfig({ value }: REvent<VideoBuild, "settings.modes.miniplayer.disabled">): void {
+    this.media.tech.features.miniplayer = !value;
+    if (value) this.media.intent.miniplayer = false;
   }
 
-  protected handlePaused({ value }: Event<CtlrMedia, "state.paused">): void {
-    if (!value) this.ctlr.media.intent.miniplayer = "auto";
+  protected handlePaused({ value }: REvent<CtlrMedia, "state.paused">): void {
+    if (!value) this.media.intent.miniplayer = "auto";
   }
 
-  protected handleMiniplayerIntent(e: Event<CtlrMedia, "intent.miniplayer">): void {
+  protected handleMiniplayerIntent(e: REvent<CtlrMedia, "intent.miniplayer">): void {
     if (e.resolved) return;
     const active = this.ctlr.isUIActive("miniplayer");
     if (this.config.disabled && !active) return e.resolve(this.name);
     const modes = this.ctlr.getPlug<ModesPlug>("modes");
-    if ((e.value === true && !active) || (!active && !this.ctlr.isUIActive("pictureInPicture") && !modes?.pip.inFloatingPlayer && !modes?.fullscreen.inFullscreen && !this.ctlr.state.mediaParentIntersecting && window.innerWidth >= this.config.minWindowWidth && !this.ctlr.media.state.paused)) this.enter();
+    if ((e.value === true && !active) || (!active && !this.ctlr.isUIActive("pictureInPicture") && !modes?.pip.inFloatingPlayer && !modes?.fullscreen.inFullscreen && !this.ctlr.state.mediaParentIntersecting && window.innerWidth >= this.config.minWindowWidth && !this.media.state.paused)) this.enter();
     else if ((e.value === false && active) || (active && this.ctlr.state.mediaParentIntersecting) || (active && window.innerWidth < this.config.minWindowWidth)) this.exit();
     e.resolve(this.name); // btw this is a smart behavioral implementation rather than just a toggler
   }
@@ -65,44 +65,44 @@ export class MiniplayerModule extends BaseModule<MiniplayerModeConfig> {
   protected enter(): void {
     this.ctlr.getPlug<SkeletonPlug>("skeleton")?.activatePseudoMode();
     this.ctlr.videoContainer.classList.add("tmg-video-miniplayer", "tmg-video-progress-bar");
-    ["mousedown", "touchstart"].forEach((type) => this.ctlr.videoContainer.addEventListener(type, this.handleDragStart));
-    this.ctlr.media.state.miniplayer = true;
+    ["mousedown", "touchstart"].forEach((type) => this.ctlr.videoContainer.addEventListener(type, this.handleDragStart, { signal: this.signal }));
+    this.media.state.miniplayer = true;
   }
 
   protected exit(behavior?: ScrollBehavior): void {
     if (behavior && inDocView(this.ctlr.pseudoVideoContainer)) this.ctlr.pseudoVideoContainer.scrollIntoView({ behavior, block: "center", inline: "center" });
     this.ctlr.getPlug<SkeletonPlug>("skeleton")?.deactivatePseudoMode();
     this.ctlr.videoContainer.classList.remove("tmg-video-miniplayer");
-    this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", this.ctlr.config.settings.controlPanel.progressBar);
+    this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", this.ctlr.settings.controlPanel.progressBar);
     ["mousedown", "touchstart"].forEach((type) => this.ctlr.videoContainer.removeEventListener(type, this.handleDragStart));
-    this.ctlr.media.state.miniplayer = false;
+    this.media.state.miniplayer = false;
   }
 
   public expand(): void {
     if (!this.ctlr.videoContainer.classList.contains("tmg-video-miniplayer")) return;
     this.exit("smooth");
-    this.ctlr.media.state.miniplayer = false;
+    this.media.state.miniplayer = false;
   }
 
   public remove(): void {
-    this.ctlr.media.intent.paused = true;
+    this.media.intent.paused = true;
     this.exit();
-    this.ctlr.media.state.miniplayer = false;
+    this.media.state.miniplayer = false;
   }
 
   protected handleDragStart(e: globalThis.Event): void {
     const target = e.target as HTMLElement,
       clientX = (e as MouseEvent).clientX ?? (e as TouchEvent).targetTouches?.[0]?.clientX ?? 0,
       clientY = (e as MouseEvent).clientY ?? (e as TouchEvent).targetTouches?.[0]?.clientY ?? 0;
-    if (!this.ctlr.isUIActive("miniplayer") || target.scrollWidth > target.clientWidth || [this.ctlr.DOM.topControlsWrapper, inBoolArrOpt(this.ctlr.config.settings.controlPanel.draggable, "big") ? this.ctlr.DOM.bigControlsWrapper : null, this.ctlr.DOM.bottomControlsWrapper, this.ctlr.DOM.captionsContainer].some((w) => w?.contains(target)) || target.closest("[class$='toast-container']")) return;
+    if (!this.ctlr.isUIActive("miniplayer") || target.scrollWidth > target.clientWidth || [this.ctlr.DOM.topControlsWrapper, inBoolArrOpt(this.ctlr.settings.controlPanel.draggable, "big") ? this.ctlr.DOM.bigControlsWrapper : null, this.ctlr.DOM.bottomControlsWrapper, this.ctlr.DOM.captionsContainer].some((w) => w?.contains(target)) || target.closest("[class$='toast-container']")) return;
     const { left, bottom } = getComputedStyle(this.ctlr.videoContainer);
     ((this.lastMiniplayerPosX = parseFloat(left)), (this.lastMiniplayerPosY = parseFloat(bottom)));
     ((this.lastMiniplayerPtrX = clientX), (this.lastMiniplayerPtrY = clientY));
-    ((this.nextMiniplayerX = this.ctlr.config.settings.css.currentMiniplayerX as string), (this.nextMiniplayerY = this.ctlr.config.settings.css.currentMiniplayerY as string));
+    ((this.nextMiniplayerX = this.ctlr.settings.css.currentMiniplayerX as string), (this.nextMiniplayerY = this.ctlr.settings.css.currentMiniplayerY as string));
     ((this.wildMiniplayerX = this.nextMiniplayerX), (this.wildMiniplayerY = this.nextMiniplayerY));
-    document.addEventListener("mousemove", this.handleDragging);
-    document.addEventListener("touchmove", this.handleDragging, { passive: false });
-    ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach((type) => document.addEventListener(type, this.handleDragEnd));
+    document.addEventListener("mousemove", this.handleDragging, { signal: this.signal });
+    document.addEventListener("touchmove", this.handleDragging, { passive: false, signal: this.signal });
+    ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach((type) => document.addEventListener(type, this.handleDragEnd, { signal: this.signal }));
     this.ctlr.videoContainer.style.setProperty("transition", "none", "important");
   }
 
@@ -112,12 +112,10 @@ export class MiniplayerModule extends BaseModule<MiniplayerModeConfig> {
     this.ctlr.getPlug<OverlayPlug>("overlay")?.remove("force");
     this.ctlr.videoContainer.classList.add("tmg-video-player-dragging");
     this.ctlr.RAFLoop("miniplayerDragging", () => {
-      const me = e as MouseEvent,
-        che = e as TouchEvent;
       const { innerWidth: ww, innerHeight: wh } = window,
-        { offsetWidth: w, offsetHeight: h } = this.ctlr.videoContainer;
-      const x = me.clientX ?? che.changedTouches?.[0]?.clientX ?? 0,
-        y = me.clientY ?? che.changedTouches?.[0]?.clientY ?? 0,
+        { offsetWidth: w, offsetHeight: h } = this.ctlr.videoContainer,
+        x = (e as MouseEvent).clientX ?? (e as TouchEvent).changedTouches?.[0]?.clientX ?? 0,
+        y = (e as MouseEvent).clientY ?? (e as TouchEvent).changedTouches?.[0]?.clientY ?? 0,
         newX = this.lastMiniplayerPosX + (x - this.lastMiniplayerPtrX),
         newY = this.lastMiniplayerPosY - (y - this.lastMiniplayerPtrY),
         posX = clamp(w / 2, newX, ww - w / 2),
@@ -136,7 +134,7 @@ export class MiniplayerModule extends BaseModule<MiniplayerModeConfig> {
     this.ctlr.videoContainer.style.removeProperty("transform");
     setTimeout(
       () => {
-        ((this.ctlr.config.settings.css.currentMiniplayerX = this.nextMiniplayerX), (this.ctlr.config.settings.css.currentMiniplayerY = this.nextMiniplayerY));
+        ((this.ctlr.settings.css.currentMiniplayerX = this.nextMiniplayerX), (this.ctlr.settings.css.currentMiniplayerY = this.nextMiniplayerY));
         ["transition", "left", "bottom"].forEach((prop) => this.ctlr.videoContainer.style.removeProperty(prop));
       },
       0,
