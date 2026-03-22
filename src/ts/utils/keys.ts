@@ -46,24 +46,24 @@ export function matchKeys(required: string | string[], actual: string, strict = 
   return isArr(required) ? required.some((req) => match(req, actual)) : match(required, actual);
 }
 
-export function getTermsForKey(combo: string, settings: any): { override: boolean; block: boolean; allowed: boolean; action: string | null } {
-  const terms = { override: false, block: false, allowed: false, action: null as string | null },
+export function getTermsForKey(combo: string, settings: any): { override: boolean; block: boolean; whitelisted: boolean; action: string | null } {
+  const terms = { override: false, block: false, whitelisted: false, action: null as string | null },
     { overrides = [], shortcuts = {}, blocks = [], strictMatches: s = false } = settings?.keys || {};
   if (matchKeys(overrides, combo, s)) terms.override = true;
   if (matchKeys(blocks, combo, s)) terms.block = true;
-  if (matchKeys(whiteListedKeys as unknown as string[], combo)) terms.allowed = true;
+  if (matchKeys(whiteListedKeys as unknown as string[], combo)) terms.whitelisted = true;
   terms.action = Object.keys(shortcuts).find((key) => matchKeys(shortcuts[key] as string | string[], combo, s)) || null;
   return terms;
 }
 
-export function keyEventAllowed(e: KeyboardEvent, settings: any): boolean | string {
+export function keyEventAllowed(e: KeyboardEvent, settings: any): false | string {
   if (settings?.keys?.disabled || ((e.key === " " || e.key === "Enter") && (e.currentTarget as any)?.document?.activeElement?.tagName === "BUTTON") || (e.currentTarget as any)?.document?.activeElement?.matches("input,textarea,[contenteditable='true']")) return false;
   const combo = stringifyKeyCombo(e),
-    { override, block, action, allowed } = getTermsForKey(combo, settings);
+    { override, block, action, whitelisted } = getTermsForKey(combo, settings);
   if (block) return false;
   if (override) e.preventDefault();
   if (action) return action;
-  if (allowed) return e.key.toLowerCase();
+  if (whitelisted) return e.key.toLowerCase();
   return false;
 }
 
@@ -84,4 +84,4 @@ export function parseForARIAKS(s: string) {
     .replace(/\w+/g, (k: any) => m[k as keyof typeof m] || k) // 3. Map keys (ctrl -> Control)
     .replace(/\s+/g, " ")
     .trim(); // 4. Cleanup extra spaces
-}
+} // ARIA Key Shortcut

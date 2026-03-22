@@ -22,7 +22,7 @@ export class AutoPlug extends BasePlug<Auto> {
 
   public wire(): void {
     // Ctlr Config Watchers
-    this.ctlr.config.watch("settings.auto.play", this.forwardAutoPlay, { signal: this.signal, immediate: true });
+    this.ctlr.config.watch("settings.auto.play", this.forwardAutoPlay, { signal: this.signal, immediate: "auto" });
     // ---- Media Listeners
     this.media.on("state.currentTime", this.handleTimeUpdate, { signal: this.signal, immediate: true });
     // ---- State ---------

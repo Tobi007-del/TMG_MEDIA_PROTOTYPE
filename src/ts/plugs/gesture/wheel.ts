@@ -94,9 +94,8 @@ export class WheelModule extends BaseModule<WheelConfig> {
   }
 
   protected applyRange(key: "volume" | "brightness", percent: number, sign: string): void {
-    const plug = this.ctlr.getPlug<VolumePlug>(key),
-      range = this.ctlr.settings[key],
+    const range = this.ctlr.settings[key],
       value = range.value! + (sign === "+" ? percent : -percent) * range.max;
-    plug?.handleSliderInput(clamp(0, Math.round(value), range.max));
+    this.ctlr.getPlug<VolumePlug>(key)?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }
 }

@@ -1,14 +1,15 @@
 {
   "compilerOptions": {
-    "target": "es2015",
+    "target": "ESNext",
+    "module": "ESNext",
     "lib": ["dom", "dom.iterable", "esnext"],
     "strict": true,
     "skipLibCheck": true,
-    "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "incremental": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "preserveSymlinks": true
   },
   "include": ["src/ts/**/*.ts", "src/index.ts"],
   "exclude": ["node_modules", "dist"]

@@ -32,9 +32,11 @@ export class Timeline extends RangeSlider<TimelineConfig> {
   public thumbnailCanvas!: HTMLCanvasElement;
   public previewContext: CanvasRenderingContext2D | null = null;
   public thumbnailContext: CanvasRenderingContext2D | null = null;
-  protected plug?: TimePlug;
   protected wasPaused = false;
   protected scrubbingId = -1;
+  protected get plug() {
+    return this.ctlr.getPlug<TimePlug>("time");
+  }
 
   constructor(ctlr: Controller, options: Partial<TimelineConfig> = {}) {
     super(ctlr, { label: "Video timeline", ...options });
@@ -70,8 +72,6 @@ export class Timeline extends RangeSlider<TimelineConfig> {
 
   public override wire(): void {
     super.wire();
-    // Variables Assignments
-    this.plug = this.ctlr.getPlug<TimePlug>("time");
     // State Listeners
     this.state.on("scrubbing", this.handleScrubbingChange, { signal: this.signal });
     // Config --------

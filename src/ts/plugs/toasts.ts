@@ -1,7 +1,7 @@
 import { BasePlug } from ".";
 import type { REvent } from "../types/reactor";
 import type { VideoBuild } from "../types/build";
-import type { ToastOptions } from "../types/t007";
+import type { ToastOptions } from "@t007/toast";
 
 export interface Toasts extends ToastOptions {
   disabled: boolean;

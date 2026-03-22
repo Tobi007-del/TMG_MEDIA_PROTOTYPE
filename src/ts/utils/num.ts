@@ -1,12 +1,10 @@
 import { AptRange } from "../types/generics";
 
 // Validators
+export { clamp } from "@t007/utils";
+
 export function isValidNum(val: any): boolean {
   return !isNaN(val ?? NaN) && val !== Infinity;
-}
-
-export function clamp(min = 0, val: number, max = Infinity) {
-  return Math.min(Math.max(val, min), max);
 }
 
 export function safeNum(number: any, fallback = 0): number {
@@ -38,7 +36,7 @@ export function stepNum<T extends AptRange>(v = 0, { min, max, step }: T): numbe
 }
 
 const _stepsCache = new Map<string, number[]>();
-export function rotate<T>(cur: T, steps: T[], dir?: "forwards" | "backwards", wrap?: boolean): T;
+export function rotate<T>(cur: T, steps: T[] | readonly T[], dir?: "forwards" | "backwards", wrap?: boolean): T;
 export function rotate(cur: number, steps: AptRange, dir?: "forwards" | "backwards", wrap?: boolean): number;
 export function rotate(cur: any, steps: any, dir: "forwards" | "backwards" = "forwards", wrap = true): any {
   let list: any[];

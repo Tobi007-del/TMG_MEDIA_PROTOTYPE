@@ -33,9 +33,9 @@ export class MediaPlug extends BasePlug<Media> {
 
   public wire(): void {
     // Ctlr Config Watchers
-    this.ctlr.config.watch("media.title", this.forwardTitle, { immediate: true, signal: this.signal });
-    this.ctlr.config.watch("media.artist", this.forwardArtist, { immediate: true, signal: this.signal });
-    this.ctlr.config.watch("media.profile", this.forwardProfile, { immediate: true, signal: this.signal });
+    this.ctlr.config.watch("media.title", this.forwardTitle, { immediate: "auto", signal: this.signal });
+    this.ctlr.config.watch("media.artist", this.forwardArtist, { immediate: "auto", signal: this.signal });
+    this.ctlr.config.watch("media.profile", this.forwardProfile, { immediate: "auto", signal: this.signal });
     // ---- Media Listeners
     this.media.on("state.paused", ({ value }) => !value && this.syncSession(), { signal: this.signal });
     this.media.on("status.loadedMetadata", () => this.autoGenerate(), { signal: this.signal });

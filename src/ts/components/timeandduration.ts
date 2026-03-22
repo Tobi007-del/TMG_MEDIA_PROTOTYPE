@@ -7,10 +7,12 @@ export type TimeAndDurationConfig = undefined;
 export class TimeAndDuration extends BaseComponent<TimeAndDurationConfig, ComponentState, HTMLButtonElement> {
   public static readonly componentName: string = "timeandduration";
   public static readonly isControl: boolean = true;
-  protected plug?: TimePlug;
   protected time!: HTMLElement;
   protected bridge!: HTMLElement;
   protected duration!: HTMLElement;
+  protected get plug() {
+    return this.ctlr.getPlug<TimePlug>("time");
+  }
 
   public create() {
     // Variables Assignments
@@ -24,10 +26,8 @@ export class TimeAndDuration extends BaseComponent<TimeAndDurationConfig, Compon
   }
 
   public wire(): void {
-    // Variables Assignments
-    this.plug = this.ctlr.getPlug<TimePlug>("time");
     // Event Listeners
-    addSafeClicks(this.element, this.plug?.toggleMode, this.plug?.rotateFormat, { signal: this.signal });
+    this.plug && addSafeClicks(this.element, this.plug.toggleMode, this.plug.rotateFormat, { signal: this.signal });
     // Ctlr Media Listeners
     this.media.on("state.currentTime", this.updateTime, { signal: this.signal });
     this.media.on("status.duration", this.updateDuration, { signal: this.signal });

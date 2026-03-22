@@ -28,6 +28,7 @@ import type {
   ErrorMessages,
   LightState,
   Modes,
+  Keys,
 } from "../plugs";
 
 // NOTE: Use deep partial util where necessary after imports
@@ -42,19 +43,10 @@ export interface Settings {
   errorMessages: ErrorMessages;
   fastPlay: FastPlay;
   gesture: Gesture;
-  keys: {
-    disabled: boolean;
-    strictMatches: boolean;
-    overrides: string[];
-    blocks: string[];
-    shortcuts: Record<KeyShortcutAction, string | string[]>;
-    mods: { disabled: boolean } & Record<
-      ModdedKeyShortcutAction,
-      Record<"ctrl" | "alt" | "shift", number>
-    >;
-  };
+  keys: Keys;
   locked: Locked;
   modes: Modes;
+  objectFit: ObjectFit;
   frame: Frame;
   notifiers: boolean;
   overlay: Overlay;

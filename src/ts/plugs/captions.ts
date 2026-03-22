@@ -1,4 +1,4 @@
-import { BasePlug, CSSPlug } from ".";
+import { BasePlug, CSSPlug, type KeysPlug } from ".";
 import type { CaptionsView } from "../components";
 import { ComponentRegistry } from "../core/registry";
 import type { REvent } from "../types/reactor";
@@ -69,6 +69,18 @@ export class CaptionsPlug extends BasePlug<Captions> {
     this.ctlr.config.on("settings.captions.font.size.max", this.handleFontSizeMax, { signal: this.signal, immediate: true });
     // Post Wiring
     (this.ctlr.settings.css.currentCaptionsX, this.ctlr.settings.css.currentCaptionsY); // Read once so CSSPlug can cache computed values.
+    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    keys?.register("captions", this.toggleCaptions, { phase: "keyup" });
+    keys?.register("captionsFontSizeUp", (_, mod) => this.changeFontSize(keys.getModded("captionsFontSize", mod, this.config.font.size.skip)), { phase: "keydown" });
+    keys?.register("captionsFontSizeDown", (_, mod) => this.changeFontSize(-keys.getModded("captionsFontSize", mod, this.config.font.size.skip)), { phase: "keydown" });
+    keys?.register("captionsFontFamily", this.rotateFontFamily, { phase: "keydown" });
+    keys?.register("captionsFontWeight", this.rotateFontWeight, { phase: "keydown" });
+    keys?.register("captionsFontVariant", this.rotateFontVariant, { phase: "keydown" });
+    keys?.register("captionsFontOpacity", this.rotateFontOpacity, { phase: "keydown" });
+    keys?.register("captionsBackgroundOpacity", this.rotateBackgroundOpacity, { phase: "keydown" });
+    keys?.register("captionsWindowOpacity", this.rotateWindowOpacity, { phase: "keydown" });
+    keys?.register("captionsCharacterEdgeStyle", this.rotateCharacterEdgeStyle, { phase: "keydown" });
+    keys?.register("captionsTextAlignment", this.rotateTextAlignment, { phase: "keydown" });
   }
 
   protected handleDisabledConfig({ value }: REvent<VideoBuild, "settings.captions.disabled">): void {

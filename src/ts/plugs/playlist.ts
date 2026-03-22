@@ -1,4 +1,4 @@
-import { BasePlug } from ".";
+import { BasePlug, type KeysPlug } from ".";
 import type { VideoBuild, Settings } from "../types/build";
 import type { REvent } from "../types/reactor";
 import { DEFAULT_VIDEO_ITEM_BUILD } from "../consts/config-defaults";
@@ -31,6 +31,10 @@ export class PlaylistPlug extends BasePlug<Playlist> {
     this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && (this.config![this.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
     // ----------- Listners
     this.ctlr.config.on("playlist", this.handlePlaylistChange, { signal: this.signal, immediate: true, depth: 1 });
+    // Post Wiring
+    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    keys?.register("prev", this.previousVideo, { phase: "keydown" });
+    keys?.register("next", this.nextVideo, { phase: "keydown" });
   }
 
   protected handlePlaylistChange({ root }: REvent<VideoBuild, "playlist">): void {

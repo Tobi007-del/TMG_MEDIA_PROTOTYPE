@@ -1,7 +1,6 @@
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
+  for (var name in all) __defProp(target, name, { get: all[name], enumerable: true });
 };
 
 // src/ts/utils/index.ts
@@ -150,17 +149,23 @@ __export(utils_exports, {
   supportsFullscreen: () => supportsFullscreen,
   supportsPictureInPicture: () => supportsPictureInPicture,
   uid: () => uid,
-  uncamelize: () => uncamelize
+  uncamelize: () => uncamelize,
 });
 
 // src/ts/utils/quirks/ripple.ts
 function rippleHandler(e, target, forceCenter = false) {
   const el = target || e.currentTarget;
-  if (e.target !== e.currentTarget && e.target?.matches("button,[href],input,label,select,textarea,[tabindex]:not([tabindex='-1'])") || el?.hasAttribute("disabled") || e.pointerType === "mouse" && e.button !== 0) return;
+  if ((e.target !== e.currentTarget && e.target?.matches("button,[href],input,label,select,textarea,[tabindex]:not([tabindex='-1'])")) || el?.hasAttribute("disabled") || (e.pointerType === "mouse" && e.button !== 0)) return;
   e.stopPropagation?.();
-  const { offsetWidth: rW, offsetHeight: rH } = el, { width: w2, height: h, left: l, top: t } = el.getBoundingClientRect(), size = Math.max(rW, rH), x = forceCenter ? rW / 2 - size / 2 : (e.clientX - l) * rW / w2 - size / 2, y = forceCenter ? rH / 2 - size / 2 : (e.clientY - t) * rH / h - size / 2, wrapper = createEl("span", { className: "tmg-video-ripple-container" }), ripple = createEl("span", { className: "tmg-video-ripple tmg-video-ripple-hold" }, {}, { cssText: `width:${size}px;height:${size}px;left:${x}px;top:${y}px;` });
+  const { offsetWidth: rW, offsetHeight: rH } = el,
+    { width: w2, height: h, left: l, top: t } = el.getBoundingClientRect(),
+    size = Math.max(rW, rH),
+    x = forceCenter ? rW / 2 - size / 2 : ((e.clientX - l) * rW) / w2 - size / 2,
+    y = forceCenter ? rH / 2 - size / 2 : ((e.clientY - t) * rH) / h - size / 2,
+    wrapper = createEl("span", { className: "tmg-video-ripple-container" }),
+    ripple = createEl("span", { className: "tmg-video-ripple tmg-video-ripple-hold" }, {}, { cssText: `width:${size}px;height:${size}px;left:${x}px;top:${y}px;` });
   let canRelease = false;
-  ripple?.addEventListener("animationend", () => canRelease = true, { once: true });
+  ripple?.addEventListener("animationend", () => (canRelease = true), { once: true });
   el.append(wrapper?.appendChild(ripple).parentElement);
   const release = () => {
     if (!canRelease) return ripple?.addEventListener("animationend", release, { once: true });
@@ -173,45 +178,55 @@ function rippleHandler(e, target, forceCenter = false) {
 
 // src/ts/utils/quirks/scroll.ts
 function initVScrollerator({ baseSpeed = 3, maxSpeed = 10, stepDelay = 2e3, baseRate = 16, lineHeight = 80, margin = 80, car = window } = {}) {
-  let linesPerSec = baseSpeed, accelId = null, lastTime = null;
+  let linesPerSec = baseSpeed,
+    accelId = null,
+    lastTime = null;
   const drive = (clientY, brake = false, offsetY = 0) => {
     if (car !== window) clientY -= offsetY;
-    const now = performance.now(), speed = linesPerSec * lineHeight * ((lastTime ? now - lastTime : baseRate) / 1e3);
+    const now = performance.now(),
+      speed = linesPerSec * lineHeight * ((lastTime ? now - lastTime : baseRate) / 1e3);
     if (!brake && (clientY < margin || clientY > (car.innerHeight ?? car.offsetHeight) - margin)) {
-      accelId === null ? accelId = setTimeout(() => linesPerSec += 1, stepDelay) : linesPerSec > baseSpeed && (linesPerSec = Math.min(linesPerSec + 1, maxSpeed));
+      accelId === null ? (accelId = setTimeout(() => (linesPerSec += 1), stepDelay)) : linesPerSec > baseSpeed && (linesPerSec = Math.min(linesPerSec + 1, maxSpeed));
       car.scrollBy?.(0, clientY < margin ? -speed : speed);
     } else reset();
-    return lastTime = !brake ? now : null, speed;
+    return ((lastTime = !brake ? now : null), speed);
   };
-  const reset = () => (accelId && clearTimeout(accelId), accelId = null, linesPerSec = baseSpeed, lastTime = null);
+  const reset = () => (accelId && clearTimeout(accelId), (accelId = null), (linesPerSec = baseSpeed), (lastTime = null));
   return { drive, reset };
 }
 var _SCROLLERS = /* @__PURE__ */ new WeakMap();
 var _SCROLLER_R_OBSERVER = typeof window !== "undefined" && new ResizeObserver((entries) => entries.forEach(({ target }) => _SCROLLERS.get(target)?.update()));
-var _SCROLLER_M_OBSERVER = typeof window !== "undefined" && new MutationObserver((entries) => {
-  const els = /* @__PURE__ */ new Set();
-  for (const entry of entries) {
-    let node = entry.target instanceof Element ? entry.target : null;
-    while (node && !_SCROLLERS.has(node)) node = node.parentElement;
-    if (node) els.add(node);
-  }
-  for (const el of els) _SCROLLERS.get(el)?.update();
-});
+var _SCROLLER_M_OBSERVER =
+  typeof window !== "undefined" &&
+  new MutationObserver((entries) => {
+    const els = /* @__PURE__ */ new Set();
+    for (const entry of entries) {
+      let node = entry.target instanceof Element ? entry.target : null;
+      while (node && !_SCROLLERS.has(node)) node = node.parentElement;
+      if (node) els.add(node);
+    }
+    for (const el of els) _SCROLLERS.get(el)?.update();
+  });
 function initScrollAssist(el, { pxPerSecond = 80, assistClassName = "tmg-video-controls-scroll-assist", vertical = true, horizontal = true } = {}) {
   const parent = el?.parentElement;
   if (!parent || _SCROLLERS.has(el)) return;
   const assist = {};
-  let scrollId = null, last = performance.now(), assistWidth = 20, assistHeight = 20;
+  let scrollId = null,
+    last = performance.now(),
+    assistWidth = 20,
+    assistHeight = 20;
   const update = () => {
     const hasInteractive = !!parent.querySelector('button, a[href], input, select, textarea, [contenteditable="true"], [tabindex]:not([tabindex="-1"])');
     if (horizontal) {
-      const w2 = assist.left?.offsetWidth || assistWidth, check = hasInteractive ? el.clientWidth < w2 * 2 : false;
+      const w2 = assist.left?.offsetWidth || assistWidth,
+        check = hasInteractive ? el.clientWidth < w2 * 2 : false;
       assist.left.style.display = check ? "none" : el.scrollLeft > 0 ? "block" : "none";
       assist.right.style.display = check ? "none" : el.scrollLeft + el.clientWidth < el.scrollWidth - 1 ? "block" : "none";
       assistWidth = w2;
     }
     if (vertical) {
-      const h = assist.up?.offsetHeight || assistHeight, check = hasInteractive ? el.clientHeight < h * 2 : false;
+      const h = assist.up?.offsetHeight || assistHeight,
+        check = hasInteractive ? el.clientHeight < h * 2 : false;
       assist.up.style.display = check ? "none" : el.scrollTop > 0 ? "block" : "none";
       assist.down.style.display = check ? "none" : el.scrollTop + el.clientHeight < el.scrollHeight - 1 ? "block" : "none";
       assistHeight = h;
@@ -219,9 +234,10 @@ function initScrollAssist(el, { pxPerSecond = 80, assistClassName = "tmg-video-c
   };
   const scroll = (dir) => {
     const frame = () => {
-      const now = performance.now(), dt = now - last;
+      const now = performance.now(),
+        dt = now - last;
       last = now;
-      const d = pxPerSecond * dt / 1e3;
+      const d = (pxPerSecond * dt) / 1e3;
       if (dir === "left") el.scrollLeft = Math.max(0, el.scrollLeft - d);
       if (dir === "right") el.scrollLeft = Math.min(el.scrollWidth - el.clientWidth, el.scrollLeft + d);
       if (dir === "up") el.scrollTop = Math.max(0, el.scrollTop - d);
@@ -231,7 +247,7 @@ function initScrollAssist(el, { pxPerSecond = 80, assistClassName = "tmg-video-c
     last = performance.now();
     frame();
   };
-  const stop = () => (cancelAnimationFrame(scrollId ?? 0), scrollId = null);
+  const stop = () => (cancelAnimationFrame(scrollId ?? 0), (scrollId = null));
   const addAssist = (dir) => {
     const div = createEl("div", { className: assistClassName }, { scrollDirection: dir }, { display: "none" });
     if (!div) return;
@@ -253,7 +269,7 @@ function initScrollAssist(el, { pxPerSecond = 80, assistClassName = "tmg-video-c
       _SCROLLER_R_OBSERVER.unobserve(el);
       _SCROLLERS.delete(el);
       Object.values(assist).forEach((a) => a.remove());
-    }
+    },
   });
   update();
   return _SCROLLERS.get(el);
@@ -280,10 +296,8 @@ var DEFAULT_CONFIG = {
   inputSelector: "input[value],textarea,[contenteditable='true']",
   focusOptions: { preventScroll: false },
   scrollIntoView: { block: "nearest", inline: "nearest" },
-  onSelect: () => {
-  },
-  onFocusOut: () => {
-  }
+  onSelect: () => {},
+  onFocusOut: () => {},
 };
 var getCommonAncestor = (a, b) => {
   if (!a || !b) return a || b || null;
@@ -318,21 +332,23 @@ var getGrid = (all, x = true, y = true, vY = true) => {
   return grid;
 };
 var getTargetIndex = ({ key, currIndex, length, gridX, gridY, vGridY, loop, ctrlKey = false, rtl }) => {
-  const rowStart = currIndex - currIndex % gridX;
+  const rowStart = currIndex - (currIndex % gridX);
   const rowEnd = Math.min(rowStart + gridX - 1, length - 1);
   const colStart = currIndex % gridX;
   const colEnd = Math.min(colStart + gridX * (gridY - 1), length - 1);
-  const canX = gridX > 1, canY = gridY > 1;
+  const canX = gridX > 1,
+    canY = gridY > 1;
   const horizontalMove = rtl ? { ArrowRight: canX ? -1 : 0, ArrowLeft: canX ? 1 : 0 } : { ArrowRight: canX ? 1 : 0, ArrowLeft: canX ? -1 : 0 };
-  const move = {
-    ...horizontalMove,
-    ArrowDown: canY ? gridX : 0,
-    ArrowUp: canY ? -gridX : 0,
-    Home: ctrlKey ? 0 : rowStart,
-    End: ctrlKey ? length - 1 : rowEnd,
-    PageDown: (vGridY - 1) * gridX,
-    PageUp: -(vGridY - 1) * gridX
-  }[key] ?? 0;
+  const move =
+    {
+      ...horizontalMove,
+      ArrowDown: canY ? gridX : 0,
+      ArrowUp: canY ? -gridX : 0,
+      Home: ctrlKey ? 0 : rowStart,
+      End: ctrlKey ? length - 1 : rowEnd,
+      PageDown: (vGridY - 1) * gridX,
+      PageUp: -(vGridY - 1) * gridX,
+    }[key] ?? 0;
   let targetIndex = key === "Home" || key === "End" ? move : currIndex + move;
   if (key === "ArrowDown") {
     if (targetIndex < gridX) targetIndex = 0;
@@ -360,7 +376,7 @@ function initArrowFocusNav(container, cfg = {}) {
   const rtl = isRtl ?? getComputedStyle(container).direction === "rtl";
   const shouldSnub = () => !enabled || !container;
   const isItemDisabled = (el) => !el || el.hasAttribute("disabled") || el.hasAttribute("aria-disabled");
-  const getItems = () => items = Array.from(container.querySelectorAll(selector));
+  const getItems = () => (items = Array.from(container.querySelectorAll(selector)));
   const getAbleIndex = (targetIndex, e = { key: "ArrowRight", ctrlKey: false }) => {
     if (shouldSnub()) return null;
     if (!items.length) return null;
@@ -394,7 +410,7 @@ function initArrowFocusNav(container, cfg = {}) {
     items.forEach((el, i) => {
       const isActive = i === activeIndex;
       if (roving) {
-        const shouldBeTabbable = i === activeIndex || activeIndex === -1 && i === tabbableIndex;
+        const shouldBeTabbable = i === activeIndex || (activeIndex === -1 && i === tabbableIndex);
         el.setAttribute("tabindex", shouldBeTabbable ? "0" : "-1");
       } else if (virtual && activeIndex > 0) {
         const shouldBeTabbable = i > activeIndex;
@@ -410,7 +426,7 @@ function initArrowFocusNav(container, cfg = {}) {
     if (shouldSnub() || !typeahead) return;
     buffer += key.toLowerCase();
     if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => buffer = "", resetMs);
+    timeout = setTimeout(() => (buffer = ""), resetMs);
     const start = activeIndex >= 0 ? activeIndex + 1 : 0;
     for (let i = 0; i < items.length; i++) {
       const idx = (start + i) % items.length;
@@ -444,7 +460,7 @@ function initArrowFocusNav(container, cfg = {}) {
       return onFocusOut?.();
     }
     const among = items.includes(evt.relatedTarget);
-    if (!among && (defaultTabbableIndex ?? -1) >= 0) return activeIndex = -1;
+    if (!among && (defaultTabbableIndex ?? -1) >= 0) return (activeIndex = -1);
     if (virtual) activeIndex = -1;
   };
   container.addEventListener("focusout", handleFocusOut);
@@ -492,7 +508,7 @@ function initArrowFocusNav(container, cfg = {}) {
     activeIndex: () => activeIndex,
     activeItem: () => items[activeIndex] ?? null,
     getGrid: () => ({ x: gridX, y: gridY, vY: vGridY }),
-    destroy
+    destroy,
   };
 }
 
@@ -552,7 +568,7 @@ var DEFAULT_MEDIA_STATE = {
   sources: [],
   tracks: [],
   // Misc
-  objectFit: "contain"
+  objectFit: "contain",
 };
 var DEFAULT_MEDIA_INTENT = DEFAULT_MEDIA_STATE;
 var DEFAULT_MEDIA_STATUS = {
@@ -589,12 +605,12 @@ var DEFAULT_MEDIA_STATUS = {
   // VR
   xrCapabilities: null,
   // Active
-  activeCue: null
+  activeCue: null,
 };
 var DEFAULT_MEDIA_SETTINGS = {
   defaultMuted: false,
   defaultPlaybackRate: 1,
-  srcObject: null
+  srcObject: null,
 };
 
 // src/ts/utils/media.ts
@@ -621,9 +637,9 @@ function getMediaReport(m) {
       crossOrigin: m.crossOrigin,
       controls: m.controls,
       controlsList: m.controlsList ?? m.getAttribute("controlsList"),
-      disablePictureInPicture: m instanceof HTMLVideoElement ? m.disablePictureInPicture ?? m.hasAttribute("disablePictureInPicture") : false,
+      disablePictureInPicture: m instanceof HTMLVideoElement ? (m.disablePictureInPicture ?? m.hasAttribute("disablePictureInPicture")) : false,
       sources: getSources(m),
-      tracks: getTracks(m)
+      tracks: getTracks(m),
     },
     status: {
       readyState: m.readyState,
@@ -644,22 +660,22 @@ function getMediaReport(m) {
       textTracks: m.textTracks,
       audioTracks: m.audioTracks,
       videoTracks: m.videoTracks,
-      activeCue: m.textTracks[txtTrackIdx]?.activeCues?.[0] || null
+      activeCue: m.textTracks[txtTrackIdx]?.activeCues?.[0] || null,
     },
     settings: {
       defaultMuted: m.defaultMuted,
-      defaultPlaybackRate: m.defaultPlaybackRate
-    }
+      defaultPlaybackRate: m.defaultPlaybackRate,
+    },
   };
   return {
     state: { ...DEFAULT_MEDIA_STATE, ...report.state },
     intent: { ...DEFAULT_MEDIA_INTENT, ...report.state },
     status: { ...DEFAULT_MEDIA_STATUS, ...report.status },
-    settings: { ...DEFAULT_MEDIA_SETTINGS, ...report.settings }
+    settings: { ...DEFAULT_MEDIA_SETTINGS, ...report.settings },
   };
 }
 function getRenderedBox(elem) {
-  const getResourceDimensions = (source) => source.videoWidth && source.videoHeight ? { width: source.videoWidth, height: source.videoHeight } : null;
+  const getResourceDimensions = (source) => (source.videoWidth && source.videoHeight ? { width: source.videoWidth, height: source.videoHeight } : null);
   const parsePositionAsPx = (str, bboxSize, objectSize) => {
     const num = parseFloat(str);
     return !str.endsWith("%") ? num : bboxSize * (num / 100) - objectSize * (num / 100);
@@ -669,19 +685,26 @@ function getRenderedBox(elem) {
     return { left: parsePositionAsPx(left, bbox2.width, object2.width), top: parsePositionAsPx(top, bbox2.height, object2.height) };
   };
   let { objectFit, objectPosition } = getComputedStyle(elem);
-  const bbox = elem.getBoundingClientRect(), object = getResourceDimensions(elem);
+  const bbox = elem.getBoundingClientRect(),
+    object = getResourceDimensions(elem);
   if (!object || !objectFit || !objectPosition) return {};
   if (objectFit === "scale-down") objectFit = bbox.width < object.width || bbox.height < object.height ? "contain" : "none";
   if (objectFit === "none") return { ...parseObjectPosition(objectPosition, bbox, object), ...object };
   else if (objectFit === "contain") {
-    const objectRatio = object.height / object.width, bboxRatio = bbox.height / bbox.width, width = bboxRatio > objectRatio ? bbox.width : bbox.height / objectRatio, height = bboxRatio > objectRatio ? bbox.width * objectRatio : bbox.height;
+    const objectRatio = object.height / object.width,
+      bboxRatio = bbox.height / bbox.width,
+      width = bboxRatio > objectRatio ? bbox.width : bbox.height / objectRatio,
+      height = bboxRatio > objectRatio ? bbox.width * objectRatio : bbox.height;
     return { ...parseObjectPosition(objectPosition, bbox, { width, height }), width, height };
   } else if (objectFit === "fill") {
-    const { left, top } = parseObjectPosition(objectPosition, bbox, object), objPosArr = objectPosition.split(" ");
+    const { left, top } = parseObjectPosition(objectPosition, bbox, object),
+      objPosArr = objectPosition.split(" ");
     return { left: objPosArr[0].endsWith("%") ? 0 : left, top: objPosArr[1].endsWith("%") ? 0 : top, width: bbox.width, height: bbox.height };
   } else if (objectFit === "cover") {
     const minRatio = Math.min(bbox.width / object.width, bbox.height / object.height);
-    let width = object.width * minRatio, height = object.height * minRatio, outRatio = 1;
+    let width = object.width * minRatio,
+      height = object.height * minRatio,
+      outRatio = 1;
     if (width < bbox.width) outRatio = bbox.width / width;
     if (Math.abs(outRatio - 1) < 1e-14 && height < bbox.height) outRatio = bbox.height / height;
     width *= outRatio;
@@ -729,7 +752,8 @@ function addSources(sources = [], medium) {
   return isIter(sources) ? Array.from(sources, (source) => addSource(source, medium)) : addSource(sources, medium);
 }
 function getSources(medium) {
-  const sources = medium.querySelectorAll("source"), _sources = [];
+  const sources = medium.querySelectorAll("source"),
+    _sources = [];
   sources.forEach((source) => {
     const obj = {};
     putSourceDetails(source, obj);
@@ -759,7 +783,8 @@ function addTracks(tracks = [], medium) {
   return isIter(tracks) ? Array.from(tracks, (track) => addTrack(track, medium)) : addTrack(tracks, medium);
 }
 function getTracks(medium, cues = false) {
-  const tracks = medium.querySelectorAll(!cues ? "track" : "track:is([kind='captions'], [kind='subtitles'])"), _tracks = [];
+  const tracks = medium.querySelectorAll(!cues ? "track" : "track:is([kind='captions'], [kind='subtitles'])"),
+    _tracks = [];
   tracks.forEach((track) => {
     const obj = {};
     putTrackDetails(track, obj);
@@ -793,8 +818,9 @@ function getTrackIdx(medium, type, term = "active") {
   return -1;
 }
 function setCurrentTrack(medium, type, term, flush = false) {
-  const list = medium[`${type.toLowerCase()}Tracks`], idx = getTrackIdx(medium, type, term);
-  if (type !== "Video") for (let i = 0; i < list.length; i++) type === "Text" ? list[i].mode = i === idx ? "showing" : flush ? "disabled" : "hidden" : list[i].enabled = i === idx;
+  const list = medium[`${type.toLowerCase()}Tracks`],
+    idx = getTrackIdx(medium, type, term);
+  if (type !== "Video") for (let i = 0; i < list.length; i++) type === "Text" ? (list[i].mode = i === idx ? "showing" : flush ? "disabled" : "hidden") : (list[i].enabled = i === idx);
   else list[idx] && (list[idx].selected = true);
 }
 var DUMMY_VID = createEl("video");
@@ -804,7 +830,7 @@ function canVidCtrlVolume() {
     const prev = DUMMY_VID.volume;
     DUMMY_VID.volume = 0.5;
     const works = DUMMY_VID.volume === 0.5;
-    return DUMMY_VID.volume = prev, works;
+    return ((DUMMY_VID.volume = prev), works);
   } catch {
     return false;
   }
@@ -818,7 +844,7 @@ function canVidCtrlRate() {
     const prev = DUMMY_VID.playbackRate;
     DUMMY_VID.playbackRate = 0.5;
     const works = DUMMY_VID.playbackRate === 0.5;
-    return DUMMY_VID.playbackRate = prev, works;
+    return ((DUMMY_VID.playbackRate = prev), works);
   } catch {
     return false;
   }
@@ -838,9 +864,11 @@ function srtToVtt(srt, vttLines = ["WEBVTT", ""]) {
   for (const block of input.split(/\n{2,}/)) {
     const lines = block.split("\n");
     let idx = /^\d+$/.test(lines[0].trim()) ? 1 : 0;
-    const timing = lines[idx]?.trim().replace(/\s+/g, " "), m = timing?.match(/(\d{1,2}:\d{2}:\d{2})(?:[.,](\d{1,3}))?\s*-->\s*(\d{1,2}:\d{2}:\d{2})(?:[.,](\d{1,3}))?/);
+    const timing = lines[idx]?.trim().replace(/\s+/g, " "),
+      m = timing?.match(/(\d{1,2}:\d{2}:\d{2})(?:[.,](\d{1,3}))?\s*-->\s*(\d{1,2}:\d{2}:\d{2})(?:[.,](\d{1,3}))?/);
     if (!m) continue;
-    const [, startHms, startMsRaw = "0", endHms, endMsRaw = "0"] = m, to3 = (ms) => ms.padEnd(3, "0").slice(0, 3);
+    const [, startHms, startMsRaw = "0", endHms, endMsRaw = "0"] = m,
+      to3 = (ms) => ms.padEnd(3, "0").slice(0, 3);
     vttLines.push(startHms + "." + to3(startMsRaw) + " --> " + endHms + "." + to3(endMsRaw));
     for (let i = idx + 1; i < lines.length; i++) vttLines.push(lines[i]);
     vttLines.push("");
@@ -848,12 +876,14 @@ function srtToVtt(srt, vttLines = ["WEBVTT", ""]) {
   return vttLines.join("\n");
 }
 function parseVttText(text) {
-  const state2 = { tag: /<(\/)?([a-z0-9.:]+)([^>]*)>/gi, o: "", l: 0, p: null, c: "" }, esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const state2 = { tag: /<(\/)?([a-z0-9.:]+)([^>]*)>/gi, o: "", l: 0, p: null, c: "" },
+    esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   let m;
-  while (m = state2.tag.exec(text)) {
+  while ((m = state2.tag.exec(text))) {
     const chunk = text.slice(state2.l, m.index);
     if (chunk) state2.c += esc(chunk);
-    const [_, cls, tag_n, rest] = m, low = tag_n.toLowerCase();
+    const [_, cls, tag_n, rest] = m,
+      low = tag_n.toLowerCase();
     if (/^[0-9]/.test(tag_n)) {
       state2.o += state2.p ? `<span data-part="timed" data-time="${state2.p}">${state2.c}</span>` : state2.c;
       state2.p = tag_n;
@@ -872,35 +902,49 @@ function parseVttText(text) {
   return state2.o + (state2.p ? `<span data-part="timed" data-time="${state2.p}">${state2.c}</span>` : state2.c);
 }
 function formatVttLine(p, maxChars) {
-  const state2 = { tokens: p.match(/<[^>]+>|\S+/g) || [], stack: [], parts: [], line: "", len: 0, openStr: "", closeStr: "", timeTag: "", lastWasTag: false }, updateTags = () => (state2.openStr = state2.stack.map((n) => `<${n}>`).join(""), state2.closeStr = state2.stack.reduceRight((a, n) => a + `</${n}>`, "")), flush = () => state2.line && (state2.parts.push(state2.line + state2.closeStr), state2.line = (state2.timeTag || "") + state2.openStr, state2.len = 0, state2.lastWasTag = true);
+  const state2 = { tokens: p.match(/<[^>]+>|\S+/g) || [], stack: [], parts: [], line: "", len: 0, openStr: "", closeStr: "", timeTag: "", lastWasTag: false },
+    updateTags = () => ((state2.openStr = state2.stack.map((n) => `<${n}>`).join("")), (state2.closeStr = state2.stack.reduceRight((a, n) => a + `</${n}>`, ""))),
+    flush = () => state2.line && (state2.parts.push(state2.line + state2.closeStr), (state2.line = (state2.timeTag || "") + state2.openStr), (state2.len = 0), (state2.lastWasTag = true));
   state2.tokens.forEach((tok) => {
-    const tag = tok[0] === "<", closeTag = tag && tok[1] === "/";
+    const tag = tok[0] === "<",
+      closeTag = tag && tok[1] === "/";
     if (tag) {
       if (state2.line && !state2.lastWasTag && !closeTag) state2.line += " ";
-      const m = tok.match(/^<\/?\s*([a-z0-9._:-]+)/i), n = m?.[1] || "", timing = /^\d/.test(n);
-      if (timing) return state2.timeTag = tok, state2.line += tok, state2.lastWasTag = true;
-      if (!closeTag && !tok.endsWith("/>") && n) state2.stack.push(n), updateTags();
-      if (closeTag && state2.stack.length) state2.stack.pop(), updateTags();
-      return state2.lastWasTag = true, state2.line += tok;
+      const m = tok.match(/^<\/?\s*([a-z0-9._:-]+)/i),
+        n = m?.[1] || "",
+        timing = /^\d/.test(n);
+      if (timing) return ((state2.timeTag = tok), (state2.line += tok), (state2.lastWasTag = true));
+      if (!closeTag && !tok.endsWith("/>") && n) (state2.stack.push(n), updateTags());
+      if (closeTag && state2.stack.length) (state2.stack.pop(), updateTags());
+      return ((state2.lastWasTag = true), (state2.line += tok));
     }
-    const len = stripTags(tok).length, needSpace = state2.line && !state2.lastWasTag;
+    const len = stripTags(tok).length,
+      needSpace = state2.line && !state2.lastWasTag;
     if (state2.len + (needSpace ? 1 : 0) + len > maxChars) flush();
-    if (needSpace) state2.line += " ", state2.len += 1;
-    state2.line += tok, state2.len += len, state2.lastWasTag = false;
+    if (needSpace) ((state2.line += " "), (state2.len += 1));
+    ((state2.line += tok), (state2.len += len), (state2.lastWasTag = false));
   });
-  return flush(), state2.parts;
+  return (flush(), state2.parts);
 }
 
 // src/ts/utils/time.ts
 function formatMediaTime({ time, format = "digital", elapsed = true, showMs = false, casing = "normal" } = { time: 0 }) {
-  const long = format.endsWith("long"), sx = (n = 0) => n == 1 ? "" : "s", cs = (str) => casing === "upper" ? str.toUpperCase() : casing === "title" ? str.replace(/^([a-z])/i, (m2) => m2.toUpperCase()) : str.toLowerCase(), wrd = (n = 0) => ({ h: cs(long ? " hour" + sx(n) + " " : "h"), m: cs(long ? " minute" + sx(n) + " " : "m"), s: cs(long ? " second" + sx(n) + " " : "s"), ms: cs(long ? " millisecond" + sx(n) + " " : "ms") }), pad = (v, n = 2, f) => long && !f ? v : String(v).padStart(n, "number" === typeof +n ? "0" : "-");
+  const long = format.endsWith("long"),
+    sx = (n = 0) => (n == 1 ? "" : "s"),
+    cs = (str) => (casing === "upper" ? str.toUpperCase() : casing === "title" ? str.replace(/^([a-z])/i, (m2) => m2.toUpperCase()) : str.toLowerCase()),
+    wrd = (n = 0) => ({ h: cs(long ? " hour" + sx(n) + " " : "h"), m: cs(long ? " minute" + sx(n) + " " : "m"), s: cs(long ? " second" + sx(n) + " " : "s"), ms: cs(long ? " millisecond" + sx(n) + " " : "ms") }),
+    pad = (v, n = 2, f) => (long && !f ? v : String(v).padStart(n, "number" === typeof +n ? "0" : "-"));
   if (isNaN(time ?? NaN) || time === Infinity) return format !== "digital" ? ("-" + wrd().h + pad("-") + wrd().m + (!elapsed ? "left" : "")).trim() : !elapsed ? "--:--" : "-:--";
-  const s = Math.floor(Math.abs(time) % 60), m = Math.floor(Math.abs(time) / 60) % 60, h = Math.floor(Math.abs(time) / 3600), ms = Math.floor(Math.abs(time) % 1 * 1e3);
+  const s = Math.floor(Math.abs(time) % 60),
+    m = Math.floor(Math.abs(time) / 60) % 60,
+    h = Math.floor(Math.abs(time) / 3600),
+    ms = Math.floor((Math.abs(time) % 1) * 1e3);
   if (format === "digital") {
     const base2 = h ? h + ":" + pad(m, 2, true) + ":" + pad(s, 2, true) : m + ":" + pad(s, 2, true);
     return !elapsed ? "-" + base2 : base2;
   }
-  const base = h ? h + wrd(h).h + pad(m) + wrd(m).m + pad(s) + wrd(s).s : m + wrd(m).m + pad(s) + wrd(s).s, msPart = showMs && ms ? pad(ms, 3) + wrd(ms).ms : "";
+  const base = h ? h + wrd(h).h + pad(m) + wrd(m).m + pad(s) + wrd(s).s : m + wrd(m).m + pad(s) + wrd(s).s,
+    msPart = showMs && ms ? pad(ms, 3) + wrd(ms).ms : "";
   return (base + msPart + (!long ? " " : "") + (!elapsed ? "left" : "")).trim();
 }
 function createTimeRanges(ranges) {
@@ -908,8 +952,8 @@ function createTimeRanges(ranges) {
   const pairs = ranges.sort((a, b) => a[0] - b[0]);
   return {
     length: pairs.length,
-    start: (i) => pairs[i] ? pairs[i][0] : 0,
-    end: (i) => pairs[i] ? pairs[i][1] : 0
+    start: (i) => (pairs[i] ? pairs[i][0] : 0),
+    end: (i) => (pairs[i] ? pairs[i][1] : 0),
   };
 }
 
@@ -955,15 +999,16 @@ function setAny(target, key, value, separator = ".", keyFunc) {
   const keys = key.split(separator);
   let currObj = target;
   for (let i = 0; i < keys.length; i++) {
-    const key2 = keyFunc ? keyFunc(keys[i]) : keys[i], match = key2.includes("[") && key2.match(arrRx);
+    const key2 = keyFunc ? keyFunc(keys[i]) : keys[i],
+      match = key2.includes("[") && key2.match(arrRx);
     if (match) {
       const [, key3, iStr] = match;
       if (!isArr(currObj[key3])) currObj[key3] = [];
       if (i === keys.length - 1) currObj[key3][Number(iStr)] = value;
-      else (_a = currObj[key3])[_b = Number(iStr)] || (_a[_b] = {}), currObj = currObj[key3][Number(iStr)];
+      else ((_a = currObj[key3])[(_b = Number(iStr))] || (_a[_b] = {}), (currObj = currObj[key3][Number(iStr)]));
     } else {
       if (i === keys.length - 1) currObj[key2] = value;
-      else currObj[key2] || (currObj[key2] = {}), currObj = currObj[key2];
+      else (currObj[key2] || (currObj[key2] = {}), (currObj = currObj[key2]));
     }
   }
 }
@@ -972,7 +1017,8 @@ function getAny(source, key, separator = ".", keyFunc) {
   const keys = key.split(separator);
   let currObj = source;
   for (let i = 0; i < keys.length; i++) {
-    const key2 = keyFunc ? keyFunc(keys[i]) : keys[i], match = key2.includes("[") && key2.match(arrRx);
+    const key2 = keyFunc ? keyFunc(keys[i]) : keys[i],
+      match = key2.includes("[") && key2.match(arrRx);
     if (match) {
       const [, key3, iStr] = match;
       if (!isArr(currObj[key3]) || !(key3 in currObj)) return void 0;
@@ -989,7 +1035,8 @@ function deleteAny(target, key, separator = ".", keyFunc) {
   const keys = key.split(separator);
   let currObj = target;
   for (let i = 0; i < keys.length; i++) {
-    const key2 = keyFunc ? keyFunc(keys[i]) : keys[i], match = key2.includes("[") && key2.match(arrRx);
+    const key2 = keyFunc ? keyFunc(keys[i]) : keys[i],
+      match = key2.includes("[") && key2.match(arrRx);
     if (match) {
       const [, key3, iStr] = match;
       if (!isArr(currObj[key3]) || !(key3 in currObj)) return;
@@ -1007,7 +1054,8 @@ function inAny(source, key, separator = ".", keyFunc) {
   const keys = key.split(separator);
   let currObj = source;
   for (let i = 0; i < keys.length; i++) {
-    const key2 = keyFunc ? keyFunc(keys[i]) : keys[i], match = key2.includes("[") && key2.match(arrRx);
+    const key2 = keyFunc ? keyFunc(keys[i]) : keys[i],
+      match = key2.includes("[") && key2.match(arrRx);
     if (match) {
       const [, key3, iStr] = match;
       if (!isArr(currObj[key3]) || !(key3 in currObj)) return false;
@@ -1022,14 +1070,15 @@ function inAny(source, key, separator = ".", keyFunc) {
   return true;
 }
 function parseUIObj(obj) {
-  const result = {}, keys = Object.keys(obj);
+  const result = {},
+    keys = Object.keys(obj);
   for (let i = 0; i < keys.length; i++) {
     const entry = obj[keys[i]];
     if (!isObj(entry)) continue;
     if (isUISetting(entry)) {
       result[keys[i]] = {
-        values: entry.options.map((opt) => "value" in opt ? opt.value : opt),
-        displays: entry.options.map((opt) => "display" in opt ? opt.display : String(opt))
+        values: entry.options.map((opt) => ("value" in opt ? opt.value : opt)),
+        displays: entry.options.map((opt) => ("display" in opt ? opt.display : String(opt))),
       };
     } else result[keys[i]] = parseUIObj(entry);
   }
@@ -1039,7 +1088,7 @@ function parseAnyObj(obj, separator = ".", keyFunc = (p) => p, visited = /* @__P
   if (!isObj(obj) || visited.has(obj)) return obj;
   visited.add(obj);
   const result = {};
-  Object.keys(obj).forEach((k) => k.includes(separator) ? setAny(result, k, parseAnyObj(obj[k], separator, keyFunc, visited), separator, keyFunc) : result[k] = isObj(obj[k]) ? parseAnyObj(obj[k], separator, keyFunc, visited) : obj[k]);
+  Object.keys(obj).forEach((k) => (k.includes(separator) ? setAny(result, k, parseAnyObj(obj[k], separator, keyFunc, visited), separator, keyFunc) : (result[k] = isObj(obj[k]) ? parseAnyObj(obj[k], separator, keyFunc, visited) : obj[k])));
   return result;
 }
 function parsePanelBottomObj(obj = [], arr = false) {
@@ -1048,14 +1097,15 @@ function parsePanelBottomObj(obj = [], arr = false) {
   return arr ? [...third, ...second, ...first] : { 1: first, 2: second, 3: third };
 }
 function parseEvOpts(options, opts, boolOpt = opts[0], result = {}) {
-  return Object.assign(result, "boolean" === typeof options ? { [boolOpt]: options } : options), result;
+  return (Object.assign(result, "boolean" === typeof options ? { [boolOpt]: options } : options), result);
 }
 function mergeObjs(o1 = {}, o2 = {}) {
-  const merged = { ...o1 || {}, ...o2 || {} };
-  return Object.keys(merged).forEach((k) => isObj(o1?.[k]) && isObj(o2?.[k]) && (merged[k] = mergeObjs(o1[k], o2[k]))), merged;
+  const merged = { ...(o1 || {}), ...(o2 || {}) };
+  return (Object.keys(merged).forEach((k) => isObj(o1?.[k]) && isObj(o2?.[k]) && (merged[k] = mergeObjs(o1[k], o2[k]))), merged);
 }
 function getTrailPaths(path, reverse = true) {
-  const parts = path.split("."), chain = ["*"];
+  const parts = path.split("."),
+    chain = ["*"];
   let acc = "";
   for (let i = 0; i < parts.length; i++) {
     acc += (i === 0 ? "" : ".") + parts[i];
@@ -1064,11 +1114,13 @@ function getTrailPaths(path, reverse = true) {
   return reverse ? chain.reverse() : chain;
 }
 function getTrailRecords(obj, path) {
-  const parts = path.split("."), record = [["*", obj, obj]];
-  let acc = "", currObj = obj;
+  const parts = path.split("."),
+    record = [["*", obj, obj]];
+  let acc = "",
+    currObj = obj;
   for (let i = 0; i < parts.length; i++) {
     acc += (i === 0 ? "" : ".") + parts[i];
-    record.push([acc, currObj, currObj = currObj?.[parts[i]]]);
+    record.push([acc, currObj, (currObj = currObj?.[parts[i]])]);
   }
   return record;
 }
@@ -1092,7 +1144,7 @@ function safeNum(number, fallback = 0) {
   return isValidNum(number) ? number : fallback;
 }
 function parseIfPercent(percent, amount, autocap = 0.25) {
-  const val = percent?.endsWith?.("%") ? safeNum(parseFloat(percent) / 100 * amount) : percent;
+  const val = percent?.endsWith?.("%") ? safeNum((parseFloat(percent) / 100) * amount) : percent;
   return val && amount && autocap && amount <= val ? amount * autocap : val;
 }
 function parseCSSTime(time) {
@@ -1115,9 +1167,9 @@ function rotate(cur, steps, dir = "forwards", wrap = true) {
   else {
     const key = `${steps.min}|${steps.max}|${steps.step}`;
     if (_stepsCache.has(key)) list = _stepsCache.get(key);
-    else _stepsCache.set(key, list = Array.from({ length: Math.floor((steps.max - steps.min) / steps.step) + 1 }, (_, i) => steps.min + i * steps.step));
+    else _stepsCache.set(key, (list = Array.from({ length: Math.floor((steps.max - steps.min) / steps.step) + 1 }, (_, i) => steps.min + i * steps.step)));
   }
-  let idx = "number" === typeof cur ? list.reduce((p, c, x) => Math.abs(c - cur) < Math.abs(list[p] - cur) ? x : p, 0) : list.indexOf(cur);
+  let idx = "number" === typeof cur ? list.reduce((p, c, x) => (Math.abs(c - cur) < Math.abs(list[p] - cur) ? x : p), 0) : list.indexOf(cur);
   idx = idx + (dir === "forwards" ? 1 : -1);
   return list[wrap ? (idx + list.length) % list.length : clamp(0, idx, list.length - 1)];
 }
@@ -1135,7 +1187,7 @@ var errorCodes = [
   // MEDIA_ERR_DECODE
   4,
   // MEDIA_ERR_SRC_NOT_SUPPORTED
-  5
+  5,
   // MEDIA_ERR_UNKNOWN
 ];
 var modes = ["fullscreen", "theater", "pictureInPicture", "miniplayer"];
@@ -1161,12 +1213,13 @@ function uid(prefix = "tmg_") {
 }
 function luid(prefix = "tmg_local_") {
   let id = localStorage.getItem(LUID_KEY);
-  return !id && localStorage.setItem(LUID_KEY, id = uid(prefix)), id || "";
+  return (!id && localStorage.setItem(LUID_KEY, (id = uid(prefix))), id || "");
 }
 function isSameURL(src1, src2) {
   if (typeof src1 !== "string" || typeof src2 !== "string" || !src1 || !src2) return false;
   try {
-    const u1 = new URL(src1, window.location.href), u2 = new URL(src2, window.location.href);
+    const u1 = new URL(src1, window.location.href),
+      u2 = new URL(src2, window.location.href);
     return decodeURIComponent(u1.origin + u1.pathname) === decodeURIComponent(u2.origin + u2.pathname);
   } catch {
     return src1.replace(/\\/g, "/").split("?")[0].trim() === src2.replace(/\\/g, "/").split("?")[0].trim();
@@ -1176,7 +1229,8 @@ function isSameURL(src1, src2) {
 // src/ts/utils/file.ts
 function formatSize(size, decimals = 3, base = 1e3) {
   if (size < base) return size + " byte" + (size == 1 ? "" : "s");
-  const units = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"], exponent = Math.min(Math.floor(Math.log(size) / Math.log(base)), units.length - 1);
+  const units = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"],
+    exponent = Math.min(Math.floor(Math.log(size) / Math.log(base)), units.length - 1);
   return (size / Math.pow(base, exponent)).toFixed(decimals).replace(/\.0+$/, "") + " " + units[exponent];
 }
 function getExtension(fn) {
@@ -1186,23 +1240,25 @@ function noExtension(fn) {
   return fn.replace(/(?:\.(?:mp4|mkv|avi|mov|webm|flv|wmv|m4v|mpg|mpeg|3gp|ogv|ts))+$/i, "");
 }
 function getMimeTypeFromExtension(fn) {
-  return {
-    m3u8: "application/vnd.apple.mpegurl",
-    mpd: "application/dash+xml",
-    avi: "video/x-msvideo",
-    mp4: "video/mp4",
-    mkv: "video/x-matroska",
-    mov: "video/quicktime",
-    flv: "video/x-flv",
-    webm: "video/webm",
-    ogg: "video/ogg",
-    wmv: "video/x-ms-wmv",
-    "3gp": "video/3gpp",
-    "3g2": "video/3gpp2",
-    mpeg: "video/mpeg",
-    ts: "video/mp2t",
-    m4v: "video/x-m4v"
-  }[getExtension(fn)] || "application/octet-stream";
+  return (
+    {
+      m3u8: "application/vnd.apple.mpegurl",
+      mpd: "application/dash+xml",
+      avi: "video/x-msvideo",
+      mp4: "video/mp4",
+      mkv: "video/x-matroska",
+      mov: "video/quicktime",
+      flv: "video/x-flv",
+      webm: "video/webm",
+      ogg: "video/ogg",
+      wmv: "video/x-ms-wmv",
+      "3gp": "video/3gpp",
+      "3g2": "video/3gpp2",
+      mpeg: "video/mpeg",
+      ts: "video/mp2t",
+      m4v: "video/x-m4v",
+    }[getExtension(fn)] || "application/octet-stream"
+  );
 }
 
 // src/ts/utils/color.ts
@@ -1213,7 +1269,8 @@ function getRGBSat([r, g, b]) {
   return Math.max(r, g, b) - Math.min(r, g, b);
 }
 function clampRGBBri([r, g, b], m = 40) {
-  const br = getRGBBri([r, g, b]), d = br < m ? m - br : br > 255 - m ? -(br - (255 - m)) : 0;
+  const br = getRGBBri([r, g, b]),
+    d = br < m ? m - br : br > 255 - m ? -(br - (255 - m)) : 0;
   return [r + d, g + d, b + d].map((v) => clamp(0, v, 255));
 }
 async function getDominantColor(src, format = "rgb", raw = false) {
@@ -1222,27 +1279,36 @@ async function getDominantColor(src, format = "rgb", raw = false) {
       const i = createEl("img", { src: String(src), crossOrigin: "anonymous", onload: () => res(i), onerror: () => rej(new Error(`Image load error: ${src}`)) });
     });
   if (src?.canvas) src = src.canvas;
-  const c = document.createElement("canvas"), x = c.getContext("2d"), s = Math.min(64, src.width, src.height);
+  const c = document.createElement("canvas"),
+    x = c.getContext("2d"),
+    s = Math.min(64, src.width, src.height);
   c.width = c.height = s;
   src?.width && src?.height && x?.drawImage(src, 0, 0, s, s);
-  const d = src && x?.getImageData(0, 0, s, s).data, ct = {}, pt = {};
+  const d = src && x?.getImageData(0, 0, s, s).data,
+    ct = {},
+    pt = {};
   for (let i = 0; i < (d?.length ?? 0); i += 4) {
     if (d[i + 3] < 128) continue;
-    const r2 = d[i] & 240, g2 = d[i + 1] & 240, b2 = d[i + 2] & 240;
-    const k = r2 << 16 | g2 << 8 | b2;
+    const r2 = d[i] & 240,
+      g2 = d[i + 1] & 240,
+      b2 = d[i + 2] & 240;
+    const k = (r2 << 16) | (g2 << 8) | b2;
     ct[k] = (ct[k] || 0) + 1;
     pt[k] = pt[k] ? [pt[k][0] + d[i], pt[k][1] + d[i + 1], pt[k][2] + d[i + 2]] : [d[i], d[i + 1], d[i + 2]];
   }
-  const clrs = Object.keys(ct).sort((a, b2) => ct[b2] - ct[a]).slice(0, 7).map((k) => ({ key: k, rgb: pt[k].map((v) => Math.round(v / ct[k])) }));
+  const clrs = Object.keys(ct)
+    .sort((a, b2) => ct[b2] - ct[a])
+    .slice(0, 7)
+    .map((k) => ({ key: k, rgb: pt[k].map((v) => Math.round(v / ct[k])) }));
   if (!clrs.length) return null;
-  const [r, g, b] = clampRGBBri(clrs.reduce((sat, curr) => getRGBSat(sat.rgb) > getRGBSat(curr.rgb) ? sat : curr, clrs[0]).rgb, 70);
+  const [r, g, b] = clampRGBBri(clrs.reduce((sat, curr) => (getRGBSat(sat.rgb) > getRGBSat(curr.rgb) ? sat : curr), clrs[0]).rgb, 70);
   return format === "hex" ? `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}` : raw == false ? `rgb(${r},${g},${b})` : [r, g, b];
 }
 function convertToMonoChrome(canvas, context) {
   const frame = context.getImageData(0, 0, canvas.width || 1, canvas.height || 1);
   for (let i = 0; i < frame.data.length / 4; i++) {
     const grey = (frame.data[i * 4 + 0] + frame.data[i * 4 + 1] + frame.data[i * 4 + 2]) / 3;
-    frame.data[i * 4 + 0] = grey, frame.data[i * 4 + 1] = grey, frame.data[i * 4 + 2] = grey;
+    ((frame.data[i * 4 + 0] = grey), (frame.data[i * 4 + 1] = grey), (frame.data[i * 4 + 2] = grey));
   }
   context.putImageData(frame, 0, 0);
 }
@@ -1271,7 +1337,7 @@ var CHROME_VERSION = null;
 var CHROMIUM_VERSION = null;
 var IE_VERSION = null;
 var IS_CHROMECAST_RECEIVER = Boolean(w?.cast?.framework?.CastReceiverContext);
-var TOUCH_ENABLED = Boolean(w && ("ontouchstart" in w || nav?.maxTouchPoints || w.DocumentTouch && w.document instanceof w.DocumentTouch));
+var TOUCH_ENABLED = Boolean(w && ("ontouchstart" in w || nav?.maxTouchPoints || (w.DocumentTouch && w.document instanceof w.DocumentTouch)));
 var pickVersion = (brands, needle) => brands.find((b) => b.brand === needle && b.version)?.version || null;
 if (uaData?.platform && uaData?.brands) {
   IS_ANDROID = uaData.platform === "Android";
@@ -1293,7 +1359,7 @@ if (!IS_CHROMIUM || !CHROMIUM_VERSION) {
   IS_TIZEN = /Tizen/i.test(ua);
   IS_WEBOS = /Web0S/i.test(ua);
   IS_IPOD = /iPod/i.test(ua);
-  IS_IPAD = /iPad/i.test(ua) || IS_SAFARI && TOUCH_ENABLED && !/iPhone/i.test(ua);
+  IS_IPAD = /iPad/i.test(ua) || (IS_SAFARI && TOUCH_ENABLED && !/iPhone/i.test(ua));
   IS_IPHONE = /iPhone/i.test(ua) && !IS_IPAD;
   IOS_VERSION = ua.match(/OS (\d+)_/i)?.[1] ?? null;
   ANDROID_VERSION = ua.match(/Android\s(\d+(?:\.\d+)+)/i)?.[1] ?? null;
@@ -1321,24 +1387,31 @@ function stringifyKeyCombo(e) {
 }
 function cleanKeyCombo(combo) {
   const clean = (combo2) => {
-    const m = ["ctrl", "alt", "shift", "meta"], alias = { cmd: "meta" };
+    const m = ["ctrl", "alt", "shift", "meta"],
+      alias = { cmd: "meta" };
     if (combo2 === " " || combo2 === "+") return combo2;
     combo2 = combo2.replace(/\+\s*\+$/, "+plus");
-    const p = combo2.toLowerCase().split("+").filter((k) => k !== "").map((k) => alias[k] || (k === "plus" ? "+" : k.trim() || " "));
-    return [...p.filter((k) => m.includes(k)).sort((a, b) => m.indexOf(a) - m.indexOf(b)), ...p.filter((k) => !m.includes(k)) || ""].join("+");
+    const p = combo2
+      .toLowerCase()
+      .split("+")
+      .filter((k) => k !== "")
+      .map((k) => alias[k] || (k === "plus" ? "+" : k.trim() || " "));
+    return [...p.filter((k) => m.includes(k)).sort((a, b) => m.indexOf(a) - m.indexOf(b)), ...(p.filter((k) => !m.includes(k)) || "")].join("+");
   };
   return isArr(combo) ? combo.map(clean) : clean(combo);
 }
 function matchKeys(required, actual, strict = false) {
   const match = (required2, actual2) => {
     if (strict) return required2 === actual2;
-    const reqKeys = required2.split("+"), actKeys = actual2.split("+");
+    const reqKeys = required2.split("+"),
+      actKeys = actual2.split("+");
     return reqKeys.every((k) => actKeys.includes(k));
   };
   return isArr(required) ? required.some((req) => match(req, actual)) : match(required, actual);
 }
 function getTermsForKey(combo, settings) {
-  const terms = { override: false, block: false, allowed: false, action: null }, { overrides = [], shortcuts = {}, blocks = [], strictMatches: s = false } = settings?.keys || {};
+  const terms = { override: false, block: false, allowed: false, action: null },
+    { overrides = [], shortcuts = {}, blocks = [], strictMatches: s = false } = settings?.keys || {};
   if (matchKeys(overrides, combo, s)) terms.override = true;
   if (matchKeys(blocks, combo, s)) terms.block = true;
   if (matchKeys(whiteListedKeys, combo)) terms.allowed = true;
@@ -1346,8 +1419,9 @@ function getTermsForKey(combo, settings) {
   return terms;
 }
 function keyEventAllowed(e, settings) {
-  if (settings?.keys?.disabled || (e.key === " " || e.key === "Enter") && e.currentTarget?.document?.activeElement?.tagName === "BUTTON" || e.currentTarget?.document?.activeElement?.matches("input,textarea,[contenteditable='true']")) return false;
-  const combo = stringifyKeyCombo(e), { override, block, action, allowed } = getTermsForKey(combo, settings);
+  if (settings?.keys?.disabled || ((e.key === " " || e.key === "Enter") && e.currentTarget?.document?.activeElement?.tagName === "BUTTON") || e.currentTarget?.document?.activeElement?.matches("input,textarea,[contenteditable='true']")) return false;
+  const combo = stringifyKeyCombo(e),
+    { override, block, action, allowed } = getTermsForKey(combo, settings);
   if (block) return false;
   if (override) e.preventDefault();
   if (action) return action;
@@ -1362,7 +1436,13 @@ function formatKeyShortcutsForDisplay(keyShortcuts) {
 }
 function parseForARIAKS(s) {
   const m = { ctrl: "Control", cmd: "Meta", space: "Space", plus: "+" };
-  return s.toLowerCase().replace(/[()]/g, "").replace(/\bor\b/g, " ").replace(/\w+/g, (k) => m[k] || k).replace(/\s+/g, " ").trim();
+  return s
+    .toLowerCase()
+    .replace(/[()]/g, "")
+    .replace(/\bor\b/g, " ")
+    .replace(/\w+/g, (k) => m[k] || k)
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // src/ts/utils/fn.ts
@@ -1371,35 +1451,41 @@ function setTimeout2(handler, timeout, ...args) {
   if (sig?.aborted) return -1;
   const w2 = args[0] instanceof Window ? args.shift() : window;
   if (!sig) return w2.setTimeout(handler, timeout, ...args);
-  const id = w2.setTimeout(() => (sig.removeEventListener("abort", kill), typeof handler === "string" ? new Function(handler) : handler(...args)), timeout), kill = () => w2.clearTimeout(id);
-  return sig.addEventListener("abort", kill, { once: true }), id;
+  const id = w2.setTimeout(() => (sig.removeEventListener("abort", kill), typeof handler === "string" ? new Function(handler) : handler(...args)), timeout),
+    kill = () => w2.clearTimeout(id);
+  return (sig.addEventListener("abort", kill, { once: true }), id);
 }
 function setInterval(handler, timeout, ...args) {
   const sig = args[0] instanceof AbortSignal ? args.shift() : void 0;
   if (sig?.aborted) return -1;
-  const w2 = args[0] instanceof Window ? args.shift() : window, id = w2.setInterval(handler, timeout, ...args);
-  return sig?.addEventListener("abort", () => w2.clearInterval(id), { once: true }), id;
+  const w2 = args[0] instanceof Window ? args.shift() : window,
+    id = w2.setInterval(handler, timeout, ...args);
+  return (sig?.addEventListener("abort", () => w2.clearInterval(id), { once: true }), id);
 }
 function requestAnimationFrame2(callback, sig, w2 = window) {
   if (sig?.aborted) return -1;
   if (!sig) return w2.requestAnimationFrame(callback);
-  const id = w2.requestAnimationFrame((t) => (sig.removeEventListener("abort", kill), callback(t))), kill = () => w2.cancelAnimationFrame(id);
-  return sig.addEventListener("abort", kill, { once: true }), id;
+  const id = w2.requestAnimationFrame((t) => (sig.removeEventListener("abort", kill), callback(t))),
+    kill = () => w2.cancelAnimationFrame(id);
+  return (sig.addEventListener("abort", kill, { once: true }), id);
 }
 var mockAsync = (timeout = 250) => new Promise((resolve) => setTimeout2(resolve, timeout));
 var breath = (w2 = window) => new Promise((res) => w2.requestAnimationFrame(res));
 var deepBreath = (w2 = window) => new Promise((res) => w2.requestAnimationFrame(() => w2.requestAnimationFrame(res)));
 function limited(fn, opts = {}) {
-  let count = 0, { key, maxTimes: max = 1 } = "string" === typeof opts ? { key: opts } : opts;
-  const getReg = () => JSON.parse(localStorage.getItem(FN_KEY) || "{}"), setReg = (r) => localStorage.setItem(FN_KEY, JSON.stringify(r));
+  let count = 0,
+    { key, maxTimes: max = 1 } = "string" === typeof opts ? { key: opts } : opts;
+  const getReg = () => JSON.parse(localStorage.getItem(FN_KEY) || "{}"),
+    setReg = (r) => localStorage.setItem(FN_KEY, JSON.stringify(r));
   const handle = (...args) => {
     if (!key) return count++ < max ? fn(...args) : void 0;
-    const r = getReg(), c = r[key] || 0;
-    return c < max ? (r[key] = c + 1, setReg(r), fn(...args)) : void 0;
+    const r = getReg(),
+      c = r[key] || 0;
+    return c < max ? ((r[key] = c + 1), setReg(r), fn(...args)) : void 0;
   };
   handle.left = max - (handle.count = count);
-  handle.reset = () => (count = 0, key && ((r) => (delete r[key], setReg(r)))(getReg()));
-  handle.block = () => (count = max, key && ((r) => (r[key] = max, setReg(r)))(getReg()));
+  handle.reset = () => ((count = 0), key && ((r) => (delete r[key], setReg(r)))(getReg()));
+  handle.block = () => ((count = max), key && ((r) => ((r[key] = max), setReg(r)))(getReg()));
   return handle;
 }
 var oncePerSession = (fn) => limited(fn);
@@ -1426,10 +1512,10 @@ function getWindow(el) {
 }
 function loadResource2(src, type = "style", { module, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, attempts = 3, retryKey = false } = {}, w2 = window) {
   var _a;
-  w2.t007 ?? (w2.t007 = {}), (_a = w2.t007)._resourceCache ?? (_a._resourceCache = {});
+  (w2.t007 ?? (w2.t007 = {}), (_a = w2.t007)._resourceCache ?? (_a._resourceCache = {}));
   if (w2.t007._resourceCache[src]) return w2.t007._resourceCache[src];
   const existing = type === "script" ? Array.prototype.find.call(w2.document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.find.call(w2.document.styleSheets, (s) => isSameURL(s.href, src)) : null;
-  if (existing) return w2.t007._resourceCache[src] = Promise.resolve(existing);
+  if (existing) return (w2.t007._resourceCache[src] = Promise.resolve(existing));
   w2.t007._resourceCache[src] = new Promise((resolve, reject) => {
     (function tryLoad(remaining, el) {
       const onerror = () => {
@@ -1443,26 +1529,33 @@ function loadResource2(src, type = "style", { module, media, crossOrigin, integr
         }
       };
       const url = retryKey && remaining < attempts ? `${src}${src.includes("?") ? "&" : "?"}_${retryKey}=${Date.now()}` : src;
-      if (type === "script") w2.document.body.append(el = createEl("script", { src: url, type: module ? "module" : "text/javascript", crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || "");
-      else if (type === "style") w2.document.head.append(el = createEl("link", { rel: "stylesheet", href: url, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || "");
+      if (type === "script") w2.document.body.append((el = createEl("script", { src: url, type: module ? "module" : "text/javascript", crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || ""));
+      else if (type === "style") w2.document.head.append((el = createEl("link", { rel: "stylesheet", href: url, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || ""));
       else reject(new Error(`Unsupported resource type: ${type}`));
     })(attempts);
   });
   return w2.t007._resourceCache[src];
 }
 function inDocView(el, axis = "y") {
-  const rect = el.getBoundingClientRect(), inX = rect.left + window.scrollX >= 0 && rect.right + window.scrollX <= window.scrollX + (window.innerWidth || document.documentElement.clientWidth), inY = rect.top + window.scrollY >= 0 && rect.bottom + window.scrollY <= window.scrollY + (window.innerHeight || document.documentElement.clientHeight);
+  const rect = el.getBoundingClientRect(),
+    inX = rect.left + window.scrollX >= 0 && rect.right + window.scrollX <= window.scrollX + (window.innerWidth || document.documentElement.clientWidth),
+    inY = rect.top + window.scrollY >= 0 && rect.bottom + window.scrollY <= window.scrollY + (window.innerHeight || document.documentElement.clientHeight);
   return axis === "x" ? inY : axis === "y" ? inX : inY && inX;
 }
 function getElSiblingAt(p, dir, els, pos = "after") {
-  return els.length && Array.prototype.reduce.call(
-    els,
-    ((closest, child) => {
-      const { top: cT, left: cL, width: cW, height: cH } = child.getBoundingClientRect(), offset = p - (dir === "y" ? cT : cL) - (dir === "y" ? cH : cW) / 2, condition = pos === "after" ? offset < 0 && offset > closest.offset : pos === "before" ? offset > 0 && offset < closest.offset : pos === "at" ? Math.abs(offset) <= (dir === "y" ? cH : cW) / 2 && Math.abs(offset) < Math.abs(closest.offset) : false;
-      return condition ? { offset, element: child } : closest;
-    }),
-    { offset: pos === "after" ? -Infinity : Infinity, element: void 0 }
-  ).element;
+  return (
+    els.length &&
+    Array.prototype.reduce.call(
+      els,
+      (closest, child) => {
+        const { top: cT, left: cL, width: cW, height: cH } = child.getBoundingClientRect(),
+          offset = p - (dir === "y" ? cT : cL) - (dir === "y" ? cH : cW) / 2,
+          condition = pos === "after" ? offset < 0 && offset > closest.offset : pos === "before" ? offset > 0 && offset < closest.offset : pos === "at" ? Math.abs(offset) <= (dir === "y" ? cH : cW) / 2 && Math.abs(offset) < Math.abs(closest.offset) : false;
+        return condition ? { offset, element: child } : closest;
+      },
+      { offset: pos === "after" ? -Infinity : Infinity, element: void 0 }
+    ).element
+  );
 }
 var queryFullscreen = () => Boolean(queryFullscreenEl());
 function queryFullscreenEl() {
@@ -1472,11 +1565,14 @@ function queryFullscreenEl() {
 var queryPictureInPicture = () => Boolean(queryPictureInPictureEl());
 var queryPictureInPictureEl = () => document.pictureInPictureElement;
 function supportsFullscreen() {
-  const d = document, v = HTMLVideoElement.prototype;
+  const d = document,
+    v = HTMLVideoElement.prototype;
   return Boolean(d.fullscreenEnabled || d.mozFullscreenEnabled || d.msFullscreenEnabled || d.webkitFullscreenEnabled || d.webkitSupportsFullscreen || v.webkitEnterFullscreen);
 }
 function supportsPictureInPicture() {
-  const w2 = window, d = document, v = HTMLVideoElement.prototype;
+  const w2 = window,
+    d = document,
+    v = HTMLVideoElement.prototype;
   return Boolean(d.pictureInPictureEnabled || v.requestPictureInPicture || w2.documentPictureInPicture);
 }
 function enterFullscreen(el) {
@@ -1484,31 +1580,41 @@ function enterFullscreen(el) {
   return e.webkitEnterFullscreen ? e.webkitEnterFullscreen() : e.requestFullscreen ? e.requestFullscreen() : e.mozRequestFullScreen ? e.mozRequestFullScreen() : e.webkitRequestFullscreen ? e.webkitRequestFullscreen() : e.msRequestFullscreen ? e.msRequestFullscreen() : Promise.reject(new Error("Fullscreen API is not supported"));
 }
 function exitFullscreen(el) {
-  const e = el, d = document;
+  const e = el,
+    d = document;
   return e.webkitExitFullscreen ? e.webkitExitFullscreen() : d.exitFullscreen ? d.exitFullscreen() : d.mozCancelFullScreen ? d.mozCancelFullScreen() : d.webkitExitFullscreen ? d.webkitExitFullscreen() : d.msExitFullscreen ? d.msExitFullscreen() : Promise.reject(new Error("Fullscreen API is not supported"));
 }
 function addSafeClicks(el, onClick, onDblClick, options) {
   el && removeSafeClicks(el);
-  el?.addEventListener("click", el._clickHandler = (e) => (clearTimeout(el._clickTimeoutId), el._clickTimeoutId = setTimeout(() => onClick?.(e), 300)), options);
-  el?.addEventListener("dblclick", el._dblClickHandler = (e) => (clearTimeout(el._clickTimeoutId), onDblClick?.(e)), options);
+  el?.addEventListener("click", (el._clickHandler = (e) => (clearTimeout(el._clickTimeoutId), (el._clickTimeoutId = setTimeout(() => onClick?.(e), 300)))), options);
+  el?.addEventListener("dblclick", (el._dblClickHandler = (e) => (clearTimeout(el._clickTimeoutId), onDblClick?.(e))), options);
 }
 function removeSafeClicks(el) {
   el?.removeEventListener("click", el._clickHandler);
   el?.removeEventListener("dblclick", el._dblClickHandler);
 }
-var intersectionObserver = typeof window !== "undefined" ? new IntersectionObserver(
-  (entries) => {
-    for (const entry of entries) entry.target._tmgIntersectCbs?.forEach((cb) => cb(entry));
-  },
-  { root: null, rootMargin: "0px", threshold: 0.3 }
-) : null;
-var resizeObserver = typeof window !== "undefined" ? new ResizeObserver((entries) => {
-  for (const entry of entries) entry.target._tmgResizeCbs?.forEach((cb) => cb(entry));
-}) : null;
-var mutationObserver = typeof window !== "undefined" ? new MutationObserver((mutations) => {
-  const target = mutations[0].target;
-  target._tmgMutationCbs?.forEach((cb) => cb(mutations));
-}) : null;
+var intersectionObserver =
+  typeof window !== "undefined"
+    ? new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) entry.target._tmgIntersectCbs?.forEach((cb) => cb(entry));
+        },
+        { root: null, rootMargin: "0px", threshold: 0.3 }
+      )
+    : null;
+var resizeObserver =
+  typeof window !== "undefined"
+    ? new ResizeObserver((entries) => {
+        for (const entry of entries) entry.target._tmgResizeCbs?.forEach((cb) => cb(entry));
+      })
+    : null;
+var mutationObserver =
+  typeof window !== "undefined"
+    ? new MutationObserver((mutations) => {
+        const target = mutations[0].target;
+        target._tmgMutationCbs?.forEach((cb) => cb(mutations));
+      })
+    : null;
 function observeResize(el, cb) {
   (el._tmgResizeCbs ?? (el._tmgResizeCbs = /* @__PURE__ */ new Set())).add(cb);
   resizeObserver?.observe(el);
@@ -1547,7 +1653,7 @@ __export(mixins_exports, {
   reactive: () => reactive,
   stable: () => stable,
   state: () => state,
-  volatile: () => volatile
+  volatile: () => volatile,
 });
 
 // src/ts/tools/mixins/methodist.ts
@@ -1573,14 +1679,14 @@ function guardAllMethods(owner, guardFn = guardMethod, bound = true) {
   });
 }
 function guardMethod(fn, onError = (e) => console.error(e)) {
-  return ((...args) => {
+  return (...args) => {
     try {
       const result = fn(...args);
       return result instanceof Promise ? result.catch((e) => onError(e)) : result;
     } catch (e) {
       onError(e);
     }
-  });
+  };
 }
 
 // src/ts/core/reactor.ts
@@ -1591,8 +1697,7 @@ var INDIFFABLE = /* @__PURE__ */ Symbol.for("S.I.A_INDIFFABLE");
 var TERMINATOR = /* @__PURE__ */ Symbol.for("S.I.A_TERMINATOR");
 var VERSION = /* @__PURE__ */ Symbol.for("S.I.A_VERSION");
 var SSVERSION = /* @__PURE__ */ Symbol.for("S.I.A_SNAPSHOT_VERSION");
-var NOOP = () => {
-};
+var NOOP = () => {};
 var R_BATCH = ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window);
 var R_LOG = console.log.bind(console, "[S.I.A Reactor]");
 var EV_WARN = console.warn.bind(console, "[S.I.A Event]");
@@ -1674,8 +1779,8 @@ var Reactor = class {
     this.core = this.proxied(obj);
     if (!options) return;
     this.canLog = !!options.debug;
-    if (this.isTracking = !!options.referenceTracking) this.lineage = /* @__PURE__ */ new WeakMap();
-    if (this.isSCloning = this.isTracking && !!options.smartCloning) this.snapshotCache = /* @__PURE__ */ new WeakMap();
+    if ((this.isTracking = !!options.referenceTracking)) this.lineage = /* @__PURE__ */ new WeakMap();
+    if ((this.isSCloning = this.isTracking && !!options.smartCloning)) this.snapshotCache = /* @__PURE__ */ new WeakMap();
     this.isTracing = this.isTracking && !!options.lineageTracing;
     const { get = this.config.get, set = this.config.set, delete: del = this.config.delete, crossRealms = this.config.crossRealms, eventBubbling = this.config.eventBubbling } = options;
     Object.assign(this.config, { get, set, delete: del, crossRealms, eventBubbling });
@@ -1693,15 +1798,19 @@ var Reactor = class {
       get: (object, key2, receiver) => {
         if (key2 === RAW) return object;
         let value = object[key2];
-        const safeKey = String(key2), fullPath = this.isTracing ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracing ? this.trace(object, safeKey) : fullPath;
+        const safeKey = String(key2),
+          fullPath = this.isTracing ? void 0 : path ? path + "." + safeKey : safeKey,
+          paths = this.isTracing ? this.trace(object, safeKey) : fullPath;
         this.log(`\u{1F440} [GET Trap] Initiated for "${safeKey}" on "${paths}"`);
         if (this.config.get) value = this.config.get(object, key2, value, receiver, paths);
         if (this.getters) {
           const wildcords = this.getters.get("*");
           for (let i = 0, len = this.isTracing ? paths.length : 1; i < len; i++) {
-            const currPath = this.isTracing ? paths[i] : fullPath, cords = this.getters.get(currPath);
+            const currPath = this.isTracing ? paths[i] : fullPath,
+              cords = this.getters.get(currPath);
             if (!cords && !wildcords) continue;
-            const target = { path: currPath, value, key: safeKey, object: receiver }, payload = { type: "get", target, currentTarget: target, root: this.core, rejectable };
+            const target = { path: currPath, value, key: safeKey, object: receiver },
+              payload = { type: "get", target, currentTarget: target, root: this.core, rejectable };
             if (cords) value = this.mediate(currPath, payload, "get", cords);
             if (!wildcords) continue;
             target.value = value;
@@ -1711,8 +1820,15 @@ var Reactor = class {
         return this.proxied(value, rejectable, indiffable, object, safeKey, fullPath);
       },
       set: (object, key2, value, receiver) => {
-        let unchanged, safeValue, safeOldValue, terminated = false;
-        const safeKey = String(key2), fullPath = this.isTracing ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracing ? this.trace(object, safeKey) : fullPath, loopLen = this.isTracing ? paths.length : 1, oldValue = object[key2];
+        let unchanged,
+          safeValue,
+          safeOldValue,
+          terminated = false;
+        const safeKey = String(key2),
+          fullPath = this.isTracing ? void 0 : path ? path + "." + safeKey : safeKey,
+          paths = this.isTracing ? this.trace(object, safeKey) : fullPath,
+          loopLen = this.isTracing ? paths.length : 1,
+          oldValue = object[key2];
         if (this.isTracking || !indiffable) {
           safeOldValue = oldValue?.[RAW] || oldValue;
           safeValue = value?.[RAW] || value;
@@ -1724,9 +1840,11 @@ var Reactor = class {
         if (this.setters) {
           const wildcords = this.setters.get("*");
           for (let i = 0; i < loopLen; i++) {
-            const currPath = this.isTracking ? paths[i] : fullPath, cords = this.setters.get(currPath);
+            const currPath = this.isTracking ? paths[i] : fullPath,
+              cords = this.setters.get(currPath);
             if (!cords && !wildcords) continue;
-            const target = { path: currPath, value, oldValue, key: safeKey, object: receiver }, payload = { type: "set", target, currentTarget: target, root: this.core, terminated, rejectable };
+            const target = { path: currPath, value, oldValue, key: safeKey, object: receiver },
+              payload = { type: "set", target, currentTarget: target, root: this.core, terminated, rejectable };
             if (cords) {
               const result2 = this.mediate(currPath, payload, "set", cords);
               if (!(terminated || (terminated = payload.terminated))) value = result2;
@@ -1737,27 +1855,36 @@ var Reactor = class {
             if (!(terminated || (terminated = payload.terminated))) value = result;
           }
         }
-        if (terminated) return this.log(`\u{1F6E1}\uFE0F [SET Mediator] Terminated on "${paths}"`), true;
+        if (terminated) return (this.log(`\u{1F6E1}\uFE0F [SET Mediator] Terminated on "${paths}"`), true);
         object[key2] = value;
-        if (this.isTracking && !unchanged) this.isSCloning && this.stamp(object), this.unlink(safeOldValue, object, safeKey), this.link(safeValue, object, safeKey);
+        if (this.isTracking && !unchanged) (this.isSCloning && this.stamp(object), this.unlink(safeOldValue, object, safeKey), this.link(safeValue, object, safeKey));
         if (this.watchers || this.listeners)
           for (let i = 0; i < loopLen; i++) {
-            const currPath = this.isTracking ? paths[i] : fullPath, target = { path: currPath, value, oldValue, key: safeKey, object: receiver };
+            const currPath = this.isTracking ? paths[i] : fullPath,
+              target = { path: currPath, value, oldValue, key: safeKey, object: receiver };
             this.notify(currPath, { type: "set", target, currentTarget: target, root: this.core, terminated, rejectable });
           }
         return true;
       },
       deleteProperty: (object, key2) => {
-        let value, receiver = this.proxyCache.get(object), terminated = false;
-        const safeKey = String(key2), fullPath = this.isTracing ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracing ? this.trace(object, safeKey) : fullPath, loopLen = this.isTracing ? paths.length : 1, oldValue = object[key2];
+        let value,
+          receiver = this.proxyCache.get(object),
+          terminated = false;
+        const safeKey = String(key2),
+          fullPath = this.isTracing ? void 0 : path ? path + "." + safeKey : safeKey,
+          paths = this.isTracing ? this.trace(object, safeKey) : fullPath,
+          loopLen = this.isTracing ? paths.length : 1,
+          oldValue = object[key2];
         this.log(`\u{1F5D1}\uFE0F [DELETE Trap] Initiated for "${safeKey}" on "${paths}"`);
         if (this.config.delete) terminated = (value = this.config.delete(object, key2, oldValue, receiver, paths)) === TERMINATOR;
         if (this.deleters) {
           const wildcords = this.deleters.get("*");
           for (let i = 0; i < loopLen; i++) {
-            const currPath = this.isTracking ? paths[i] : fullPath, cords = this.deleters.get(currPath);
+            const currPath = this.isTracking ? paths[i] : fullPath,
+              cords = this.deleters.get(currPath);
             if (!cords && !wildcords) continue;
-            const target = { path: currPath, value, oldValue, key: safeKey, object: receiver }, payload = { type: "delete", target, currentTarget: target, root: this.core, rejectable };
+            const target = { path: currPath, value, oldValue, key: safeKey, object: receiver },
+              payload = { type: "delete", target, currentTarget: target, root: this.core, rejectable };
             if (cords) {
               const result2 = this.mediate(currPath, payload, "delete", cords);
               if (!(terminated || (terminated = payload.terminated))) value = result2;
@@ -1767,21 +1894,22 @@ var Reactor = class {
             if (!(terminated || (terminated = payload.terminated))) value = result;
           }
         }
-        if (terminated) return this.log(`\u{1F6E1}\uFE0F [DELETE Mediator] Terminated on "${paths}"`), true;
+        if (terminated) return (this.log(`\u{1F6E1}\uFE0F [DELETE Mediator] Terminated on "${paths}"`), true);
         delete object[key2];
-        if (this.isTracking) this.isSCloning && this.stamp(object), this.unlink(oldValue?.[RAW] || oldValue, object, safeKey);
+        if (this.isTracking) (this.isSCloning && this.stamp(object), this.unlink(oldValue?.[RAW] || oldValue, object, safeKey));
         if (this.watchers || this.listeners)
           for (let i = 0; i < loopLen; i++) {
-            const currPath = this.isTracking ? paths[i] : fullPath, target = { path: currPath, value, oldValue, key: safeKey, object: receiver };
+            const currPath = this.isTracking ? paths[i] : fullPath,
+              target = { path: currPath, value, oldValue, key: safeKey, object: receiver };
             this.notify(currPath, { type: "delete", target, currentTarget: target, root: this.core, rejectable });
           }
         return true;
-      }
+      },
     });
-    return this.proxyCache.set(obj, proxy), proxy;
+    return (this.proxyCache.set(obj, proxy), proxy);
   }
   trace(target, path, paths = [], visited = /* @__PURE__ */ new WeakSet()) {
-    if (Object.is(target, this.core[RAW] || this.core)) return paths.push(path), paths;
+    if (Object.is(target, this.core[RAW] || this.core)) return (paths.push(path), paths);
     if (visited.has(target)) return paths;
     visited.add(target);
     const es = this.lineage.get(target);
@@ -1792,7 +1920,7 @@ var Reactor = class {
   // won't be called without `.isTracking` so internal guard avoided
   link(target, parent, key, typecheck = true, es) {
     if (typecheck && !(isStrictObj(target, this.config.crossRealms) || Array.isArray(target))) return;
-    es = this.lineage.get(target) ?? (this.lineage.set(target, es = []), es);
+    es = this.lineage.get(target) ?? (this.lineage.set(target, (es = [])), es);
     for (let i = 0, len = es.length; i < len; i += 2) if (Object.is(es[i], parent) && es[i + 1] === key) return;
     es.push(parent, key);
   }
@@ -1810,44 +1938,49 @@ var Reactor = class {
     if (es) for (let i = 0, len = es.length; i < len; i += 2) this.stamp(es[i]);
   }
   mediate(path, payload, type, cords) {
-    let terminated = false, value = payload.target.value;
-    const isGet = type === "get", isSet = type === "set", mediators = isGet ? this.getters : isSet ? this.setters : this.deleters;
+    let terminated = false,
+      value = payload.target.value;
+    const isGet = type === "get",
+      isSet = type === "set",
+      mediators = isGet ? this.getters : isSet ? this.setters : this.deleters;
     for (let i = !isGet ? 0 : cords.length - 1, len = !isGet ? cords.length : -1; i !== len; i += !isGet ? 1 : -1) {
       const response = isGet ? cords[i].cb(value, payload) : isSet ? cords[i].cb(value, terminated, payload) : cords[i].cb(terminated, payload);
       if (isGet || !(terminated || (terminated = payload.terminated = response === TERMINATOR))) value = response;
-      if (cords[i].once) cords.splice(i--, 1), !cords.length && mediators.delete(path);
+      if (cords[i].once) (cords.splice(i--, 1), !cords.length && mediators.delete(path));
     }
     return value;
   }
   notify(path, payload) {
     if (this.watchers) {
-      const wildcords = this.watchers.get("*"), cords = this.watchers.get(path);
+      const wildcords = this.watchers.get("*"),
+        cords = this.watchers.get(path);
       if (cords)
         for (let i = 0, len = cords.length; i < len; i++) {
           cords[i].cb(payload.target.value, payload);
-          if (cords[i].once) cords.splice(i--, 1), !cords.length && this.watchers.delete(path);
+          if (cords[i].once) (cords.splice(i--, 1), !cords.length && this.watchers.delete(path));
         }
       if (wildcords)
         for (let i = 0, len = wildcords.length; i < len; i++) {
           wildcords[i].cb(payload.target.value, payload);
-          if (wildcords[i].once) wildcords.splice(i--, 1), !wildcords.length && this.watchers.delete("*");
+          if (wildcords[i].once) (wildcords.splice(i--, 1), !wildcords.length && this.watchers.delete("*"));
         }
     }
     this.listeners && this.schedule(path, payload);
   }
   schedule(path, payload) {
     this.batch ?? (this.batch = /* @__PURE__ */ new Map());
-    this.batch.set(path, payload), !this.isBatching && this.initBatching();
+    (this.batch.set(path, payload), !this.isBatching && this.initBatching());
   }
   initBatching() {
-    this.isBatching = true, this.config.batchingFunction(() => this.flush());
+    ((this.isBatching = true), this.config.batchingFunction(() => this.flush()));
   }
   flush() {
-    this.isBatching = false, this.batch && this.tick(this.batch.keys());
-    if (this.queue?.size) for (const task of this.queue) task(), this.queue.delete(task);
+    ((this.isBatching = false), this.batch && this.tick(this.batch.keys()));
+    if (this.queue?.size) for (const task of this.queue) (task(), this.queue.delete(task));
   }
   wave(path, payload) {
-    const e = new ReactorEvent(payload, this.config.eventBubbling, this.isLogging), chain = getTrailRecords(this.core, path);
+    const e = new ReactorEvent(payload, this.config.eventBubbling, this.isLogging),
+      chain = getTrailRecords(this.core, path);
     e.eventPhase = ReactorEvent.CAPTURING_PHASE;
     for (let i = 0; i <= chain.length - 2; i++) {
       if (e.propagationStopped) break;
@@ -1873,11 +2006,11 @@ var Reactor = class {
       if (e.immediatePropagationStopped) break;
       if (cords[i].capture !== isCapture) continue;
       if (cords[i].depth !== void 0) {
-        tDepth ?? (tDepth = this.getDepth(e.target.path)), lDepth ?? (lDepth = this.getDepth(path));
+        (tDepth ?? (tDepth = this.getDepth(e.target.path)), lDepth ?? (lDepth = this.getDepth(path)));
         if (tDepth > lDepth + cords[i].depth) continue;
       }
       cords[i].cb(e);
-      if (cords[i].once) cords.splice(i--, 1), !cords.length && this.listeners.delete(path);
+      if (cords[i].once) (cords.splice(i--, 1), !cords.length && this.listeners.delete(path));
     }
   }
   bind(cord, signal) {
@@ -1886,7 +2019,9 @@ var Reactor = class {
     return cord.clup;
   }
   getContext(path) {
-    const lastDot = path.lastIndexOf("."), value = path === "*" ? this.core : getAny(this.core, path), object = lastDot === -1 ? this.core : getAny(this.core, path.slice(0, lastDot));
+    const lastDot = path.lastIndexOf("."),
+      value = path === "*" ? this.core : getAny(this.core, path),
+      object = lastDot === -1 ? this.core : getAny(this.core, path.slice(0, lastDot));
     return { path, value, key: path.slice(lastDot + 1) || "", object };
   }
   getDepth(p, d = !p ? 0 : 1) {
@@ -1906,15 +2041,17 @@ var Reactor = class {
   }
   stall(task) {
     this.queue ?? (this.queue = /* @__PURE__ */ new Set());
-    this.queue.add(task), !this.isBatching && this.initBatching();
+    (this.queue.add(task), !this.isBatching && this.initBatching());
   }
   nostall(task) {
     return this.queue?.delete(task);
   }
   syncAdd(key, path, cb, opts, onImmediate) {
     var _a;
-    const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR), store = this[_a = `${key}${key.endsWith("t") ? "t" : ""}ers`] ?? (this[_a] = /* @__PURE__ */ new Map());
-    let cords = store.get(path), cord;
+    const { lazy = false, once = false, signal, immediate = false } = parseEvOpts(opts, EV_OPTS.MEDIATOR),
+      store = this[(_a = `${key}${key.endsWith("t") ? "t" : ""}ers`)] ?? (this[_a] = /* @__PURE__ */ new Map());
+    let cords = store.get(path),
+      cord;
     if (cords) {
       for (let i = 0, len = cords.length; i < len; i++)
         if (Object.is(cords[i].cb, cb)) {
@@ -1926,21 +2063,22 @@ var Reactor = class {
     let task;
     cord = { cb, once, clup: () => (lazy && this.nostall(task), this[`no${key}`](path, cb)) };
     immediate && onImmediate?.(immediate);
-    task = () => (cords ?? (store.set(path, cords = []), cords)).push(cord);
+    task = () => (cords ?? (store.set(path, (cords = [])), cords)).push(cord);
     lazy ? this.stall(task) : task();
     return this.bind(cord, signal);
   }
   syncDrop(store, path, cb) {
     const cords = store?.get(path);
     if (!cords) return void 0;
-    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && store.delete(path), true;
+    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && store.delete(path), true);
     return false;
   }
   clone(obj, raw, visited = /* @__PURE__ */ new WeakMap()) {
     if (!(isStrictObj(obj, this.config.crossRealms) || Array.isArray(obj)) || visited.has(obj)) return obj;
-    const version = obj[VERSION] || 0, cached = !raw && this.isSCloning && this.snapshotCache.get(obj);
+    const version = obj[VERSION] || 0,
+      cached = !raw && this.isSCloning && this.snapshotCache.get(obj);
     if (cached && obj[SSVERSION] === version) return cached;
-    const clone = !raw ? Array.isArray(obj) ? [] : {} : obj[RAW] || obj;
+    const clone = !raw ? (Array.isArray(obj) ? [] : {}) : obj[RAW] || obj;
     visited.set(obj, clone);
     const keys = Object.keys(obj);
     for (let i = 0, len = keys.length; i < len; i++) clone[keys[i]] = this.clone(obj[keys[i]], raw, visited);
@@ -1989,7 +2127,8 @@ var Reactor = class {
   on(path, cb, options) {
     this.listeners ?? (this.listeners = /* @__PURE__ */ new Map());
     const { capture = false, once = false, signal, immediate = false, depth } = parseEvOpts(options, EV_OPTS.LISTENER);
-    let cords = this.listeners.get(path), cord;
+    let cords = this.listeners.get(path),
+      cord;
     if (cords) {
       for (let i = 0, len = cords.length; i < len; i++)
         if (Object.is(cords[i].cb, cb) && capture === cords[i].capture) {
@@ -2003,7 +2142,7 @@ var Reactor = class {
       const target = this.getContext(path);
       cb(new ReactorEvent({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, this.config.eventBubbling, this.isLogging));
     }
-    (cords ?? (this.listeners.set(path, cords = []), cords)).push(cord);
+    (cords ?? (this.listeners.set(path, (cords = [])), cords)).push(cord);
     return this.bind(cord, signal);
   }
   once(path, cb, options) {
@@ -2013,24 +2152,25 @@ var Reactor = class {
     const cords = this.listeners?.get(path);
     if (!cords) return void 0;
     const { capture } = parseEvOpts(options, EV_OPTS.LISTENER);
-    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb) && cords[i].capture === capture) return cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.listeners.delete(path), true;
+    for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb) && cords[i].capture === capture) return (cords[i].sclup?.(), cords.splice(i--, 1), !cords.length && this.listeners.delete(path), true);
     return false;
   }
   snapshot(raw = !this.isSCloning, branch = this.core) {
     return this.clone(branch, raw);
   }
   cascade({ type, currentTarget: { path, value: news, oldValue: olds } }, objSafe = true) {
-    if (type !== "set" && type !== "delete" || !(isStrictObj(news, this.config.crossRealms) || Array.isArray(news)) || (objSafe ? !(isStrictObj(olds, this.config.crossRealms) || Array.isArray(olds)) : false)) return;
-    const obj = objSafe ? mergeObjs(olds, news) : news, keys = Object.keys(obj);
+    if ((type !== "set" && type !== "delete") || !(isStrictObj(news, this.config.crossRealms) || Array.isArray(news)) || (objSafe ? !(isStrictObj(olds, this.config.crossRealms) || Array.isArray(olds)) : false)) return;
+    const obj = objSafe ? mergeObjs(olds, news) : news,
+      keys = Object.keys(obj);
     for (let i = 0, len = keys.length; i < len; i++) setAny(this.core, path + "." + keys[i], obj[keys[i]]);
   }
   reset() {
-    this.getters?.clear(), this.setters?.clear(), this.deleters?.clear(), this.watchers?.clear(), this.listeners?.clear();
-    this.queue?.clear(), this.batch?.clear(), this.isBatching = false;
+    (this.getters?.clear(), this.setters?.clear(), this.deleters?.clear(), this.watchers?.clear(), this.listeners?.clear());
+    (this.queue?.clear(), this.batch?.clear(), (this.isBatching = false));
     this.proxyCache = /* @__PURE__ */ new WeakMap();
   }
   destroy() {
-    this.reset(), nuke(this);
+    (this.reset(), nuke(this));
   }
   get canLog() {
     return this.log === R_LOG;
@@ -2052,14 +2192,17 @@ var Reactor = class {
 // src/ts/tools/mixins/reactive.ts
 var methods = ["tick", "stall", "nostall", "get", "gonce", "noget", "set", "sonce", "noset", "delete", "donce", "nodelete", "watch", "wonce", "nowatch", "on", "once", "off", "cascade", "snapshot", "reset", "destroy"];
 function reactive(target, options, prefs) {
-  const descriptors = {}, rtr = target instanceof Reactor ? target : new Reactor(target, options), locks = { enumerable: false, configurable: true, writable: false }, hasAffix = !!(prefs?.prefix || prefs?.suffix);
+  const descriptors = {},
+    rtr = target instanceof Reactor ? target : new Reactor(target, options),
+    locks = { enumerable: false, configurable: true, writable: false },
+    hasAffix = !!(prefs?.prefix || prefs?.suffix);
   for (let key of methods) {
     if (hasAffix) (prefs?.whitelist?.includes(key) ?? true) && (key = `${prefs?.prefix || ""}${key}${prefs?.suffix || ""}`);
     else if (prefs?.whitelist?.includes(key)) continue;
     descriptors[key] = { value: rtr[key].bind(rtr), ...locks };
   }
   descriptors["__Reactor__"] = { value: rtr, ...locks };
-  return Object.defineProperties(rtr.core, descriptors), rtr.core;
+  return (Object.defineProperties(rtr.core, descriptors), rtr.core);
 }
 function inert(target) {
   target[INERTIA] = true;
@@ -2123,38 +2266,41 @@ var BaseRegistry = class {
   }
   register(name, value, options) {
     this.unregister(name);
-    return this.items.push({ name, value, options }), this;
+    return (this.items.push({ name, value, options }), this);
   }
   unregister(name) {
-    return this.items = this.items.filter((i) => i.name !== name), this;
+    return ((this.items = this.items.filter((i) => i.name !== name)), this);
   }
   get(name) {
     return this.items.find((i) => i.name === name)?.value;
   }
   getAll(order) {
     if (!order) return this.items.map((i) => i.value);
-    return this.items.sort((a, b) => {
-      const aIdx = order.indexOf(a.name), bIdx = order.indexOf(b.name);
-      return aIdx === -1 && bIdx === -1 ? 0 : aIdx === -1 ? 1 : bIdx === -1 ? -1 : aIdx - bIdx;
-    }).map((i) => i.value);
+    return this.items
+      .sort((a, b) => {
+        const aIdx = order.indexOf(a.name),
+          bIdx = order.indexOf(b.name);
+        return aIdx === -1 && bIdx === -1 ? 0 : aIdx === -1 ? 1 : bIdx === -1 ? -1 : aIdx - bIdx;
+      })
+      .map((i) => i.value);
   }
 };
 var OrderedRegistry = class extends BaseRegistry {
   registerPriority(name, value, options) {
     this.unregister(name);
-    return this.items.unshift({ name, value, options }), this;
+    return (this.items.unshift({ name, value, options }), this);
   }
   registerBefore(key, name, value, options) {
     const idx = this.items.findIndex((i) => i.name === key);
-    if (idx === -1) return console.warn(`[TMG Registry] Cannot register '${name}' before '${key}': Target '${key}' not found.`), this;
+    if (idx === -1) return (console.warn(`[TMG Registry] Cannot register '${name}' before '${key}': Target '${key}' not found.`), this);
     this.unregister(name);
-    return this.items.splice(idx, 0, { name, value, options }), this;
+    return (this.items.splice(idx, 0, { name, value, options }), this);
   }
   registerAfter(key, name, value, options) {
     const idx = this.items.findIndex((i) => i.name === key);
-    if (idx === -1) return console.warn(`[TMG Registry] Cannot register '${name}' after '${key}': Target '${key}' not found.`), this;
+    if (idx === -1) return (console.warn(`[TMG Registry] Cannot register '${name}' after '${key}': Target '${key}' not found.`), this);
     this.unregister(name);
-    return this.items.splice(idx + 1, 0, { name, value, options }), this;
+    return (this.items.splice(idx + 1, 0, { name, value, options }), this);
   }
 };
 var _IconRegistry = class _IconRegistry extends BaseRegistry {
@@ -2226,7 +2372,7 @@ var _ComponentRegistry = class _ComponentRegistry extends BaseRegistry {
     const Comp = this.instance.get(name);
     if (!Comp) return null;
     const instance = new Comp(ctlr, options);
-    return instance.create(), instance.setup(), instance;
+    return (instance.create(), instance.setup(), instance);
   }
   static getAll() {
     return this.instance.getAll();
@@ -2239,7 +2385,7 @@ var ComponentRegistry = _ComponentRegistry;
 var media_exports = {};
 __export(media_exports, {
   BaseTech: () => BaseTech,
-  HTML5Tech: () => HTML5Tech
+  HTML5Tech: () => HTML5Tech,
 });
 
 // src/ts/core/controllable.ts
@@ -2261,11 +2407,10 @@ var Controllable = class {
   }
   destroy() {
     !this.signal.aborted && this.ac.abort(`[TMG Controllable] Instance is being destroyed`);
-    this.onDestroy(), this.state?.destroy?.(), this.config?.destroy?.();
+    (this.onDestroy(), this.state?.destroy?.(), this.config?.destroy?.());
     nuke(this);
   }
-  onDestroy() {
-  }
+  onDestroy() {}
 };
 
 // src/ts/media/base.ts
@@ -2373,7 +2518,7 @@ var _HTML5Tech = class _HTML5Tech extends BaseTech {
       canPlayThrough: true,
       // Settings
       defaultMuted: true,
-      defaultPlaybackRate: true
+      defaultPlaybackRate: true,
     });
     this.eOpts = { EL: { signal: this.signal }, REACTOR: { capture: true, signal: this.signal, immediate: this.ctlr.payload.initialized } };
   }
@@ -2618,26 +2763,26 @@ var _HTML5Tech = class _HTML5Tech extends BaseTech {
       } else if (m.type !== "attributes" || !m.attributeName) return;
       switch (m.attributeName) {
         case "poster":
-          return state2.poster = this.el.poster;
+          return (state2.poster = this.el.poster);
         case "autoplay":
-          return state2.autoplay = this.el.autoplay;
+          return (state2.autoplay = this.el.autoplay);
         case "loop":
-          return state2.loop = this.el.loop;
+          return (state2.loop = this.el.loop);
         case "preload":
-          return state2.preload = this.el.preload;
+          return (state2.preload = this.el.preload);
         case "crossorigin":
-          return state2.crossOrigin = this.el.crossOrigin;
+          return (state2.crossOrigin = this.el.crossOrigin);
         case "controls":
-          return state2.controls = this.el.controls;
+          return (state2.controls = this.el.controls);
         case "playsinline":
         case "webkit-playsinline":
-          return state2.playsInline = this.el.playsInline;
+          return (state2.playsInline = this.el.playsInline);
         case "controlslist":
-          return state2.controlsList = this.el.controlsList ?? this.el.getAttribute(m.attributeName);
+          return (state2.controlsList = this.el.controlsList ?? this.el.getAttribute(m.attributeName));
         case "disablepictureinpicture":
-          return state2.disablePictureInPicture = this.el.disablePictureInPicture ?? this.el.hasAttribute(m.attributeName);
+          return (state2.disablePictureInPicture = this.el.disablePictureInPicture ?? this.el.hasAttribute(m.attributeName));
         case "muted":
-          return state2.muted = this.el.muted, settings.defaultMuted = this.el.defaultMuted;
+          return ((state2.muted = this.el.muted), (settings.defaultMuted = this.el.defaultMuted));
       }
     }
   }
@@ -2673,7 +2818,7 @@ var _HTML5Tech = class _HTML5Tech extends BaseTech {
     e.resolve(_HTML5Tech.techName);
   }
   handleAttributeIntent(e, key, isBool) {
-    if (e.resolved || key === "poster" && isSameURL(e.value, this.config.state[key])) return;
+    if (e.resolved || (key === "poster" && isSameURL(e.value, this.config.state[key]))) return;
     const attr = key.toLowerCase();
     isBool ? this.el.toggleAttribute(attr, Boolean(e.value)) : e.value ? this.el.setAttribute(attr, e.value) : this.el.removeAttribute(attr);
     if (key === "playsInline") this.el.toggleAttribute("webkit-playsinline", Boolean(e.value));
@@ -2681,12 +2826,12 @@ var _HTML5Tech = class _HTML5Tech extends BaseTech {
   }
   handleSourcesIntent(e) {
     if (e.resolved) return;
-    if (!isSameSources(this.config.state.sources, e.value)) removeSources(this.el), addSources(e.value, this.el);
+    if (!isSameSources(this.config.state.sources, e.value)) (removeSources(this.el), addSources(e.value, this.el));
     e.resolve(_HTML5Tech.techName);
   }
   handleTracksIntent(e) {
     if (e.resolved) return;
-    if (!isSameTracks(this.config.state.tracks, e.value)) removeTracks(this.el), addTracks(e.value, this.el);
+    if (!isSameTracks(this.config.state.tracks, e.value)) (removeTracks(this.el), addTracks(e.value, this.el));
     e.resolve(_HTML5Tech.techName);
   }
   // --- Status (Bulk) ---
@@ -2722,7 +2867,7 @@ var _HTML5Tech = class _HTML5Tech extends BaseTech {
     this.config.status.waiting = this.config.status.stalled = false;
   }
   handleErrorStatus(e) {
-    this.config.status.error = this.el.error ?? { message: "string" === typeof e && e || e?.message };
+    this.config.status.error = this.el.error ?? { message: ("string" === typeof e && e) || e?.message };
     this.config.status.waiting = false;
   }
   handleTracksStatus(type, list) {
@@ -2785,7 +2930,7 @@ var Controller = class {
       dimensions: { container: { width: 0, height: 0, tier: "x" }, pseudoContainer: { width: 0, height: 0, tier: "x" }, window: { width: window.innerWidth, height: window.innerHeight } },
       screenOrientation: window.screen.orientation,
       docVisibilityState: document.visibilityState,
-      docInFullscreen: queryFullscreen()
+      docInFullscreen: queryFullscreen(),
     });
     const defs = getMediaReport(medium);
     this.media = reactive({
@@ -2795,9 +2940,9 @@ var Controller = class {
       intent: volatile(intent(defs.intent)),
       state: state(defs.state),
       status: state(defs.status),
-      settings: state(defs.settings)
+      settings: state(defs.settings),
     });
-    this.config.watch("settings", (value) => this.settings = value, { immediate: true, signal: this.signal });
+    this.config.watch("settings", (value) => (this.settings = value), { immediate: true, signal: this.signal });
     this.buildCache = this.config.snapshot();
     this.media.set("tech", (t) => inert(t), { signal: this.signal });
     this.boot();
@@ -2812,7 +2957,7 @@ var Controller = class {
     this.setReadyState();
     if (!this.media.state.paused) this.setReadyState();
     else this.media.wonce("state.paused", () => this.setReadyState(), { signal: this.signal });
-    setTimeout2(() => this.mutatingDOMM = false, 0, this.signal);
+    setTimeout2(() => (this.mutatingDOMM = false), 0, this.signal);
   }
   connectPlugs() {
     for (const PlugClass of PlugRegistry.getOrdered()) {
@@ -2835,9 +2980,11 @@ var Controller = class {
     this.media.on("settings.srcObject", () => this.overseeTech(), opts);
   }
   overseeTech(pref = "intent") {
-    const { src: prefSrc, sources: prefSources } = pref === "intent" ? this.media.intent : this.media.state, { src: altSrc, sources: altSources } = pref === "intent" ? this.media.state : this.media.intent;
+    const { src: prefSrc, sources: prefSources } = pref === "intent" ? this.media.intent : this.media.state,
+      { src: altSrc, sources: altSources } = pref === "intent" ? this.media.state : this.media.intent;
     if (this.media.settings.srcObject) return this.switchTech(HTML5Tech);
-    let selectedTech = null, selectedSource = null;
+    let selectedTech = null,
+      selectedSource = null;
     if (!isSameURL(prefSrc, altSrc)) {
       selectedTech = TechRegistry.pick(prefSrc, this.config.settings.techOrder);
       if (selectedTech) selectedSource = prefSrc;
@@ -2856,18 +3003,18 @@ var Controller = class {
   }
   switchTech(TechClass, config = this.media) {
     if (this.media.tech && TechClass === this.media.tech.constructor) return;
-    if (this.media.tech) this.media.tech.destroy(), this.log(`Switching tech from '${this.media.tech.name}' -> '${TechClass.name}'`);
+    if (this.media.tech) (this.media.tech.destroy(), this.log(`Switching tech from '${this.media.tech.name}' -> '${TechClass.name}'`));
     (this.media.tech = new TechClass(this, config)).setup();
   }
   wireRuntimeState() {
-    this.clups.push(observeIntersection(this.videoContainer.parentElement, (entry) => this.state.mediaParentIntersecting = entry.isIntersecting));
-    this.clups.push(observeIntersection(this.videoContainer, (entry) => this.state.mediaIntersecting = entry.isIntersecting));
-    this.clups.push(observeResize(this.videoContainer, () => this.state.dimensions.container = getSizeTier(this.videoContainer)));
-    this.clups.push(observeResize(this.pseudoVideoContainer, () => this.state.dimensions.pseudoContainer = getSizeTier(this.pseudoVideoContainer)));
+    this.clups.push(observeIntersection(this.videoContainer.parentElement, (entry) => (this.state.mediaParentIntersecting = entry.isIntersecting)));
+    this.clups.push(observeIntersection(this.videoContainer, (entry) => (this.state.mediaIntersecting = entry.isIntersecting)));
+    this.clups.push(observeResize(this.videoContainer, () => (this.state.dimensions.container = getSizeTier(this.videoContainer))));
+    this.clups.push(observeResize(this.pseudoVideoContainer, () => (this.state.dimensions.pseudoContainer = getSizeTier(this.pseudoVideoContainer))));
   }
   get payload() {
     const readyState = this.state?.readyState ?? 0;
-    this._payload.readyState = readyState, this._payload.initialized = readyState > 0, this._payload.destroyed = readyState < 0;
+    ((this._payload.readyState = readyState), (this._payload.initialized = readyState > 0), (this._payload.destroyed = readyState < 0));
     return this._payload;
   }
   setReadyState(state2, medium) {
@@ -2894,11 +3041,11 @@ var Controller = class {
     if (strict) {
       const now = performance.now();
       if (now - (this.throttleMap.get(key) ?? 0) < delay) return;
-      return this.throttleMap.set(key, now), fn();
+      return (this.throttleMap.set(key, now), fn());
     }
     if (this.throttleMap.has(key)) return;
     const id = setTimeout2(() => this.throttleMap.delete(key), delay, this.signal, getWindow(this.videoContainer));
-    return this.throttleMap.set(key, id), fn();
+    return (this.throttleMap.set(key, id), fn());
   }
   RAFLoop(key, fn) {
     this.rafLoopFnMap.set(key, fn);
@@ -2906,7 +3053,7 @@ var Controller = class {
     !this.rafLoopMap.has(key) && this.rafLoopMap.set(key, requestAnimationFrame2(loop, this.signal, getWindow(this.videoContainer)));
   }
   cancelRAFLoop(key) {
-    getWindow(this.videoContainer)?.cancelAnimationFrame(this.rafLoopMap.get(key)), this.rafLoopFnMap.delete(key), this.rafLoopMap.delete(key);
+    (getWindow(this.videoContainer)?.cancelAnimationFrame(this.rafLoopMap.get(key)), this.rafLoopFnMap.delete(key), this.rafLoopMap.delete(key));
   }
   queryDOM(query, all = false, isPseudo = false) {
     const container = isPseudo ? this.pseudoVideoContainer : this.videoContainer;
@@ -2933,10 +3080,10 @@ var Controller = class {
     this.clups.forEach((cleanup) => cleanup());
     [...this.plugs.values()].reverse().forEach((p) => p.destroy());
     this.media.tech.destroy();
-    this.plugs.clear(), this.throttleMap.clear(), this.rafLoopMap.clear(), this.rafLoopFnMap.clear();
-    this.media.destroy(), this.state.destroy(), this.config.destroy();
+    (this.plugs.clear(), this.throttleMap.clear(), this.rafLoopMap.clear(), this.rafLoopFnMap.clear());
+    (this.media.destroy(), this.state.destroy(), this.config.destroy());
     const el = this.config.cloneOnDetach ? cloneMedia(this.media.element) : this.media.element;
-    return nuke(this), el;
+    return (nuke(this), el);
   }
 };
 
@@ -2972,8 +3119,8 @@ var DEFAULT_VIDEO_BUILD = {
             { value: "times new roman", display: "Times New Roman" },
             { value: "georgia", display: "Georgia" },
             { value: "impact", display: "Impact" },
-            { value: "comic sans ms", display: "Comic Sans MS" }
-          ]
+            { value: "comic sans ms", display: "Comic Sans MS" },
+          ],
         },
         size: {
           min: 100,
@@ -2987,8 +3134,8 @@ var DEFAULT_VIDEO_BUILD = {
             { value: 150, display: "150%" },
             { value: 200, display: "200%" },
             { value: 300, display: "300%" },
-            { value: 400, display: "400%" }
-          ]
+            { value: 400, display: "400%" },
+          ],
         },
         color: {
           value: "white",
@@ -3000,8 +3147,8 @@ var DEFAULT_VIDEO_BUILD = {
             { value: "blue", display: "Blue" },
             { value: "magenta", display: "Magenta" },
             { value: "red", display: "Red" },
-            { value: "black", display: "Black" }
-          ]
+            { value: "black", display: "Black" },
+          ],
         },
         opacity: {
           value: 1,
@@ -3009,8 +3156,8 @@ var DEFAULT_VIDEO_BUILD = {
             { value: 0.25, display: "25%" },
             { value: 0.5, display: "50%" },
             { value: 0.75, display: "75%" },
-            { value: 1, display: "100%" }
-          ]
+            { value: 1, display: "100%" },
+          ],
         },
         weight: {
           value: "400",
@@ -3023,17 +3170,17 @@ var DEFAULT_VIDEO_BUILD = {
             { value: "600", display: "Semi Bold" },
             { value: "700", display: "Bold" },
             { value: "800", display: "Extra Bold" },
-            { value: "900", display: "Black" }
-          ]
+            { value: "900", display: "Black" },
+          ],
         },
         variant: {
           value: "normal",
           options: [
             { value: "normal", display: "Normal" },
             { value: "small-caps", display: "Small Caps" },
-            { value: "all-small-caps", display: "All Small Caps" }
-          ]
-        }
+            { value: "all-small-caps", display: "All Small Caps" },
+          ],
+        },
       },
       background: {
         color: {
@@ -3046,8 +3193,8 @@ var DEFAULT_VIDEO_BUILD = {
             { value: "blue", display: "Blue" },
             { value: "magenta", display: "Magenta" },
             { value: "red", display: "Red" },
-            { value: "black", display: "Black" }
-          ]
+            { value: "black", display: "Black" },
+          ],
         },
         opacity: {
           value: 0.75,
@@ -3056,9 +3203,9 @@ var DEFAULT_VIDEO_BUILD = {
             { value: 0.25, display: "25%" },
             { value: 0.5, display: "50%" },
             { value: 0.75, display: "75%" },
-            { value: 1, display: "100%" }
-          ]
-        }
+            { value: 1, display: "100%" },
+          ],
+        },
       },
       window: {
         color: {
@@ -3071,8 +3218,8 @@ var DEFAULT_VIDEO_BUILD = {
             { value: "blue", display: "Blue" },
             { value: "magenta", display: "Magenta" },
             { value: "red", display: "Red" },
-            { value: "black", display: "Black" }
-          ]
+            { value: "black", display: "Black" },
+          ],
         },
         opacity: {
           value: 0,
@@ -3081,9 +3228,9 @@ var DEFAULT_VIDEO_BUILD = {
             { value: 0.25, display: "25%" },
             { value: 0.5, display: "50%" },
             { value: 0.75, display: "75%" },
-            { value: 1, display: "100%" }
-          ]
-        }
+            { value: 1, display: "100%" },
+          ],
+        },
       },
       characterEdgeStyle: {
         value: "none",
@@ -3092,17 +3239,17 @@ var DEFAULT_VIDEO_BUILD = {
           { value: "drop-shadow", display: "Drop Shadow" },
           { value: "raised", display: "Raised" },
           { value: "depressed", display: "Depressed" },
-          { value: "outline", display: "Outline" }
-        ]
+          { value: "outline", display: "Outline" },
+        ],
       },
       textAlignment: {
         value: "left",
         options: [
           { value: "left", display: "Left" },
           { value: "center", display: "Center" },
-          { value: "right", display: "Right" }
-        ]
-      }
+          { value: "right", display: "Right" },
+        ],
+      },
     },
     controlPanel: {
       profile: true,
@@ -3110,11 +3257,11 @@ var DEFAULT_VIDEO_BUILD = {
       artist: true,
       top: ["expandminiplayer", "spacer", "meta", "spacer", "capture", "fullscreenlock", "fullscreenorientation", "removeminiplayer"],
       center: ["bigprev", "bigplaypause", "bignext"],
-      bottom: { 1: [], 2: ["spacer", "timeline", "spacer"], 3: [...!IS_MOBILE ? ["prev", "playpause", "next"] : [], "brightness", "volume", "timeandduration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] },
+      bottom: { 1: [], 2: ["spacer", "timeline", "spacer"], 3: [...(!IS_MOBILE ? ["prev", "playpause", "next"] : []), "brightness", "volume", "timeandduration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] },
       buffer: "eclipse",
       timeline: { thumbIndicator: true, seek: { relative: !IS_MOBILE, cancel: { delta: 15, timeout: 2e3 } } },
       progressBar: IS_MOBILE,
-      draggable: ["", "wrapper"]
+      draggable: ["", "wrapper"],
     },
     errorMessages: { 1: "The video playback was aborted :(", 2: "The video failed due to a network error :(", 3: "The video could not be decoded :(", 4: "The video source is not supported :(" },
     fastPlay: { playbackRate: 2, key: true, pointer: { type: "all", threshold: 800, inset: 20 }, reset: true, rewind: true },
@@ -3122,7 +3269,7 @@ var DEFAULT_VIDEO_BUILD = {
       click: IS_MOBILE ? "" : "togglePlay",
       dblClick: IS_MOBILE ? "togglePlay" : "toggleFullscreenMode",
       touch: { volume: true, brightness: true, timeline: true, threshold: 200, axesRatio: 3, inset: 20, sliderTimeout: 1e3, xRatio: 1, yRatio: 1 },
-      wheel: { volume: { normal: true, slider: true }, brightness: { normal: true, slider: true }, timeline: { normal: true, slider: true }, timeout: 2e3, xRatio: 12, yRatio: 6 }
+      wheel: { volume: { normal: true, slider: true }, brightness: { normal: true, slider: true }, timeline: { normal: true, slider: true }, timeout: 2e3, xRatio: 12, yRatio: 6 },
     },
     keys: {
       disabled: false,
@@ -3131,7 +3278,7 @@ var DEFAULT_VIDEO_BUILD = {
       shortcuts: { prev: "Shift+p", next: "Shift+n", playPause: "k", mute: "m", dark: "d", skipBwd: "j", skipFwd: "l", stepFwd: ".", stepBwd: ",", volumeUp: "ArrowUp", volumeDown: "ArrowDown", brightnessUp: "y", brightnessDown: "h", playbackRateUp: ">", playbackRateDown: "<", timeFormat: "z", timeMode: "q", capture: "s", objectFit: "a", pictureInPicture: "i", theater: "t", fullscreen: "f", captions: "c", captionsFontSizeUp: ["+", "="], captionsFontSizeDown: ["-", "_"], captionsFontFamily: "u", captionsFontWeight: "g", captionsFontVariant: "v", captionsFontOpacity: "o", captionsBackgroundOpacity: "b", captionsWindowOpacity: "w", captionsCharacterEdgeStyle: "e", captionsTextAlignment: "x", settings: "?" },
       mods: { disabled: false, skip: { ctrl: 60, shift: 10 }, volume: { ctrl: 50, shift: 10 }, brightness: { ctrl: 50, shift: 10 }, playbackRate: { ctrl: 1 }, captionsFontSize: {} },
       // prettier-ignore
-      blocks: ["Ctrl+Tab", "Ctrl+Shift+Tab", "Ctrl+PageUp", "Ctrl+PageDown", "Cmd+Option+ArrowRight", "Cmd+Option+ArrowLeft", "Ctrl+1", "Ctrl+2", "Ctrl+3", "Ctrl+4", "Ctrl+5", "Ctrl+6", "Ctrl+7", "Ctrl+8", "Ctrl+9", "Cmd+1", "Cmd+2", "Cmd+3", "Cmd+4", "Cmd+5", "Cmd+6", "Cmd+7", "Cmd+8", "Cmd+9", "Alt+ArrowLeft", "Alt+ArrowRight", "Cmd+ArrowLeft", "Cmd+ArrowRight", "Ctrl+r", "Ctrl+Shift+r", "F5", "Shift+F5", "Cmd+r", "Cmd+Shift+r", "Ctrl+h", "Ctrl+j", "Ctrl+d", "Ctrl+f", "Cmd+y", "Cmd+Option+b", "Cmd+d", "Cmd+f", "Ctrl+Shift+i", "Ctrl+Shift+j", "Ctrl+Shift+c", "Ctrl+u", "F12", "Cmd+Option+i", "Cmd+Option+j", "Cmd+Option+c", "Cmd+Option+u", "Ctrl+=", "Ctrl+-", "Ctrl+0", "Cmd+=", "Cmd+-", "Cmd+0", "Ctrl+p", "Ctrl+s", "Ctrl+o", "Cmd+p", "Cmd+s", "Cmd+o"]
+      blocks: ["Ctrl+Tab", "Ctrl+Shift+Tab", "Ctrl+PageUp", "Ctrl+PageDown", "Cmd+Option+ArrowRight", "Cmd+Option+ArrowLeft", "Ctrl+1", "Ctrl+2", "Ctrl+3", "Ctrl+4", "Ctrl+5", "Ctrl+6", "Ctrl+7", "Ctrl+8", "Ctrl+9", "Cmd+1", "Cmd+2", "Cmd+3", "Cmd+4", "Cmd+5", "Cmd+6", "Cmd+7", "Cmd+8", "Cmd+9", "Alt+ArrowLeft", "Alt+ArrowRight", "Cmd+ArrowLeft", "Cmd+ArrowRight", "Ctrl+r", "Ctrl+Shift+r", "F5", "Shift+F5", "Cmd+r", "Cmd+Shift+r", "Ctrl+h", "Ctrl+j", "Ctrl+d", "Ctrl+f", "Cmd+y", "Cmd+Option+b", "Cmd+d", "Cmd+f", "Ctrl+Shift+i", "Ctrl+Shift+j", "Ctrl+Shift+c", "Ctrl+u", "F12", "Cmd+Option+i", "Cmd+Option+j", "Cmd+Option+c", "Cmd+Option+u", "Ctrl+=", "Ctrl+-", "Ctrl+0", "Cmd+=", "Cmd+-", "Cmd+0", "Ctrl+p", "Ctrl+s", "Ctrl+o", "Cmd+p", "Cmd+s", "Cmd+o"],
     },
     locked: { disabled: true },
     modes: { fullscreen: { disabled: false, orientationLock: "auto", onRotate: 90 }, theater: { disabled: !IS_MOBILE }, pictureInPicture: { disabled: false, floatingPlayer: { disabled: false, width: 500, height: 281, disallowReturnToOpener: false, preferInitialWindowPlacement: false } }, miniplayer: { disabled: false, minWindowWidth: 240 } },
@@ -3144,14 +3291,14 @@ var DEFAULT_VIDEO_BUILD = {
     time: { min: 0, skip: 10, previews: false, mode: "elapsed", format: "digital", seekSync: false },
     frame: { disabled: false, fps: 30, captureAutoClose: 15e3 },
     toasts: { disabled: false, maxToasts: 7, position: "bottom-left", hideProgressBar: true, closeButton: !IS_MOBILE, animation: "slide-up", dragToCloseDir: "x||y" },
-    volume: { min: 0, max: 300, skip: 5 }
-  }
+    volume: { min: 0, max: 300, skip: 5 },
+  },
 };
 var DEFAULT_VIDEO_ITEM_BUILD = {
   media: { title: "", chapterInfo: [], links: { title: "" } },
   src: "",
   tracks: [],
-  settings: { time: { start: 0, previews: false } }
+  settings: { time: { start: 0, previews: false } },
 };
 
 // src/ts/tools/player.ts
@@ -3174,7 +3321,7 @@ var Player = class {
     this.configure(customBuild);
   }
   queryBuild() {
-    return !this.active ? true : this.notice({ error: "Already deployed the custom controls of your build configuration", tip: "Consider setting your build configuration before attaching your media element" }), false;
+    return (!this.active ? true : this.notice({ error: "Already deployed the custom controls of your build configuration", tip: "Consider setting your build configuration before attaching your media element" }), false);
   }
   notice({ error, warning, tip }) {
     error && console.error(`[TMG Player] ${error}`);
@@ -3186,8 +3333,8 @@ var Player = class {
     this._build = mergeObjs(this._build, parseAnyObj(customBuild));
     const keys = this._build.settings.keys;
     if (!keys) return;
-    Object.keys(keys.shortcuts || {}).forEach((k) => keys.shortcuts[k] = cleanKeyCombo(keys.shortcuts[k]));
-    ["blocks", "overrides"].forEach((k) => keys[k] = cleanKeyCombo(keys[k]));
+    Object.keys(keys.shortcuts || {}).forEach((k) => (keys.shortcuts[k] = cleanKeyCombo(keys.shortcuts[k])));
+    ["blocks", "overrides"].forEach((k) => (keys[k] = cleanKeyCombo(keys[k])));
   }
   async attach(medium) {
     if (isIter(medium)) return this.notice({ error: "An iterable argument cannot be attached to the TMG media player", tip: "Consider looping the iterable argument to instantiate a new 'tmg.Player' for each" });
@@ -3196,8 +3343,8 @@ var Player = class {
     tmg.Controllers.push(this._build.id);
     medium.tmgPlayer = this;
     this.medium = medium;
-    await this.fetchCustomOptions(), await this.deployController();
-    return this.controller?.fire("tmgattached", this.controller.payload), medium;
+    (await this.fetchCustomOptions(), await this.deployController());
+    return (this.controller?.fire("tmgattached", this.controller.payload), medium);
   }
   detach() {
     if (!this.active) return;
@@ -3212,12 +3359,16 @@ var Player = class {
   async fetchCustomOptions() {
     if (!this.medium) return;
     if (this.medium.getAttribute("tmg")?.includes(".json")) {
-      await fetch(this.medium.getAttribute("tmg")).then((res) => {
-        if (!res.ok) throw new Error(`JSON file not found at provided URL!. Status: ${res.status}`);
-        return res.json();
-      }).then((json) => this.configure(json)).catch(({ message }) => this.notice({ error: message, tip: "A valid JSON file is required for parsing your build configuration" }));
+      await fetch(this.medium.getAttribute("tmg"))
+        .then((res) => {
+          if (!res.ok) throw new Error(`JSON file not found at provided URL!. Status: ${res.status}`);
+          return res.json();
+        })
+        .then((json) => this.configure(json))
+        .catch(({ message }) => this.notice({ error: message, tip: "A valid JSON file is required for parsing your build configuration" }));
     }
-    const customBuild = {}, attributes = this.medium.getAttributeNames().filter((attr) => attr.startsWith("tmg--"));
+    const customBuild = {},
+      attributes = this.medium.getAttributeNames().filter((attr) => attr.startsWith("tmg--"));
     attributes?.forEach((attr) => setHTMLConfig(customBuild, attr, this.medium.getAttribute(attr)));
     if (this.medium instanceof HTMLVideoElement && this.medium.poster) this.configure({ "media.artwork[0].src": this.medium.poster });
     this.configure(customBuild);
@@ -3230,7 +3381,7 @@ var Player = class {
     this.medium.controls = false;
     this.medium.classList.add(`tmg-${this.medium.tagName.toLowerCase()}`, "tmg-media");
     const s = this._build.settings;
-    Object.keys(s.modes).forEach((k) => s.modes[k] = s.modes[k] && (modes2[String(k)] ?? true) ? s.modes[k] : false);
+    Object.keys(s.modes).forEach((k) => (s.modes[k] = s.modes[k] && (modes2[String(k)] ?? true) ? s.modes[k] : false));
     await Promise.all([loadResource2(window.TMG_VIDEO_CSS_SRC), loadResource2(window.T007_TOAST_JS_SRC, "script", { module: true }), loadResource2(window.T007_INPUT_JS_SRC, "script")]);
     Controllers[Controllers.indexOf(this._build.id)] = this.controller = new Controller(this.medium, this._build);
   }
@@ -3281,10 +3432,10 @@ function freeMutation(m) {
 function mountMedia() {
   if (typeof HTMLVideoElement === "undefined") return;
   Object.defineProperty(HTMLVideoElement.prototype, "tmgcontrols", {
-    get: function() {
+    get: function () {
       return this.hasAttribute("tmgcontrols");
     },
-    set: async function(value) {
+    set: async function (value) {
       if (value) {
         flagMutation(this);
         await (this.tmgPlayer || new Player()).attach(this);
@@ -3298,7 +3449,7 @@ function mountMedia() {
       }
     },
     enumerable: true,
-    configurable: true
+    configurable: true,
   });
 }
 function unmountMedia() {
@@ -3307,8 +3458,8 @@ function unmountMedia() {
 function startAudioManager() {
   if (!AUDIO_CONTEXT && IS_DOC_TRANSIENT && typeof window !== "undefined") {
     AUDIO_CONTEXT = new (window.AudioContext || window.webkitAudioContext)();
-    const L = AUDIO_LIMITER = AUDIO_CONTEXT.createDynamicsCompressor();
-    L.threshold.value = -1, L.knee.value = 0, L.ratio.value = 20, L.attack.value = 1e-3, L.release.value = 0.05;
+    const L = (AUDIO_LIMITER = AUDIO_CONTEXT.createDynamicsCompressor());
+    ((L.threshold.value = -1), (L.knee.value = 0), (L.ratio.value = 20), (L.attack.value = 1e-3), (L.release.value = 0.05));
     Controllers.forEach((c) => c.state && (c.state.audioContextReady = true));
   } else if (AUDIO_CONTEXT?.state === "suspended") AUDIO_CONTEXT.resume();
 }
@@ -3324,7 +3475,7 @@ function connectMediaToAudioManager(medium) {
 }
 function init() {
   mountMedia();
-  ["click", "pointerdown", "keydown"].forEach((e) => document?.addEventListener(e, () => (IS_DOC_TRANSIENT = true, startAudioManager()), true));
+  ["click", "pointerdown", "keydown"].forEach((e) => document?.addEventListener(e, () => ((IS_DOC_TRANSIENT = true), startAudioManager()), true));
   document?.querySelectorAll("video").forEach((medium) => {
     observeMutation(medium, handleVidMutation, { attributes: true });
     medium.tmgcontrols = medium.hasAttribute("tmgcontrols");
@@ -3333,7 +3484,7 @@ function init() {
   window?.addEventListener("resize", () => Controllers.forEach((c) => c.state && (c.state.dimensions.window = { width: window.innerWidth, height: window.innerHeight })));
   screen?.orientation.addEventListener("change", (e) => Controllers.forEach((c) => c.state && (c.state.screenOrientation = e?.target)));
   document?.addEventListener("visibilitychange", () => Controllers.forEach((c) => c.state && (c.state.docVisibilityState = document.visibilityState)));
-  ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "msfullscreenchange"].forEach((e) => document?.addEventListener(e, () => Controllers.forEach((c) => c.state.docInFullscreen = queryFullscreen())));
+  ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "msfullscreenchange"].forEach((e) => document?.addEventListener(e, () => Controllers.forEach((c) => (c.state.docInFullscreen = queryFullscreen()))));
 }
 
 // src/ts/core/storage.ts
@@ -3385,11 +3536,11 @@ var AsyncQueue = class {
   drop(id) {
     const job = this.jobs.find((j) => j.id === id);
     job?.resolve({ success: false, cancelled: true, dropped: true });
-    return job && this.jobs.splice(this.jobs.indexOf(job), 1), !!job;
+    return (job && this.jobs.splice(this.jobs.indexOf(job), 1), !!job);
   }
   cancel(id) {
     const job = this.jobs.find((j) => j.id === id);
-    return job && (job.cancelled = true), !!job?.cancelled;
+    return (job && (job.cancelled = true), !!job?.cancelled);
   }
 };
 
@@ -3433,7 +3584,7 @@ __export(plugs_exports, {
   TouchModule: () => TouchModule,
   TracksPlug: () => TracksPlug,
   VolumePlug: () => VolumePlug3,
-  WheelModule: () => WheelModule
+  WheelModule: () => WheelModule,
 });
 
 // src/ts/plugs/base.ts
@@ -3446,10 +3597,8 @@ var BasePlug = class extends Controllable {
     if (this.ctlr.state.readyState) this.wire?.();
     else this.wire && this.ctlr.state.wonce("readyState", this.wire, { signal: this.signal });
   }
-  mount() {
-  }
-  wire() {
-  }
+  mount() {}
+  wire() {}
 };
 BasePlug.isCore = false;
 var BaseModule = class extends Controllable {
@@ -3461,10 +3610,8 @@ var BaseModule = class extends Controllable {
     if (this.ctlr.state.readyState) this.wire?.();
     else this.wire && this.ctlr.state.wonce("readyState", this.wire, { signal: this.signal });
   }
-  mount() {
-  }
-  wire() {
-  }
+  mount() {}
+  wire() {}
 };
 
 // src/ts/plugs/sources.ts
@@ -3527,16 +3674,16 @@ var PlaylistPlug = class extends BasePlug {
   }
   wire() {
     this.currentIndex = 0;
-    this.ctlr.config.get("playlist", (v) => v?.length ? v : null, { signal: this.signal });
+    this.ctlr.config.get("playlist", (v) => (v?.length ? v : null), { signal: this.signal });
     this.ctlr.config.set("playlist", (v) => v?.map((i) => mergeObjs(DEFAULT_VIDEO_ITEM_BUILD, i)) ?? null, { signal: this.signal });
-    this.ctlr.config.watch("playlist", (value) => this.config = value, { signal: this.signal });
+    this.ctlr.config.watch("playlist", (value) => (this.config = value), { signal: this.signal });
     this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && (this.config[this.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
     this.ctlr.config.on("playlist", this.handlePlaylistChange, { signal: this.signal, immediate: true, depth: 1 });
   }
   handlePlaylistChange({ root }) {
     if (this.media.status.readyState < 1) return;
     const list = root.playlist;
-    const v = list?.find((v2) => v2.media.id && v2.media.id === root.media.id || isSameURL(v2.src, root.src));
+    const v = list?.find((v2) => (v2.media.id && v2.media.id === root.media.id) || isSameURL(v2.src, root.src));
     this.currentIndex = (v && list?.indexOf(v)) ?? 0;
     v ? this.applyItem(v, false) : this.movePlaylistTo(this.currentIndex);
   }
@@ -3548,7 +3695,7 @@ var PlaylistPlug = class extends BasePlug {
   }
   applyItem(item, reset = true) {
     this.ctlr.config.media = deepClone(item.media);
-    timeKeys.forEach((p) => this.ctlr.settings.time[p] = item.settings.time[p]);
+    timeKeys.forEach((p) => (this.ctlr.settings.time[p] = item.settings.time[p]));
     this.ctlr.config.tracks = deepClone(item.tracks ?? []);
     if (reset) this.ctlr.config.src = item.src || "";
     if (reset && "sources" in item && item.sources) this.ctlr.config.sources = deepClone(item.sources);
@@ -3573,7 +3720,10 @@ var AutoPlug = class extends BasePlug {
     this.autonextVideo = () => {
       if (!this.media.status.loadedMetadata || !this.ctlr.config.playlist || this.config.next.value < 0 || !this.canAutoMovePlaylist || this.ctlr.getPlug("playlist").currentIndex >= this.ctlr.config.playlist.length - 1 || this.media.state.paused || this.media.status.waiting) return;
       this.canAutoMovePlaylist = false;
-      const count = clamp(1, Math.round((this.ctlr.settings.time.end ?? this.media.status.duration) - this.media.state.currentTime), this.config.next.value), v = this.ctlr.config.playlist[this.ctlr.getPlug("playlist").currentIndex + 1], toastsPlug = this.ctlr.getPlug("toasts"), timePlug = this.ctlr.getPlug("time");
+      const count = clamp(1, Math.round((this.ctlr.settings.time.end ?? this.media.status.duration) - this.media.state.currentTime), this.config.next.value),
+        v = this.ctlr.config.playlist[this.ctlr.getPlug("playlist").currentIndex + 1],
+        toastsPlug = this.ctlr.getPlug("toasts"),
+        timePlug = this.ctlr.getPlug("time");
       const nVTId = toastsPlug?.toast?.("", {
         autoClose: count * 1e3,
         hideProgressBar: false,
@@ -3592,13 +3742,16 @@ var AutoPlug = class extends BasePlug {
           if (el) el.textContent = String(Math.round((count * 1e3 - time) / 1e3) || 1);
         },
         onClose: (timeElapsed) => (removeListeners(), timeElapsed && this.ctlr.getPlug("playlist")?.nextVideo()),
-        tag: "tmg-anvi"
+        tag: "tmg-anvi",
       });
-      const cleanUp = (permanent = false) => (nVTId && window.t007?.toast.dismiss(nVTId, "instant"), this.nextVideoPreview = null, this.canAutoMovePlaylist = !permanent), cleanUpWhenNeeded = () => !this.media.element.ended && cleanUp(), autoCleanUpToast = () => Math.floor((this.ctlr.settings.time.end ?? this.media.status.duration) - this.media.state.currentTime) > this.config.next.value && cleanUp(), removeListeners = () => ["timeupdate", "pause", "waiting"].forEach((e, i) => this.media.element.removeEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
+      const cleanUp = (permanent = false) => (nVTId && window.t007?.toast.dismiss(nVTId, "instant"), (this.nextVideoPreview = null), (this.canAutoMovePlaylist = !permanent)),
+        cleanUpWhenNeeded = () => !this.media.element.ended && cleanUp(),
+        autoCleanUpToast = () => Math.floor((this.ctlr.settings.time.end ?? this.media.status.duration) - this.media.state.currentTime) > this.config.next.value && cleanUp(),
+        removeListeners = () => ["timeupdate", "pause", "waiting"].forEach((e, i) => this.media.element.removeEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
       ["timeupdate", "pause", "waiting"].forEach((e, i) => this.media.element.addEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
-      const nVP = this.nextVideoPreview = this.ctlr.queryDOM(".tmg-video-next-preview");
+      const nVP = (this.nextVideoPreview = this.ctlr.queryDOM(".tmg-video-next-preview"));
       if (v.sources?.length) addSources(v.sources, nVP);
-      ["loadedmetadata", "loaded", "durationchange"].forEach((e) => nVP?.addEventListener(e, ({ target: p }) => p.nextElementSibling.textContent = timePlug?.toTimeText(p.duration) ?? "0:00"));
+      ["loadedmetadata", "loaded", "durationchange"].forEach((e) => nVP?.addEventListener(e, ({ target: p }) => (p.nextElementSibling.textContent = timePlug?.toTimeText(p.duration) ?? "0:00")));
       this.ctlr.settings.auto.next.preview = this.config.next.preview;
       nVP?.previousElementSibling?.addEventListener("click", () => (cleanUp(true), this.ctlr.getPlug("playlist")?.nextVideo()), { capture: true });
     };
@@ -3615,7 +3768,8 @@ var AutoPlug = class extends BasePlug {
     this.media.element.autoplay = typeof value === "string" ? false : !!value;
   }
   handleTimeUpdate({ target }) {
-    const dur = this.media.status.duration, curr = target.value;
+    const dur = this.media.status.duration,
+      curr = target.value;
     if (this.media.status.readyState && curr && this.ctlr.state.readyState > 1 && Math.floor((this.ctlr.settings.time.end ?? dur) - curr) <= this.config.next.value) this.autonextVideo();
   }
   handleIntersectionChange() {
@@ -3623,7 +3777,7 @@ var AutoPlug = class extends BasePlug {
     this.mediaAptAutoplay();
   }
   handlePreviewUsePoster({ target: { value, object } }) {
-    if (!this.nextVideoPreview || value && this.nextVideoPreview.poster) return;
+    if (!this.nextVideoPreview || (value && this.nextVideoPreview.poster)) return;
     if (object.tease) this.ctlr.settings.auto.next.preview.tease = true;
     else this.nextVideoPreview.currentTime = object.time;
   }
@@ -3633,7 +3787,7 @@ var AutoPlug = class extends BasePlug {
     if (value && (!object.usePoster || !this.nextVideoPreview.poster)) this.nextVideoPreview.play();
   }
   handlePreviewTime({ target: { value, object } }) {
-    if (!this.nextVideoPreview || object.usePoster && this.nextVideoPreview.poster) return;
+    if (!this.nextVideoPreview || (object.usePoster && this.nextVideoPreview.poster)) return;
     this.nextVideoPreview.currentTime = Number(value);
   }
   mediaAptAutoplay(auto = this.config.play, bool = true, p = this.ctlr.state.mediaParentIntersecting ? "in" : "out") {
@@ -3657,38 +3811,42 @@ var CSSPlug = class extends BasePlug {
       var _a;
       if (!path.startsWith("settings.css.") || path.includes("sync")) return val;
       const newVal = this[this.classKeys.includes(key) ? "getClassValue" : "getCSSValue"](key);
-      return (_a = this.CSSCache)[key] || (_a[key] = newVal), newVal;
+      return ((_a = this.CSSCache)[key] || (_a[key] = newVal), newVal);
     });
     this.media.watch("status.videoWidth", this.syncAspectRatio, { signal: this.signal, immediate: true });
     this.media.watch("status.videoHeight", this.syncAspectRatio, { signal: this.signal });
     this.ctlr.config.watch("*", (val, { target: { key, path } }) => path.startsWith("settings.css.") && !path.includes("sync") && this.apply(key, val), { signal: this.signal });
-    this.ctlr.state.watch("dimensions.container.width", (w2) => this.ctlr.settings.css.currentContainerWidth = `${w2 || 0}px`, { signal: this.signal, immediate: true });
-    this.ctlr.state.watch("dimensions.container.height", (h) => this.ctlr.settings.css.currentContainerHeight = `${h || 0}px`, { signal: this.signal, immediate: true });
+    this.ctlr.state.watch("dimensions.container.width", (w2) => (this.ctlr.settings.css.currentContainerWidth = `${w2 || 0}px`), { signal: this.signal, immediate: true });
+    this.ctlr.state.watch("dimensions.container.height", (h) => (this.ctlr.settings.css.currentContainerHeight = `${h || 0}px`), { signal: this.signal, immediate: true });
     this.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
-    this.ctlr.state.on("dimensions.container.tier", ({ value: tier }) => this.ctlr.videoContainer.dataset.sizeTier = tier || "", { signal: this.signal, immediate: true });
-    this.ctlr.state.on("dimensions.pseudoContainer.tier", ({ value: tier }) => this.ctlr.pseudoVideoContainer.dataset.sizeTier = tier || "", { signal: this.signal, immediate: true });
+    this.ctlr.state.on("dimensions.container.tier", ({ value: tier }) => (this.ctlr.videoContainer.dataset.sizeTier = tier || ""), { signal: this.signal, immediate: true });
+    this.ctlr.state.on("dimensions.pseudoContainer.tier", ({ value: tier }) => (this.ctlr.pseudoVideoContainer.dataset.sizeTier = tier || ""), { signal: this.signal, immediate: true });
     entries.forEach(([k, v]) => {
       var _a;
       return k !== "syncWithMedia" && ((_a = this.CSSCache)[k] || (_a[k] = this.config[k]), this.apply(k, v));
     });
   }
   async handleLoadedMetadataStatus({ value }) {
-    const color = value && await this.ctlr.getPlug("frame")?.getMainColor(), keys = Object.keys(this.ctlr.settings.css.syncWithMedia).filter((k) => this.ctlr.settings.css.syncWithMedia[k]);
-    keys.forEach((k) => this.ctlr.settings.css[k] = String((value ? color : null) ?? this.CSSCache[k]));
+    const color = value && (await this.ctlr.getPlug("frame")?.getMainColor()),
+      keys = Object.keys(this.ctlr.settings.css.syncWithMedia).filter((k) => this.ctlr.settings.css.syncWithMedia[k]);
+    keys.forEach((k) => (this.ctlr.settings.css[k] = String((value ? color : null) ?? this.CSSCache[k])));
   }
   getCSSValue(key) {
-    const cssVar = `--tmg-video-${uncamelize(key, "-")}`, val = getComputedStyle(this.ctlr.videoContainer).getPropertyValue(cssVar);
+    const cssVar = `--tmg-video-${uncamelize(key, "-")}`,
+      val = getComputedStyle(this.ctlr.videoContainer).getPropertyValue(cssVar);
     return val;
   }
   getClassValue(key) {
-    const prefix = `tmg-video-${uncamelize(key, "-")}`, val = Array.prototype.find.call(this.ctlr.videoContainer.classList, (c) => c.startsWith(prefix))?.replace(`${prefix}-`, "");
+    const prefix = `tmg-video-${uncamelize(key, "-")}`,
+      val = Array.prototype.find.call(this.ctlr.videoContainer.classList, (c) => c.startsWith(prefix))?.replace(`${prefix}-`, "");
     return val || "none";
   }
   apply(key, value) {
     this[this.classKeys.includes(key) ? "updateClassValue" : "updateCssVariable"](key, value);
   }
   updateCssVariable(key, value) {
-    const strVal = String(value), cssVar = `--tmg-video-${uncamelize(key, "-")}`;
+    const strVal = String(value),
+      cssVar = `--tmg-video-${uncamelize(key, "-")}`;
     [this.ctlr.videoContainer, this.ctlr.pseudoVideoContainer].forEach((el) => el?.style.setProperty(cssVar, strVal));
   }
   updateClassValue(key, value) {
@@ -3767,14 +3925,14 @@ var SkeletonPlug = class extends BasePlug {
     this.ctlr.pseudoVideo.crossOrigin = this.media.element.crossOrigin;
   }
   activatePseudoMode() {
-    this.ctlr.pseudoVideo.id = this.media.element.id, this.media.element.id = "";
+    ((this.ctlr.pseudoVideo.id = this.media.element.id), (this.media.element.id = ""));
     this.ctlr.pseudoVideo.className += " " + this.media.element.className.replace(/tmg-media|tmg-video/g, "");
     this.ctlr.pseudoVideoContainer.className += " " + this.ctlr.videoContainer.className.replace(/tmg-media-container|tmg-pseudo-video-container/g, "");
     this.ctlr.videoContainer.parentElement?.insertBefore(this.ctlr.pseudoVideoContainer, this.ctlr.videoContainer);
     document.body.append(this.ctlr.videoContainer);
   }
   deactivatePseudoMode(destroy) {
-    this.media.element.id = this.ctlr.pseudoVideo.id, this.ctlr.pseudoVideo.id = "";
+    ((this.media.element.id = this.ctlr.pseudoVideo.id), (this.ctlr.pseudoVideo.id = ""));
     this.ctlr.pseudoVideo.className = "tmg-pseudo-video tmg-media";
     this.ctlr.pseudoVideoContainer.className = "tmg-pseudo-video-container tmg-media-container";
     this.ctlr.pseudoVideoContainer.parentElement?.replaceChild(destroy ? this.media.element : this.ctlr.videoContainer, this.ctlr.pseudoVideoContainer);
@@ -3797,14 +3955,14 @@ var DraggableModule = class extends BaseModule {
   }
   wire() {
     this.plug = this.ctlr.getPlug("controlPanel");
-    this.ctlr.config.watch("settings.controlPanel.draggable", (value) => this.config = value, { signal: this.signal });
+    this.ctlr.config.watch("settings.controlPanel.draggable", (value) => (this.config = value), { signal: this.signal });
     this.ctlr.config.on("settings.controlPanel.draggable", ({ value }) => this.setDragEventListeners(value ? "add" : "remove"), { signal: this.signal, immediate: true });
   }
   setDragEventListeners(action) {
     this.ctlr.queryDOM("[data-draggable-control]", true).forEach((c) => {
       c.dataset.dragId = c.dataset.dragId ?? "";
       const act = !inBoolArrOpt(this.config, c.dataset.dragId) ? "remove" : action;
-      c.dataset.draggableControl = String(c.draggable = act === "add");
+      c.dataset.draggableControl = String((c.draggable = act === "add"));
       c[`${act}EventListener`]("dragstart", this.handleDragStart, { signal: this.signal });
       c[`${act}EventListener`]("drag", this.handleDrag, { signal: this.signal });
       c[`${act}EventListener`]("dragend", this.handleDragEnd, { signal: this.signal });
@@ -3821,19 +3979,20 @@ var DraggableModule = class extends BaseModule {
   }
   getUIZoneWCoord(target, zoneW = false) {
     let key = "";
-    const pos = { 0: "left", 1: "center", 2: "right" }[[...target.parentElement.children].indexOf(target)], cws = this.ctlr.queryDOM(".tmg-video-top-controls-wrapper, .tmg-video-bottom-sub-controls-wrapper", true);
+    const pos = { 0: "left", 1: "center", 2: "right" }[[...target.parentElement.children].indexOf(target)],
+      cws = this.ctlr.queryDOM(".tmg-video-top-controls-wrapper, .tmg-video-bottom-sub-controls-wrapper", true);
     cws.forEach((w2, i) => w2.contains(target) && (key = { 0: "top.", 1: "bottom.1.", 2: "bottom.2.", 3: "bottom.3." }[i]));
     return zoneW ? { coord: key + pos, zoneW: getAny(this.plug.zoneWs, key + pos) } : key + pos;
   }
   syncControlPanelToUI() {
     const id = (el) => el.dataset.controlId;
-    const derive = (zoneW, center = false) => [center ? "spacer" : "", ...zoneW instanceof HTMLElement ? [id(zoneW)] : Array.from(zoneW.zone.children, id), center && (zoneW instanceof HTMLElement ? true : zoneW.zone.children.length) ? "spacer" : ""].filter(Boolean);
+    const derive = (zoneW, center = false) => [center ? "spacer" : "", ...(zoneW instanceof HTMLElement ? [id(zoneW)] : Array.from(zoneW.zone.children, id)), center && (zoneW instanceof HTMLElement ? true : zoneW.zone.children.length) ? "spacer" : ""].filter(Boolean);
     this.ctlr.settings.controlPanel.top = [...derive(this.plug.cZoneWs.top.left), ...derive(this.plug.cZoneWs.top.center, true), ...derive(this.plug.cZoneWs.top.right)];
     this.ctlr.settings.controlPanel.center = derive(this.plug.zoneWs.center);
     this.ctlr.settings.controlPanel.bottom = {
       1: [...derive(this.plug.cZoneWs.bottom[1].left), ...derive(this.plug.cZoneWs.bottom[1].center, true), ...derive(this.plug.cZoneWs.bottom[1].right)],
       2: [...derive(this.plug.cZoneWs.bottom[2].left), ...derive(this.plug.cZoneWs.bottom[2].center, true), ...derive(this.plug.cZoneWs.bottom[2].right)],
-      3: [...derive(this.plug.cZoneWs.bottom[3].left), ...derive(this.plug.cZoneWs.bottom[3].center, true), ...derive(this.plug.cZoneWs.bottom[3].right)]
+      3: [...derive(this.plug.cZoneWs.bottom[3].left), ...derive(this.plug.cZoneWs.bottom[3].center, true), ...derive(this.plug.cZoneWs.bottom[3].right)],
     };
   }
   noDropOff(t, drop = this.draggingEl) {
@@ -3923,7 +4082,7 @@ var ControlPanelPlug = class extends BasePlug {
     this.zoneWs = { top: {}, center: {}, bottom: { 1: {}, 2: {}, 3: {} } };
     this.zoneWs.top = { left: this.buildWSkel("left"), center: this.buildWSkel("center"), right: this.buildWSkel("right") };
     this.zoneWs.center = { zone: createEl("div", { className: "tmg-video-big-controls-wrapper" }, { dropZone: "", dragId: "big" }) };
-    rowsArr.forEach((i) => this.zoneWs.bottom[i] = { left: this.buildWSkel("left"), center: this.buildWSkel("center"), right: this.buildWSkel("right") });
+    rowsArr.forEach((i) => (this.zoneWs.bottom[i] = { left: this.buildWSkel("left"), center: this.buildWSkel("center"), right: this.buildWSkel("right") }));
     this.cZoneWs = { top: {}, center: this.zoneWs.center, bottom: { 1: {}, 2: {}, 3: {} } };
     this.zonesArr = [...Object.values(this.zoneWs.top), ...Object.values(this.zoneWs.bottom).map((v) => Object.values(v))].flat().map((w2) => w2.zone);
     buffer?.mount?.();
@@ -3941,19 +4100,18 @@ var ControlPanelPlug = class extends BasePlug {
     this.ctlr.config.on("settings.controlPanel.top", this.handleTopLayout, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.center", this.handleCenterLayout, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.bottom", this.handleBottomLayout, { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.controlPanel.buffer", ({ value }) => this.ctlr.videoContainer.dataset.buffer = String(value), { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.controlPanel.timeline.thumbIndicator", ({ value }) => this.ctlr.videoContainer.dataset.thumbIndicator = String(value), { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.buffer", ({ value }) => (this.ctlr.videoContainer.dataset.buffer = String(value)), { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.timeline.thumbIndicator", ({ value }) => (this.ctlr.videoContainer.dataset.thumbIndicator = String(value)), { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.timeline.seek", this.handleTimelineSeek, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.progressBar", ({ value }) => this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", !!value), { signal: this.signal, immediate: true });
     this.initScrollAndResize();
   }
-  handleMetaLayout({ target: { key, value } }) {
-  }
+  handleMetaLayout({ target: { key, value } }) {}
   handleTopLayout({ value }) {
     if (!value || typeof value === "boolean") return;
     const { left, center, right } = this.getSplitControls(value);
-    this.fillSWrapper(this.topW, [this.cZoneWs.top.left = this.getZoneW(left, this.zoneWs.top.left), this.cZoneWs.top.center = this.getZoneW(center, this.zoneWs.top.center), this.cZoneWs.top.right = this.getZoneW(right, this.zoneWs.top.right)]);
-    this.fillZone(this.cZoneWs.top.left, left), this.fillZone(this.cZoneWs.top.center, center), this.fillZone(this.cZoneWs.top.right, right);
+    this.fillSWrapper(this.topW, [(this.cZoneWs.top.left = this.getZoneW(left, this.zoneWs.top.left)), (this.cZoneWs.top.center = this.getZoneW(center, this.zoneWs.top.center)), (this.cZoneWs.top.right = this.getZoneW(right, this.zoneWs.top.right))]);
+    (this.fillZone(this.cZoneWs.top.left, left), this.fillZone(this.cZoneWs.top.center, center), this.fillZone(this.cZoneWs.top.right, right));
   }
   handleCenterLayout({ value }) {
     if (!value || typeof value === "boolean") return;
@@ -3963,8 +4121,8 @@ var ControlPanelPlug = class extends BasePlug {
     if (!value || typeof value === "boolean") return;
     [1, 2, 3].forEach((i) => {
       const { left, center, right } = this.getSplitControls(value[i]);
-      this.fillSWrapper(this.bottomW.children[i - 1], [this.cZoneWs.bottom[i].left = this.getZoneW(left, this.zoneWs.bottom[i].left), this.cZoneWs.bottom[i].center = this.getZoneW(center, this.zoneWs.bottom[i].center), this.cZoneWs.bottom[i].right = this.getZoneW(right, this.zoneWs.bottom[i].right)]);
-      this.fillZone(this.cZoneWs.bottom[i].left, left), this.fillZone(this.cZoneWs.bottom[i].center, center), this.fillZone(this.cZoneWs.bottom[i].right, right);
+      this.fillSWrapper(this.bottomW.children[i - 1], [(this.cZoneWs.bottom[i].left = this.getZoneW(left, this.zoneWs.bottom[i].left)), (this.cZoneWs.bottom[i].center = this.getZoneW(center, this.zoneWs.bottom[i].center)), (this.cZoneWs.bottom[i].right = this.getZoneW(right, this.zoneWs.bottom[i].right))]);
+      (this.fillZone(this.cZoneWs.bottom[i].left, left), this.fillZone(this.cZoneWs.bottom[i].center, center), this.fillZone(this.cZoneWs.bottom[i].right, right));
     });
   }
   handleTimelineSeek({ currentTarget: { value } }) {
@@ -3973,20 +4131,22 @@ var ControlPanelPlug = class extends BasePlug {
     if (timeline) timeline.config.scrub.cancel = value.cancel;
   }
   buildWSkel(side) {
-    const zone = createEl("div", { className: `tmg-video-side-controls-wrapper tmg-video-${side}-side-controls-wrapper` }, { dropZone: "", scroller: side === "right" ? "reverse" : "" }), cover = createEl("div", { className: `tmg-video-side-controls-wrapper-cover tmg-video-${side}-side-controls-wrapper-cover` });
-    return cover.append(zone), { cover, zone };
+    const zone = createEl("div", { className: `tmg-video-side-controls-wrapper tmg-video-${side}-side-controls-wrapper` }, { dropZone: "", scroller: side === "right" ? "reverse" : "" }),
+      cover = createEl("div", { className: `tmg-video-side-controls-wrapper-cover tmg-video-${side}-side-controls-wrapper-cover` });
+    return (cover.append(zone), { cover, zone });
   }
   getSplitControls(row) {
     if (!row?.length) return { left: [], center: [], right: [] };
-    const s1 = row.indexOf("spacer"), s2 = row.indexOf("spacer", s1 + 1);
+    const s1 = row.indexOf("spacer"),
+      s2 = row.indexOf("spacer", s1 + 1);
     return s1 === -1 ? { left: row, center: [], right: [] } : s2 === -1 ? { left: row.slice(0, s1), center: [], right: row.slice(s1 + 1) } : { left: row.slice(0, s1), center: row.slice(s1 + 1, s2), right: row.slice(s2 + 1) };
   }
   getZoneW(ids, fallback) {
-    return ids.length === 1 ? ids.includes("meta") ? this.getControlEl("meta") ?? fallback : ids.includes("timeline") ? this.getControlEl("timeline") ?? fallback : fallback : fallback;
+    return ids.length === 1 ? (ids.includes("meta") ? (this.getControlEl("meta") ?? fallback) : ids.includes("timeline") ? (this.getControlEl("timeline") ?? fallback) : fallback) : fallback;
   }
   fillSWrapper(wrapper, zoneWs) {
     wrapper.innerHTML = "";
-    wrapper.append(...zoneWs.map((zoneW) => zoneW instanceof HTMLElement ? zoneW : zoneW.cover ?? zoneW.zone));
+    wrapper.append(...zoneWs.map((zoneW) => (zoneW instanceof HTMLElement ? zoneW : (zoneW.cover ?? zoneW.zone))));
   }
   fillZone(zoneW, ids) {
     if (zoneW instanceof HTMLElement || !zoneW.zone) return;
@@ -4004,19 +4164,20 @@ var ControlPanelPlug = class extends BasePlug {
   }
   handleControlsView(w2) {
     if (!w2.isConnected) return;
-    let spacer, c = w2.firstElementChild;
+    let spacer,
+      c = w2.firstElementChild;
     do {
       c?.setAttribute("data-displayed", getComputedStyle(c).display !== "none" ? "true" : "false");
       c?.setAttribute("data-spacer", "false");
       if (c?.dataset.displayed === "true" && !spacer) spacer = c;
-    } while (c = c?.nextElementSibling ?? null);
+    } while ((c = c?.nextElementSibling ?? null));
     this.ctlr.settings.css.currentTopWrapperHeight = `${this.topW.offsetHeight}px`;
     this.ctlr.settings.css.currentBottomWrapperHeight = `${this.bottomW.offsetHeight}px`;
     if (w2.dataset.scroller !== "reverse") return;
     spacer?.setAttribute("data-spacer", "true");
     if (w2.dataset.resetScrolled === "true") w2.dataset.hasScrolled = "false";
     if (w2.dataset.hasScrolled === "true" || w2.scrollWidth <= w2.clientWidth || w2.scrollLeft === w2.scrollWidth - w2.clientWidth) return void (w2.scrollWidth <= w2.clientWidth && (w2.dataset.hasScrolled = "false"));
-    w2.addEventListener("scroll", () => w2.dataset.hasScrolled = "false", { once: true, signal: this.signal });
+    w2.addEventListener("scroll", () => (w2.dataset.hasScrolled = "false"), { once: true, signal: this.signal });
     w2.scrollLeft = w2.scrollWidth - w2.clientWidth;
   }
   handleDirtyScroll(e) {
@@ -4028,7 +4189,7 @@ var ControlPanelPlug = class extends BasePlug {
     this.draggable?.destroy();
     this.clups.forEach((cleanup) => cleanup());
     this.scrollAssistEls.forEach(removeScrollAssist);
-    this.controls.forEach((instance) => instance.destroy()), this.controls.clear();
+    (this.controls.forEach((instance) => instance.destroy()), this.controls.clear());
   }
 };
 ControlPanelPlug.plugName = "controlPanel";
@@ -4041,7 +4202,7 @@ var OverlayPlug2 = class extends BasePlug {
     this.overlayDelayId = -1;
   }
   wire() {
-    this.media.on("state.paused", ({ value }) => value ? this.show() : this.delay(), { signal: this.signal, immediate: true });
+    this.media.on("state.paused", ({ value }) => (value ? this.show() : this.delay()), { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.overlay.curtain", this.handleCurtain, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.overlay.behavior", this.handleBehavior, { signal: this.signal, immediate: true });
   }
@@ -4056,7 +4217,7 @@ var OverlayPlug2 = class extends BasePlug {
     return this.config.behavior !== "hidden" && !this.ctlr.settings.locked && !this.ctlr.isUIActive("playerDragging");
   }
   shouldRemove(manner) {
-    return this.config.behavior !== "persistent" && (manner === "force" || !this.ctlr.isUIActive("pictureInPicture") && !this.ctlr.isUIActive("settings") && (IS_MOBILE ? !this.media.status.waiting && !this.media.state.paused : this.config.behavior === "strict" ? true : !this.media.state.paused));
+    return this.config.behavior !== "persistent" && (manner === "force" || (!this.ctlr.isUIActive("pictureInPicture") && !this.ctlr.isUIActive("settings") && (IS_MOBILE ? !this.media.status.waiting && !this.media.state.paused : this.config.behavior === "strict" ? true : !this.media.state.paused)));
   }
   show() {
     if (!this.shouldShow()) return;
@@ -4106,7 +4267,7 @@ var MediaPlug = class extends BasePlug {
   }
   handleMediaLink({ target: { key, value } }) {
     const el = key !== "profile" ? this.ctlr.DOM[`video${capitalize(key)}`] : this.ctlr.DOM.videoProfile?.parentElement;
-    el && Object.entries({ href: value, "tab-index": value ? "0" : null, target: value ? "_blank" : null, rel: value ? "noopener noreferrer" : null }).forEach(([attr, val]) => val ? el.setAttribute(attr, val) : el.removeAttribute(attr));
+    el && Object.entries({ href: value, "tab-index": value ? "0" : null, target: value ? "_blank" : null, rel: value ? "noopener noreferrer" : null }).forEach(([attr, val]) => (val ? el.setAttribute(attr, val) : el.removeAttribute(attr)));
   }
   handleArtwork({ currentTarget: { value } }) {
     this.media.intent.poster = value?.[0]?.src || "";
@@ -4115,21 +4276,23 @@ var MediaPlug = class extends BasePlug {
     if (!this.media.state.paused) this.syncSession();
   }
   syncSession() {
-    if (!navigator.mediaSession || document.pictureInPictureElement && !this.ctlr.isUIActive("pictureInPicture")) return;
+    if (!navigator.mediaSession || (document.pictureInPictureElement && !this.ctlr.isUIActive("pictureInPicture"))) return;
     if (this.config) navigator.mediaSession.metadata = new MediaMetadata(this.config);
     const set = (...args) => navigator.mediaSession.setActionHandler(...args);
-    set("play", () => this.media.intent.paused = false);
-    set("pause", () => this.media.intent.paused = true);
+    set("play", () => (this.media.intent.paused = false));
+    set("pause", () => (this.media.intent.paused = true));
     const timePlug = this.ctlr.getPlug("time");
     set("seekbackward", timePlug ? () => timePlug.skip(-this.ctlr.settings.time.skip) : null);
     set("seekforward", timePlug ? () => timePlug.skip(this.ctlr.settings.time.skip) : null);
-    const playlistPlug = this.ctlr.getPlug("playlist"), playlist = this.ctlr.config.playlist, currentIndex = this.ctlr.getPlug("playlist")?.currentIndex ?? 0;
+    const playlistPlug = this.ctlr.getPlug("playlist"),
+      playlist = this.ctlr.config.playlist,
+      currentIndex = this.ctlr.getPlug("playlist")?.currentIndex ?? 0;
     set("previoustrack", playlist && currentIndex > 0 && playlistPlug ? playlistPlug.previousVideo : null);
     set("nexttrack", playlist && currentIndex < (playlist?.length ?? 0) - 1 && playlistPlug ? playlistPlug.nextVideo : null);
   }
   async autoGenerate() {
     const url = this.config.artwork?.[0]?.src;
-    if (!this.config.autoGenerate || url && !url.startsWith("blob:")) return;
+    if (!this.config.autoGenerate || (url && !url.startsWith("blob:"))) return;
     url && URL.revokeObjectURL(url);
     this.config.artwork = [{ src: "" }];
   }
@@ -4140,7 +4303,7 @@ MediaPlug.isCore = true;
 // src/ts/plugs/light-state.ts
 var LightStatePlug = class extends BasePlug {
   wire() {
-    this.ctlr.config.set("lightState.disabled", (value) => this.ctlr.state.readyState > 1 ? TERMINATOR : value);
+    this.ctlr.config.set("lightState.disabled", (value) => (this.ctlr.state.readyState > 1 ? TERMINATOR : value));
     this.ctlr.config.on("lightState.disabled", this.handleDisabled, { signal: this.signal, immediate: true });
     this.ctlr.config.on("lightState.controls", this.handleControls, { signal: this.signal, immediate: true });
     this.ctlr.config.on("lightState.preview.usePoster", this.handleUsePoster, { signal: this.signal });
@@ -4163,12 +4326,12 @@ var LightStatePlug = class extends BasePlug {
     }
   }
   handleControls() {
-    this.ctlr.queryDOM("[data-control-id]", true).forEach((c) => c.dataset.lightControl = this.isLight(c.dataset.controlId) ? "true" : "false");
+    this.ctlr.queryDOM("[data-control-id]", true).forEach((c) => (c.dataset.lightControl = this.isLight(c.dataset.controlId) ? "true" : "false"));
   }
   handleUsePoster({ target: { value, object }, root }) {
-    if (root.lightState.disabled || value && this.media.state.poster) return;
+    if (root.lightState.disabled || (value && this.media.state.poster)) return;
     this.media.intent.currentTime = object.time;
-    if (!this.media.status.loadedMetadata) this.media.once("status.loadedMetadata", () => this.config.preview.usePoster = value, { signal: this.signal });
+    if (!this.media.status.loadedMetadata) this.media.once("status.loadedMetadata", () => (this.config.preview.usePoster = value), { signal: this.signal });
   }
   handleTime({ target: { object }, root }) {
     !root.lightState.disabled && (!object.usePoster || !this.media.state.poster) && (this.media.intent.currentTime = object.time);
@@ -4230,7 +4393,10 @@ var WheelModule = class extends BaseModule {
   }
   handleMove({ clientX: x, deltaX, deltaY, shiftKey }) {
     deltaX = shiftKey ? deltaY : deltaX;
-    const wc = this.config, rect = this.ctlr.videoContainer.getBoundingClientRect(), width = shiftKey ? rect.height : rect.width, height = shiftKey ? rect.width : rect.height;
+    const wc = this.config,
+      rect = this.ctlr.videoContainer.getBoundingClientRect(),
+      width = shiftKey ? rect.height : rect.width,
+      height = shiftKey ? rect.width : rect.height;
     let xPercent = -deltaX / (width * wc.xRatio);
     xPercent = this.timePercent += xPercent;
     const xSign = xPercent >= 0 ? "+" : "-";
@@ -4243,14 +4409,16 @@ var WheelModule = class extends BaseModule {
     }
     if (deltaY) {
       if (this.xCheck) {
-        const mY = clamp(0, Math.abs(this.deltaY += deltaY), height * wc.yRatio * 0.5);
+        const mY = clamp(0, Math.abs((this.deltaY += deltaY)), height * wc.yRatio * 0.5);
         this.timeMultiplier = 1 - mY / (height * wc.yRatio * 0.5);
         return this.applyTimeline(xPercent, xSign, this.timeMultiplier);
       }
-      const cancel = this.zone?.x === "right" && !wc.volume.normal || this.zone?.x === "left" && !wc.brightness.normal, currentXZone = x - rect.left > width * 0.5 ? "right" : "left";
+      const cancel = (this.zone?.x === "right" && !wc.volume.normal) || (this.zone?.x === "left" && !wc.brightness.normal),
+        currentXZone = x - rect.left > width * 0.5 ? "right" : "left";
       if (cancel || currentXZone !== this.zone?.x) return this.handleStop();
       this.yCheck = true;
-      const ySign = -deltaY >= 0 ? "+" : "-", yPercent = clamp(0, Math.abs(deltaY), height * wc.yRatio) / (height * wc.yRatio);
+      const ySign = -deltaY >= 0 ? "+" : "-",
+        yPercent = clamp(0, Math.abs(deltaY), height * wc.yRatio) / (height * wc.yRatio);
       this.zone?.x === "right" ? this.applyRange("volume", yPercent, ySign) : this.applyRange("brightness", yPercent, ySign);
     }
   }
@@ -4263,11 +4431,15 @@ var WheelModule = class extends BaseModule {
     }
   }
   applyTimeline(percent, sign, multiplier) {
-    const { currentTime } = this.media.state, { duration } = this.media.status, change = percent * duration * +multiplier.toFixed(1);
+    const { currentTime } = this.media.state,
+      { duration } = this.media.status,
+      change = percent * duration * +multiplier.toFixed(1);
     this.nextTime = clamp(0, currentTime + (sign === "+" ? change : -change), duration);
   }
   applyRange(key, percent, sign) {
-    const plug = this.ctlr.getPlug(key), range = this.ctlr.settings[key], value = range.value + (sign === "+" ? percent : -percent) * range.max;
+    const plug = this.ctlr.getPlug(key),
+      range = this.ctlr.settings[key],
+      value = range.value + (sign === "+" ? percent : -percent) * range.max;
     plug?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }
 };
@@ -4299,23 +4471,29 @@ var TouchModule = class extends BaseModule {
     this.lastX = e.touches[0].clientX;
     this.lastY = e.touches[0].clientY;
     this.ctlr.videoContainer.addEventListener("touchmove", this.handleInit, { once: true, signal: this.signal });
-    this.cancelTimeoutId = setTimeout2(() => this.canCancel = false, this.config.threshold, this.signal);
+    this.cancelTimeoutId = setTimeout2(() => (this.canCancel = false), this.config.threshold, this.signal);
     ["touchend", "touchcancel"].forEach((evt) => this.ctlr.videoContainer.addEventListener(evt, this.handleEnd, { signal: this.signal }));
   }
   handleInit(e) {
     const te = e;
     if (te.touches?.length > 1 || this.ctlr.getPlug("fastPlay")?.speedCheck) return;
     te.preventDefault();
-    const tc = this.config, rect = this.ctlr.videoContainer.getBoundingClientRect(), x = te.touches[0].clientX, y = te.touches[0].clientY, deltaX = Math.abs(this.lastX - x), deltaY = Math.abs(this.lastY - y);
+    const tc = this.config,
+      rect = this.ctlr.videoContainer.getBoundingClientRect(),
+      x = te.touches[0].clientX,
+      y = te.touches[0].clientY,
+      deltaX = Math.abs(this.lastX - x),
+      deltaY = Math.abs(this.lastY - y);
     this.zone = { x: x - rect.left > rect.width * 0.5 ? "right" : "left", y: y - rect.top > rect.height * 0.5 ? "bottom" : "top" };
-    const rLeft = this.lastX - rect.left, rTop = this.lastY - rect.top;
+    const rLeft = this.lastX - rect.left,
+      rTop = this.lastY - rect.top;
     if (deltaX > deltaY * tc.axesRatio && rLeft > tc.inset && rLeft < rect.width - tc.inset) {
       if (tc.timeline) {
         this.xCheck = true;
         this.ctlr.videoContainer.addEventListener("touchmove", this.handleXMove, { passive: false, signal: this.signal });
       }
     } else if (deltaY > deltaX * tc.axesRatio && rTop > tc.inset && rTop < rect.height - tc.inset) {
-      if (tc.volume && this.zone?.x === "right" || tc.brightness && this.zone?.x === "left") {
+      if ((tc.volume && this.zone?.x === "right") || (tc.brightness && this.zone?.x === "left")) {
         this.yCheck = true;
         this.ctlr.videoContainer.addEventListener("touchmove", this.handleYMove, { passive: false, signal: this.signal });
       }
@@ -4329,7 +4507,16 @@ var TouchModule = class extends BaseModule {
     this.ctlr.throttle(
       "gestureTouchMove",
       () => {
-        const tc = this.config, { offsetWidth: width, offsetHeight: height } = this.ctlr.videoContainer, x = te.touches[0].clientX, y = te.touches[0].clientY, deltaX = x - this.lastX, deltaY = y - this.lastY, sign = deltaX >= 0 ? "+" : "-", percent = clamp(0, Math.abs(deltaX), width * tc.xRatio) / (width * tc.xRatio), mY = clamp(0, Math.abs(deltaY), height * tc.yRatio * 0.5), multiplier = 1 - mY / (height * tc.yRatio * 0.5);
+        const tc = this.config,
+          { offsetWidth: width, offsetHeight: height } = this.ctlr.videoContainer,
+          x = te.touches[0].clientX,
+          y = te.touches[0].clientY,
+          deltaX = x - this.lastX,
+          deltaY = y - this.lastY,
+          sign = deltaX >= 0 ? "+" : "-",
+          percent = clamp(0, Math.abs(deltaX), width * tc.xRatio) / (width * tc.xRatio),
+          mY = clamp(0, Math.abs(deltaY), height * tc.yRatio * 0.5),
+          multiplier = 1 - mY / (height * tc.yRatio * 0.5);
         this.applyTimeline({ percent, sign, multiplier });
       },
       30,
@@ -4344,7 +4531,12 @@ var TouchModule = class extends BaseModule {
     this.ctlr.throttle(
       "gestureTouchMove",
       () => {
-        const tc = this.config, height = this.ctlr.videoContainer.offsetHeight, y = te.touches[0].clientY, deltaY = y - this.lastY, sign = deltaY >= 0 ? "-" : "+", percent = clamp(0, Math.abs(deltaY), height * tc.yRatio) / (height * tc.yRatio);
+        const tc = this.config,
+          height = this.ctlr.videoContainer.offsetHeight,
+          y = te.touches[0].clientY,
+          deltaY = y - this.lastY,
+          sign = deltaY >= 0 ? "-" : "+",
+          percent = clamp(0, Math.abs(deltaY), height * tc.yRatio) / (height * tc.yRatio);
         this.lastY = y;
         this.applyRange(this.zone?.x === "right" ? "volume" : "brightness", percent, sign);
       },
@@ -4379,11 +4571,15 @@ var TouchModule = class extends BaseModule {
     ["touchend", "touchcancel"].forEach((evt) => this.ctlr.videoContainer.removeEventListener(evt, this.handleEnd));
   }
   applyTimeline({ percent, sign, multiplier }) {
-    const { currentTime } = this.media.state, { duration } = this.media.status, change = percent * duration * +multiplier.toFixed(1);
+    const { currentTime } = this.media.state,
+      { duration } = this.media.status,
+      change = percent * duration * +multiplier.toFixed(1);
     this.nextTime = clamp(0, currentTime + (sign === "+" ? change : -change), duration);
   }
   applyRange(key, percent, sign) {
-    const plug = this.ctlr.getPlug(key), range = this.ctlr.settings[key], value = sign === "+" ? range.value + percent * range.max : range.value - percent * range.max;
+    const plug = this.ctlr.getPlug(key),
+      range = this.ctlr.settings[key],
+      value = sign === "+" ? range.value + percent * range.max : range.value - percent * range.max;
     plug?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }
 };
@@ -4423,7 +4619,8 @@ var GeneralModule = class extends BaseModule {
     if ((t?.dataset?.controlId ?? t?.parentElement?.dataset?.controlId) === this.focusSubjectId) t.blur();
   }
   handleHoverPointerActive(e) {
-    const { target, pointerType } = e, overlay = this.ctlr.getPlug("overlay");
+    const { target, pointerType } = e,
+      overlay = this.ctlr.getPlug("overlay");
     (!pointerType || !IS_MOBILE) && overlay?.show();
     pointerType && target.closest(".tmg-video-side-controls-wrapper") && clearTimeout(overlay?.overlayDelayId ?? -1);
   }
@@ -4440,7 +4637,8 @@ var GeneralModule = class extends BaseModule {
   handleDblClick(e) {
     const { clientX: x, target, detail } = e;
     if (target !== this.ctlr.DOM.controlsContainer) return;
-    const rect = this.ctlr.videoContainer.getBoundingClientRect(), pos = x - rect.left > rect.width * 0.65 ? "right" : x - rect.left < rect.width * 0.35 ? "left" : "center";
+    const rect = this.ctlr.videoContainer.getBoundingClientRect(),
+      pos = x - rect.left > rect.width * 0.65 ? "right" : x - rect.left < rect.width * 0.35 ? "left" : "center";
     if (this.state.skipPersist && pos !== this.skipPersistPosition) {
       this.deactivateSkipPersist();
       if (detail === 1) return;
@@ -4524,7 +4722,7 @@ var FastPlayPlug = class extends BasePlug {
     this.media.intent.paused = false;
   }
   rewind(rate = this.config.playbackRate) {
-    this.media.intent.playbackRate = 1, this.rewindPlaybackRate = rate;
+    ((this.media.intent.playbackRate = 1), (this.rewindPlaybackRate = rate));
     this.state.isRewinding = true;
     this.media.element.addEventListener("play", () => this.rewindReset(), { signal: this.signal });
     this.speedIntervalId = setInterval(() => this.rewindVideo(), this.ctlr.state.pframeDelay - 20, this.signal);
@@ -4578,7 +4776,9 @@ var FastPlayPlug = class extends BasePlug {
     this.ctlr.throttle(
       "speedPointerMove",
       () => {
-        const rect = this.ctlr.videoContainer.getBoundingClientRect(), x = e.clientX ?? e.targetTouches?.[0]?.clientX, currPos = x - rect.left >= rect.width * 0.5 ? "forwards" : "backwards";
+        const rect = this.ctlr.videoContainer.getBoundingClientRect(),
+          x = e.clientX ?? e.targetTouches?.[0]?.clientX,
+          currPos = x - rect.left >= rect.width * 0.5 ? "forwards" : "backwards";
         if (currPos !== this.speedDirection) {
           this.speedDirection = currPos;
           this.slowDown();
@@ -4665,12 +4865,14 @@ var VolumePlug3 = class extends BasePlug {
     if (this.config.value > max) this.config.value = max;
     if (this.lastVolume > max) this.lastVolume = max;
     this.ctlr.videoContainer.classList.toggle("tmg-video-volume-boost", max > 100);
-    this.ctlr.settings.css.volumeSliderPercent = Math.round(100 / max * 100);
+    this.ctlr.settings.css.volumeSliderPercent = Math.round((100 / max) * 100);
     this.ctlr.settings.css.maxVolumeRatio = max / 100;
   }
   handleVolumeState(volume) {
-    const v = clamp(this.shouldMute ? 0 : this.config.min, volume * 100, this.config.max), vLevel = v === 0 ? "muted" : v < 50 ? "low" : v <= 100 ? "high" : "boost", vPercent = (v - 0) / (this.config.max - 0);
-    if (this.gainNode) this.gainNode.gain.setTargetAtTime(v / 100 * 2, this.ctime, 0.05);
+    const v = clamp(this.shouldMute ? 0 : this.config.min, volume * 100, this.config.max),
+      vLevel = v === 0 ? "muted" : v < 50 ? "low" : v <= 100 ? "high" : "boost",
+      vPercent = (v - 0) / (this.config.max - 0);
+    if (this.gainNode) this.gainNode.gain.setTargetAtTime((v / 100) * 2, this.ctime, 0.05);
     this.media.element.muted = this.media.element.defaultMuted = this.config.muted = v === 0;
     this.ctlr.videoContainer.dataset.volumeLevel = vLevel;
     this.ctlr.settings.css.currentVolumeTooltipPosition = `${10.5 + vPercent * 79.5}%`;
@@ -4704,7 +4906,7 @@ var VolumePlug3 = class extends BasePlug {
     if (this.audioSetup || connectMediaToAudioManager(this.media.element) === "unavailable") return;
     this.gainNode = this.media.element._tmgGainNode;
     const DCN = this.media.element._tmgDynamicsCompressorNode;
-    if (DCN) DCN.threshold.value = -30, DCN.knee.value = 20, DCN.ratio.value = 12, DCN.attack.value = 3e-3, DCN.release.value = 0.25;
+    if (DCN) ((DCN.threshold.value = -30), (DCN.knee.value = 20), (DCN.ratio.value = 12), (DCN.attack.value = 3e-3), (DCN.release.value = 0.25));
     this.audioSetup = true;
   }
   cancelAudio() {
@@ -4726,9 +4928,9 @@ var VolumePlug3 = class extends BasePlug {
     if (sign === "-") {
       if (volume > this.config.min) volume -= volume % value ? volume % value : value;
     } else {
-      if (volume < this.config.max) volume += volume % value ? value - volume % value : value;
+      if (volume < this.config.max) volume += volume % value ? value - (volume % value) : value;
     }
-    this.shouldSetLastVolume ? this.lastVolume = volume : this.config.value = volume;
+    this.shouldSetLastVolume ? (this.lastVolume = volume) : (this.config.value = volume);
   }
   handleSliderInput(volume) {
     this.shouldMute = this.shouldSetLastVolume = false;
@@ -4793,11 +4995,13 @@ var BrightnessPlug = class extends BasePlug {
     if (this.config.value > max) this.config.value = max;
     if (this.lastBrightness > max) this.lastBrightness = max;
     this.ctlr.videoContainer.classList.toggle("tmg-video-brightness-boost", max > 100);
-    this.ctlr.settings.css.brightnessSliderPercent = Math.round(100 / max * 100);
+    this.ctlr.settings.css.brightnessSliderPercent = Math.round((100 / max) * 100);
     this.ctlr.settings.css.maxBrightnessRatio = max / 100;
   }
   handleBrightnessState(value) {
-    const b = clamp(this.shouldDark ? 0 : this.config.min, value, this.config.max), bLevel = b === 0 ? "dark" : b < 50 ? "low" : b <= 100 ? "high" : "boost", bPercent = (b - 0) / (this.config.max - 0);
+    const b = clamp(this.shouldDark ? 0 : this.config.min, value, this.config.max),
+      bLevel = b === 0 ? "dark" : b < 50 ? "low" : b <= 100 ? "high" : "boost",
+      bPercent = (b - 0) / (this.config.max - 0);
     this.ctlr.settings.css.brightness = b;
     this.config.dark = b === 0;
     this.ctlr.videoContainer.dataset.brightnessLevel = bLevel;
@@ -4839,9 +5043,9 @@ var BrightnessPlug = class extends BasePlug {
     if (sign === "-") {
       if (brightness > this.config.min) brightness -= brightness % value ? brightness % value : value;
     } else {
-      if (brightness < this.config.max) brightness += brightness % value ? value - brightness % value : value;
+      if (brightness < this.config.max) brightness += brightness % value ? value - (brightness % value) : value;
     }
-    this.shouldSetLastBrightness ? this.lastBrightness = brightness : this.config.value = brightness;
+    this.shouldSetLastBrightness ? (this.lastBrightness = brightness) : (this.config.value = brightness);
   }
   handleSliderInput(brightness) {
     this.shouldDark = this.shouldSetLastBrightness = false;
@@ -4878,7 +5082,7 @@ var PlaybackRatePlug = class extends BasePlug {
     if (sign === "-") {
       if (rate > this.config.min) this.config.value -= rate % value ? rate % value : value;
     } else {
-      if (rate < this.config.max) this.config.value += rate % value ? value - rate % value : value;
+      if (rate < this.config.max) this.config.value += rate % value ? value - (rate % value) : value;
     }
   }
 };
@@ -4896,11 +5100,11 @@ var CaptionsPlug = class extends BasePlug {
     this.view = ComponentRegistry.init("captions", this.ctlr);
     this.infoView = ComponentRegistry.init("captions", this.ctlr);
     if (this.view) this.ctlr.DOM.captionsContainer = this.view.element;
-    this.view?.mount(), this.infoView?.mount();
+    (this.view?.mount(), this.infoView?.mount());
   }
   wire() {
     STYLE_PROPS.forEach((prop) => {
-      this.ctlr.config.watch(`settings.captions.${prop}.value`, (value) => (this.ctlr.settings.css[camelize(`captions.${prop}`, /\./)] = value, this.view?.syncSize()), { signal: this.signal, immediate: true });
+      this.ctlr.config.watch(`settings.captions.${prop}.value`, (value) => ((this.ctlr.settings.css[camelize(`captions.${prop}`, /\./)] = value), this.view?.syncSize()), { signal: this.signal, immediate: true });
     });
     this.media.on("status.loadedMetadata", this.syncUIState, { signal: this.signal, immediate: true });
     this.media.on("status.textTracks", this.syncUIState, { signal: this.signal });
@@ -4909,15 +5113,19 @@ var CaptionsPlug = class extends BasePlug {
     this.view && this.media.on("state.currentTime", this.view.syncKaraoke, { signal: this.signal });
     this.ctlr.config.on("settings.captions.font.size.min", this.handleFontSizeMin, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.captions.font.size.max", this.handleFontSizeMax, { signal: this.signal, immediate: true });
-    this.ctlr.settings.css.currentCaptionsX, this.ctlr.settings.css.currentCaptionsY;
+    (this.ctlr.settings.css.currentCaptionsX, this.ctlr.settings.css.currentCaptionsY);
   }
   handleDisabledConfig({ value }) {
     const cssPlug = this.ctlr.getPlug("css");
-    this.ctlr.settings.css.currentCaptionsX = cssPlug?.CSSCache.currentCaptionsX, this.ctlr.settings.css.currentCaptionsY = cssPlug?.CSSCache.currentCaptionsY;
+    ((this.ctlr.settings.css.currentCaptionsX = cssPlug?.CSSCache.currentCaptionsX), (this.ctlr.settings.css.currentCaptionsY = cssPlug?.CSSCache.currentCaptionsY));
     if (!this.media.status.textTracks[this.media.state.currentTextTrack]) return;
     !value ? this.ctlr.videoContainer.classList.add("tmg-video-captions") : this.ctlr.videoContainer.classList.remove("tmg-video-captions", "tmg-video-captions-preview");
-    !value && this.infoView?.preview({ text: `${this.media.status.textTracks[this.media.state.currentTextTrack]?.label} ${this.ctlr.videoContainer.dataset.trackKind} 
- Click \u2699 for settings`, region: { viewportAnchorX: 10, viewportAnchorY: 10 } });
+    !value &&
+      this.infoView?.preview({
+        text: `${this.media.status.textTracks[this.media.state.currentTextTrack]?.label} ${this.ctlr.videoContainer.dataset.trackKind} 
+ Click \u2699 for settings`,
+        region: { viewportAnchorX: 10, viewportAnchorY: 10 },
+      });
   }
   handleFontSizeMin({ value: min }) {
     if (this.config.font.size.value < min) this.config.font.size.value = min;
@@ -5013,7 +5221,11 @@ var TimePlug = class extends BasePlug {
     this.media.intent.currentTime = value;
   }
   handleCurrentTimeState({ target }) {
-    const curr = target.value, min = this.config.min, max = this.config.max, dur = this.media.status.duration, end = this.config.end;
+    const curr = target.value,
+      min = this.config.min,
+      max = this.config.max,
+      dur = this.media.status.duration,
+      end = this.config.end;
     if (curr < min || curr > max) {
       this.media.intent.currentTime = this.config.loop ? min : curr;
       if (!this.config.loop) this.media.intent.paused = true;
@@ -5027,7 +5239,8 @@ var TimePlug = class extends BasePlug {
     return parseIfPercent(value ?? 0, this.media.status.duration);
   }
   toTimeText(time = this.media.state.currentTime, useMode = false, showMs = false) {
-    const format = this.config.format, duration = this.media.status.duration;
+    const format = this.config.format,
+      duration = this.media.status.duration;
     if (!useMode || this.config.mode !== "remaining") return formatMediaTime({ time, format, elapsed: true, showMs });
     return `-${formatMediaTime({ time: duration - time, format, elapsed: false, showMs })}`;
   }
@@ -5045,8 +5258,9 @@ var TimePlug = class extends BasePlug {
     this.config.format = this.nextFormat;
   }
   skip(duration) {
-    const overlay = this.ctlr.getPlug("overlay"), notifier = duration > 0 ? this.ctlr.queryDOM(".tmg-video-fwd-notifier") : this.ctlr.queryDOM(".tmg-video-bwd-notifier");
-    duration = duration > 0 ? this.media.status.duration - this.media.state.currentTime > duration ? duration : this.media.status.duration - this.media.state.currentTime : duration < 0 ? this.media.state.currentTime > Math.abs(duration) ? duration : -this.media.state.currentTime : 0;
+    const overlay = this.ctlr.getPlug("overlay"),
+      notifier = duration > 0 ? this.ctlr.queryDOM(".tmg-video-fwd-notifier") : this.ctlr.queryDOM(".tmg-video-bwd-notifier");
+    duration = duration > 0 ? (this.media.status.duration - this.media.state.currentTime > duration ? duration : this.media.status.duration - this.media.state.currentTime) : duration < 0 ? (this.media.state.currentTime > Math.abs(duration) ? duration : -this.media.state.currentTime) : 0;
     this.media.intent.currentTime = this.media.state.currentTime + duration;
     this.ctlr.settings.css.currentPlayedPosition = this.ctlr.settings.css.currentThumbPosition = safeNum(this.media.intent.currentTime / this.media.status.duration);
     const mdle = this.ctlr.getPlug("gesture")?.general;
@@ -5104,7 +5318,7 @@ var FullscreenModule = class extends BaseModule {
     if (this.config.disabled && !this.inFullscreen) return e.resolve(this.name);
     if (!this.ctlr.isUIActive("fullscreen")) {
       const fW = this.ctlr.getPlug("modes")?.pip?.floatingWindow;
-      if (this.ctlr.isUIActive("floatingPlayer")) return fW?.addEventListener("pagehide", this.enter, { signal: this.signal }), fW?.close(), e.resolve(this.name);
+      if (this.ctlr.isUIActive("floatingPlayer")) return (fW?.addEventListener("pagehide", this.enter, { signal: this.signal }), fW?.close(), e.resolve(this.name));
       if (this.ctlr.isUIActive("pictureInPicture")) this.media.intent.pictureInPicture = false;
       this.media.intent.miniplayer = false;
       this.enter();
@@ -5140,7 +5354,7 @@ var FullscreenModule = class extends BaseModule {
   async changeScreenOrientation(option = true) {
     const orientation = screen.orientation;
     if (option === false) return void orientation?.unlock?.();
-    await orientation?.lock?.(option === "auto" ? this.media.status.videoHeight > this.media.status.videoWidth ? "portrait" : "landscape" : option === true ? orientation.angle === 0 ? "landscape" : "portrait" : option);
+    await orientation?.lock?.(option === "auto" ? (this.media.status.videoHeight > this.media.status.videoWidth ? "portrait" : "landscape") : option === true ? (orientation.angle === 0 ? "landscape" : "portrait") : option);
   }
 };
 FullscreenModule.moduleName = "fullscreen";
@@ -5218,7 +5432,8 @@ var PictureInPictureModule = class extends BaseModule {
     this.inFloatingPlayer = true;
     this.floatingWindow.document.documentElement.style.cssText = `height:100%; background:url(${this.ctlr.config.media?.profile}) center / 32px no-repeat, url(${this.media.state.poster}) center / ${this.ctlr.settings.css.bgSafeObjectFit} no-repeat, black;`;
     await breath(this.floatingWindow);
-    const cssTexts = [], whitelist = Object.keys(window.t007?._resourceCache ?? {}).concat(this.whitelist);
+    const cssTexts = [],
+      whitelist = Object.keys(window.t007?._resourceCache ?? {}).concat(this.whitelist);
     for (const sheet of document.styleSheets) {
       try {
         if (whitelist.concat(this.blacklist).some((href) => isSameURL(href, sheet.href))) continue;
@@ -5295,8 +5510,8 @@ var MiniplayerModule = class extends BaseModule {
     const active = this.ctlr.isUIActive("miniplayer");
     if (this.config.disabled && !active) return e.resolve(this.name);
     const modes3 = this.ctlr.getPlug("modes");
-    if (e.value === true && !active || !active && !this.ctlr.isUIActive("pictureInPicture") && !modes3?.pip.inFloatingPlayer && !modes3?.fullscreen.inFullscreen && !this.ctlr.state.mediaParentIntersecting && window.innerWidth >= this.config.minWindowWidth && !this.media.state.paused) this.enter();
-    else if (e.value === false && active || active && this.ctlr.state.mediaParentIntersecting || active && window.innerWidth < this.config.minWindowWidth) this.exit();
+    if ((e.value === true && !active) || (!active && !this.ctlr.isUIActive("pictureInPicture") && !modes3?.pip.inFloatingPlayer && !modes3?.fullscreen.inFullscreen && !this.ctlr.state.mediaParentIntersecting && window.innerWidth >= this.config.minWindowWidth && !this.media.state.paused)) this.enter();
+    else if ((e.value === false && active) || (active && this.ctlr.state.mediaParentIntersecting) || (active && window.innerWidth < this.config.minWindowWidth)) this.exit();
     e.resolve(this.name);
   }
   enter() {
@@ -5324,13 +5539,15 @@ var MiniplayerModule = class extends BaseModule {
     this.media.state.miniplayer = false;
   }
   handleDragStart(e) {
-    const target = e.target, clientX = e.clientX ?? e.targetTouches?.[0]?.clientX ?? 0, clientY = e.clientY ?? e.targetTouches?.[0]?.clientY ?? 0;
+    const target = e.target,
+      clientX = e.clientX ?? e.targetTouches?.[0]?.clientX ?? 0,
+      clientY = e.clientY ?? e.targetTouches?.[0]?.clientY ?? 0;
     if (!this.ctlr.isUIActive("miniplayer") || target.scrollWidth > target.clientWidth || [this.ctlr.DOM.topControlsWrapper, inBoolArrOpt(this.ctlr.settings.controlPanel.draggable, "big") ? this.ctlr.DOM.bigControlsWrapper : null, this.ctlr.DOM.bottomControlsWrapper, this.ctlr.DOM.captionsContainer].some((w2) => w2?.contains(target)) || target.closest("[class$='toast-container']")) return;
     const { left, bottom } = getComputedStyle(this.ctlr.videoContainer);
-    this.lastMiniplayerPosX = parseFloat(left), this.lastMiniplayerPosY = parseFloat(bottom);
-    this.lastMiniplayerPtrX = clientX, this.lastMiniplayerPtrY = clientY;
-    this.nextMiniplayerX = this.ctlr.settings.css.currentMiniplayerX, this.nextMiniplayerY = this.ctlr.settings.css.currentMiniplayerY;
-    this.wildMiniplayerX = this.nextMiniplayerX, this.wildMiniplayerY = this.nextMiniplayerY;
+    ((this.lastMiniplayerPosX = parseFloat(left)), (this.lastMiniplayerPosY = parseFloat(bottom)));
+    ((this.lastMiniplayerPtrX = clientX), (this.lastMiniplayerPtrY = clientY));
+    ((this.nextMiniplayerX = this.ctlr.settings.css.currentMiniplayerX), (this.nextMiniplayerY = this.ctlr.settings.css.currentMiniplayerY));
+    ((this.wildMiniplayerX = this.nextMiniplayerX), (this.wildMiniplayerY = this.nextMiniplayerY));
     document.addEventListener("mousemove", this.handleDragging, { signal: this.signal });
     document.addEventListener("touchmove", this.handleDragging, { passive: false, signal: this.signal });
     ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach((type) => document.addEventListener(type, this.handleDragEnd, { signal: this.signal }));
@@ -5342,10 +5559,17 @@ var MiniplayerModule = class extends BaseModule {
     this.ctlr.getPlug("overlay")?.remove("force");
     this.ctlr.videoContainer.classList.add("tmg-video-player-dragging");
     this.ctlr.RAFLoop("miniplayerDragging", () => {
-      const { innerWidth: ww, innerHeight: wh } = window, { offsetWidth: w2, offsetHeight: h } = this.ctlr.videoContainer, x = e.clientX ?? e.changedTouches?.[0]?.clientX ?? 0, y = e.clientY ?? e.changedTouches?.[0]?.clientY ?? 0, newX = this.lastMiniplayerPosX + (x - this.lastMiniplayerPtrX), newY = this.lastMiniplayerPosY - (y - this.lastMiniplayerPtrY), posX = clamp(w2 / 2, newX, ww - w2 / 2), posY = clamp(h / 2, newY, wh - h / 2);
+      const { innerWidth: ww, innerHeight: wh } = window,
+        { offsetWidth: w2, offsetHeight: h } = this.ctlr.videoContainer,
+        x = e.clientX ?? e.changedTouches?.[0]?.clientX ?? 0,
+        y = e.clientY ?? e.changedTouches?.[0]?.clientY ?? 0,
+        newX = this.lastMiniplayerPosX + (x - this.lastMiniplayerPtrX),
+        newY = this.lastMiniplayerPosY - (y - this.lastMiniplayerPtrY),
+        posX = clamp(w2 / 2, newX, ww - w2 / 2),
+        posY = clamp(h / 2, newY, wh - h / 2);
       this.ctlr.videoContainer.style.setProperty("transform", `translate(${x - this.lastMiniplayerPtrX}px, ${y - this.lastMiniplayerPtrY}px)`, "important");
-      this.nextMiniplayerX = `${posX / ww * 100}%`, this.nextMiniplayerY = `${posY / wh * 100}%`;
-      this.wildMiniplayerX = `${newX / ww * 100}%`, this.wildMiniplayerY = `${newY / wh * 100}%`;
+      ((this.nextMiniplayerX = `${(posX / ww) * 100}%`), (this.nextMiniplayerY = `${(posY / wh) * 100}%`));
+      ((this.wildMiniplayerX = `${(newX / ww) * 100}%`), (this.wildMiniplayerY = `${(newY / wh) * 100}%`));
     });
   }
   handleDragEnd() {
@@ -5356,7 +5580,7 @@ var MiniplayerModule = class extends BaseModule {
     this.ctlr.videoContainer.style.removeProperty("transform");
     setTimeout2(
       () => {
-        this.ctlr.settings.css.currentMiniplayerX = this.nextMiniplayerX, this.ctlr.settings.css.currentMiniplayerY = this.nextMiniplayerY;
+        ((this.ctlr.settings.css.currentMiniplayerX = this.nextMiniplayerX), (this.ctlr.settings.css.currentMiniplayerY = this.nextMiniplayerY));
         ["transition", "left", "bottom"].forEach((prop) => this.ctlr.videoContainer.style.removeProperty(prop));
       },
       0,
@@ -5491,17 +5715,22 @@ var FramePlug = class extends BasePlug {
       }
       this.ctlr.state.frameReadyPromise = await this.ctlr.state.frameReadyPromise;
     }
-    this.exportCanvas.width = video.videoWidth || min, this.exportCanvas.height = video.videoHeight || min;
+    ((this.exportCanvas.width = video.videoWidth || min), (this.exportCanvas.height = video.videoHeight || min));
     this.exportContext.filter = this.ctlr.settings.css.filter;
     display === "monochrome" && (this.exportContext.filter = `${this.exportContext.filter} grayscale(100%)`);
     this.exportContext.drawImage(video, 0, 0, this.exportCanvas.width, this.exportCanvas.height);
     this.exportContext.filter = "none";
     if (raw === true) return { canvas: this.exportCanvas, context: this.exportContext };
-    const blob = (this.exportCanvas.width || this.exportCanvas.height) && await new Promise((res) => this.exportCanvas.toBlob(res));
+    const blob = (this.exportCanvas.width || this.exportCanvas.height) && (await new Promise((res) => this.exportCanvas.toBlob(res)));
     return { blob: blob || false, url: blob ? URL.createObjectURL(blob) : false };
   }
   async captureFrame(display = "", time = this.media.state.currentTime) {
-    const toast = this.ctlr.getPlug("toasts")?.toast, tTxt = formatMediaTime({ time, format: "human", showMs: true }), fTxt = `video frame ${display === "monochrome" ? "in b&w " : ""}at ${tTxt}`, frameToastId = toast?.loading(`Capturing ${fTxt}...`, { delay: parseCSSTime(this.ctlr.settings.css.notifiersAnimationTime), image: window.TMG_VIDEO_ALT_IMG_SRC, tag: `tmg-${this.ctlr.config.media.title ?? "Video"}fcpa${tTxt}${display}` }), frame = await this.getFrame(display, time, false, 0, this.media.element), filename = `${this.ctlr.config.media.title ?? "Video"}_${display === "monochrome" ? `black&white_` : ""}at_${tTxt}.png`.replace(/[\/:*?"<>|\s]+/g, "_");
+    const toast = this.ctlr.getPlug("toasts")?.toast,
+      tTxt = formatMediaTime({ time, format: "human", showMs: true }),
+      fTxt = `video frame ${display === "monochrome" ? "in b&w " : ""}at ${tTxt}`,
+      frameToastId = toast?.loading(`Capturing ${fTxt}...`, { delay: parseCSSTime(this.ctlr.settings.css.notifiersAnimationTime), image: window.TMG_VIDEO_ALT_IMG_SRC, tag: `tmg-${this.ctlr.config.media.title ?? "Video"}fcpa${tTxt}${display}` }),
+      frame = await this.getFrame(display, time, false, 0, this.media.element),
+      filename = `${this.ctlr.config.media.title ?? "Video"}_${display === "monochrome" ? `black&white_` : ""}at_${tTxt}.png`.replace(/[\/:*?"<>|\s]+/g, "_");
     const Save = () => {
       toast?.loading(frameToastId, { render: `Saving ${fTxt}`, actions: {} });
       createEl("a", { href: frame.url, download: filename })?.click?.();
@@ -5525,10 +5754,10 @@ var FramePlug = class extends BasePlug {
     return null;
   }
   async getMainColor(time, poster = this.media.element.poster, config = {}) {
-    return getDominantColor(poster ? poster : (await this.getFrame("", time ? time : await this.findGoodTime(config) ?? void 0, true, 1)).canvas);
+    return getDominantColor(poster ? poster : (await this.getFrame("", time ? time : ((await this.findGoodTime(config)) ?? void 0), true, 1)).canvas);
   }
   moveFrame(dir = "forwards") {
-    this.media.state.paused && this.ctlr.throttle("frameStepping", () => this.media.intent.currentTime = clamp(0, Math.round(this.media.state.currentTime * this.config.fps) + (dir === "backwards" ? -1 : 1), Math.floor(this.media.status.duration * this.config.fps)) / this.config.fps, Math.round(1e3 / this.config.fps));
+    this.media.state.paused && this.ctlr.throttle("frameStepping", () => (this.media.intent.currentTime = clamp(0, Math.round(this.media.state.currentTime * this.config.fps) + (dir === "backwards" ? -1 : 1), Math.floor(this.media.status.duration * this.config.fps)) / this.config.fps), Math.round(1e3 / this.config.fps));
   }
 };
 FramePlug.plugName = "frame";
@@ -5580,7 +5809,8 @@ var ErrorMessagesPlug = class extends BasePlug {
   }
   handleError({ value }) {
     if (!value) return;
-    const code = value.code, mssg = this.config[code ?? 5] || value.message || "An unknown error occurred with the video :(";
+    const code = value.code,
+      mssg = this.config[code ?? 5] || value.message || "An unknown error occurred with the video :(";
     this.ctlr.getPlug("disabled")?.deactivate(mssg);
   }
 };
@@ -5668,7 +5898,8 @@ var TimeTravelPlug = class extends BasePlug {
     this.stopRequested = false;
     for (let i = this.currentFrame + 1; i < this.history.length; i++) {
       if (this.stopRequested) break;
-      const e = this.history[i], delay = this.history[i + 1] ? this.history[i + 1].timestamp - e.timestamp : 0;
+      const e = this.history[i],
+        delay = this.history[i + 1] ? this.history[i + 1].timestamp - e.timestamp : 0;
       this.currentFrame = i;
       await new Promise((res) => {
         this.playbackTimer = setTimeout2(() => (this.applyEntry(e), res(0)), Math.min(delay, 2e3));
@@ -5743,7 +5974,7 @@ __export(components_exports, {
   ScreenLocked: () => ScreenLocked,
   Time: () => Time,
   TimeAndDuration: () => TimeAndDuration,
-  Timeline: () => Timeline
+  Timeline: () => Timeline,
 });
 
 // src/ts/components/base.ts
@@ -5766,25 +5997,23 @@ var BaseComponent = class extends Controllable {
     this.unmount();
   }
   // Must assign to this.element before returning
-  mount() {
-  }
+  mount() {}
   unmount() {
     this.element.isConnected && this.element.remove();
   }
-  wire() {
-  }
+  wire() {}
   // auto unwiring
   hide() {
-    this.el.classList.toggle("tmg-video-control-hidden", this.state.hidden = true);
+    this.el.classList.toggle("tmg-video-control-hidden", (this.state.hidden = true));
   }
   show() {
-    this.el.classList.toggle("tmg-video-control-hidden", this.state.hidden = false);
+    this.el.classList.toggle("tmg-video-control-hidden", (this.state.hidden = false));
   }
   disable() {
-    this.el.classList.toggle("tmg-video-control-disabled", this.state.disabled = true);
+    this.el.classList.toggle("tmg-video-control-disabled", (this.state.disabled = true));
   }
   enable() {
-    this.el.classList.toggle("tmg-video-control-disabled", this.state.disabled = false);
+    this.el.classList.toggle("tmg-video-control-disabled", (this.state.disabled = false));
   }
   getIcon(name) {
     return IconRegistry.get(name);
@@ -5801,7 +6030,7 @@ BaseComponent.isControl = false;
 // src/ts/components/buffer.ts
 var Buffer2 = class extends BaseComponent {
   create() {
-    return this.element = createEl("div", { className: "tmg-video-buffer", innerHTML: `<div class="tmg-video-buffer-accent"></div><div class="tmg-video-buffer-eclipse"><div class="tmg-video-buffer-left"><div class="tmg-video-buffer-circle"></div></div><div class="tmg-video-buffer-right"><div class="tmg-video-buffer-circle"></div></div></div>` });
+    return (this.element = createEl("div", { className: "tmg-video-buffer", innerHTML: `<div class="tmg-video-buffer-accent"></div><div class="tmg-video-buffer-eclipse"><div class="tmg-video-buffer-left"><div class="tmg-video-buffer-circle"></div></div><div class="tmg-video-buffer-right"><div class="tmg-video-buffer-circle"></div></div></div>` }));
   }
   mount() {
     this.ctlr.DOM.controlsContainer?.prepend(this.element);
@@ -5826,7 +6055,7 @@ var CaptionsView = class extends BaseComponent {
     this.lastPtrY = 0;
   }
   create() {
-    return this.element = createEl("div", { className: "tmg-video-captions-container" }, { part: "region" });
+    return (this.element = createEl("div", { className: "tmg-video-captions-container" }, { part: "region" }));
   }
   mount() {
     this.ctlr.DOM.controlsContainer.prepend(this.element);
@@ -5843,12 +6072,13 @@ var CaptionsView = class extends BaseComponent {
     this.charW = measurer.offsetWidth / 52;
     const { lineHeight, fontSize } = getComputedStyle(measurer);
     this.lineHPx = !safeNum(parseFloat(lineHeight), 0) ? safeNum(parseFloat(fontSize), 16) * 1.2 : parseFloat(lineHeight);
-    measurer.remove(), this.element.style.removeProperty("display");
+    (measurer.remove(), this.element.style.removeProperty("display"));
   }
   preview(preview = `${capitalize(this.ctlr.videoContainer.dataset.trackKind || "captions")} look like this`, flush = this.element.textContent.replace(/\s/g, "") === this.lastPreview?.replace(/\s/g, "")) {
-    const text = "string" === typeof preview ? preview : preview.text || "", should = flush || !this.ctlr.isUIActive("captions") || !this.element.textContent;
+    const text = "string" === typeof preview ? preview : preview.text || "",
+      should = flush || !this.ctlr.isUIActive("captions") || !this.element.textContent;
     should && this.ctlr.videoContainer.classList.add("tmg-video-captions-preview");
-    this.render(should ? isObj(preview) ? preview : { text: preview } : this.lastCue);
+    this.render(should ? (isObj(preview) ? preview : { text: preview }) : this.lastCue);
     clearTimeout(this.previewTimeoutId);
     this.previewTimeoutId = setTimeout2(
       (flush2 = this.element.textContent.replace(/\s/g, "") === text.replace(/\s/g, "")) => {
@@ -5863,15 +6093,17 @@ var CaptionsView = class extends BaseComponent {
   render(cue) {
     const existing = this.element.querySelector(".tmg-video-captions-wrapper");
     if (!cue) return existing?.remove();
-    const wrapper = existing ?? createEl("div", { className: "tmg-video-captions-wrapper", ariaLive: "off", ariaAtomic: "true" }, { part: "cue-display" }), { offsetWidth: vCWidth, offsetHeight: vCHeight } = this.ctlr.videoContainer, allowOverride = this.ctlr.settings.captions.allowVideoOverride || !this.isMain;
+    const wrapper = existing ?? createEl("div", { className: "tmg-video-captions-wrapper", ariaLive: "off", ariaAtomic: "true" }, { part: "cue-display" }),
+      { offsetWidth: vCWidth, offsetHeight: vCHeight } = this.ctlr.videoContainer,
+      allowOverride = this.ctlr.settings.captions.allowVideoOverride || !this.isMain;
     ["style", "data-active", "data-scroll"].forEach((attr) => this.element.removeAttribute(attr));
-    wrapper.innerHTML = "", cue.text || (cue.text = ""), this.lastCue = cue;
+    ((wrapper.innerHTML = ""), cue.text || (cue.text = ""), (this.lastCue = cue));
     const lines = cue.text.replace(/(<br\s*\/>)|\\N/gi, "\n").split(/\n/);
     lines.forEach((p) => formatVttLine(p, Math.floor(vCWidth / this.charW)).forEach((l) => wrapper.append(createEl("div", { className: "tmg-video-captions-line" }, cue.id ? { part: "cue", id: cue.id } : { part: "cue" }, allowOverride && cue.align ? { textAlign: cue.align } : void 0).appendChild(createEl("span", { className: "tmg-video-captions-text", innerHTML: parseVttText(l) })).parentElement)));
     !existing && this.element.append(wrapper);
     const { offsetWidth: cWidth, offsetHeight: cHeight } = this.element;
-    this.isMain ? this.ctlr.settings.css.currentCaptionsContainerHeight = `${cHeight}px` : this.element.style.setProperty("--tmg-video-current-captions-container-height", `${cHeight}px`);
-    this.isMain ? this.ctlr.settings.css.currentCaptionsContainerWidth = `${cWidth}px` : this.element.style.setProperty("--tmg-video-current-captions-container-width", `${cWidth}px`);
+    this.isMain ? (this.ctlr.settings.css.currentCaptionsContainerHeight = `${cHeight}px`) : this.element.style.setProperty("--tmg-video-current-captions-container-height", `${cHeight}px`);
+    this.isMain ? (this.ctlr.settings.css.currentCaptionsContainerWidth = `${cWidth}px`) : this.element.style.setProperty("--tmg-video-current-captions-container-width", `${cWidth}px`);
     if (allowOverride) {
       if (cue.region) {
         this.element.setAttribute("data-active", "");
@@ -5879,19 +6111,25 @@ var CaptionsView = class extends BaseComponent {
         if (isDef(vpAnX)) this.element.style.setProperty("--tmg-video-current-captions-x", `${vpAnX}%`);
         if (isDef(vpAnY)) this.element.style.setProperty("--tmg-video-current-captions-y", `${100 - Number(vpAnY)}%`);
         if (isDef(width)) this.element.style.maxWidth = `${width}%`;
-        if (isDef(regionLines)) this.element.style.maxHeight = `${Number(regionLines) * (this.lineHPx / vCHeight * 100)}%`;
+        if (isDef(regionLines)) this.element.style.maxHeight = `${Number(regionLines) * ((this.lineHPx / vCHeight) * 100)}%`;
         if (scroll === "up") {
-          this.element.style.maxHeight = `${regionLines * (this.lineHPx / vCHeight * 100)}%`;
+          this.element.style.maxHeight = `${regionLines * ((this.lineHPx / vCHeight) * 100)}%`;
           this.element.dataset.scroll = scroll;
-          this.ctlr.config.stall(() => this.element.scrollTop = wrapper.scrollHeight);
+          this.ctlr.config.stall(() => (this.element.scrollTop = wrapper.scrollHeight));
         }
       } else {
         if (isDef(cue.position) && cue.position !== "auto") {
-          const elHalfWPct = cWidth / vCWidth * 100 / 2, posOffset = cue.positionAlign === "line-left" ? 0 : cue.positionAlign === "line-right" ? -2 * elHalfWPct : -elHalfWPct;
+          const elHalfWPct = ((cWidth / vCWidth) * 100) / 2,
+            posOffset = cue.positionAlign === "line-left" ? 0 : cue.positionAlign === "line-right" ? -2 * elHalfWPct : -elHalfWPct;
           this.element.style.setProperty("--tmg-video-current-captions-x", `calc(${cue.position}% + ${posOffset}% + ${elHalfWPct}%)`);
         }
         if (isDef(cue.line) && cue.line !== "auto") {
-          const line = parseIfPercent(cue.line, 100), lhPct = this.lineHPx / vCHeight * 100, elHalfHPct = cHeight / vCHeight * 100 / 2, lAlign = cue.lineAlign && cue.lineAlign !== "auto" ? cue.lineAlign : line < 0 ? "end" : "start", lineOffset = lAlign === "start" ? -2 * elHalfHPct : lAlign === "end" ? 0 : -elHalfHPct, bottomVal = cue.snapToLines ? line < 0 ? (Math.abs(line) - 1) * lhPct : 100 - line * lhPct : 100 - line;
+          const line = parseIfPercent(cue.line, 100),
+            lhPct = (this.lineHPx / vCHeight) * 100,
+            elHalfHPct = ((cHeight / vCHeight) * 100) / 2,
+            lAlign = cue.lineAlign && cue.lineAlign !== "auto" ? cue.lineAlign : line < 0 ? "end" : "start",
+            lineOffset = lAlign === "start" ? -2 * elHalfHPct : lAlign === "end" ? 0 : -elHalfHPct,
+            bottomVal = cue.snapToLines ? (line < 0 ? (Math.abs(line) - 1) * lhPct : 100 - line * lhPct) : 100 - line;
           this.element.style.setProperty("--tmg-video-current-captions-y", `calc(${bottomVal}% + ${lineOffset}% + ${elHalfHPct}%)`);
         }
         if (isDef(cue.size) && cue.size !== 100) this.element.style.maxWidth = `${cue.size}%`;
@@ -5908,23 +6146,26 @@ var CaptionsView = class extends BaseComponent {
     if (!this.karaokeNodes) return;
     for (const { el, time } of this.karaokeNodes) {
       const isPast = this.media.state.currentTime > time;
-      el.toggleAttribute("data-past", isPast), el.toggleAttribute("data-future", !isPast);
+      (el.toggleAttribute("data-past", isPast), el.toggleAttribute("data-future", !isPast));
     }
   }
   handleDragStart(e) {
     this.element.setPointerCapture(e.pointerId);
     const { left, bottom } = getComputedStyle(this.element);
-    this.lastPosX = parseFloat(left), this.lastPosY = parseFloat(bottom);
-    this.lastPtrX = e.clientX, this.lastPtrY = e.clientY;
+    ((this.lastPosX = parseFloat(left)), (this.lastPosY = parseFloat(bottom)));
+    ((this.lastPtrX = e.clientX), (this.lastPtrY = e.clientY));
     this.element.addEventListener("pointermove", this.handleDragging, { signal: this.signal });
     this.element.addEventListener("pointerup", this.handleDragEnd, { signal: this.signal });
   }
   handleDragging(e) {
     this.ctlr.videoContainer.classList.add("tmg-video-captions-dragging");
     this.ctlr.RAFLoop("captionsDragging", () => {
-      const { offsetWidth: ww, offsetHeight: hh } = this.ctlr.videoContainer, { offsetWidth: w2, offsetHeight: h } = this.element, posX = clamp(w2 / 2, this.lastPosX + (e.clientX - this.lastPtrX), ww - w2 / 2), posY = clamp(h / 2, this.lastPosY - (e.clientY - this.lastPtrY), hh - h / 2);
-      this.isMain ? this.ctlr.settings.css.currentCaptionsX = `${posX / ww * 100}%` : this.element.style.setProperty("--tmg-video-current-captions-x", `${posX / ww * 100}%`);
-      this.isMain ? this.ctlr.settings.css.currentCaptionsY = `${posY / hh * 100}%` : this.element.style.setProperty("--tmg-video-current-captions-y", `${posY / hh * 100}%`);
+      const { offsetWidth: ww, offsetHeight: hh } = this.ctlr.videoContainer,
+        { offsetWidth: w2, offsetHeight: h } = this.element,
+        posX = clamp(w2 / 2, this.lastPosX + (e.clientX - this.lastPtrX), ww - w2 / 2),
+        posY = clamp(h / 2, this.lastPosY - (e.clientY - this.lastPtrY), hh - h / 2);
+      this.isMain ? (this.ctlr.settings.css.currentCaptionsX = `${(posX / ww) * 100}%`) : this.element.style.setProperty("--tmg-video-current-captions-x", `${(posX / ww) * 100}%`);
+      this.isMain ? (this.ctlr.settings.css.currentCaptionsY = `${(posY / hh) * 100}%`) : this.element.style.setProperty("--tmg-video-current-captions-y", `${(posY / hh) * 100}%`);
     });
   }
   handleDragEnd() {
@@ -5940,7 +6181,7 @@ CaptionsView.isControl = false;
 // src/ts/components/duration.ts
 var Duration = class extends BaseComponent {
   create() {
-    return this.element = createEl("button", { className: "tmg-video-total-time" }, { draggableControl: "", controlId: this.name });
+    return (this.element = createEl("button", { className: "tmg-video-total-time" }, { draggableControl: "", controlId: this.name }));
   }
   wire() {
     this.plug = this.ctlr.getPlug("time");
@@ -5964,7 +6205,7 @@ Duration.isControl = true;
 // src/ts/components/playPause.ts
 var PlayPause = class extends BaseComponent {
   create() {
-    return this.element = createEl("button", { className: "tmg-video-play-pause-btn", innerHTML: this.getIcon("play") + this.getIcon("pause") + this.getIcon("replay") }, { draggableControl: "", controlId: this.name });
+    return (this.element = createEl("button", { className: "tmg-video-play-pause-btn", innerHTML: this.getIcon("play") + this.getIcon("pause") + this.getIcon("replay") }, { draggableControl: "", controlId: this.name }));
   }
   wire() {
     this.el.addEventListener("click", this.togglePlay, { signal: this.signal });
@@ -6006,7 +6247,8 @@ var RangeSlider = class extends BaseComponent {
       if (["arrowleft", "arrowdown", "arrowright", "arrowup"].includes(key)) {
         e.preventDefault();
         e.stopImmediatePropagation();
-        const delta = e.shiftKey ? 2 : 1, direction = ["arrowleft", "arrowdown"].includes(key) ? -1 : 1;
+        const delta = e.shiftKey ? 2 : 1,
+          direction = ["arrowleft", "arrowdown"].includes(key) ? -1 : 1;
         this.config.value += direction * delta * this.config.step;
       }
     };
@@ -6019,7 +6261,7 @@ var RangeSlider = class extends BaseComponent {
     this.thumbIndicator = createEl("div", { className: "tmg-video-thumb-indicator" });
     this.barsWrapper.append(this.baseBar, this.valueBar);
     this.container.append(this.barsWrapper, this.thumbIndicator);
-    return this.element = this.container;
+    return (this.element = this.container);
   }
   wire() {
     this.container.addEventListener("pointerdown", this.handlePointerDown, { signal: this.signal });
@@ -6028,9 +6270,9 @@ var RangeSlider = class extends BaseComponent {
     this.barsWrapper.addEventListener("mousemove", this.handleInput, { signal: this.signal });
     ["mouseleave", "touchend", "touchcancel"].forEach((e) => this.barsWrapper.addEventListener(e, this.stopPreview, { signal: this.signal }));
     this.config.set("value", (value) => stepNum(value, this.config), { signal: this.signal });
-    this.config.on("label", ({ value }) => this.container.ariaLabel = value, { signal: this.signal, immediate: true });
-    this.config.on("min", ({ value }) => this.container.ariaValueMin = String(value), { signal: this.signal, immediate: true });
-    this.config.on("max", ({ value }) => this.container.ariaValueMax = String(value), { signal: this.signal, immediate: true });
+    this.config.on("label", ({ value }) => (this.container.ariaLabel = value), { signal: this.signal, immediate: true });
+    this.config.on("min", ({ value }) => (this.container.ariaValueMin = String(value)), { signal: this.signal, immediate: true });
+    this.config.on("max", ({ value }) => (this.container.ariaValueMax = String(value)), { signal: this.signal, immediate: true });
     this.config.on("value", this.handleValueChange, { signal: this.signal, immediate: true });
   }
   seek(value) {
@@ -6038,7 +6280,7 @@ var RangeSlider = class extends BaseComponent {
   }
   handleValueChange({ target }) {
     const pos = this.getValueAsPos();
-    this.updateThumbPosition(pos), this.updateValueBar(pos);
+    (this.updateThumbPosition(pos), this.updateValueBar(pos));
     if (!this.state.scrubbing) this.container.ariaValueNow = String(target.value);
   }
   handlePointerDown(e) {
@@ -6049,7 +6291,7 @@ var RangeSlider = class extends BaseComponent {
     const s = window.getComputedStyle(this.container);
     this.isVertical = s.writingMode.includes("vertical");
     this.isRTL = s.direction === "rtl";
-    this.lastPtrPos = this.getPos(e), this.lastThumbPos = this.getValueAsPos();
+    ((this.lastPtrPos = this.getPos(e)), (this.lastThumbPos = this.getValueAsPos()));
     this.handleInput(e);
     this.container.addEventListener("pointermove", this.handleInput, { signal: this.signal });
     this.container.addEventListener("pointerup", this.stopScrubbing, { signal: this.signal });
@@ -6064,8 +6306,7 @@ var RangeSlider = class extends BaseComponent {
     this.container.removeEventListener("pointermove", this.handleInput);
     this.container.removeEventListener("pointerup", this.stopScrubbing);
   }
-  stopPreview() {
-  }
+  stopPreview() {}
   // Subclasses can override to add preview cleanup logic
   cancelScrubbing() {
     if (this.state.stallCancelScrub || this.state.shouldCancelScrub || this.cancelScrubTimeoutId) return;
@@ -6081,7 +6322,10 @@ var RangeSlider = class extends BaseComponent {
     this.ctlr.throttle(
       `${this.config.label}RangeInput`,
       () => {
-        const dimension = this.isVertical ? this.rect.height : this.rect.width, progress = this.getPos(e), pos = clamp(0, !this.state.scrubbing || this.config.scrub.relative ? progress : this.lastThumbPos + progress - this.lastPtrPos, 1), value = this.getPosAsValue(pos);
+        const dimension = this.isVertical ? this.rect.height : this.rect.width,
+          progress = this.getPos(e),
+          pos = clamp(0, !this.state.scrubbing || this.config.scrub.relative ? progress : this.lastThumbPos + progress - this.lastPtrPos, 1),
+          value = this.getPosAsValue(pos);
         this.config.previewValue = value;
         if (this.state.scrubbing) {
           if (!this.config.scrub.sync) this.updateThumbPosition(pos);
@@ -6093,14 +6337,15 @@ var RangeSlider = class extends BaseComponent {
       30
     );
   }
-  onInput(e, pos) {
-  }
+  onInput(e, pos) {}
   // Subclasses override to add preview logic (timeline preview image, etc.)
   handleWheel(e) {
     if (this.config.wheel.disabled) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    const dimension = this.isVertical ? window.innerHeight : window.innerWidth, pos = clamp(0, Math.abs(-e.deltaY), dimension * this.config.wheel.axisRatio) / (dimension * this.config.wheel.axisRatio), value = this.config.value + (-e.deltaY >= 0 ? pos : -pos) * (this.config.max - this.config.min);
+    const dimension = this.isVertical ? window.innerHeight : window.innerWidth,
+      pos = clamp(0, Math.abs(-e.deltaY), dimension * this.config.wheel.axisRatio) / (dimension * this.config.wheel.axisRatio),
+      value = this.config.value + (-e.deltaY >= 0 ? pos : -pos) * (this.config.max - this.config.min);
     this.seek(Math.round(value));
   }
   updateThumbPosition(pos) {
@@ -6125,14 +6370,14 @@ RangeSlider.componentName = "Range";
 // src/ts/components/screenlocked.ts
 var ScreenLocked = class extends BaseComponent {
   create() {
-    return this.element = createEl("button", {
+    return (this.element = createEl("button", {
       type: "button",
       title: "Unlock Screen",
       ariaLabel: "Unlock Screen",
       className: "tmg-video-screen-locked-btn",
       tabIndex: -1,
-      innerHTML: `${this.getIcon("lock")}${this.getIcon("unlock")}<p>Unlock controls?</p>`
-    });
+      innerHTML: `${this.getIcon("lock")}${this.getIcon("unlock")}<p>Unlock controls?</p>`,
+    }));
   }
   wire() {
     this.plug = this.ctlr.getPlug("locked");
@@ -6154,7 +6399,7 @@ ScreenLocked.componentName = "screenlocked";
 // src/ts/components/time.ts
 var Time = class extends BaseComponent {
   create() {
-    return this.element = createEl("button", { className: "tmg-video-current-time" }, { draggableControl: "", controlId: this.name });
+    return (this.element = createEl("button", { className: "tmg-video-current-time" }, { draggableControl: "", controlId: this.name }));
   }
   wire() {
     this.plug = this.ctlr.getPlug("time");
@@ -6201,7 +6446,7 @@ var TimeAndDuration = class extends BaseComponent {
   updateUI() {
     const bridgeText = { digital: "/", human: "of", "human-long": "out of" }[this.ctlr.settings.time.format];
     this.bridge.textContent = bridgeText || "/";
-    this.updateTime(), this.updateDuration();
+    (this.updateTime(), this.updateDuration());
   }
   updateTime() {
     this.time.textContent = this.plug?.toTimeText(this.media.state.currentTime, true) || "-:--";
@@ -6256,8 +6501,8 @@ var Timeline = class extends RangeSlider {
     this.state.on("scrubbing", this.handleScrubbingChange, { signal: this.signal });
     this.config.on("previewValue", this.updatePreviewTime, { signal: this.signal });
     this.config.on("previews", this.handlePreviewChange, { signal: this.signal });
-    this.ctlr.config.watch("settings.time.previews", (value) => this.config.previews = value, { signal: this.signal, immediate: true });
-    this.ctlr.config.watch("settings.time.seekSync", (value) => this.config.scrub.sync = value, { signal: this.signal, immediate: true });
+    this.ctlr.config.watch("settings.time.previews", (value) => (this.config.previews = value), { signal: this.signal, immediate: true });
+    this.ctlr.config.watch("settings.time.seekSync", (value) => (this.config.scrub.sync = value), { signal: this.signal, immediate: true });
     this.media.on("state.paused", this.handlePausedState, { signal: this.signal, immediate: true });
     this.media.on("state.currentTime", this.handleCurrentTimeState, { signal: this.signal, immediate: true });
     this.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
@@ -6267,12 +6512,12 @@ var Timeline = class extends RangeSlider {
     this.ctlr.state.on("dimensions.container", this.syncThumbnailSize, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.time.format", this.updatePreviewTime, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.time.mode", this.updatePreviewTime, { signal: this.signal });
-    this.ctlr.config.on("settings.css.currentThumbnailWidth", ({ value }) => this.thumbnailCanvas.width = Number(value), { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.css.currentThumbnailHeight", ({ value }) => this.thumbnailCanvas.height = Number(value), { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.css.currentThumbnailWidth", ({ value }) => (this.thumbnailCanvas.width = Number(value)), { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.css.currentThumbnailHeight", ({ value }) => (this.thumbnailCanvas.height = Number(value)), { signal: this.signal, immediate: true });
   }
   seek(value) {
     super.seek(value);
-    this.media.intent.currentTime = safeNum(value / 100 * this.media.status.duration);
+    this.media.intent.currentTime = safeNum((value / 100) * this.media.status.duration);
   }
   handlePausedState({ value }) {
     !value ? this.ctlr.RAFLoop("timelineUpdating", this.handleTimeUpdateLoop) : this.ctlr.cancelRAFLoop("timelineUpdating");
@@ -6283,7 +6528,7 @@ var Timeline = class extends RangeSlider {
     this.container.ariaValueText = `${formatMediaTime({ time: target.value, format: "human-long" })} out of ${formatMediaTime({ time: this.media.status.duration, format: "human-long" })}`;
   }
   handleLoadedMetadataStatus() {
-    this.ctlr.pseudoVideo.addEventListener("timeupdate", (e) => e.target.ontimeupdate = this.syncCanvasPreviews, { signal: this.signal, once: true });
+    this.ctlr.pseudoVideo.addEventListener("timeupdate", (e) => (e.target.ontimeupdate = this.syncCanvasPreviews), { signal: this.signal, once: true });
   }
   handleBufferedStatus() {
     const buffered = this.media.status.buffered;
@@ -6323,12 +6568,13 @@ var Timeline = class extends RangeSlider {
   handlePreviewChange({ target }) {
     const value = target.value === true ? {} : target.value;
     if (!value) return void (this.ctlr.videoContainer.dataset.previewType = "none");
-    const manual = value.address && (value.spf || value.cols && value.rows), type = manual ? value.cols && value.rows ? "sprite" : "image" : "canvas";
+    const manual = value.address && (value.spf || (value.cols && value.rows)),
+      type = manual ? (value.cols && value.rows ? "sprite" : "image") : "canvas";
     this.ctlr.videoContainer.dataset.previewType = type;
     if (type === "sprite" && value.address) this.ctlr.settings.css.currentPreviewUrl = this.ctlr.settings.css.currentThumbnailUrl = `url(${value.address})`;
     else this.ctlr.settings.css.currentPreviewPosition = this.ctlr.settings.css.currentThumbnailPosition = "center";
     if (this.media.status.loadedMetadata) return;
-    this.ctlr.setCanvasFallback(this.previewCanvas, this.previewContext), this.ctlr.setCanvasFallback(this.thumbnailCanvas, this.thumbnailContext);
+    (this.ctlr.setCanvasFallback(this.previewCanvas, this.previewContext), this.ctlr.setCanvasFallback(this.thumbnailCanvas, this.thumbnailContext));
     this.ctlr.pseudoVideo.ontimeupdate = null;
   }
   stopScrubbing() {
@@ -6341,16 +6587,27 @@ var Timeline = class extends RangeSlider {
   }
   onInput(e, pos) {
     this.ctlr.videoContainer.classList.add("tmg-video-previewing");
-    const previewImgMin = this.previewContainer.offsetWidth / 2 / this.rect.width, previewImgPos = clamp(previewImgMin, pos, 1 - previewImgMin);
+    const previewImgMin = this.previewContainer.offsetWidth / 2 / this.rect.width,
+      previewImgPos = clamp(previewImgMin, pos, 1 - previewImgMin);
     this.previewContainer.style.left = `${previewImgPos * 100}%`;
     this.previewBar.style.width = `${pos * 100}%`;
-    const previewConfig = this.config.previews, type = this.ctlr.videoContainer.dataset.previewType;
+    const previewConfig = this.config.previews,
+      type = this.ctlr.videoContainer.dataset.previewType;
     if (type === "sprite" && previewConfig && typeof previewConfig !== "boolean" && previewConfig.cols && previewConfig.rows) {
-      const duration = this.media.status.duration, spf = previewConfig.spf || 1, frameIndex = Math.floor(pos * (duration || 0) / spf) || 1, { cols, rows } = previewConfig, clampedI = Math.min(frameIndex, cols * rows - 1), xPercent = clampedI % cols * 100 / (cols - 1 || 1), yPercent = Math.floor(clampedI / cols) * 100 / (rows - 1 || 1);
+      const duration = this.media.status.duration,
+        spf = previewConfig.spf || 1,
+        frameIndex = Math.floor((pos * (duration || 0)) / spf) || 1,
+        { cols, rows } = previewConfig,
+        clampedI = Math.min(frameIndex, cols * rows - 1),
+        xPercent = ((clampedI % cols) * 100) / (cols - 1 || 1),
+        yPercent = (Math.floor(clampedI / cols) * 100) / (rows - 1 || 1);
       if (!IS_MOBILE) this.ctlr.settings.css.currentPreviewPosition = `${xPercent}% ${yPercent}%`;
       if (this.state.scrubbing) this.ctlr.settings.css.currentThumbnailPosition = `${xPercent}% ${yPercent}%`;
     } else if (type === "image" && previewConfig && typeof previewConfig !== "boolean" && previewConfig.address) {
-      const duration = this.media.status.duration, spf = previewConfig.spf || 1, frameIndex = Math.floor(pos * (duration || 0) / spf) || 1, url = `url(${previewConfig.address.replace("$", String(frameIndex))})`;
+      const duration = this.media.status.duration,
+        spf = previewConfig.spf || 1,
+        frameIndex = Math.floor((pos * (duration || 0)) / spf) || 1,
+        url = `url(${previewConfig.address.replace("$", String(frameIndex))})`;
       if (!IS_MOBILE) this.ctlr.settings.css.currentPreviewUrl = url;
       if (this.state.scrubbing) this.ctlr.settings.css.currentThumbnailUrl = url;
     } else if (previewConfig && !this.ctlr.state.frameReadyPromise && this.ctlr.pseudoVideo) {
@@ -6405,63 +6662,24 @@ __export(consts_exports, {
   moddedKeyShortcutActions: () => moddedKeyShortcutActions,
   modes: () => modes,
   orientationOptions: () => orientationOptions,
-  whiteListedKeys: () => whiteListedKeys
+  whiteListedKeys: () => whiteListedKeys,
 });
 
 // src/index.ts
 if (typeof window !== "undefined") {
   window.tmg ?? (window.tmg = {});
-  window.TMG_VIDEO_ALT_IMG_SRC ?? (window.TMG_VIDEO_ALT_IMG_SRC = "/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png");
-  window.TMG_VIDEO_CSS_SRC ?? (window.TMG_VIDEO_CSS_SRC = "/TMG_MEDIA_PROTOTYPE/prototype-3/prototype-3-video.css");
+  window.TMG_VIDEO_ALT_IMG_SRC ?? (window.TMG_VIDEO_ALT_IMG_SRC = "/tmg-media-player/assets/icons/movie-tape.png");
+  window.TMG_VIDEO_CSS_SRC ?? (window.TMG_VIDEO_CSS_SRC = "/tmg-media-player/prototype-3/prototype-3-video.css");
   window.T007_TOAST_CSS_SRC ?? (window.T007_TOAST_CSS_SRC = "/T007_TOOLS/T007_toast_library/T007_toast.css");
   window.T007_TOAST_JS_SRC ?? (window.T007_TOAST_JS_SRC = "/T007_TOOLS/T007_toast_library/T007_toast.js");
   window.T007_INPUT_CSS_SRC ?? (window.T007_INPUT_CSS_SRC = "/T007_TOOLS/T007_input_library/T007_input.css");
   window.T007_INPUT_JS_SRC ?? (window.T007_INPUT_JS_SRC = "/T007_TOOLS/T007_input_library/T007_input.js");
   console.log("%cTMG Media Player Available", "color: darkturquoise");
-  loadResource2(window.TMG_VIDEO_CSS_SRC), loadResource2(window.T007_TOAST_JS_SRC, "script", { module: true }), loadResource2(window.T007_INPUT_JS_SRC, "script");
+  (loadResource2(window.TMG_VIDEO_CSS_SRC), loadResource2(window.T007_TOAST_JS_SRC, "script", { module: true }), loadResource2(window.T007_INPUT_JS_SRC, "script"));
   init();
 } else {
   console.log("\x1B[38;2;139;69;19mTMG Media Player Unavailable\x1B[0m");
-  console.error("TMG Media Player cannot run in a terminal!"), console.warn("Consider moving to a browser environment to use the TMG Media Player");
+  (console.error("TMG Media Player cannot run in a terminal!"), console.warn("Consider moving to a browser environment to use the TMG Media Player"));
 }
-export {
-  AUDIO_CONTEXT,
-  AUDIO_LIMITER,
-  AsyncQueue,
-  BaseRegistry,
-  ComponentRegistry,
-  Controllable,
-  Controller,
-  Controllers,
-  INDIFFABLE,
-  INERTIA,
-  IS_DOC_TRANSIENT,
-  IconRegistry,
-  LocalStorageAdapter,
-  OrderedRegistry,
-  Player,
-  PlugRegistry,
-  RAW,
-  REJECTABLE,
-  Reactor,
-  ReactorEvent,
-  SSVERSION,
-  StorageAdapter,
-  TERMINATOR,
-  TechRegistry,
-  VERSION,
-  components_exports as comps,
-  connectMediaToAudioManager,
-  consts_exports as consts,
-  handleDOMMutation,
-  handleVidMutation,
-  init,
-  media_exports as media,
-  mixins_exports as mixins,
-  mountMedia,
-  plugs_exports as plugs,
-  startAudioManager,
-  unmountMedia,
-  utils_exports as utils
-};
+export { AUDIO_CONTEXT, AUDIO_LIMITER, AsyncQueue, BaseRegistry, ComponentRegistry, Controllable, Controller, Controllers, INDIFFABLE, INERTIA, IS_DOC_TRANSIENT, IconRegistry, LocalStorageAdapter, OrderedRegistry, Player, PlugRegistry, RAW, REJECTABLE, Reactor, ReactorEvent, SSVERSION, StorageAdapter, TERMINATOR, TechRegistry, VERSION, components_exports as comps, connectMediaToAudioManager, consts_exports as consts, handleDOMMutation, handleVidMutation, init, media_exports as media, mixins_exports as mixins, mountMedia, plugs_exports as plugs, startAudioManager, unmountMedia, utils_exports as utils };
 //# sourceMappingURL=tmg-player.mjs.map

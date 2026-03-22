@@ -1,4 +1,4 @@
-import { BasePlug, type ToastsPlug } from ".";
+import { BasePlug, type KeysPlug, type ToastsPlug } from ".";
 import { createEl, clamp, parseCSSTime, formatMediaTime, getDominantColor, getRGBBri, getRGBSat } from "../utils";
 
 export interface Frame {
@@ -11,6 +11,14 @@ export class FramePlug extends BasePlug<Frame> {
   public static readonly plugName: string = "frame";
   public exportCanvas: HTMLCanvasElement = createEl("canvas");
   public exportContext: CanvasRenderingContext2D = this.exportCanvas.getContext("2d", { willReadFrequently: true })!;
+
+  public wire(): void {
+    // Post Wiring
+    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    keys?.register("capture", (e) => this.captureFrame(e.altKey ? "monochrome" : ""), { phase: "keyup" });
+    keys?.register("stepFwd", () => this.moveFrame("forwards"), { phase: "keydown" });
+    keys?.register("stepBwd", () => this.moveFrame("backwards"), { phase: "keydown" });
+  }
 
   public async getFrame(display = "", time = this.media.state.currentTime, raw = false, min = 0, video = this.ctlr.pseudoVideo): Promise<{ canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } | { blob: Blob | false; url: string | false }> {
     if (video !== this.media.element) {

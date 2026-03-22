@@ -81,7 +81,7 @@ export class PlaysInlinePlug extends BasePlug<PlaysInline> {
 
   public wire() {
     // Ctlr Config Watchers
-    this.ctlr.config.watch("settings.playsInline", this.forwardPlaysInline, { signal: this.signal, immediate: true });
+    this.ctlr.config.watch("settings.playsInline", this.forwardPlaysInline, { signal: this.signal, immediate: "auto" });
   }
 
   protected forwardPlaysInline(value: boolean) {

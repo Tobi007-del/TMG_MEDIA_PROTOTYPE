@@ -1,14 +1,31 @@
 {
-  "name": "tmg_media_prototype",
+  "name": "tmg-media-player",
   "version": "1.0.0",
   "description": "> A feature-rich, Web video player implementation for [THE_MOVIE_GARDEN](https://tobi007-del.github.io/TMG.com/) initiative",
+  "author": "Oketade Oluwatobiloba <tobioketade007@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tobi007-del/tmg-media-player.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Tobi007-del/tmg-media-player/issues"
+  },
+  "homepage": "https://github.com/Tobi007-del/tmg-media-player#readme",
   "type": "module",
-  "main": "dist/tmg-player.js",
-  "module": "dist/tmg-player.mjs",
-  "types": "dist/tmg-player.d.ts",
-  "files": [
-    "dist"
-  ],
+  "main": "dist/tmg-media-player.global.js",
+  "module": "dist/tmg-media-player.js",
+  "browser": "dist/tmg-media-player.global.js",
+  "types": "dist/tmg-media-player.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/tmg-media-player.d.ts",
+      "import": "./dist/tmg-media-player.js",
+      "default": "./dist/tmg-media-player.global.js"
+    },
+    "./style.css": "./dist/tmg-media-player.css",
+    "./assets/*": "./dist/assets/*"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit --watch",
     "dev": "vite",
@@ -16,22 +33,23 @@
     "build:prod": "node build.mjs --prod",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE.git"
-  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE/issues"
-  },
-  "homepage": "https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE#readme",
   "devDependencies": {
     "esbuild": "^0.27.2",
     "esbuild-sass-plugin": "^3.6.0",
     "sass": "^1.94.1",
     "typescript": "^5.9.3",
     "vite": "^6.4.1"
+  },
+  "dependencies": {
+    "@t007/input": "^0.0.1",
+    "@t007/toast": "^0.0.1",
+    "@t007/utils": "^0.0.1",
+    "sia-reactor": "^0.0.4"
   }
 }

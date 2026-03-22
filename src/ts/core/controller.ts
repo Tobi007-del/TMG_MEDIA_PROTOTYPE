@@ -2,11 +2,11 @@ import { AUDIO_CONTEXT, type RuntimeState } from "../tools/runtime";
 import type { VideoBuild } from "../types/build";
 import type { CtlrMedia } from "../types/contract";
 import type { Volatile } from "../types/reactor";
-import { reactive, type Reactive, guardAllMethods, guardMethod, nuke, inert, intent, state, volatile } from "../tools/mixins";
+import { reactive, type Reactive, guardAllMethods, guardMethod, inert, intent, state, volatile } from "../tools/mixins";
 import { TechRegistry, PlugRegistry } from "./registry";
 import { TechConstructor, BaseTech, HTML5Tech } from "../media";
 import { PlugConstructor, ToastsPlug, type BasePlug as Plug } from "../plugs";
-import { setTimeout, requestAnimationFrame, getWindow, clamp, uncamelize, cloneMedia, getMediaReport, isSameURL, isSameSources, observeIntersection, observeResize, queryFullscreen, getSizeTier, createEl } from "../utils";
+import { nuke, setTimeout, requestAnimationFrame, getWindow, clamp, uncamelize, cloneMedia, getMediaReport, isSameURL, isSameSources, observeIntersection, observeResize, queryFullscreen, getSizeTier, createEl } from "../utils";
 
 interface LifePayload {
   readyState: number;

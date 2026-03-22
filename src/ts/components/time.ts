@@ -7,15 +7,15 @@ export type TimeConfig = undefined;
 export class Time extends BaseComponent<TimeConfig, ComponentState, HTMLButtonElement> {
   public static readonly componentName: string = "time";
   public static readonly isControl: boolean = true;
-  protected plug?: TimePlug;
+  protected get plug() {
+    return this.ctlr.getPlug<TimePlug>("time");
+  }
 
   public create() {
     return (this.element = createEl("button", { className: "tmg-video-current-time" }, { draggableControl: "", controlId: this.name }));
   }
 
   public wire(): void {
-    // Variables Assignments
-    this.plug = this.ctlr.getPlug<TimePlug>("time");
     // Event Listeners
     addSafeClicks(this.element, this.plug?.toggleMode, this.plug?.rotateFormat, { signal: this.signal });
     // Ctlr Media Listeners

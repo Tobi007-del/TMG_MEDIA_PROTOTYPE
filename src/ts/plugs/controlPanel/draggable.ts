@@ -6,14 +6,14 @@ export type DraggableModuleConfig = ("" | "big" | "wrapper")[] | boolean;
 
 export class DraggableModule extends BaseModule<DraggableModuleConfig> {
   public static readonly moduleName: string = "controlPanelDrag";
-  protected plug!: ControlPanelPlug; // only ctl panel plug will instantiate after all
   protected draggingEl: HTMLElement | null = null;
   protected replaced: { target: HTMLElement; child: HTMLElement } | null = null;
   protected safeTimeoutId = -1;
+  protected get plug(): ControlPanelPlug {
+    return this.ctlr.getPlug<ControlPanelPlug>("controlPanel")!; // `!`: only ctl panel plug will instantiate after all
+  }
 
   public wire() {
-    // Variables Assignment
-    this.plug = this.ctlr.getPlug<ControlPanelPlug>("controlPanel")!;
     // Ctlr Config Watchers
     this.ctlr.config.watch("settings.controlPanel.draggable", (value) => (this.config = value), { signal: this.signal }); // #COMPUTED: config can lose reference
     // ----------- Listeners

@@ -10,7 +10,7 @@ class T_M_G_Video_Controller {
   constructor(videoOptions) {
     this.video = videoOptions.video;
     this.setReadyState(0);
-    this.bindMethods();
+    this.bindAllMethods();
     this.CSSPropsCache = {};
     Object.entries(videoOptions).forEach(([k, v]) => (this[k] = v)); // merging the video build into the Video Player Instance
     videoOptions.tracks = this.tracks;
@@ -68,7 +68,7 @@ class T_M_G_Video_Controller {
     this.readyState === 1 && this.fire("tmgready", { initialized: true });
     this.fire("tmgreadystatechange", { readyState: this.readyState });
   }
-  bindMethods() {
+  bindAllMethods() {
     let proto = this;
     while (proto && proto !== Object.prototype) {
       for (const method of Object.getOwnPropertyNames(proto)) {
@@ -4050,8 +4050,8 @@ if (typeof window !== "undefined") {
     tracks: [],
     settings: { time: { start: 0, previews: false } },
   };
-  window.TMG_VIDEO_ALT_IMG_SRC ??= "/TMG_MEDIA_PROTOTYPE/assets/icons/movie-tape.png";
-  window.TMG_VIDEO_CSS_SRC ??= "/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2-video.css";
+  window.TMG_VIDEO_ALT_IMG_SRC ??= "/tmg-media-player/assets/icons/movie-tape.png";
+  window.TMG_VIDEO_CSS_SRC ??= "/tmg-media-player/prototype-2/prototype-2-video.css";
   window.T007_TOAST_JS_SRC ??= "/T007_TOOLS/T007_toast_library/T007_toast.js";
   tmg.loadResource(TMG_VIDEO_CSS_SRC);
   tmg.loadResource(T007_TOAST_JS_SRC, "script", { module: true });

@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[Live Demo](https://tmg-video-player.vercel.app) | [Prototype 1](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-1/prototype-1.html) | [Prototype 2](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2.html)
+[Live Demo](https://tmg-video-player.vercel.app) | [Prototype 1](https://tobi007-del.github.io/tmg-media-player/prototype-1/prototype-1.html) | [Prototype 2](https://tobi007-del.github.io/tmg-media-player/prototype-2/prototype-2.html)
 
 ---
 
@@ -60,10 +60,10 @@
 
 Try the player in action:
 
-- **[Main Demo](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/)** - Landing page with all prototypes
-- **[Prototype 1](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-1/prototype-1.html)** - Basic initial implementation
-- **[Prototype 2](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/prototype-2/prototype-2.html)** - Full Featured player
-- **[Library Comparison](https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/video-libs-test/index.html)** - Compare with other players
+- **[Main Demo](https://tobi007-del.github.io/tmg-media-player/)** - Landing page with all prototypes
+- **[Prototype 1](https://tobi007-del.github.io/tmg-media-player/prototype-1/prototype-1.html)** - Basic initial implementation
+- **[Prototype 2](https://tobi007-del.github.io/tmg-media-player/prototype-2/prototype-2.html)** - Full Featured player
+- **[Library Comparison](https://tobi007-del.github.io/tmg-media-player/libs-test/index.html)** - Compare with other players
 
 ### Key Features in Action
 
@@ -196,8 +196,8 @@ Try the player in action:
 1. **Clone the repository**:
 
 ```bash
-git clone https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE.git
-cd TMG_MEDIA_PROTOTYPE
+git clone https://github.com/Tobi007-del/tmg-media-player.git
+cd tmg-media-player
 ```
 
 2. **Serve locally** (choose one):
@@ -226,7 +226,7 @@ Open any of these URLs to see the player in action or just grab the files you ne
 - **Landing Page**: `http://localhost:8000/`
 - **Prototype 1**: `http://localhost:8000/prototype-1/prototype-1.html`
 - **Prototype 2**: `http://localhost:8000/prototype-2/prototype-2.html`
-- **Library Tests**: `http://localhost:8000/video-libs-test/index.html`
+- **Library Tests**: `http://localhost:8000/libs-test/index.html`
 
 ---
 
@@ -586,8 +586,8 @@ player.configure({
 
 ## Browser Support
 
-| Browser       | Version | Support Level      |
-| ------------- | ------- | ------------------ |
+| Browser       | Version | Support Level     |
+| ------------- | ------- | ----------------- |
 | Chrome        | 90+     | ✅ Full Support    |
 | Edge          | 90+     | ✅ Full Support    |
 | Firefox       | 88+     | ✅ Full Support    |
@@ -697,7 +697,7 @@ Contributions are welcome! Here's how you can help:
 
 ### Reporting Issues
 
-Found a bug? [Report it here](https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE/issues)
+Found a bug? [Report it here](https://github.com/Tobi007-del/tmg-media-player/issues)
 
 ---
 
@@ -873,17 +873,17 @@ Override CSS variables:
 
 ## Comparison with Other Players
 
-| Feature            | TMG Player | Plyr     | Video.js   | Shaka  |
-| ------------------ | ---------- | -------- | ---------- | ------ |
-| Dependencies       | 0          | 0        | 0          | 0      |
-| File Size          | ~150KB     | ~50KB    | ~250KB     | ~500KB |
-| Gesture Controls   | ✅         | ❌       | ❌         | ❌     |
-| Floating Player    | ✅         | ❌       | ❌         | ❌     |
-| Brightness Control | ✅         | ❌       | ❌         | ❌     |
-| Frame Stepping     | ✅         | ❌       | ❌         | ❌     |
-| Playlist Support   | ✅         | ❌       | ✅         | ❌     |
-| HLS/DASH           | ❌         | ❌       | ✅         | ✅     |
-| Customization      | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
+| Feature            | TMG Player | Plyr  | Video.js | Shaka  |
+| ------------------ | ---------- | ----- | -------- | ------ |
+| Dependencies       | 0          | 0     | 0        | 0      |
+| File Size          | ~150KB     | ~50KB | ~250KB   | ~500KB |
+| Gesture Controls   | ✅          | ❌     | ❌        | ❌      |
+| Floating Player    | ✅          | ❌     | ❌        | ❌      |
+| Brightness Control | ✅          | ❌     | ❌        | ❌      |
+| Frame Stepping     | ✅          | ❌     | ❌        | ❌      |
+| Playlist Support   | ✅          | ❌     | ✅        | ❌      |
+| HLS/DASH           | ❌          | ❌     | ✅        | ✅      |
+| Customization      | ⭐⭐⭐⭐⭐      | ⭐⭐⭐⭐  | ⭐⭐⭐⭐⭐    | ⭐⭐⭐    |
 
 ---
 
@@ -1000,8 +1000,8 @@ player.configure({
 
 ### Community
 
-- [GitHub Discussions](https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE/discussions) - Ask questions, share ideas
-- [GitHub Issues](https://github.com/Tobi007-del/TMG_MEDIA_PROTOTYPE/issues) - Report bugs, request features
+- [GitHub Discussions](https://github.com/Tobi007-del/tmg-media-player/discussions) - Ask questions, share ideas
+- [GitHub Issues](https://github.com/Tobi007-del/tmg-media-player/issues) - Report bugs, request features
 
 ---
 
@@ -1055,13 +1055,13 @@ player.configure({
 
 ## Project Stats
 
-![GitHub stars](https://img.shields.io/github/stars/Tobi007-del/TMG_MEDIA_PROTOTYPE?style=social)
-![GitHub forks](https://img.shields.io/github/forks/Tobi007-del/TMG_MEDIA_PROTOTYPE?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/Tobi007-del/TMG_MEDIA_PROTOTYPE?style=social)
+![GitHub stars](https://img.shields.io/github/stars/Tobi007-del/tmg-media-player?style=social)
+![GitHub forks](https://img.shields.io/github/forks/Tobi007-del/tmg-media-player?style=social)
+![GitHub watchers](https://img.shields.io/github/watchers/Tobi007-del/tmg-media-player?style=social)
 
-![GitHub last commit](https://img.shields.io/github/last-commit/Tobi007-del/TMG_MEDIA_PROTOTYPE)
-![GitHub issues](https://img.shields.io/github/issues/Tobi007-del/TMG_MEDIA_PROTOTYPE)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/Tobi007-del/TMG_MEDIA_PROTOTYPE)
+![GitHub last commit](https://img.shields.io/github/last-commit/Tobi007-del/tmg-media-player)
+![GitHub issues](https://img.shields.io/github/issues/Tobi007-del/tmg-media-player)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/Tobi007-del/tmg-media-player)
 
 ---
 
@@ -1113,7 +1113,7 @@ player.configure({
 
 If you find this project useful, please consider giving it a star! ⭐
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Tobi007-del/TMG_MEDIA_PROTOTYPE&type=Date)](https://star-history.com/#Tobi007-del/TMG_MEDIA_PROTOTYPE&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=Tobi007-del/tmg-media-player&type=Date)](https://star-history.com/#Tobi007-del/tmg-media-player&Date)
 
 ---
 

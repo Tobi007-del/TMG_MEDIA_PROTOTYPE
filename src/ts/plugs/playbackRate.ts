@@ -1,4 +1,4 @@
-import { BasePlug } from ".";
+import { BasePlug, type KeysPlug, type KeyMod } from ".";
 import type { REvent } from "../types/reactor";
 import { VideoBuild } from "../types/build";
 import type { OptRange } from "../types/generics";
@@ -13,10 +13,14 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
     // Ctlr Media Setters
     this.media.set("intent.playbackRate", (value) => clamp(this.config.min, value!, this.config.max), { signal: this.signal });
     // ---- Config Watchers
-    this.ctlr.config.watch("settings.playbackRate.value", this.forwardRate, { signal: this.signal, immediate: true });
+    this.ctlr.config.watch("settings.playbackRate.value", this.forwardRate, { signal: this.signal, immediate: "auto" });
     // ----------- Listeners
     this.ctlr.config.on("settings.playbackRate.min", this.handleMinChange, { signal: this.signal });
     this.ctlr.config.on("settings.playbackRate.max", this.handleMaxChange, { signal: this.signal });
+    // Post Wiring
+    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    keys?.register("playbackRateUp", this.handleKeyRateUp, { phase: "keydown" });
+    keys?.register("playbackRateDown", this.handleKeyRateDown, { phase: "keydown" });
   }
 
   protected forwardRate(value?: number): void {
@@ -29,6 +33,16 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
 
   protected handleMaxChange({ value: max }: REvent<VideoBuild, "settings.playbackRate.max">): void {
     if (this.config.value! > max) this.config.value = max;
+  }
+
+  protected handleKeyRateUp(_: KeyboardEvent, mod: KeyMod): void {
+    this.changeRate(this.ctlr.getPlug<KeysPlug>("keys")!.getModded("playbackRate", mod, this.config.skip));
+    // JS: this.notify("playbackrateup");
+  }
+
+  protected handleKeyRateDown(_: KeyboardEvent, mod: KeyMod): void {
+    this.changeRate(-this.ctlr.getPlug<KeysPlug>("keys")!.getModded("playbackRate", mod, this.config.skip));
+    // JS: this.notify("playbackratedown");
   }
 
   public rotateRate(dir: "forwards" | "backwards" = "forwards"): void {

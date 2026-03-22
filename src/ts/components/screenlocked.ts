@@ -6,7 +6,9 @@ export type ScreenLockedConfig = undefined;
 
 export class ScreenLocked extends BaseComponent<ScreenLockedConfig, ComponentState, HTMLButtonElement> {
   public static readonly componentName: string = "screenlocked";
-  protected plug?: LockedPlug;
+  protected get plug() {
+    return this.ctlr.getPlug<LockedPlug>("locked");
+  }
 
   public create() {
     return (this.element = createEl("button", {
@@ -20,8 +22,6 @@ export class ScreenLocked extends BaseComponent<ScreenLockedConfig, ComponentSta
   }
 
   public wire(): void {
-    // Variables Assignments
-    this.plug = this.ctlr.getPlug<LockedPlug>("locked");
     // Event Listeners
     this.el.addEventListener("click", this.handleClick, { signal: this.signal });
     // Plug Listeners

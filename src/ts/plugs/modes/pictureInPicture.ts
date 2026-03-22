@@ -1,4 +1,4 @@
-import { BaseModule, MediaPlug, OverlayPlug, SkeletonPlug } from "../";
+import { BaseModule, KeysPlug, MediaPlug, OverlayPlug, SkeletonPlug } from "../";
 import type { REvent } from "../../types/reactor";
 import type { CtlrMedia } from "../../types/contract";
 import type { VideoBuild } from "../../types/build";
@@ -95,7 +95,7 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
     this.signal.addEventListener("abort", observeMutation(this.floatingWindow!.document.documentElement, handleDOMMutation, { childList: true, subtree: true }), { once: true });
     this.floatingWindow!.addEventListener("resize", this.handleFloatingPlayerResize, { signal: this.signal });
     this.floatingWindow!.addEventListener("pagehide", this.handleFloatingPlayerClose, { signal: this.signal });
-    // JS: this.ctlr.setKeyEventListeners?.("add");
+    this.ctlr.getPlug<KeysPlug>("keys")?.setKeyEventListeners("add");
     this.media.state.pictureInPicture = true;
   }
 

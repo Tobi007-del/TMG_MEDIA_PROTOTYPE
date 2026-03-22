@@ -1,6 +1,6 @@
 import { Controller } from "./controller";
-import { guardAllMethods, type Reactive, nuke, reactive } from "../tools/mixins";
-import { isObj } from "../utils";
+import { guardAllMethods, type Reactive, reactive } from "../tools/mixins";
+import { nuke, isObj } from "../utils";
 
 // A lifecylce controlled by it's Controller
 // Try to use methods for most things so they can be customized when extended and also auto guarded

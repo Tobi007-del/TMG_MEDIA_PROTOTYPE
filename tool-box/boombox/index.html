@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nino's Boombox | TMG 3D Audio Player</title>
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/tool-box/boombox" />
+    <meta property="og:url" content="https://tobi007-del.github.io/tmg-media-player/tool-box/boombox" />
     <meta property="og:title" content="Nino's Boombox | TMG 3D Audio Player" />
     <meta property="og:description" content="A tactile, fully interactive 3D boombox for the web. Featuring lifelike spatial audio, physical acoustics, and real-time CSS bass vibrations." />
-    <meta property="og:image" content="https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/assets/boombox_hero_image.png" />
+    <meta property="og:image" content="https://tobi007-del.github.io/tmg-media-player/assets/images/boombox_hero_image.png" />
     <meta property="og:image:alt" content="A 3D interactive boombox floating in an ambient studio room" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:domain" content="tobi007-del.github.io/TMG_MEDIA_PROTOTYPE" />
-    <meta name="twitter:url" content="https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/tool-box/boombox" />
+    <meta name="twitter:domain" content="tobi007-del.github.io/tmg-media-player" />
+    <meta name="twitter:url" content="https://tobi007-del.github.io/tmg-media-player/tool-box/boombox" />
     <meta name="twitter:title" content="Nino's Boombox | TMG 3D Audio Player" />
     <meta name="twitter:description" content="A tactile, fully interactive 3D boombox for the web. Featuring lifelike spatial audio, physical acoustics, and real-time CSS bass vibrations." />
-    <meta name="twitter:image" content="https://tobi007-del.github.io/TMG_MEDIA_PROTOTYPE/assets/boombox_hero_image.png" />
+    <meta name="twitter:image" content="https://tobi007-del.github.io/tmg-media-player/assets/images/boombox_hero_image.png" />
     <meta name="twitter:label1" content="Engine" />
     <meta name="twitter:data1" content="3D Spatial Audio & Physics" />
     <meta name="twitter:label2" content="Interact" />
@@ -98,9 +98,9 @@
         box-shadow: 0 0 12px rgb(from var(--brand) r g b / 1);
       }
     </style>
-    <link rel="stylesheet" href="/TMG_MEDIA_PROTOTYPE/prototype-3/prototype-3-video.css" />
+    <link rel="stylesheet" href="/tmg-media-player/src/beta/prototype-3-video.css" />
     <link rel="stylesheet" href="index.css" />
-    <script src="/TMG_MEDIA_PROTOTYPE/prototype-3/prototype-3.js" defer></script>
+    <script src="/tmg-media-player/src/beta/prototype-3.js" defer></script>
     <script src="/T007_TOOLS/T007_input_library/T007_input.js" defer></script>
     <script type="module" src="/T007_TOOLS/T007_toast_library/T007_toast.js" defer></script>
     <script src="index.js" defer></script>
@@ -146,7 +146,7 @@
     </div>
     <script defer>
       window.addEventListener("load", () => {
-        const fileInput = createField({
+        const fileInput = field({
           type: "file",
           label: "Load Your Own Audio File",
           helperText: { info: "Make the experience yours! For best results, use a stereo audio file" },
@@ -174,8 +174,8 @@
             { option: "Custom Hue", value: "custom" },
           ],
           colors = options.slice(0, -1).map((opt) => opt.value),
-          colorField = createField({ type: "select", label: "Pick Your Own Color", value: "#e26e02", helperText: { info: "Play around with the colors too, might just brighten your mood :)" }, options }),
-          cColorField = createField({ type: "color", value: "#e26e02" }),
+          colorField = field({ type: "select", label: "Pick Your Own Color", value: "#e26e02", helperText: { info: "Play around with the colors too, might just brighten your mood :)" }, options }),
+          cColorField = field({ type: "color", value: "#e26e02" }),
           wrapper = document.createElement("div"),
           onColorChange = ({ target: { value: val } }) => {
             if (val === "custom") return cColorField.inputEl.click();

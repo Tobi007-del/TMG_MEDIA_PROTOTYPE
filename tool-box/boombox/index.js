@@ -24,9 +24,9 @@ class Boombox {
     return this.bbSens.overflow * this.state.transform.z; // Since OffsetWidth doesn't change with transform, we have to account for it
   }
   constructor() {
-    tmg.bindMethods(this);
+    tmg.bindAllMethods(this);
     this.state = reactive(structuredClone(bbState));
-    this.media = new Audio("/TMG_MEDIA_PROTOTYPE/assets/Subway-Surfers-Theme-Sound-Effect.mp3");
+    this.media = new Audio("/tmg-media-player/assets/Subway-Surfers-Theme-Sound-Effect.mp3");
     this.media.loop = true;
     this.bbSens = { translate: 1.2, rotate: 0.6, zoom: 2.4, overflow: 70 }; // S.I.A. configuration
     this.eS = { lastX: 0, lastY: 0, isZSliding: false, auxDown: false }; // event store

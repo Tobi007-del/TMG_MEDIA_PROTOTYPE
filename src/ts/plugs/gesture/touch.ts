@@ -159,9 +159,8 @@ export class TouchModule extends BaseModule<TouchConfig> {
   }
 
   protected applyRange(key: "volume" | "brightness", percent: number, sign: string): void {
-    const plug = this.ctlr.getPlug<VolumePlug>(key),
-      range = this.ctlr.settings[key],
+    const range = this.ctlr.settings[key],
       value = sign === "+" ? range.value! + percent * range.max : range.value! - percent * range.max;
-    plug?.handleSliderInput(clamp(0, Math.round(value), range.max));
+    this.ctlr.getPlug<VolumePlug>(key)?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }
 }

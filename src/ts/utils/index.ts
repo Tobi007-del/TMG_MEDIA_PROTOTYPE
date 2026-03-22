@@ -1,6 +1,5 @@
 // DOM & UI
 export * from "./dom";
-export * from "./quirks";
 // Media
 export * from "./media";
 export * from "./time";
@@ -15,3 +14,7 @@ export * from "./browser";
 export * from "./keys";
 // Utilities
 export * from "./fn";
+// Quirks
+export * from "./quirks/ripple";
+export * from "./quirks/scroll";
+export * from "./quirks/arrowFocusNav";

@@ -1,3 +1,4 @@
+import { uid as _uid } from "@t007/utils";
 import { LUID_KEY } from "../consts/generics";
 import type { TitleCase, CamelCase, NoCamelCase } from "../types/str";
 
@@ -15,12 +16,11 @@ export function uncamelize<T extends string, S extends string = " ">(str: T, sep
 }
 
 // Generation
-export function uid(prefix = "tmg_"): string {
-  return prefix + Date.now().toString(36) + "_" + performance.now().toString(36).replace(".", "") + "_" + Math.random().toString(36).slice(2);
-}
-export function luid(prefix = "tmg_local_"): string {
-  let id = localStorage.getItem(LUID_KEY);
-  return (!id && localStorage.setItem(LUID_KEY, (id = uid(prefix))), id || "");
+export const uid = (prefix = "tmg_") => _uid(prefix);
+
+export function luid(key = LUID_KEY, prefix = "tmg_local_"): string {
+  let id = localStorage.getItem(key);
+  return (!id && localStorage.setItem(key, (id = uid(prefix))), id || "");
 }
 
 // Checkers

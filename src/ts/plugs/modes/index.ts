@@ -1,5 +1,5 @@
 import { Controller } from "../../core/controller";
-import { BasePlug } from "../";
+import { BasePlug, type KeysPlug } from "../";
 import { FullscreenModule, type FullscreenModuleConfig } from "./fullscreen";
 import { TheaterConfig, TheaterModule } from "./theater";
 import { PictureInPictureModule, type PictureInPictureModuleConfig } from "./pictureInPicture";
@@ -37,6 +37,11 @@ export class ModesPlug extends BasePlug<Modes> {
     this.theater.wire();
     this.pip.wire();
     this.miniplayer.wire();
+    // Post Wiring
+    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    keys?.register("pictureInPicture", () => (this.media.intent.pictureInPicture = !this.media.state.pictureInPicture), { phase: "keyup" });
+    keys?.register("theater", () => !this.ctlr.isUIActive("fullscreen") && !this.ctlr.isUIActive("miniplayer") && !this.ctlr.isUIActive("floatingPlayer") && (this.media.intent.theater = !this.media.state.theater), { phase: "keyup" });
+    keys?.register("fullscreen", () => (this.media.intent.fullscreen = !this.media.state.fullscreen), { phase: "keyup" });
   }
 
   protected override onDestroy(): void {

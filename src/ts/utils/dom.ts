@@ -1,74 +1,21 @@
-import { isSameURL } from ".";
-
 // Types
-export type Dataset = Record<string, string | number>;
-export type Style = Partial<CSSStyleDeclaration>;
 type Direction = "x" | "y";
 type Position = "before" | "after" | "at";
-type ResourceType = "style" | "script" | string;
 type SafeClickEl = HTMLElement & {
   _clickHandler?: (e: MouseEvent) => void;
   _dblClickHandler?: (e: MouseEvent) => void;
   _clickTimeoutId?: ReturnType<typeof setTimeout>;
 };
-type LoadResourceOptions = Partial<{
-  module: boolean;
-  media: string;
-  crossOrigin: "anonymous" | "use-credentials" | string | null;
-  integrity: string;
-  referrerPolicy: "no-referrer" | "origin" | "strict-origin-when-cross-origin" | string;
-  nonce: string;
-  fetchPriority: "high" | "low" | "auto";
-  attempts: number;
-  retryKey: boolean | string; // retry token
-}>;
 
 // Element Factory
-export function createEl<K extends keyof HTMLElementTagNameMap>(tag: K, props?: Partial<HTMLElementTagNameMap[K]>, dataset?: Dataset, styles?: Style): HTMLElementTagNameMap[K];
-export function createEl(tag: string, props?: Partial<HTMLElement>, dataset?: Dataset, styles?: Style): HTMLElement | null;
-export function createEl(tag: string, props: Record<string, unknown> = {}, dataset: Dataset = {}, styles: Style = {}): HTMLElement | null {
-  return assignEl(tag ? document?.createElement(tag) : undefined, props, dataset, styles) ?? null;
-}
-
-export function assignEl<K extends keyof HTMLElementTagNameMap>(el?: HTMLElementTagNameMap[K], props?: Partial<HTMLElementTagNameMap[K]>, dataset?: Dataset, styles?: Style): void;
-export function assignEl(el?: HTMLElement, props?: Partial<HTMLElement>, dataset?: Dataset, styles?: Style): void;
-export function assignEl(el?: HTMLElement, props: Record<string, unknown> = {}, dataset: Dataset = {}, styles: Style = {}): void {
-  if (!el) return;
-  for (const k of Object.keys(props)) if (props[k] !== undefined) (el as unknown as Record<string, unknown>)[k] = props[k];
-  for (const k of Object.keys(dataset)) if (dataset[k] !== undefined) (el.dataset as DOMStringMap)[k] = String(dataset[k]);
-  for (const k of Object.keys(styles)) if (styles[k as keyof Style] !== undefined) (el.style as unknown as Record<string, unknown>)[k] = styles[k as keyof Style];
-}
+export { type Dataset, type Style, createEl, assignEl } from "@t007/utils";
 
 export function getWindow(el?: any): (Window & typeof globalThis) | undefined {
   return (el instanceof Window ? el : el instanceof Document ? el?.defaultView : el?.ownerDocument?.defaultView) ?? undefined;
 }
 
 // Resource Loading
-export function loadResource(src: string, type: ResourceType = "style", { module, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, attempts = 3, retryKey = false }: LoadResourceOptions = {}, w = window): Promise<HTMLElement | void> {
-  ((w.t007 ??= {} as any), (w.t007._resourceCache ??= {}));
-  if (w.t007._resourceCache[src]) return w.t007._resourceCache[src]; // set crossorigin on (links|scripts) if provided due to document.(styleSheets|scripts)
-  const existing = type === "script" ? Array.prototype.find.call(w.document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.find.call(w.document.styleSheets, (s) => isSameURL((s as CSSStyleSheet).href, src)) : null;
-  if (existing) return (w.t007._resourceCache[src] = Promise.resolve(existing));
-  w.t007._resourceCache[src] = new Promise<HTMLElement | void>((resolve, reject) => {
-    (function tryLoad(remaining: number, el?: HTMLElement) {
-      const onerror = () => {
-        el?.remove?.(); // Remove failed element before retrying
-        if (remaining > 1) {
-          setTimeout(tryLoad, 1000, remaining - 1);
-          console.warn(`Retrying ${type} load (${attempts - remaining + 1}): ${src}...`);
-        } else {
-          delete w.t007._resourceCache[src]; // Final fail: clear cache so user can manually retry
-          reject(new Error(`${type} load failed after ${attempts} attempts: ${src}`));
-        }
-      };
-      const url = retryKey && remaining < attempts ? `${src}${src.includes("?") ? "&" : "?"}_${retryKey}=${Date.now()}` : src;
-      if (type === "script") w.document.body.append((el = createEl("script", { src: url, type: module ? "module" : "text/javascript", crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || ""));
-      else if (type === "style") w.document.head.append((el = createEl("link", { rel: "stylesheet", href: url, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || ""));
-      else reject(new Error(`Unsupported resource type: ${type}`));
-    })(attempts);
-  });
-  return w.t007._resourceCache[src];
-}
+export { loadResource } from "@t007/utils";
 
 // Viewport Checks
 export function inDocView(el: Element, axis: "x" | "y" = "y"): boolean {

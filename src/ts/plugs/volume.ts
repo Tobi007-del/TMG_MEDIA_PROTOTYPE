@@ -1,4 +1,4 @@
-import { BasePlug } from ".";
+import { BasePlug, type KeysPlug, type KeyMod } from ".";
 import type { REvent } from "../types/reactor";
 import type { VideoBuild } from "../types/build";
 import type { CtlrMedia } from "../types/contract";
@@ -39,8 +39,8 @@ export class VolumePlug extends BasePlug<Volume> {
     // ----------- Setters
     this.ctlr.config.set("settings.volume.value", (value) => clamp(this.config.min, value, this.config.max), { signal: this.signal });
     // ----------- Watchers
-    this.ctlr.config.watch("settings.volume.value", this.forwardVolume, { signal: this.signal, immediate: true });
-    this.ctlr.config.watch("settings.volume.muted", this.forwardMuted, { signal: this.signal, immediate: true });
+    this.ctlr.config.watch("settings.volume.value", this.forwardVolume, { signal: this.signal, immediate: "auto" });
+    this.ctlr.config.watch("settings.volume.muted", this.forwardMuted, { signal: this.signal, immediate: "auto" });
     // ---- Media Listeners
     this.media.on("intent.volume", this.handleVolumeIntent, { capture: true, signal: this.signal });
     this.media.on("intent.muted", this.handleMutedIntent, { capture: true, signal: this.signal });
@@ -49,6 +49,10 @@ export class VolumePlug extends BasePlug<Volume> {
     this.ctlr.config.on("settings.volume.max", this.handleMax, { signal: this.signal });
     // Post Wiring
     this.media.tech.features.volume = true;
+    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    keys?.register("mute", this.handleKeyMute, { phase: "keyup" });
+    keys?.register("volumeUp", this.handleKeyVolumeUp, { phase: "keydown" });
+    keys?.register("volumeDown", this.handleKeyVolumeDown, { phase: "keydown" });
   }
 
   protected forwardVolume(value: number): void {
@@ -142,9 +146,7 @@ export class VolumePlug extends BasePlug<Volume> {
   }
 
   public toggleMute(option?: "auto"): void {
-    if (option === "auto" && this.shouldSetLastVolume && !this.lastVolume) {
-      this.lastVolume = this.config.skip;
-    }
+    if (option === "auto" && this.shouldSetLastVolume && !this.lastVolume) this.lastVolume = this.config.skip;
     this.config.muted = !this.config.muted;
   }
 
@@ -161,6 +163,19 @@ export class VolumePlug extends BasePlug<Volume> {
       // this.ctlr.notify("volumeup");
     }
     this.shouldSetLastVolume ? (this.lastVolume = volume) : (this.config.value = volume);
+  }
+
+  protected handleKeyMute(): void {
+    this.toggleMute("auto");
+    // JS: this.ctlr.config.stall(() => (this.config.value === 0 ? this.notify("volumemuted") : this.notify("volumeup")));
+  }
+
+  protected handleKeyVolumeUp(_: KeyboardEvent, mod: KeyMod): void {
+    this.changeVolume(this.ctlr.getPlug<KeysPlug>("keys")!.getModded("volume", mod, this.config.skip));
+  }
+
+  protected handleKeyVolumeDown(_: KeyboardEvent, mod: KeyMod): void {
+    this.changeVolume(-this.ctlr.getPlug<KeysPlug>("keys")!.getModded("volume", mod, this.config.skip));
   }
 
   public handleSliderInput(volume: number): void {

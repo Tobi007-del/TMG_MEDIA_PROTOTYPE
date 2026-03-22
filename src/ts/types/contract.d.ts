@@ -1,6 +1,6 @@
 import type { Controller } from "./controller";
 import { Inert, Intent, State, Volatile } from "./reactor";
-import { Sources, Src, SrcObject, Tracks } from "../plugs";
+import { Sources, Src, SrcObject, Tracks, ObjectFit } from "../plugs";
 import { BaseTech } from "../media";
 
 export interface MediaContract {
@@ -67,7 +67,7 @@ export interface MediaState {
   sources: Sources; // HTML courtesy
   tracks: Tracks; // HTML courtesy
   // --- Misc ---
-  objectFit: "fill" | "contain" | "cover" | "none" | "scale-down" | string;
+  objectFit: ObjectFit;
   // [key: string]: any; // Allow for plugins to add custom contract properties
 }
 
