@@ -26,7 +26,7 @@ class Boombox {
   constructor() {
     tmg.bindAllMethods(this);
     this.state = reactive(structuredClone(bbState));
-    this.media = new Audio("/tmg-media-player/assets/Subway-Surfers-Theme-Sound-Effect.mp3");
+    this.media = new Audio("/tmg-media-player/assets/media/Subway-Surfers-Theme-Sound-Effect.mp3");
     this.media.loop = true;
     this.bbSens = { translate: 1.2, rotate: 0.6, zoom: 2.4, overflow: 70 }; // S.I.A. configuration
     this.eS = { lastX: 0, lastY: 0, isZSliding: false, auxDown: false }; // event store
@@ -161,7 +161,8 @@ class Boombox {
     if (value <= this.state.audio.volume.value) this.state.audio.volume.value = value;
     this.volumeSlider.max = value;
   }
-  onMuted(muted) {
+  onMuted(muted, { target: { oldValue } }) {
+    if (muted === oldValue) return TERMINATOR;
     if (muted) {
       this.lastVolume = this.state.audio.volume.value;
       this.state.audio.volume.value = 0;

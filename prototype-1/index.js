@@ -359,7 +359,7 @@ videos.forEach((video, i) => {
       const previewImgMin = previewImg.offsetWidth / 2 / rect.width;
       const previewImgPercent = Math.min(Math.max(percent, previewImgMin), 1 - previewImgMin);
       const previewImgNumber = Math.max(1, Math.floor((percent * video.duration) / 10));
-      const previewImgSrc = `../assets/previewImgs/preview${previewImgNumber}.jpg`;
+      const previewImgSrc = `../assets/images/previews/preview${previewImgNumber}.jpg`;
       previewImg.src = previewImgSrc;
       timelineContainer.style.setProperty("--preview-position", percent);
       timelineContainer.style.setProperty("--preview-img-position", previewImgPercent);

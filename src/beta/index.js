@@ -4119,11 +4119,11 @@ if (typeof window !== "undefined") {
     settings: { time: { start: 0, previews: false } },
   }; // for a playlist
   window.TMG_VIDEO_ALT_IMG_SRC ??= "/tmg-media-player/assets/icons/movie-tape.png";
-  window.TMG_VIDEO_CSS_SRC ??= "/tmg-media-player/src/beta/prototype-3-video.css";
+  window.TMG_VIDEO_CSS_SRC ??= "/tmg-media-player/src/beta/index-video.css";
   window.T007_TOAST_JS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/toast@latest`;
-  window.T007_TOAST_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/toast@latest/dist/index.css`;
+  window.T007_TOAST_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/toast@latest/dist/index.min.css`;
   window.T007_INPUT_JS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/input@latest`;
-  window.T007_INPUT_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/input@latest/dist/index.css`;
+  window.T007_INPUT_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/input@latest/dist/index.min.css`;
   (tmg.loadResource(TMG_VIDEO_CSS_SRC), tmg.loadResource(T007_TOAST_JS_SRC, "script", { module: true }), tmg.loadResource(T007_INPUT_JS_SRC, "script"));
   tmg.init();
   console.log("%cTMG Media Player Available", "color: darkturquoise");

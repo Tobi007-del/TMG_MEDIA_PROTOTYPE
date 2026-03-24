@@ -34,9 +34,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
+    "dist"
   ],
   "keywords": [],
   "devDependencies": {
@@ -47,9 +45,10 @@
     "vite": "^6.4.1"
   },
   "dependencies": {
-    "@t007/input": "^0.0.1",
-    "@t007/toast": "^0.0.1",
-    "@t007/utils": "^0.0.1",
-    "sia-reactor": "^0.0.4"
+    "@t007/dialog": "^0.0.6",
+    "@t007/input": "^0.0.6",
+    "@t007/toast": "^0.0.6",
+    "@t007/utils": "^0.0.6",
+    "sia-reactor": "^0.0.7"
   }
 }

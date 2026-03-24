@@ -1,7 +1,7 @@
 import "./css/index.scss";
 import "./ts/types/global.d.ts";
-import { loadResource } from "./ts/utils/dom";
 import { init } from "./ts/tools/runtime";
+import { loadResource } from "./ts/utils/dom";
 
 export * from "./api";
 

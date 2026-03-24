@@ -6,7 +6,7 @@
 
 ## The Project
 
-TMG is a TypeScript video player replacing beta: `prototype-3.js`. The architecture is **S.I.A. (State & Intent Architecture)** - a plug-based, reactive, infinitely extensible core. Goal is a paradigm shift, not an MVP. Think before coding.
+TMG is a TypeScript video player replacing beta: `src/beta/index.js`. The architecture is **S.I.A. (State & Intent Architecture)** - a plug-based, reactive, infinitely extensible core. Goal is a paradigm shift, not an MVP. Think before coding.
 
 ---
 

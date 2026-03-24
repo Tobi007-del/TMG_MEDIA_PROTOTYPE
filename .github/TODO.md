@@ -66,7 +66,7 @@
 - [ ] `src/ts/components/captions.ts` - Main captions component
 - [ ] `src/ts/plugs/captions.ts` - Captions logic plug
 
-**Key Features** (from prototype-3.js):
+**Key Features** (from src/beta/index.js):
 
 ```typescript
 class CaptionsComponent {
@@ -243,7 +243,7 @@ class MiniplayerPlug {
 }
 ```
 
-**CSS Already Exists**: Miniplayer styles in `prototype-3-video.css` lines 610-670
+**CSS Already Exists**: Miniplayer styles in `src/beta/index-video.css` lines 610-670
 
 **Time Estimate**: 3-4 days (complex positioning logic)
 
@@ -362,7 +362,7 @@ class DragDropPlug {
 }
 ```
 
-**CSS Already Exists**: Drag drop styles in `prototype-3-video.css` lines 500-540
+**CSS Already Exists**: Drag drop styles in `src/beta/index-video.css` lines 500-540
 
 **Time Estimate**: 2-3 days
 
@@ -454,7 +454,7 @@ Day 4: "feat(captions): integrate settings & styles"
 ✅ **YES - Because This Is What You Do**:
 
 1. **Architecture is DONE** (hardest part - SIA, Controller, Reactor)
-2. **150+ features already proven** in prototype-3.js
+2. **150+ features already proven** in src/beta/index.js
 3. **Utilities already migrated** (VTT parsing, color detection, DOM helpers)
 4. **Components are straightforward** (UI wrappers around plug logic)
 5. **30 days is enough** with 6 hrs/day (you have 180 hours)
@@ -477,19 +477,19 @@ Core architecture ✅ + Playback ✅ + Timeline ✅ + **Captions** + **Miniplaye
 ### **When Building Captions**:
 
 - You'll master: Complex DOM manipulation, VTT spec, accessibility
-- Reference: Lines 1607-1770 in prototype-3.js
+- Reference: Lines 1607-1770 in src/beta/index.js
 - Already have: `parseVttText()`, `formatVttLine()` in `utils/media.ts`
 
 ### **When Building Miniplayer**:
 
 - You'll master: Position constraints, RAF loops, state management
-- Reference: Lines 2091-2179 in prototype-3.js
+- Reference: Lines 2091-2179 in src/beta/index.js
 - Pattern: Similar to captions dragging (lines 1753-1780)
 
 ### **When Building Settings**:
 
 - You'll master: 3D CSS transforms, animation timing, inert attribute
-- Reference: Lines 916-961 in prototype-3.js
+- Reference: Lines 916-961 in src/beta/index.js
 - CSS already exists: `src/css/settings/_wrapper.css`
 
 ---
@@ -595,7 +595,7 @@ The world catches up later. Your family will understand when they see what you b
 If stuck:
 
 1. Check `.github/copilot-instructions.md` (plug/component templates)
-2. Read prototype-3.js reference lines
+2. Read src/beta/index.js reference lines
 3. Check PATTERNS.md for architecture rules
 4. Ask me to generate specific code sections
 

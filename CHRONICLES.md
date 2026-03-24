@@ -173,6 +173,34 @@ I also added propagation, but I’m taking it as it’s for those that are doing
 
 ---
 
+### Semantic Structuring: Plain State vs. Intentful State
+
+You are not forced to use Intents. If you are building a simple application where data updates are immediate and undisputed, the S.I.A. engine functions perfectly as a hyper-fast, standard state manager. You can strictly use plain state and ignore the complexities of the rejection event loop.
+
+However, the moment you introduce Intents into your architecture, **semantics matter**. 
+
+If you use an `intent` object to capture user requests, your `state` object must act strictly as the factual mirror to that `intent`. Because `state` is now semantically locked to your intents, you must separate your other data. 
+
+Do not pollute your `state` object with data that doesn't require an intent. Instead, categorize them semantically:
+- **`intent`**: For asynchronous requests or delayed validations (e.g., `intent.playing = true`).
+- **`state`**: The factual mirror of granted intents (e.g., `state.playing = true`).
+- **`settings` / `config`**: For immediate, undisputed user preferences (e.g., `settings.playbackRate = 2`).
+- **`status`**: For read-only system facts (e.g., `status.network = "offline"`).
+
+```javascript
+import { reactive, intent } from 'sia-reactor';
+
+// A perfectly structured S.I.A. Data DOM
+const player = reactive({
+  intent: intent({ playing: false, fullscreen: false }), // Can be rejected
+  state: { playing: false, fullscreen: false },          // The factual mirror
+  settings: { volume: 50, theme: "dark" },               // Immediate, plain state
+  status: { buffering: false, duration: 120 }            // System facts
+});
+```
+
+---
+
 ### A Brief Synopsis: Summarizing Concepts
 
 So, in summary, I added an event loop to be ready for anything later because when you meet the right people, you have to be ready for anything.

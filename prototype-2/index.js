@@ -4051,8 +4051,8 @@ if (typeof window !== "undefined") {
     settings: { time: { start: 0, previews: false } },
   };
   window.TMG_VIDEO_ALT_IMG_SRC ??= "/tmg-media-player/assets/icons/movie-tape.png";
-  window.TMG_VIDEO_CSS_SRC ??= "/tmg-media-player/prototype-2/prototype-2-video.css";
-  window.T007_TOAST_JS_SRC ??= "/T007_TOOLS/T007_toast_library/T007_toast.js";
+  window.TMG_VIDEO_CSS_SRC ??= "/tmg-media-player/prototype-2/index-video.css";
+  window.T007_TOAST_JS_SRC ??= "https://cdn.jsdelivr.net/npm/@t007/toast@latest";
   tmg.loadResource(TMG_VIDEO_CSS_SRC);
   tmg.loadResource(T007_TOAST_JS_SRC, "script", { module: true });
   tmg.init();
