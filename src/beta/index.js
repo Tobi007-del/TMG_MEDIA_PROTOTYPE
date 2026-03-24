@@ -2449,11 +2449,11 @@ class tmg_Video_Controller {
     this.floatingWindow.document.documentElement.style.cssText = `height:100%; background:url(${this.config.media.profile}) center / 32px no-repeat, url(${this.video.poster}) center / ${this.settings.css.bgSafeObjectFit} no-repeat, black;`;
     await tmg.breath(this.floatingWindow); // paint the bg incase the stylesheet logic takes a while
     const cssTexts = [],
-      whitelist = Object.keys(t007._resourceCache);
+      parse = (src) => ("string" === typeof src ? src : null),
+      whitelist = [parse(window.T007_TOAST_CSS_SRC), parse(window.T007_INPUT_CSS_SRC), parse(window.TMG_VIDEO_CSS_SRC) ?? "/tmg-media-player/src/beta/index-video.css"].filter(Boolean); // video CSS too experimental; needs a link :)
     for (const sheet of document.styleSheets) {
       try {
-        if (whitelist.some((href) => tmg.isSameURL(href, sheet.href))) continue;
-        for (const cssRule of sheet.cssRules) if (cssRule.selectorText?.includes(":root") || cssRule.cssText.includes("tmg") || cssRule.cssText.includes("t007")) cssTexts.push(cssRule.cssText);
+        if (!whitelist.some((src) => tmg.isSameURL(src, sheet.href))) for (const cssRule of sheet.cssRules) if (cssRule.selectorText?.includes(":root") || cssRule.cssText.includes("tmg") || cssRule.cssText.includes("t007")) cssTexts.push(cssRule.cssText);
       } catch {
         continue; // add extensible whitelisting and blacklisting hrefs later
       }

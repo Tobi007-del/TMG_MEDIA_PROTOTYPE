@@ -74,14 +74,14 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
     this.inFloatingPlayer = true;
     this.floatingWindow!.document.documentElement.style.cssText = `height:100%; background:url(${this.ctlr.config.media?.profile}) center / 32px no-repeat, url(${this.media.state.poster}) center / ${this.ctlr.settings.css.bgSafeObjectFit} no-repeat, black;`;
     await breath(this.floatingWindow! as Window & typeof globalThis);
-    const cssTexts: string[] = [],
-      whitelist = Object.keys(window.t007?._resourceCache ?? {}).concat(this.whitelist);
+    const cssTexts = [],
+      parse = (src: string) => ("string" === typeof src ? src : null),
+      whitelist = this.whitelist.concat([parse(window.T007_TOAST_CSS_SRC!), parse(window.T007_INPUT_CSS_SRC!), parse(window.TMG_VIDEO_CSS_SRC!) ?? "https://cdn.jsdelivr.net/npm/tmg-media-player@latest/dist/index.min.css"].filter(Boolean) as string[]); // video CSS too experimental; needs a link :)
     for (const sheet of document.styleSheets) {
       try {
-        if (whitelist.concat(this.blacklist).some((href) => isSameURL(href, sheet.href))) continue;
-        for (const cssRule of sheet.cssRules) if ((cssRule as CSSStyleRule).selectorText?.includes(":root") || cssRule.cssText.includes("tmg") || cssRule.cssText.includes("t007")) cssTexts.push(cssRule.cssText);
+        if (!whitelist.some((src) => isSameURL(src, sheet.href))) for (const cssRule of sheet.cssRules) if (((cssRule as CSSStyleRule).selectorText?.includes(":root")) || cssRule.cssText.includes("tmg") || cssRule.cssText.includes("t007")) cssTexts.push(cssRule.cssText);
       } catch {
-        continue;
+        continue; // add extensible whitelisting and blacklisting hrefs later
       }
     }
     this.floatingWindow!.document.head.append(createEl("style", { textContent: cssTexts.join("\n") }));
