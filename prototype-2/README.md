@@ -1034,7 +1034,7 @@ player.configure({
 
 ## Credits
 
-### Developer
+### Author
 
 - **Tobi007-del** - [GitHub](https://github.com/Tobi007-del)
 
@@ -1113,7 +1113,7 @@ player.configure({
 
 If you find this project useful, please consider giving it a star! ⭐
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Tobi007-del/tmg-media-player&type=Date)](https://star-history.com/#Tobi007-del/tmg-media-player&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=Tobi007-del/tmg-media-player&type=Date)](https://github.com/Tobi007-del/tmg-media-player)
 
 ---
 

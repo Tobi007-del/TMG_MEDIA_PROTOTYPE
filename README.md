@@ -27,4 +27,8 @@ The next generation of **TMG Media Player** is actively in development. We are s
 
 - Architect & Developer - [Oketade Oluwatobiloba (Tobi007-del)](https://github.com/Tobi007-del)
 
+---
+
 **Made with ❤️ for THE_MOVIE_GARDEN initiative**
+
+**[⬆ Back to Top](#tmg-media-player)**

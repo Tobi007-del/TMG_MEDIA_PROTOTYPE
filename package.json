@@ -1,7 +1,7 @@
 {
   "name": "tmg-media-player",
   "version": "1.0.0",
-  "description": "> A feature-rich, Web video player implementation for [THE_MOVIE_GARDEN](https://tobi007-del.github.io/TMG.com/) initiative",
+  "description": "A feature-rich, Web media player implementation for The Movie Garden initiative",
   "author": "Oketade Oluwatobiloba <tobioketade007@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -48,7 +48,7 @@
     "@t007/dialog": "^0.0.6",
     "@t007/input": "^0.0.6",
     "@t007/toast": "^0.0.6",
-    "@t007/utils": "^0.0.6",
+    "@t007/utils": "^0.0.7",
     "sia-reactor": "^0.0.7"
   }
 }
