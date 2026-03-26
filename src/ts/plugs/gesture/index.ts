@@ -1,8 +1,9 @@
 import { Controller } from "../../core/controller";
 import { BasePlug } from "..";
-import { WheelModule, type WheelConfig } from "./wheel";
-import { TouchModule, type TouchConfig } from "./touch";
-import { GeneralModule, type GeneralConfig } from "./general";
+import type { DeepPartial } from "../../types/obj";
+import { WheelModule, WHEEL_BUILD, type WheelConfig } from "./wheel";
+import { TouchModule, TOUCH_BUILD, type TouchConfig } from "./touch";
+import { GeneralModule, GENERAL_BUILD, type GeneralConfig } from "./general";
 export * from "./general";
 export * from "./touch";
 export * from "./wheel";
@@ -38,3 +39,9 @@ export class GesturePlug extends BasePlug<Gesture> {
     this.touch?.destroy();
   }
 }
+
+export const GESTURE_BUILD: DeepPartial<Gesture> = {
+  ...GENERAL_BUILD,
+  touch: TOUCH_BUILD,
+  wheel: WHEEL_BUILD,
+};

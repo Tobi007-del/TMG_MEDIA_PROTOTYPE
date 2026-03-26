@@ -1,9 +1,8 @@
 import { Controller } from "../core/controller";
 import { BasePlug } from ".";
-import type { VideoBuild } from "../types/build";
+import type { CtlrConfig } from "../types/config";
 import type { REvent } from "../types/reactor";
-import { type Reactive } from "../tools/mixins";
-import { setTimeout, IS_MOBILE } from "../utils";
+import { type Reactive, setTimeout, IS_MOBILE } from "../utils";
 
 export interface Overlay {
   delay: number;
@@ -31,11 +30,11 @@ export class OverlayPlug extends BasePlug<Overlay, OverlayState> {
     this.ctlr.config.on("settings.overlay.behavior", this.handleBehavior, { signal: this.signal, immediate: true });
   }
 
-  protected handleCurtain({ value }: REvent<VideoBuild, "settings.overlay.curtain">): void {
+  protected handleCurtain({ value }: REvent<CtlrConfig, "settings.overlay.curtain">): void {
     this.ctlr.videoContainer.dataset.curtain = value;
   }
 
-  protected handleBehavior({ value }: REvent<VideoBuild, "settings.overlay.behavior">): void {
+  protected handleBehavior({ value }: REvent<CtlrConfig, "settings.overlay.behavior">): void {
     value === "persistent" && this.show();
     value === "hidden" && this.remove("force");
   }
@@ -67,3 +66,5 @@ export class OverlayPlug extends BasePlug<Overlay, OverlayState> {
     }
   }
 }
+
+export const OVERLAY_BUILD: Partial<Overlay> = { delay: 3000, behavior: "strict" };

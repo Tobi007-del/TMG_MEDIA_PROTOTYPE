@@ -1,12 +1,12 @@
 import { FN_KEY } from "../consts/generics";
 import { uid } from ".";
 
-// ============ Timer Utilities ============
-
+// ============ Timer Helpers ============
+// 3rd & 4th param are consumed if signal and window are used respectively
 export function setTimeout(handler: TimerHandler, timeout?: number, ...args: any[]) {
   const sig = args[0] instanceof AbortSignal ? args.shift() : undefined;
   if (sig?.aborted) return -1;
-  const w = args[0] instanceof Window ? args.shift() : window;
+  const w: Window = args[0] instanceof Window ? args.shift() : window;
   if (!sig) return w.setTimeout(handler, timeout, ...args);
   const id = w.setTimeout(() => (sig.removeEventListener("abort", kill), typeof handler === "string" ? new Function(handler) : handler(...args)), timeout),
     kill = () => w.clearTimeout(id);
@@ -16,7 +16,7 @@ export function setTimeout(handler: TimerHandler, timeout?: number, ...args: any
 export function setInterval(handler: TimerHandler, timeout?: number, ...args: any[]) {
   const sig = args[0] instanceof AbortSignal ? args.shift() : undefined;
   if (sig?.aborted) return -1;
-  const w = args[0] instanceof Window ? args.shift() : window,
+  const w: Window = args[0] instanceof Window ? args.shift() : window,
     id = w.setInterval(handler, timeout, ...args);
   return (sig?.addEventListener("abort", () => w.clearInterval(id), { once: true }), id);
 }
@@ -29,7 +29,7 @@ export function requestAnimationFrame(callback: FrameRequestCallback, sig?: Abor
   return (sig.addEventListener("abort", kill, { once: true }), id);
 }
 
-// ============ Async Utilities ============
+// ============ Async Helpers ============
 
 export const mockAsync = (timeout = 250): Promise<void> => new Promise((resolve) => setTimeout(resolve, timeout));
 
@@ -37,7 +37,7 @@ export const breath = (w = window) => new Promise((res) => w.requestAnimationFra
 
 export const deepBreath = (w = window) => new Promise((res) => w.requestAnimationFrame(() => w.requestAnimationFrame(res))); // The "Double Frame" breathe - guaranteed layout completion
 
-// ============ Limited Call Utilities ============
+// ============ Limited Call Helpers ============
 
 interface LimitedOptions {
   key?: string /** Key for localStorage persistence (if omitted, uses session-only) */;
@@ -89,4 +89,12 @@ export function deprecate(message: string): void {
  */
 export function deprecateForMajor(major: number, oldName: string, newName?: string): void {
   deprecate(newName ? `${oldName} is deprecated and will be removed in ${major}.0; use ${newName} instead.` : `${oldName} is deprecated and will be removed in ${major}.0.`);
+}
+
+// ============ Generic Helpers ============
+
+export function bindClupToSig<Cb extends () => any>(clup: Cb, signal?: AbortSignal): Cb {
+  signal?.aborted ? clup() : signal?.addEventListener("abort", clup, { once: true });
+  if (signal && !signal.aborted) clup = (() => (signal.removeEventListener("abort", clup), clup())) as Cb;
+  return clup; // once incase spec changes, memory leaks too
 }

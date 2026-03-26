@@ -99,3 +99,12 @@ export class WheelModule extends BaseModule<WheelConfig> {
     this.ctlr.getPlug<VolumePlug>(key)?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }
 }
+
+export const WHEEL_BUILD: Partial<WheelConfig> = {
+  volume: { normal: true, slider: true },
+  brightness: { normal: true, slider: true },
+  timeline: { normal: true, slider: true },
+  timeout: 2000,
+  xRatio: 12,
+  yRatio: 6,
+};

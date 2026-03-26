@@ -1,6 +1,6 @@
 import { BasePlug } from ".";
 import type { REvent } from "../types/reactor";
-import type { VideoBuild } from "../types/build";
+import type { CtlrConfig } from "../types/config";
 import { StorageAdapter, LocalStorageAdapter, type StorageAdapterConstructor } from "../core/storage";
 import { mergeObjs } from "../utils";
 
@@ -24,7 +24,7 @@ export class PersistPlug extends BasePlug<Persist> {
     this.ctlr.config.on("settings.persist.disabled", this.handleDisabledChange, { signal: this.signal, immediate: true });
   }
 
-  protected handleAdapterChange({ value }: REvent<VideoBuild, "settings.persist.adapter">) {
+  protected handleAdapterChange({ value }: REvent<CtlrConfig, "settings.persist.adapter">) {
     if (this.adapter && value === this.adapter.constructor) return; // No change
     this.adapter?.remove("settings"); // Cleanup old adapter storage, disabled will handle refresh
     this.adapter = new (value || LocalStorageAdapter)(this.ctlr.id);
@@ -32,15 +32,15 @@ export class PersistPlug extends BasePlug<Persist> {
     if (saved) this.ctlr.settings = mergeObjs(this.ctlr.settings, saved); // this.ctlr.log("Settings hydrated from storage", "log")
   }
 
-  protected handleDisabledChange({ value }: REvent<VideoBuild, "settings.persist.disabled">) {
+  protected handleDisabledChange({ value }: REvent<CtlrConfig, "settings.persist.disabled">) {
     this.ctlr.config.off("settings", this.throttleSave); // Always unbind first to be safe (prevent double-binding)
     if (value) this.adapter?.remove("settings");
     else this.ctlr.config.on("settings", this.throttleSave, { signal: this.signal, immediate: true }); // Enabled: Start listening
   }
 
-  protected throttleSave({ root: { settings } }: REvent<VideoBuild, "settings">) {
+  protected throttleSave({ root: { settings } }: REvent<CtlrConfig, "settings">) {
     // We use the root 'settings' object from the event context
-    this.ctlr.throttle("persist_save", () => this.adapter.set("settings", settings), this.config.throttle ?? 5000);
+    this.ctlr.throttle("persistSync", () => this.adapter.set("settings", settings), this.config.throttle ?? 5000);
   }
 
   protected onDestroy() {
@@ -48,3 +48,5 @@ export class PersistPlug extends BasePlug<Persist> {
     !this.config.disabled && this.adapter?.set("settings", this.ctlr.settings);
   }
 }
+
+export const PERSIST_BUILD: Partial<Persist> = { disabled: false, throttle: 5000 };

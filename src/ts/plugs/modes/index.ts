@@ -1,9 +1,10 @@
 import { Controller } from "../../core/controller";
 import { BasePlug, type KeysPlug } from "../";
-import { FullscreenModule, type FullscreenModuleConfig } from "./fullscreen";
-import { TheaterConfig, TheaterModule } from "./theater";
-import { PictureInPictureModule, type PictureInPictureModuleConfig } from "./pictureInPicture";
-import { MiniplayerModule, type MiniplayerModeConfig } from "./miniplayer";
+import type { DeepPartial } from "../../types/obj";
+import { FullscreenModule, FULLSCREEN_BUILD, type FullscreenModuleConfig } from "./fullscreen";
+import { THEATER_BUILD, TheaterConfig, TheaterModule } from "./theater";
+import { PictureInPictureModule, PICTURE_IN_PICTURE_BUILD, type PictureInPictureModuleConfig } from "./pictureInPicture";
+import { MINIPLAYER_BUILD, MiniplayerModule, type MiniplayerModeConfig } from "./miniplayer";
 export * from "./fullscreen";
 export * from "./theater";
 export * from "./pictureInPicture";
@@ -39,9 +40,9 @@ export class ModesPlug extends BasePlug<Modes> {
     this.miniplayer.wire();
     // Post Wiring
     const keys = this.ctlr.getPlug<KeysPlug>("keys");
-    keys?.register("pictureInPicture", () => (this.media.intent.pictureInPicture = !this.media.state.pictureInPicture), { phase: "keyup" });
-    keys?.register("theater", () => !this.ctlr.isUIActive("fullscreen") && !this.ctlr.isUIActive("miniplayer") && !this.ctlr.isUIActive("floatingPlayer") && (this.media.intent.theater = !this.media.state.theater), { phase: "keyup" });
     keys?.register("fullscreen", () => (this.media.intent.fullscreen = !this.media.state.fullscreen), { phase: "keyup" });
+    keys?.register("theater", () => !this.ctlr.isUIActive("fullscreen") && !this.ctlr.isUIActive("miniplayer") && !this.ctlr.isUIActive("floatingPlayer") && (this.media.intent.theater = !this.media.state.theater), { phase: "keyup" });
+    keys?.register("pictureInPicture", () => (this.media.intent.pictureInPicture = !this.media.state.pictureInPicture), { phase: "keyup" });
   }
 
   protected override onDestroy(): void {
@@ -52,3 +53,10 @@ export class ModesPlug extends BasePlug<Modes> {
     this.miniplayer?.destroy();
   }
 }
+
+export const MODES_BUILD: DeepPartial<Modes> = {
+  fullscreen: FULLSCREEN_BUILD,
+  theater: THEATER_BUILD,
+  pictureInPicture: PICTURE_IN_PICTURE_BUILD,
+  miniplayer: MINIPLAYER_BUILD,
+};

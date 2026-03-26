@@ -1,20 +1,19 @@
 import { Controller } from "../core/controller";
 import { Controllers } from "./runtime";
 import { loadResource, mergeObjs, parseAnyObj, isIter, setHTMLConfig, cleanKeyCombo, isObj, supportsFullscreen, supportsPictureInPicture, setAny, luid } from "../utils";
-import { DEFAULT_VIDEO_BUILD, DEFAULT_VIDEO_ITEM_BUILD } from "../consts/config-defaults";
-import type { VideoBuild } from "../types/build";
+import { CONFIG_BUILD } from "../consts";
+import { PLAYLIST_ITEM_BUILD } from "../plugs";
+import type { CtlrConfig } from "../types/config";
 import { DeepPartial, Paths, PathValue } from "../types/obj";
 
-const modes: Record<string, boolean> = { fullScreen: supportsFullscreen(), pictureInPicture: supportsPictureInPicture() };
-
-export type BuildPaths = Paths<VideoBuild>;
-export type BuildParam = DeepPartial<VideoBuild> & Record<BuildPaths, PathValue<VideoBuild, BuildPaths>>;
+export type BuildPaths = Paths<CtlrConfig>;
+export type BuildParam = DeepPartial<CtlrConfig> & Record<BuildPaths, PathValue<CtlrConfig, BuildPaths>>;
 
 export class Player {
   private medium: HTMLMediaElement | null = null;
   private active: boolean = false;
   private controller: Controller | null = null;
-  private _build: VideoBuild = structuredClone(DEFAULT_VIDEO_BUILD as VideoBuild);
+  private _build: CtlrConfig = structuredClone(CONFIG_BUILD) as CtlrConfig;
 
   constructor(customBuild: BuildParam = {} as BuildParam) {
     this.configure({ ...customBuild, id: customBuild.id ?? `${luid()}_Controller_${Controllers.length + 1}` });
@@ -24,7 +23,7 @@ export class Player {
     return this.controller;
   }
 
-  public get build(): VideoBuild {
+  public get build(): CtlrConfig {
     return this._build;
   }
   public set build(customBuild: BuildParam) {
@@ -34,26 +33,19 @@ export class Player {
     return (!this.active ? true : this.notice({ error: "Already deployed the custom controls of your build configuration", tip: "Consider setting your build configuration before attaching your media element" }), false);
   }
 
-  private notice({ error, warning, tip }: Partial<Record<"error" | "warning" | "tip", string>>) {
-    error && console.error(`[TMG Player] ${error}`);
-    warning && console.warn(`[TMG Player] ${warning}`);
-    tip && console.info(`[TMG Player] ${tip}`);
-  }
-
   public configure(customBuild: BuildParam): void {
     if (!this.queryBuild() || !isObj(customBuild)) return;
     this._build = mergeObjs(this._build, parseAnyObj(customBuild));
-    const keys = this._build.settings.keys;
-    if (!keys) return;
-    Object.keys(keys.shortcuts || {}).forEach((k) => ((keys.shortcuts as any)[k] = cleanKeyCombo((keys.shortcuts as any)[k])));
-    ["blocks", "overrides"].forEach((k) => ((keys as any)[k] = cleanKeyCombo((keys as any)[k])));
+    const keys = this._build.settings.keys as any;
+    keys && Object.keys(keys.shortcuts || {}).forEach((k) => (keys.shortcuts[k] = cleanKeyCombo(keys.shortcuts[k])));
+    keys && ["blocks", "overrides"].forEach((k) => (keys[k] = cleanKeyCombo(keys[k])));
   }
 
   public async attach(medium: HTMLMediaElement) {
     if (isIter(medium)) return this.notice({ error: "An iterable argument cannot be attached to the TMG media player", tip: "Consider looping the iterable argument to instantiate a new 'tmg.Player' for each" });
     if (this.active) return medium;
     medium.tmgPlayer?.detach();
-    tmg.Controllers.push(this._build.id as any); // dummy for sync
+    Controllers.push(this._build.id as any); // dummy for sync
     medium.tmgPlayer = this;
     this.medium = medium;
     (await this.fetchCustomOptions(), await this.deployController());
@@ -67,8 +59,7 @@ export class Player {
     medium?.classList?.remove(`tmg-${medium?.tagName.toLowerCase()}`, "tmg-media");
     medium.tmgcontrols = this.active = false;
     this.controller?.fire("tmgdetached", this.controller.payload);
-    medium.tmgPlayer = this.controller = this.medium = null;
-    return medium;
+    return ((medium.tmgPlayer = this.controller = this.medium = null), medium);
   }
 
   public async fetchCustomOptions() {
@@ -91,15 +82,18 @@ export class Player {
 
   private async deployController() {
     if (this.active || !this.medium?.isConnected) return;
-    if (this._build.playlist?.[0]) this.configure(mergeObjs(DEFAULT_VIDEO_ITEM_BUILD as BuildParam, parseAnyObj(this._build.playlist[0] as BuildParam)));
+    if (this._build.playlist?.[0]) this.configure(mergeObjs(structuredClone(PLAYLIST_ITEM_BUILD), parseAnyObj(this._build.playlist[0])) as BuildParam);
     if (!(this.medium instanceof HTMLVideoElement)) return this.notice({ error: `Could not deploy custom controls on the '${this.medium.tagName}' element as it is not supported`, warning: "Only the 'VIDEO' element is currently supported", tip: "" });
-    this.medium.tmgcontrols = this.active = true;
     this.medium.controls = false;
+    this.medium.tmgcontrols = this.active = true;
     this.medium.classList.add(`tmg-${this.medium.tagName.toLowerCase()}`, "tmg-media");
-    const s = this._build.settings;
-    type Mode = keyof typeof s.modes;
-    Object.keys(s.modes).forEach((k) => (s.modes[k as Mode] = (s.modes[k as Mode] && (modes[String(k)] ?? true) ? s.modes[k as Mode] : false) as any));
-    await Promise.all([loadResource(window.TMG_VIDEO_CSS_SRC), loadResource(window.T007_TOAST_JS_SRC, "script", { module: true }), loadResource(window.T007_INPUT_JS_SRC, "script")]);
+    const modes: Record<string, boolean> = { fullScreen: supportsFullscreen(), pictureInPicture: supportsPictureInPicture() };
+    Object.keys(this._build.settings.modes).forEach((k) => ((this._build.settings.modes as any)[k] = (this._build.settings.modes as any)[k] && (modes[String(k)] ?? true) ? (this._build.settings.modes as any)[k] : false));
+    await Promise.all([loadResource(window.TMG_VIDEO_CSS_SRC!), loadResource(window.T007_TOAST_JS_SRC!, "script", { module: true }), loadResource(window.T007_INPUT_JS_SRC!, "script")]);
     Controllers[Controllers.indexOf(this._build.id as any)] = this.controller = new Controller(this.medium, this._build);
+  }
+
+  private notice({ error, warning, tip }: Partial<Record<"error" | "warning" | "tip", string>>) {
+    (error && console.error(`[TMG Player] ${error}`), warning && console.warn(`[TMG Player] ${warning}`), tip && console.info(`[TMG Player] ${tip}`));
   }
 }

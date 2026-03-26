@@ -164,3 +164,5 @@ export class TouchModule extends BaseModule<TouchConfig> {
     this.ctlr.getPlug<VolumePlug>(key)?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }
 }
+
+export const TOUCH_BUILD: Partial<TouchConfig> = { volume: true, brightness: true, timeline: true, threshold: 200, axesRatio: 3, inset: 20, sliderTimeout: 1000, xRatio: 1, yRatio: 1 };

@@ -1,7 +1,8 @@
+import { clamp } from "@t007/utils";
 import { AptRange } from "../types/generics";
 
 // Validators
-export { clamp } from "@t007/utils";
+export { clamp };
 
 export function isValidNum(val: any): boolean {
   return !isNaN(val ?? NaN) && val !== Infinity;

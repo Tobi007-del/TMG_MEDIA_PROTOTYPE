@@ -1,7 +1,7 @@
 import { BasePlug, OverlayPlug } from ".";
 import type { Controller } from "../core/controller";
 import type { ScreenLocked } from "../components";
-import type { VideoBuild } from "../types/build";
+import type { CtlrConfig } from "../types/config";
 import type { REvent } from "../types/reactor";
 import { ComponentRegistry } from "../core/registry";
 import { setTimeout, parseCSSTime, mockAsync, createEl } from "../utils";
@@ -44,7 +44,7 @@ export class LockedPlug extends BasePlug<Locked, LockedState> {
     this.state.visible ? this?.removeOverlay() : this?.showOverlay();
   }
 
-  protected async handleLockChange({ value }: REvent<VideoBuild, "settings.locked.disabled">): Promise<void> {
+  protected async handleLockChange({ value }: REvent<CtlrConfig, "settings.locked.disabled">): Promise<void> {
     if (!value) {
       // JS: this.ctlr.leaveSettingsView?.();
       setTimeout(this.showOverlay, 0, this.signal);
@@ -81,3 +81,5 @@ export class LockedPlug extends BasePlug<Locked, LockedState> {
     this.control?.destroy();
   }
 }
+
+export const LOCKED_BUILD: Partial<Locked> = { disabled: true };

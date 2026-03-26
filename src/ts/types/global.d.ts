@@ -1,5 +1,5 @@
 import { Player } from "../tools/player";
-import * as TMGGlobal from "../../";
+import * as TMGGlobal from "../../api";
 
 declare global {
   interface HTMLMediaElement {
@@ -22,7 +22,7 @@ declare global {
 
   interface Window {
     tmg: TMGNamespace;
-    
+
     TMG_VIDEO_ALT_IMG_SRC?: string;
     TMG_VIDEO_CSS_SRC?: string;
   }

@@ -1,5 +1,6 @@
 import { BasePlug } from ".";
-import type { VideoBuild } from "../types/build";
+import type { CtlrConfig } from "../types/config";
+import type { DeepPartial } from "../types/obj";
 import type { REvent } from "../types/reactor";
 import { capitalize } from "../utils";
 import type { PlaylistPlug, TimePlug } from ".";
@@ -50,21 +51,19 @@ export class MediaPlug extends BasePlug<Media> {
   protected forwardTitle(value: string): void {
     this.ctlr.settings.controlPanel.title = value;
   }
-
   protected forwardArtist(value: string): void {
     this.ctlr.settings.controlPanel.artist = value;
   }
-
   protected forwardProfile(value: string): void {
     this.ctlr.settings.controlPanel.profile = value;
   }
 
-  protected handleMediaLink({ target: { key, value } }: REvent<VideoBuild, "media.links.title" | "media.links.artist" | "media.links.profile">): void {
+  protected handleMediaLink({ target: { key, value } }: REvent<CtlrConfig, "media.links.title" | "media.links.artist" | "media.links.profile">): void {
     const el = key !== "profile" ? (this.ctlr.DOM[`video${capitalize(key)}`] as HTMLAnchorElement) : (this.ctlr.DOM.videoProfile as HTMLImageElement)?.parentElement;
     el && Object.entries({ href: value, "tab-index": value ? "0" : null, target: value ? "_blank" : null, rel: value ? "noopener noreferrer" : null }).forEach(([attr, val]) => (val ? el.setAttribute(attr, val) : el.removeAttribute(attr)));
   }
 
-  protected handleArtwork({ currentTarget: { value } }: REvent<VideoBuild, "media.artwork">): void {
+  protected handleArtwork({ currentTarget: { value } }: REvent<CtlrConfig, "media.artwork">): void {
     this.media.intent.poster = value?.[0]?.src || "";
   }
 
@@ -96,3 +95,14 @@ export class MediaPlug extends BasePlug<Media> {
     // JS: this.config.artwork = [{ src: (await this.getVideoFrame(undefined, this.config.lightState.preview.time)).url }];
   }
 }
+
+export const MEDIA_BUILD: DeepPartial<Media> = {
+  title: "",
+  artist: "",
+  profile: "",
+  album: "",
+  artwork: [],
+  chapterInfo: [],
+  links: { title: "", artist: "", profile: "" },
+  autoGenerate: true,
+};

@@ -1,3 +1,3 @@
-export * from "./media-defaults";
-export * from "./config-defaults";
+export * from "./media";
+export * from "./config";
 export * from "./generics";

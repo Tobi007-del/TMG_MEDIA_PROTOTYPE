@@ -1,9 +1,9 @@
 import { RangeSlider, type RangeConfig, type RangeState } from "./";
-import { createEl, clamp, safeNum, setTimeout, formatMediaTime, getRenderedBox, IS_MOBILE } from "../utils";
 import type { Controller } from "../core/controller";
 import type { REvent } from "../types/reactor";
 import type { CtlrMedia } from "../types/contract";
 import type { TimePlug } from "../plugs";
+import { createEl, clamp, safeNum, setTimeout, formatMediaTime, getRenderedBox, IS_MOBILE, requestAnimationFrame } from "../utils";
 
 export type PreviewConfig =
   | boolean
@@ -144,7 +144,7 @@ export class Timeline extends RangeSlider<TimelineConfig> {
         this.media.intent.paused = true;
         this.ctlr.videoContainer.classList.add("tmg-video-scrubbing");
         // IS_MOBILE && this.ctlr.DOM.scrubNotifier?.classList.add("tmg-video-control-active");
-      });
+      }, this.signal);
     }
     this.ctlr.videoContainer.classList.toggle("tmg-video-scrubbing", value);
     if (!value) this.stopPreview();

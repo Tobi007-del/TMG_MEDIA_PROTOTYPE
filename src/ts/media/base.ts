@@ -2,8 +2,7 @@ import { Controllable } from "../core/controllable";
 import type { Controller } from "../core/controller";
 import type { CtlrMedia, MediaFeatures } from "../types/contract";
 import type { REvent } from "../types/reactor";
-import { reactive, Reactive } from "../tools/mixins/reactive";
-import { capitalize } from "../utils";
+import { reactive, Reactive, capitalize } from "../utils";
 
 export type BaseTechConfig = Reactive<CtlrMedia>; // Must extend to add more
 
@@ -47,11 +46,13 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
     this.element && this.element !== this.config.element && this.config.element.replaceWith(this.element);
   }
   public unmount() {
-    this.element && this.config.element !== this.element && this.element.replaceWith(this.config.element);
+    this.element && this.element !== this.config.element && this.element.replaceWith(this.config.element);
   }
 
   // --- THE MANDATORY CORE 5 ---
   public wire() {
+    // Variables Assignments
+    (this.element as any).tmgPlayer = this.config.element.tmgPlayer; // ref is maintained if element was replaced in mount
     // Ctlr Media Listeners
     this.media.on("intent", this.handleIntentChange, { signal: this.signal });
     this.wireSrc();
@@ -76,7 +77,7 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
     type === "update" ? this.wireFeature(t.key) : type === "init" && (Object.keys(t.value) as (keyof MediaFeatures)[]).forEach(this.wireFeature);
   }
   protected handleIntentChange(e: REvent<CtlrMedia, "intent">) {
-    if (e.type === "update" && !this.features[e.target.key as keyof MediaFeatures] && e.value) e.stopImmediatePropagation();
+    e.type === "update" && !this.features[e.target.key as keyof MediaFeatures] && e.value && e.stopImmediatePropagation();
   }
   protected wireFeature(feature: keyof MediaFeatures): void {
     !this.wiredFeatures[feature] && (this as any)[`wire${capitalize(feature)}`]?.();

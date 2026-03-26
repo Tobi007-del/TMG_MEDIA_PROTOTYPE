@@ -1,6 +1,6 @@
 import { BasePlug, type KeysPlug, type KeyMod } from ".";
 import type { REvent } from "../types/reactor";
-import type { VideoBuild } from "../types/build";
+import type { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";
 import { clamp } from "../utils";
@@ -79,13 +79,13 @@ export class VolumePlug extends BasePlug<Volume> {
     e.resolve(this.name);
   }
 
-  protected handleMin({ target }: REvent<VideoBuild, "settings.volume.min">): void {
+  protected handleMin({ target }: REvent<CtlrConfig, "settings.volume.min">): void {
     const min = target.value;
     if (this.config.value < min) this.config.value = min;
     if (this.lastVolume < min) this.lastVolume = min;
   }
 
-  protected handleMax({ target }: REvent<VideoBuild, "settings.volume.max">): void {
+  protected handleMax({ target }: REvent<CtlrConfig, "settings.volume.max">): void {
     const max = target.value;
     if (this.config.value > max) this.config.value = max;
     if (this.lastVolume > max) this.lastVolume = max;
@@ -189,3 +189,5 @@ export class VolumePlug extends BasePlug<Volume> {
     if (this.config.muted !== this.media.element.muted) this.toggleMute();
   }
 }
+
+export const VOLUME_BUILD: Partial<Volume> = { min: 0, max: 300, skip: 5 };

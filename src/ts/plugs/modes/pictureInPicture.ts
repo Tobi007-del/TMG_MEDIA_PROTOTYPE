@@ -1,7 +1,7 @@
 import { BaseModule, KeysPlug, MediaPlug, OverlayPlug, SkeletonPlug } from "../";
 import type { REvent } from "../../types/reactor";
 import type { CtlrMedia } from "../../types/contract";
-import type { VideoBuild } from "../../types/build";
+import type { CtlrConfig } from "../../types/config";
 import { mockAsync, breath, loadResource, observeMutation, isSameURL, createEl } from "../../utils";
 import { handleDOMMutation } from "../../tools/runtime";
 
@@ -35,7 +35,7 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
     this.media.tech.features.pictureInPicture = !this.config.disabled;
   }
 
-  protected handleDisabledConfig({ value }: REvent<VideoBuild, "settings.modes.pictureInPicture.disabled">): void {
+  protected handleDisabledConfig({ value }: REvent<CtlrConfig, "settings.modes.pictureInPicture.disabled">): void {
     this.media.tech.features.pictureInPicture = !value;
     if (value && (this.ctlr.isUIActive("pictureInPicture") || this.ctlr.isUIActive("floatingPlayer"))) this.media.intent.pictureInPicture = false;
   }
@@ -79,7 +79,7 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
       whitelist = this.whitelist.concat([parse(window.T007_TOAST_CSS_SRC!), parse(window.T007_INPUT_CSS_SRC!), parse(window.TMG_VIDEO_CSS_SRC!) ?? "https://cdn.jsdelivr.net/npm/tmg-media-player@latest/dist/index.min.css"].filter(Boolean) as string[]); // video CSS too experimental; needs a link :)
     for (const sheet of document.styleSheets) {
       try {
-        if (!whitelist.some((src) => isSameURL(src, sheet.href))) for (const cssRule of sheet.cssRules) if (((cssRule as CSSStyleRule).selectorText?.includes(":root")) || cssRule.cssText.includes("tmg") || cssRule.cssText.includes("t007")) cssTexts.push(cssRule.cssText);
+        if (!whitelist.some((src) => isSameURL(src, sheet.href))) for (const cssRule of sheet.cssRules) if ((cssRule as CSSStyleRule).selectorText?.includes(":root") || cssRule.cssText.includes("tmg") || cssRule.cssText.includes("t007")) cssTexts.push(cssRule.cssText);
       } catch {
         continue; // add extensible whitelisting and blacklisting hrefs later
       }
@@ -114,3 +114,8 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
     this.media.state.pictureInPicture = false;
   }
 }
+
+export const PICTURE_IN_PICTURE_BUILD: Partial<PictureInPictureModuleConfig> = {
+  disabled: false,
+  floatingPlayer: { disabled: false, width: 500, height: 281, disallowReturnToOpener: false, preferInitialWindowPlacement: false },
+};

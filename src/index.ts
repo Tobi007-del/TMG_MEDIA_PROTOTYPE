@@ -6,7 +6,7 @@ import { loadResource } from "./ts/utils/dom";
 export * from "./api";
 
 if (typeof window !== "undefined") {
-  window.tmg ??= {} as any;
+  window.tmg ??= {} as any; // bundler will handle the rest
   window.TMG_VIDEO_ALT_IMG_SRC ??= "https://cdn.jsdelivr.net/npm/tmg-media-player/assets/movie-tape.png";
   window.TMG_VIDEO_CSS_SRC ??= "https://cdn.jsdelivr.net/npm/tmg-media-player@latest/dist/index.min.css";
   console.log("%cTMG Media Player Available", "color: darkturquoise");

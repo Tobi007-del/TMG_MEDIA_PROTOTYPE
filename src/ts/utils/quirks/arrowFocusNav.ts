@@ -1,4 +1,4 @@
-import { clamp } from "..";
+import { clamp, observeMutation, observeResize } from "..";
 
 // Key sets
 const H_NAV_KEYS = ["ArrowRight", "ArrowLeft", "Home", "End"] as const;
@@ -116,14 +116,16 @@ const getTargetIndex = ({ key, currIndex, length, gridX, gridY, vGridY, loop, ct
 };
 
 export type ArrowNavHandle = {
+  gridX: () => number;
+  gridY: () => number;
+  vGridY: () => number;
+  items: () => HTMLElement[];
+  activeIndex: () => number;
+  activeItem: () => HTMLElement | null;
   goToIndex: (index: number, e?: KeyEvent) => void;
   simulateKey: (e: KeyEvent) => void;
   getAbleIndex: (targetIndex: number, e?: KeyEvent) => number | null;
   typeAhead: (key: string) => void;
-  items: () => HTMLElement[];
-  activeIndex: () => number;
-  activeItem: () => HTMLElement | null;
-  getGrid: () => { x: number; y: number; vY: number };
   destroy: () => void;
 };
 
@@ -168,9 +170,7 @@ export function initArrowFocusNav(container: HTMLElement, cfg: ArrowNavConfig = 
     if (virtual) {
       items[idx]?.scrollIntoView(scrollIntoView);
       container.setAttribute("aria-activedescendant", items[idx].id || "");
-    } else {
-      items[idx]?.focus(focusOptions);
-    }
+    } else items[idx]?.focus(focusOptions);
   };
 
   const updateDOM = () => {
@@ -225,8 +225,7 @@ export function initArrowFocusNav(container: HTMLElement, cfg: ArrowNavConfig = 
   };
 
   // Setup
-  getItems();
-  updateDOM();
+  (getItems(), updateDOM());
 
   // Keydown binding
   const interactiveEls = !virtual ? [container] : [container.querySelector<HTMLElement>(inputSelector)];
@@ -254,15 +253,18 @@ export function initArrowFocusNav(container: HTMLElement, cfg: ArrowNavConfig = 
   items.forEach((el) => el.addEventListener("mouseenter", handleHover));
 
   // Mutation handling
-  const mutationObserver = new MutationObserver(() => {
-    const oldEl = items[activeIndex];
-    getItems();
-    const newEl = items[activeIndex];
-    updateDOM();
-    if (oldEl && newEl && oldEl === newEl) return;
-    activeIndex = -1;
-  });
-  mutationObserver.observe(container, { childList: true, subtree: true });
+  const mutationCleanup = observeMutation(
+    container,
+    () => {
+      const oldEl = items[activeIndex];
+      getItems();
+      const newEl = items[activeIndex];
+      updateDOM();
+      if (oldEl && newEl && oldEl === newEl) return;
+      activeIndex = -1;
+    },
+    { childList: true, subtree: true }
+  );
 
   // Grid handling (ResizeObserver)
   const setGrid = (g: Required<ArrowNavConfig>["grid"]) => {
@@ -270,31 +272,30 @@ export function initArrowFocusNav(container: HTMLElement, cfg: ArrowNavConfig = 
     if (g.y !== undefined) gridY = g.y;
     if (g.vY !== undefined) vGridY = g.vY;
   };
-  setGrid(grid);
   const calcGrid = () => setGrid(getGrid(items, !grid.x, !grid.y, !grid.vY));
-  calcGrid();
-  const resizeObserver = new ResizeObserver(() => calcGrid());
+  (setGrid(grid), calcGrid());
   const ancestor = items.length > 1 ? getCommonAncestor(items[0], items[1]) : container;
-  ancestor && resizeObserver.observe(ancestor);
+  const resizeCleanup = ancestor && observeResize(ancestor, calcGrid);
 
   const destroy = () => {
     interactiveEls.forEach((el) => el?.removeEventListener("keydown", simulateKey as EventListener));
     container.removeEventListener("focusout", handleFocusOut);
     items.forEach((el) => el.removeEventListener("mouseenter", handleHover));
-    mutationObserver.disconnect();
-    resizeObserver.disconnect();
+    (mutationCleanup(), resizeCleanup?.());
     if (timeout) clearTimeout(timeout);
   };
 
   return {
+    gridX: () => gridX,
+    gridY: () => gridY,
+    vGridY: () => vGridY,
+    items: () => items,
+    activeIndex: () => activeIndex,
+    activeItem: () => items[activeIndex] ?? null,
     goToIndex,
     simulateKey,
     getAbleIndex,
     typeAhead,
-    items: () => items,
-    activeIndex: () => activeIndex,
-    activeItem: () => items[activeIndex] ?? null,
-    getGrid: () => ({ x: gridX, y: gridY, vY: vGridY }),
     destroy,
-  };
+  }; // will return a reactive obj later
 }

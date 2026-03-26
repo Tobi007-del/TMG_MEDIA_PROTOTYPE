@@ -1,6 +1,6 @@
 {
   "name": "@t007/input",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "A lightweight, pure JS input system.",
   "author": "Oketade Oluwatobiloba <tobioketade007@gmail.com>",
   "license": "MIT",

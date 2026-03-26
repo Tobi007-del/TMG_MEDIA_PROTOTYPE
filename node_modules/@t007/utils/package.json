@@ -1,6 +1,6 @@
 {
   "name": "@t007/utils",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "High-performance, zero-dependency utility functions for the t007 ecosystem.",
   "author": "Oketade Oluwatobiloba <tobioketade007@gmail.com>",
   "license": "MIT",

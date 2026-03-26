@@ -1,6 +1,6 @@
 import { BasePlug, type KeysPlug, type KeyMod } from ".";
 import type { REvent } from "../types/reactor";
-import type { VideoBuild } from "../types/build";
+import type { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";
 import { clamp } from "../utils";
@@ -68,13 +68,13 @@ export class BrightnessPlug extends BasePlug<Brightness> {
     e.resolve(this.name);
   }
 
-  protected handleMin({ target }: REvent<VideoBuild, "settings.brightness.min">): void {
+  protected handleMin({ target }: REvent<CtlrConfig, "settings.brightness.min">): void {
     const min = target.value;
     if (this.config.value < min) this.config.value = min;
     if (this.lastBrightness < min) this.lastBrightness = min;
   }
 
-  protected handleMax({ target }: REvent<VideoBuild, "settings.brightness.max">): void {
+  protected handleMax({ target }: REvent<CtlrConfig, "settings.brightness.max">): void {
     const max = target.value;
     if (this.config.value > max) this.config.value = max;
     if (this.lastBrightness > max) this.lastBrightness = max;
@@ -158,3 +158,5 @@ export class BrightnessPlug extends BasePlug<Brightness> {
     if (brightness > 5) this.sliderAptBrightness = brightness;
   }
 }
+
+export const BRIGHTNESS_BUILD: Partial<Brightness> = { min: 0, max: 150, value: 100, skip: 5 };

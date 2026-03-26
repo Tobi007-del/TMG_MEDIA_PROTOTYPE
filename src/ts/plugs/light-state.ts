@@ -1,6 +1,7 @@
 import { BasePlug, OverlayPlug, ControlPanelPlug, Control, BigControl } from ".";
 import type { PosterPreview } from "../types/generics";
-import type { VideoBuild } from "../types/build";
+import type { CtlrConfig } from "../types/config";
+import type { DeepPartial } from "../types/obj";
 import type { REvent } from "../types/reactor";
 import { TERMINATOR } from "../core/reactor";
 import { inBoolArrOpt } from "../utils";
@@ -26,7 +27,7 @@ export class LightStatePlug extends BasePlug<LightState> {
     if (this.config.disabled) this.ctlr.setReadyState(); // warning my compadres: gesture plug & others
   }
 
-  protected handleDisabled({ value, target }: REvent<VideoBuild, "lightState.disabled">): void {
+  protected handleDisabled({ value, target }: REvent<CtlrConfig, "lightState.disabled">): void {
     if (value) {
       const timeStart = this.ctlr.settings.time.start;
       if (timeStart != null) this.media.intent.currentTime = timeStart;
@@ -46,13 +47,13 @@ export class LightStatePlug extends BasePlug<LightState> {
     this.ctlr.queryDOM("[data-control-id]", true).forEach((c) => (c.dataset.lightControl = this.isLight(c.dataset.controlId!) ? "true" : "false"));
   }
 
-  protected handleUsePoster({ target: { value, object }, root }: REvent<VideoBuild, "lightState.preview.usePoster">): void {
+  protected handleUsePoster({ target: { value, object }, root }: REvent<CtlrConfig, "lightState.preview.usePoster">): void {
     if (root.lightState.disabled || (value && this.media.state.poster)) return;
     this.media.intent.currentTime = object.time;
     if (!this.media.status.loadedMetadata) this.media.once("status.loadedMetadata", () => (this.config.preview.usePoster = value), { signal: this.signal }); // retrigger when metadata is ready in case time is a percentage
   }
 
-  protected handleTime({ target: { object }, root }: REvent<VideoBuild, "lightState.preview.time">): void {
+  protected handleTime({ target: { object }, root }: REvent<CtlrConfig, "lightState.preview.time">): void {
     !root.lightState.disabled && (!object.usePoster || !this.media.state.poster) && (this.media.intent.currentTime = object.time!);
   }
 
@@ -81,3 +82,9 @@ export class LightStatePlug extends BasePlug<LightState> {
     return inBoolArrOpt(this.ctlr.config.lightState.controls, controlId);
   }
 }
+
+export const LIGHT_STATE_BUILD: DeepPartial<LightState> = {
+  disabled: false,
+  controls: ["meta", "bigplaypause", "fullscreenorientation"],
+  preview: { usePoster: true, time: 4 },
+};

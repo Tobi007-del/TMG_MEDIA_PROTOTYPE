@@ -1,6 +1,6 @@
 import { BaseModule, OverlayPlug } from "..";
 import type { BigControl, ControlPanelBottomTuple, ControlPanelPlug, SControl, ZoneSlot, ZoneW } from ".";
-import { getAny, getElSiblingAt, inBoolArrOpt, setAny, setTimeout } from "../../utils";
+import { getAny, getElSiblingAt, inBoolArrOpt, setAny, setTimeout, requestAnimationFrame } from "../../utils";
 
 export type DraggableModuleConfig = ("" | "big" | "wrapper")[] | boolean;
 
@@ -70,7 +70,7 @@ export class DraggableModule extends BaseModule<DraggableModuleConfig> {
     if (t.matches(":has(input:is(:hover, :active))")) return e.preventDefault();
     dataTransfer!.effectAllowed = "move";
     this.draggingEl = t;
-    requestAnimationFrame(() => t.classList.add("tmg-video-control-draggingEl"));
+    requestAnimationFrame(() => t.classList.add("tmg-video-control-draggingEl"), this.signal);
     this.safeTimeoutId = setTimeout(() => t.classList.remove("tmg-video-control-draggingEl"), 1000, this.signal); // for mobile browsers supporting the API but not living up
     if (t.dataset.dragId !== "wrapper" || t.parentElement?.dataset.dragId !== "wrapper") return;
     const { coord, zoneW } = this.getUIZoneWCoord(t, true) as { coord: string; zoneW: ZoneW };
@@ -127,3 +127,5 @@ export class DraggableModule extends BaseModule<DraggableModuleConfig> {
     !this.noDropOff(e.target as HTMLElement) && (e.target as HTMLElement).classList.remove("tmg-video-dragover");
   }
 }
+
+export const DRAGGABLE_BUILD: DraggableModuleConfig = ["", "wrapper"];

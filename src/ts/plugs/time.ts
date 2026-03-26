@@ -135,3 +135,5 @@ export class TimePlug extends BasePlug<CTime> {
     this.guardedTimePaths.forEach((p) => this.ctlr.config.get(p, this.toTimeVal, { signal: this.signal }));
   }
 }
+
+export const TIME_BUILD: Partial<CTime> = { min: 0, skip: 10, previews: false, mode: "elapsed", format: "digital", seekSync: false };

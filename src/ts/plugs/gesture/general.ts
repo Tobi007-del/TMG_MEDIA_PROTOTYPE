@@ -106,3 +106,8 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
     this.ctlr.videoContainer.removeEventListener("click", this.handleDblClick);
   }
 }
+
+export const GENERAL_BUILD: Partial<GeneralConfig> = {
+  click: IS_MOBILE ? "" : "togglePlay",
+  dblClick: IS_MOBILE ? "togglePlay" : "toggleFullscreenMode",
+};

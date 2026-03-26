@@ -88,3 +88,5 @@ export class PlaysInlinePlug extends BasePlug<PlaysInline> {
     this.media.intent.playsInline = value;
   }
 }
+
+export const PLAYS_INLINE_BUILD: PlaysInline = true;

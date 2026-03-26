@@ -1,19 +1,11 @@
-import { AUDIO_CONTEXT, type RuntimeState } from "../tools/runtime";
-import type { VideoBuild } from "../types/build";
+import type { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
 import type { Volatile } from "../types/reactor";
-import { reactive, type Reactive, guardAllMethods, guardMethod, inert, intent, state, volatile } from "../tools/mixins";
 import { TechRegistry, PlugRegistry } from "./registry";
+import { STATE_BUILD, type CtlrState } from "../tools/runtime";
 import { TechConstructor, BaseTech, HTML5Tech } from "../media";
 import { PlugConstructor, ToastsPlug, type BasePlug as Plug } from "../plugs";
-import { nuke, setTimeout, requestAnimationFrame, getWindow, clamp, uncamelize, cloneMedia, getMediaReport, isSameURL, isSameSources, observeIntersection, observeResize, queryFullscreen, getSizeTier, createEl } from "../utils";
-
-interface LifePayload {
-  readyState: number;
-  initialized: boolean;
-  destroyed: boolean;
-  instance: Controller;
-}
+import { reactive, type Reactive, guardAllMethods, guardMethod, inert, intent, state, volatile, nuke, setTimeout, requestAnimationFrame, getWindow, clamp, uncamelize, cloneMedia, getMediaReport, isSameURL, isSameSources, observeIntersection, observeResize, getSizeTier, createEl } from "../utils";
 
 // --- CONTROLLER (The Orchestrator) ---
 export class Controller {
@@ -26,13 +18,13 @@ export class Controller {
   private ac = new AbortController();
   public readonly signal = this.ac.signal;
   // --- RUNTIME (Global Controller States) ---
-  public config: Reactive<Volatile<VideoBuild>>;
-  public state: Reactive<RuntimeState> & Record<string, any>; // runtime state and states to be populated for easy reach
+  public config: Reactive<Volatile<CtlrConfig>>;
+  public state: Reactive<CtlrState> & Record<string, any>; // runtime state and states to be populated for easy reach
   public media: Reactive<CtlrMedia>;
-  public settings!: VideoBuild["settings"]; // for easy reach, better devx
+  public settings!: CtlrConfig["settings"]; // for easy reach, better devx
   // --- MEMORY ---
-  public buildCache: VideoBuild;
-  private _payload: LifePayload = { instance: this } as any; // must use getter for payload
+  public _build: CtlrConfig; // Build Cache
+  private _payload: { readyState: number; initialized: boolean; destroyed: boolean; instance: Controller } = { instance: this } as any; // must use getter for payload
   // DOM References (Utilized by Plugs)
   public pseudoVideo: HTMLVideoElement = createEl("video");
   public videoContainer: HTMLElement = createEl("div");
@@ -42,44 +34,34 @@ export class Controller {
   private throttleMap = new Map<string, any>();
   private rafLoopMap = new Map<string, number>();
   private rafLoopFnMap = new Map<string, Function>();
-  protected clups: (() => void)[] = [];
   // --- FLAGS (Essential Only) ---
   public mutatingDOMM = true; // Critical for Player wrapper to know when swapping modes
 
-  constructor(medium: HTMLVideoElement, build: VideoBuild) {
+  constructor(medium: HTMLVideoElement, build: CtlrConfig) {
     this.setReadyState(0, medium);
     guardAllMethods(this, this.guard, true);
     this.id = build.id;
-    this.config = reactive(volatile(build)); // `referenceTracking: false` so clone before reassigning objects already in state
-    this.state = reactive<RuntimeState>({
-      readyState: 0,
-      audioContextReady: !!AUDIO_CONTEXT,
-      mediaIntersecting: true,
-      mediaParentIntersecting: true,
-      dimensions: { container: { width: 0, height: 0, tier: "x" }, pseudoContainer: { width: 0, height: 0, tier: "x" }, window: { width: window.innerWidth, height: window.innerHeight } },
-      screenOrientation: window.screen.orientation,
-      docVisibilityState: document.visibilityState,
-      docInFullscreen: queryFullscreen(),
-    });
+    this.config = reactive(volatile(build), { lineageTracing: true }); // `referenceTracking: false` so clone before reassigning objects already in state, `lineage tracing: true` for structural sharing
+    this.state = reactive<CtlrState>(STATE_BUILD);
     const defs = getMediaReport(medium); // returns defaults and initials
     this.media = reactive<CtlrMedia>({
-      tech: inert({} as BaseTech), // dummy tech to be replaced on boot
       element: inert(medium),
+      tech: inert({} as BaseTech), // dummy tech to be replaced on boot
       intent: volatile(intent(defs.intent)),
       state: state(defs.state),
       status: state(defs.status),
       settings: state(defs.settings),
     });
-    this.config.watch("settings", (value) => (this.settings = value), { immediate: true, signal: this.signal }); // COMPUTED: settings can lose reference
-    this.buildCache = this.config.snapshot();
     this.media.set("tech", (t) => inert(t!), { signal: this.signal });
+    this.config.watch("settings", (v) => (this.settings = v), { immediate: true, signal: this.signal }); // COMPUTED: settings can lose reference
+    this._build = this.config.snapshot(); // clone initial config for resets and fast subsequent cloning
     this.boot();
   }
 
   private boot() {
     this.connectPlugs();
     this.wireTechOverseer();
-    this.wireRuntimeState();
+    this.wireCtlrState();
     this.setReadyState(); // boot complete
     if (!this.media.state.paused) this.setReadyState();
     else this.media.wonce("state.paused", () => this.setReadyState(), { signal: this.signal }); // first play
@@ -100,13 +82,11 @@ export class Controller {
   }
 
   protected wireTechOverseer() {
-    const opts = { capture: true, signal: this.signal };
-    // Media Listeners
-    this.media.on("intent.src", () => this.overseeTech(), { ...opts, immediate: true }); // load initial
-    this.media.on("intent.sources", () => this.overseeTech(), opts);
-    this.media.on("state.src", () => this.overseeTech("state"), opts); // just in case
-    this.media.on("state.sources", () => this.overseeTech("intent"), opts); // just in case
-    this.media.on("settings.srcObject", () => this.overseeTech(), opts);
+    this.media.on("intent.src", () => this.overseeTech(), { capture: true, signal: this.signal, immediate: true }); // load initial
+    this.media.on("intent.sources", () => this.overseeTech(), { capture: true, signal: this.signal });
+    this.media.on("state.src", () => this.overseeTech("state"), { capture: true, signal: this.signal }); // just in case :)
+    this.media.on("state.sources", () => this.overseeTech("intent"), { capture: true, signal: this.signal }); // just in case :)
+    this.media.on("settings.srcObject", () => this.overseeTech(), { capture: true, signal: this.signal });
   }
   protected overseeTech(pref: "state" | "intent" = "intent") {
     const { src: prefSrc, sources: prefSources } = pref === "intent" ? this.media.intent : this.media.state,
@@ -136,11 +116,11 @@ export class Controller {
     (this.media.tech = new TechClass(this, config)).setup();
   }
 
-  private wireRuntimeState() {
-    this.clups.push(observeIntersection(this.videoContainer.parentElement!, (entry) => (this.state.mediaParentIntersecting = entry.isIntersecting)));
-    this.clups.push(observeIntersection(this.videoContainer, (entry) => (this.state.mediaIntersecting = entry.isIntersecting)));
-    this.clups.push(observeResize(this.videoContainer, () => (this.state.dimensions.container = getSizeTier(this.videoContainer))));
-    this.clups.push(observeResize(this.pseudoVideoContainer, () => (this.state.dimensions.pseudoContainer = getSizeTier(this.pseudoVideoContainer))));
+  private wireCtlrState() {
+    observeIntersection(this.videoContainer.parentElement!, (entry) => (this.state.mediaParentIntersecting = entry.isIntersecting), this.signal);
+    observeIntersection(this.videoContainer, (entry) => (this.state.mediaIntersecting = entry.isIntersecting), this.signal);
+    observeResize(this.videoContainer, () => (this.state.dimensions.container = getSizeTier(this.videoContainer)), this.signal);
+    observeResize(this.pseudoVideoContainer, () => (this.state.dimensions.pseudoContainer = getSizeTier(this.pseudoVideoContainer)), this.signal);
   }
 
   public get payload() {
@@ -193,10 +173,8 @@ export class Controller {
   public cancelAllLoops = (): void => this.rafLoopMap.keys().forEach(this.cancelRAFLoop);
 
   public queryDOM<K extends keyof HTMLElementTagNameMap>(query: K, all: true, isPseudo?: boolean): NodeListOf<HTMLElementTagNameMap[K]>;
-  public queryDOM<K extends keyof SVGElementTagNameMap>(query: K, all: true, isPseudo?: boolean): NodeListOf<SVGElementTagNameMap[K]>;
   public queryDOM<E extends Element = HTMLElement>(query: string, all: true, isPseudo?: boolean): NodeListOf<E>;
   public queryDOM<K extends keyof HTMLElementTagNameMap>(query: K, all?: false, isPseudo?: boolean): HTMLElementTagNameMap[K] | null;
-  public queryDOM<K extends keyof SVGElementTagNameMap>(query: K, all?: false, isPseudo?: boolean): SVGElementTagNameMap[K] | null;
   public queryDOM<E extends Element = HTMLElement>(query: string, all?: false, isPseudo?: boolean): E | null;
   public queryDOM(query: string, all = false, isPseudo = false) {
     const container = isPseudo ? this.pseudoVideoContainer : this.videoContainer;
@@ -206,7 +184,7 @@ export class Controller {
     img?.setAttribute("data-loaded", String(img.complete && img.naturalWidth > 0));
   }
   setImgFallback<T extends { target: HTMLImageElement }>({ target: img }: T): void {
-    img.src = window.TMG_VIDEO_ALT_IMG_SRC;
+    img.src = window.TMG_VIDEO_ALT_IMG_SRC!;
   }
   setCanvasFallback(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, img?: HTMLImageElement): void {
     img = canvas && createEl("img", { src: window.TMG_VIDEO_ALT_IMG_SRC, onload: () => context?.drawImage(img!, 0, 0, canvas.width, canvas.height) });
@@ -221,7 +199,6 @@ export class Controller {
     this.setReadyState(-1);
     this.cancelAllLoops();
     this.ac.abort("[TMG Controller] Instance is being destroyed");
-    this.clups.forEach((cleanup) => cleanup());
     [...this.plugs.values()].reverse().forEach((p) => p.destroy());
     this.media.tech.destroy();
     (this.plugs.clear(), this.throttleMap.clear(), this.rafLoopMap.clear(), this.rafLoopFnMap.clear());

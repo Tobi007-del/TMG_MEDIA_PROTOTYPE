@@ -1,3 +1,5 @@
+import { bindClupToSig } from "./fn";
+
 // Types
 type Direction = "x" | "y";
 type Position = "before" | "after" | "at";
@@ -127,28 +129,30 @@ export const mutationObserver =
       })
     : null;
 
+
+
 // --- PUBLIC API ---
-export function observeResize(el: Element, cb: (entry: ResizeObserverEntry) => void) {
+export function observeResize(el: Element, cb: (entry: ResizeObserverEntry) => void, sig?: AbortSignal) {
   (el._tmgResizeCbs ?? (el._tmgResizeCbs = new Set())).add(cb);
   resizeObserver?.observe(el);
-  return () => (el._tmgResizeCbs?.delete(cb), !el._tmgResizeCbs?.size && resizeObserver?.unobserve(el));
+  return bindClupToSig(() => (el._tmgResizeCbs?.delete(cb), !el._tmgResizeCbs?.size && resizeObserver?.unobserve(el)), sig);
 }
 
-export function observeIntersection(el: Element, cb: (entry: IntersectionObserverEntry) => void) {
+export function observeIntersection(el: Element, cb: (entry: IntersectionObserverEntry) => void, sig?: AbortSignal) {
   (el._tmgIntersectCbs ?? (el._tmgIntersectCbs = new Set())).add(cb);
   intersectionObserver?.observe(el);
-  return () => (el._tmgIntersectCbs?.delete(cb), !el._tmgIntersectCbs?.size && intersectionObserver?.unobserve(el));
+  return bindClupToSig(() => (el._tmgIntersectCbs?.delete(cb), !el._tmgIntersectCbs?.size && intersectionObserver?.unobserve(el)), sig);
 }
 
-export function observeMutation(el: Element, cb: (mutations: MutationRecord[]) => void, options: MutationObserverInit) {
+export function observeMutation(el: Element, cb: (mutations: MutationRecord[]) => void, options: MutationObserverInit, sig?: AbortSignal) {
   (el._tmgMutationCbs ?? (el._tmgMutationCbs = new Set())).add(cb);
   mutationObserver?.observe(el, options);
-  return () => {
+  return bindClupToSig(() => {
     el._tmgMutationCbs?.delete(cb);
     // Note: MutationObserver.unobserve stops EVERYTHING on that observer.
     // If we share one observer, we can't unobserve just one element easily without disconnecting all.
     // For safety in this "util" pattern with a shared observer, we just leave it connected or use dedicated observers.
     // Given the constraints, we'll keep it simple: disconnect if empty only works if 1-to-1.
     // For now, we assume persistent observation for system logic.
-  };
+  }, sig);
 }

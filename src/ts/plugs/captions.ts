@@ -2,10 +2,10 @@ import { BasePlug, CSSPlug, type KeysPlug } from ".";
 import type { CaptionsView } from "../components";
 import { ComponentRegistry } from "../core/registry";
 import type { REvent } from "../types/reactor";
-import type { VideoBuild } from "../types/build";
+import type { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";
-import type { PathValue } from "../types/obj";
+import type { DeepPartial, PathValue } from "../types/obj";
 import type { UIOption, UISettings } from "../types/UIOptions";
 import { camelize, parseUIObj, rotate, setAny } from "../utils";
 
@@ -42,15 +42,15 @@ type CaptionsRotatePath = (typeof ROTATE_PATHS)[number];
 export class CaptionsPlug extends BasePlug<Captions> {
   public static readonly plugName: string = "captions";
   protected view: CaptionsView | null = null;
-  protected infoView: CaptionsView | null = null;
+  protected iView: CaptionsView | null = null; // info view
 
   public mount(): void {
     // Variables Assignment
     this.view = ComponentRegistry.init<CaptionsView>("captions", this.ctlr);
-    this.infoView = ComponentRegistry.init<CaptionsView>("captions", this.ctlr);
+    this.iView = ComponentRegistry.init<CaptionsView>("captions", this.ctlr);
     if (this.view) this.ctlr.DOM.captionsContainer = this.view.element;
     // DOM Injection
-    (this.view?.mount(), this.infoView?.mount());
+    (this.view?.mount(), this.iView?.mount());
   }
 
   public wire(): void {
@@ -83,19 +83,19 @@ export class CaptionsPlug extends BasePlug<Captions> {
     keys?.register("captionsTextAlignment", this.rotateTextAlignment, { phase: "keydown" });
   }
 
-  protected handleDisabledConfig({ value }: REvent<VideoBuild, "settings.captions.disabled">): void {
+  protected handleDisabledConfig({ value }: REvent<CtlrConfig, "settings.captions.disabled">): void {
     const cssPlug = this.ctlr.getPlug<CSSPlug>("css");
-    ((this.ctlr.settings.css.currentCaptionsX = cssPlug?.CSSCache.currentCaptionsX!), (this.ctlr.settings.css.currentCaptionsY = cssPlug?.CSSCache.currentCaptionsY!));
+    ((this.ctlr.settings.css.currentCaptionsX = cssPlug?._cache.currentCaptionsX!), (this.ctlr.settings.css.currentCaptionsY = cssPlug?._cache.currentCaptionsY!));
     if (!this.media.status.textTracks[this.media.state.currentTextTrack]) return;
     !value ? this.ctlr.videoContainer.classList.add("tmg-video-captions") : this.ctlr.videoContainer.classList.remove("tmg-video-captions", "tmg-video-captions-preview");
-    !value && this.infoView?.preview({ text: `${this.media.status.textTracks[this.media.state.currentTextTrack]?.label} ${this.ctlr.videoContainer.dataset.trackKind} \n Click ⚙ for settings`, region: { viewportAnchorX: 10, viewportAnchorY: 10 } });
+    !value && this.iView?.preview({ text: `${this.media.status.textTracks[this.media.state.currentTextTrack]?.label} ${this.ctlr.videoContainer.dataset.trackKind} \n Click ⚙ for settings`, region: { viewportAnchorX: 10, viewportAnchorY: 10 } });
   }
 
-  protected handleFontSizeMin({ value: min }: REvent<VideoBuild, "settings.captions.font.size.min">): void {
+  protected handleFontSizeMin({ value: min }: REvent<CtlrConfig, "settings.captions.font.size.min">): void {
     if (this.config.font.size.value < min) this.config.font.size.value = min;
   }
 
-  protected handleFontSizeMax({ value: max }: REvent<VideoBuild, "settings.captions.font.size.max">): void {
+  protected handleFontSizeMax({ value: max }: REvent<CtlrConfig, "settings.captions.font.size.max">): void {
     if (this.config.font.size.value > max) this.config.font.size.value = max;
   }
 
@@ -132,7 +132,7 @@ export class CaptionsPlug extends BasePlug<Captions> {
     this.view && this.ctlr.config.stall(this.view.preview);
   }
 
-  protected rotateProp(steps: PathValue<VideoBuild["settings"], CaptionsRotatePath>[], prop: CaptionsRotatePath, numeric = true): void {
+  protected rotateProp(steps: PathValue<CtlrConfig["settings"], CaptionsRotatePath>[], prop: CaptionsRotatePath, numeric = true): void {
     if (!steps.length) return;
     const curr = this.ctlr.settings.css[camelize(prop.replace(".value", ""), /\./)];
     setAny(this.ctlr.settings, prop, rotate(numeric ? Number(curr) : String(curr), steps));
@@ -169,3 +169,156 @@ export class CaptionsPlug extends BasePlug<Captions> {
     if (this.ctlr.DOM.captionsContainer === this.view?.element) this.ctlr.DOM.captionsContainer = null;
   }
 }
+
+export const CAPTIONS_BUILD: DeepPartial<Captions> = {
+  disabled: false,
+  allowVideoOverride: true,
+  font: {
+    family: {
+      value: "inherit",
+      options: [
+        { value: "inherit", display: "Default" },
+        { value: "monospace", display: "Monospace" },
+        { value: "sans-serif", display: "Sans Serif" },
+        { value: "serif", display: "Serif" },
+        { value: "cursive", display: "Cursive" },
+        { value: "fantasy", display: "Fantasy" },
+        { value: "system-ui", display: "System UI" },
+        { value: "arial", display: "Arial" },
+        { value: "verdana", display: "Verdana" },
+        { value: "tahoma", display: "Tahoma" },
+        { value: "times new roman", display: "Times New Roman" },
+        { value: "georgia", display: "Georgia" },
+        { value: "impact", display: "Impact" },
+        { value: "comic sans ms", display: "Comic Sans MS" },
+      ],
+    },
+    size: {
+      min: 100,
+      max: 400,
+      value: 100,
+      skip: 100,
+      options: [
+        { value: 25, display: "25%" },
+        { value: 50, display: "50%" },
+        { value: 100, display: "100%" },
+        { value: 150, display: "150%" },
+        { value: 200, display: "200%" },
+        { value: 300, display: "300%" },
+        { value: 400, display: "400%" },
+      ],
+    },
+    color: {
+      value: "white",
+      options: [
+        { value: "white", display: "White" },
+        { value: "yellow", display: "Yellow" },
+        { value: "green", display: "Green" },
+        { value: "cyan", display: "Cyan" },
+        { value: "blue", display: "Blue" },
+        { value: "magenta", display: "Magenta" },
+        { value: "red", display: "Red" },
+        { value: "black", display: "Black" },
+      ],
+    },
+    opacity: {
+      value: 1,
+      options: [
+        { value: 0.25, display: "25%" },
+        { value: 0.5, display: "50%" },
+        { value: 0.75, display: "75%" },
+        { value: 1, display: "100%" },
+      ],
+    },
+    weight: {
+      value: "400",
+      options: [
+        { value: "100", display: "Thin" },
+        { value: "200", display: "Extra Light" },
+        { value: "300", display: "Light" },
+        { value: "400", display: "Normal" },
+        { value: "500", display: "Medium" },
+        { value: "600", display: "Semi Bold" },
+        { value: "700", display: "Bold" },
+        { value: "800", display: "Extra Bold" },
+        { value: "900", display: "Black" },
+      ],
+    },
+    variant: {
+      value: "normal",
+      options: [
+        { value: "normal", display: "Normal" },
+        { value: "small-caps", display: "Small Caps" },
+        { value: "all-small-caps", display: "All Small Caps" },
+      ],
+    },
+  },
+  background: {
+    color: {
+      value: "black",
+      options: [
+        { value: "white", display: "White" },
+        { value: "yellow", display: "Yellow" },
+        { value: "green", display: "Green" },
+        { value: "cyan", display: "Cyan" },
+        { value: "blue", display: "Blue" },
+        { value: "magenta", display: "Magenta" },
+        { value: "red", display: "Red" },
+        { value: "black", display: "Black" },
+      ],
+    },
+    opacity: {
+      value: 0.75,
+      options: [
+        { value: 0, display: "0%" },
+        { value: 0.25, display: "25%" },
+        { value: 0.5, display: "50%" },
+        { value: 0.75, display: "75%" },
+        { value: 1, display: "100%" },
+      ],
+    },
+  },
+  window: {
+    color: {
+      value: "black",
+      options: [
+        { value: "white", display: "White" },
+        { value: "yellow", display: "Yellow" },
+        { value: "green", display: "Green" },
+        { value: "cyan", display: "Cyan" },
+        { value: "blue", display: "Blue" },
+        { value: "magenta", display: "Magenta" },
+        { value: "red", display: "Red" },
+        { value: "black", display: "Black" },
+      ],
+    },
+    opacity: {
+      value: 0,
+      options: [
+        { value: 0, display: "0%" },
+        { value: 0.25, display: "25%" },
+        { value: 0.5, display: "50%" },
+        { value: 0.75, display: "75%" },
+        { value: 1, display: "100%" },
+      ],
+    },
+  },
+  characterEdgeStyle: {
+    value: "none",
+    options: [
+      { value: "none", display: "None" },
+      { value: "drop-shadow", display: "Drop Shadow" },
+      { value: "raised", display: "Raised" },
+      { value: "depressed", display: "Depressed" },
+      { value: "outline", display: "Outline" },
+    ],
+  },
+  textAlignment: {
+    value: "left",
+    options: [
+      { value: "left", display: "Left" },
+      { value: "center", display: "Center" },
+      { value: "right", display: "Right" },
+    ],
+  },
+};

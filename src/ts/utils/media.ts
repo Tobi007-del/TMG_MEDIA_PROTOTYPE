@@ -1,4 +1,4 @@
-import { DEFAULT_MEDIA_INTENT, DEFAULT_MEDIA_SETTINGS, DEFAULT_MEDIA_STATE, DEFAULT_MEDIA_STATUS } from "../consts/media-defaults";
+import { MEDIA_INTENT_BUILD, MEDIA_SETTINGS_BUILD, MEDIA_STATE_BUILD, MEDIA_STATUS_BUILD } from "../consts/media";
 import { MediaState, MediaReport } from "../types/contract";
 import type { Source, Sources, Track, Tracks } from "../plugs";
 import { createEl, isIter, isSameURL, loadResource, queryFullscreenEl, queryPictureInPictureEl } from ".";
@@ -66,10 +66,10 @@ export function getMediaReport(m: HTMLMediaElement): MediaReport {
     },
   };
   return {
-    state: { ...DEFAULT_MEDIA_STATE, ...report.state },
-    intent: { ...DEFAULT_MEDIA_INTENT, ...report.state },
-    status: { ...DEFAULT_MEDIA_STATUS, ...report.status },
-    settings: { ...DEFAULT_MEDIA_SETTINGS, ...report.settings },
+    state: { ...MEDIA_STATE_BUILD, ...report.state },
+    intent: { ...MEDIA_INTENT_BUILD, ...report.state },
+    status: { ...MEDIA_STATUS_BUILD, ...report.status },
+    settings: { ...MEDIA_SETTINGS_BUILD, ...report.settings },
   };
 }
 

@@ -1,9 +1,8 @@
 import { BaseComponent, ComponentState } from "./";
-import { reactive, type Reactive } from "../tools/mixins";
-import { createEl, clamp, setTimeout, stepNum } from "../utils";
 import type { Controller } from "../core/controller";
 import type { REvent } from "../types/reactor";
 import type { AptRange } from "../types/generics";
+import { reactive, type Reactive, createEl, clamp, setTimeout, stepNum } from "../utils";
 
 export interface RangeConfig extends AptRange {
   value: number;
@@ -78,10 +77,10 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
     this.config.value = value;
   }
 
-  protected handleValueChange({ target }: REvent<RangeConfig, "value">): void {
+  protected handleValueChange({ value }: REvent<RangeConfig, "value">): void {
     const pos = this.getValueAsPos();
     (this.updateThumbPosition(pos), this.updateValueBar(pos));
-    if (!this.state.scrubbing) this.container.ariaValueNow = String(target.value!);
+    if (!this.state.scrubbing) this.container.ariaValueNow = String(value);
   }
 
   protected handlePointerDown(e: PointerEvent): void {

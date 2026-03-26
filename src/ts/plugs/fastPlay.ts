@@ -1,4 +1,5 @@
 import { BasePlug, type TimePlug, type OverlayPlug } from ".";
+import type { DeepPartial } from "../types/obj";
 import { setTimeout, setInterval } from "../utils";
 
 export interface FastPlay {
@@ -146,3 +147,11 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
     !this.ctlr.videoContainer?.matches(":hover") && this.handleSpeedPointerUp();
   }
 }
+
+export const FAST_PLAY_BUILD: DeepPartial<FastPlay> = {
+  playbackRate: 2,
+  key: true,
+  pointer: { type: "all", threshold: 800, inset: 20 },
+  reset: true,
+  rewind: true,
+};

@@ -21,3 +21,10 @@ export class ErrorMessagesPlug extends BasePlug<ErrorMessages> {
     this.ctlr.getPlug<DisabledPlug>("disabled")?.deactivate(mssg);
   }
 }
+
+export const ERROR_MESSAGES_BUILD: Partial<ErrorMessages> = {
+  1: "The video playback was aborted :(",
+  2: "The video failed due to a network error :(",
+  3: "The video could not be decoded :(",
+  4: "The video source is not supported :(",
+};

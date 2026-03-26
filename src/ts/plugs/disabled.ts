@@ -1,6 +1,6 @@
 import { BasePlug } from ".";
 import type { REvent } from "../types/reactor";
-import type { VideoBuild } from "../types/build";
+import type { CtlrConfig } from "../types/config";
 import type { OverlayPlug, ToastsPlug, ControlPanelPlug } from ".";
 import type { Timeline } from "../components";
 
@@ -14,13 +14,15 @@ export class DisabledPlug extends BasePlug<Disabled, DisabledState> {
   public static readonly plugName: string = "disabled";
 
   public wire(): void {
-    // Ctlr Media Listeners
+    // Ctlr State Watchers
+    this.ctlr.config.watch("disabled", (value) => (this.config = value), { signal: this.signal }); // #COMPUTED: config can lose reference
+    // ---- Media Listeners
     this.media.on("state.paused", ({ value }) => !value && this.media.status.loadedMetadata && this.reactivate(), { signal: this.signal });
     // ---------- Listeners
     this.ctlr.config.on("disabled", this.handleDisabled, { immediate: true, signal: this.signal });
   }
 
-  protected handleDisabled({ value }: REvent<VideoBuild, "disabled">): void {
+  protected handleDisabled({ value }: REvent<CtlrConfig, "disabled">): void {
     if (value) {
       // JS: this.leaveSettingsView();
       this.ctlr.cancelAllLoops();
@@ -43,10 +45,8 @@ export class DisabledPlug extends BasePlug<Disabled, DisabledState> {
     this.state.message = message;
     this.ctlr.DOM.containerContent?.setAttribute("data-message", message);
     const timeline = this.ctlr.getPlug<ControlPanelPlug>("controlPanel")?.getControl<Timeline>("timeline");
-    if (timeline) {
-      this.ctlr.setCanvasFallback(timeline["previewCanvas"], timeline["previewContext"]!);
-      this.ctlr.setCanvasFallback(timeline["thumbnailCanvas"], timeline["thumbnailContext"]!);
-    }
+    timeline && this.ctlr.setCanvasFallback(timeline["previewCanvas"], timeline["previewContext"]!);
+    timeline && this.ctlr.setCanvasFallback(timeline["thumbnailCanvas"], timeline["thumbnailContext"]!);
     this.ctlr.videoContainer.classList.add("tmg-video-inactive");
   }
 
@@ -57,3 +57,5 @@ export class DisabledPlug extends BasePlug<Disabled, DisabledState> {
     this.ctlr.videoContainer.classList.remove("tmg-video-inactive");
   }
 }
+
+export const DISABLED_BUILD: Disabled = false;

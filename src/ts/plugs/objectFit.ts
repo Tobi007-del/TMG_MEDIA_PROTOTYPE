@@ -44,3 +44,5 @@ export class ObjectFitPlug extends BasePlug<ObjectFit> {
     // JS: this.ctlr.getPlug<NotifiersPlug>("notifiers")?.notify(`objectfit${this.media.intent.objectFit}`);
   }
 }
+
+export const OBJECT_FIT_BUILD: ObjectFit = "contain";

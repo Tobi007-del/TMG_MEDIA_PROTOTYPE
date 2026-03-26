@@ -1,5 +1,6 @@
 import { BasePlug, type FastPlayPlug, type GesturePlug, type ModesPlug, type OverlayPlug, type TimePlug, type VolumePlug } from ".";
 import type { KeyShortcutAction, ModdedKeyShortcutAction } from "../types/generics";
+import type { DeepPartial } from "../types/obj";
 import { cleanKeyCombo, formatKeyShortcutsForDisplay, isArr, keyEventAllowed } from "../utils";
 
 export type KeyPhase = "keydown" | "keyup";
@@ -20,12 +21,12 @@ export interface Keys {
   blocks: string[];
   shortcuts: Record<KeyShortcutAction, string | string[]>;
   mods: { disabled: boolean } & Record<ModdedKeyShortcutAction, Partial<Record<Exclude<KeyMod, "">, number>>>;
+  _handlers: Record<KeyPhase, Record<string, KeyHook>>;
 }
 
 export class KeysPlug extends BasePlug<Keys> {
   public static readonly plugName: string = "keys";
   protected playTriggerCounter = 0;
-  protected handlers: Record<KeyPhase, Map<string, KeyHook>> = { keydown: new Map(), keyup: new Map() };
 
   public wire(): void {
     // Ctlr Config Listeners
@@ -51,13 +52,13 @@ export class KeysPlug extends BasePlug<Keys> {
   }
 
   public register(action: string, handler: KeyHandler, options: KeyRegOptions = {}): void {
-    (options.phase ? (isArr(options.phase) ? options.phase : [options.phase]) : ["keyup"]).forEach((phase) => this.handlers[phase as KeyPhase].set(action, { fn: handler, zen: !!options.zen }));
+    (options.phase ? (isArr(options.phase) ? options.phase : [options.phase]) : ["keyup"]).forEach((phase) => (this.config._handlers[phase as KeyPhase][action] = { fn: handler, zen: !!options.zen }));
     if (options.shortcut && ((this.config.shortcuts as any)[action] == null || options.overwrite)) (this.config.shortcuts as any)[action] = cleanKeyCombo(options.shortcut);
   }
 
   public unregister(action: string, phase?: KeyPhase): void {
-    if (phase) return void this.handlers[phase].delete(action);
-    (this.handlers.keydown.delete(action), this.handlers.keyup.delete(action));
+    if (phase) return void delete this.config._handlers[phase][action];
+    (delete this.config._handlers.keydown[action], delete this.config._handlers.keyup[action]);
   }
 
   protected syncKeyEventListeners(): void {
@@ -69,7 +70,7 @@ export class KeysPlug extends BasePlug<Keys> {
       mod = this.getMod(e);
     if (action === false) return;
     action && this.ctlr.getPlug<OverlayPlug>("overlay")?.show();
-    this.ctlr.throttle("keyDown", () => this.handlers.keydown.get(action)?.fn(e, mod), 30);
+    this.ctlr.throttle("keyDown", () => this.config._handlers.keydown[action]?.fn(e, mod), 30);
   }
 
   protected handleKeyUp(e: KeyboardEvent, zen = false): void {
@@ -77,10 +78,9 @@ export class KeysPlug extends BasePlug<Keys> {
       mod = this.getMod(e);
     if (action === false) return;
     action && this.ctlr.getPlug<OverlayPlug>("overlay")?.show();
-    const hook = this.handlers.keyup.get(action);
+    const hook = this.config._handlers.keyup[action];
     hook && (!zen || hook.zen) && hook.fn(e, mod);
   }
-
   protected handleZenKeyUp(e: KeyboardEvent): void {
     this.handleKeyUp(e, true);
   }
@@ -114,18 +114,15 @@ export class KeysPlug extends BasePlug<Keys> {
     this.ctlr.getPlug<TimePlug>("time")?.skip(-this.getModded("skip", mod, 5));
     // JS: this.notify("bwd");
   }
-
   protected handleArrowRight(_: KeyboardEvent, mod: KeyMod): void {
     this.ctlr.getPlug<GesturePlug>("gesture")?.general?.deactivateSkipPersist();
     this.ctlr.getPlug<TimePlug>("time")?.skip(this.getModded("skip", mod, 5));
     // JS: this.notify("fwd");
   }
-
   protected handleArrowUp(_: KeyboardEvent, mod: KeyMod): void {
     this.ctlr.getPlug<VolumePlug>("volume")?.changeVolume(this.getModded("volume", mod, 5));
     // JS: this.notify("volumeup");
   }
-
   protected handleArrowDown(_: KeyboardEvent, mod: KeyMod): void {
     this.ctlr.getPlug<VolumePlug>("volume")?.changeVolume(-this.getModded("volume", mod, 5));
     // JS: this.settings.volume.value === 0 ? this.notify("volumemuted") : this.notify("volumedown");
@@ -151,7 +148,6 @@ export class KeysPlug extends BasePlug<Keys> {
   protected getMod(e: KeyboardEvent): KeyMod {
     return this.config.mods.disabled ? "" : e.ctrlKey ? "ctrl" : e.altKey ? "alt" : e.shiftKey ? "shift" : "";
   }
-
   public getModded(action: ModdedKeyShortcutAction, mod: KeyMod, fallback: number): number {
     return mod ? (this.config.mods[action]?.[mod] ?? fallback) : fallback;
   }
@@ -160,3 +156,49 @@ export class KeysPlug extends BasePlug<Keys> {
     return formatKeyShortcutsForDisplay(this.config.shortcuts as any);
   }
 }
+
+export const KEYS_BUILD: DeepPartial<Keys> = {
+  disabled: false,
+  strictMatches: false,
+  overrides: [" ", "ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Home", "End"],
+  shortcuts: {
+    prev: "Shift+p",
+    next: "Shift+n",
+    playPause: "k",
+    mute: "m",
+    dark: "d",
+    skipBwd: "j",
+    skipFwd: "l",
+    stepFwd: ".",
+    stepBwd: ",",
+    volumeUp: "ArrowUp",
+    volumeDown: "ArrowDown",
+    brightnessUp: "y",
+    brightnessDown: "h",
+    playbackRateUp: ">",
+    playbackRateDown: "<",
+    timeFormat: "z",
+    timeMode: "q",
+    capture: "s",
+    objectFit: "a",
+    pictureInPicture: "i",
+    theater: "t",
+    fullscreen: "f",
+    captions: "c",
+    captionsFontSizeUp: ["+", "="],
+    captionsFontSizeDown: ["-", "_"],
+    captionsFontFamily: "u",
+    captionsFontWeight: "g",
+    captionsFontVariant: "v",
+    captionsFontOpacity: "o",
+    captionsBackgroundOpacity: "b",
+    captionsWindowOpacity: "w",
+    captionsCharacterEdgeStyle: "e",
+    captionsTextAlignment: "x",
+    settings: "?",
+  },
+  mods: { disabled: false, skip: { ctrl: 60, shift: 10 }, volume: { ctrl: 50, shift: 10 }, brightness: { ctrl: 50, shift: 10 }, playbackRate: { ctrl: 1 }, captionsFontSize: {} },
+  // prettier-ignore
+  blocks: ["Ctrl+Tab", "Ctrl+Shift+Tab", "Ctrl+PageUp", "Ctrl+PageDown", "Cmd+Option+ArrowRight", "Cmd+Option+ArrowLeft", "Ctrl+1", "Ctrl+2", "Ctrl+3", "Ctrl+4", "Ctrl+5", "Ctrl+6", "Ctrl+7", "Ctrl+8", "Ctrl+9", "Cmd+1", "Cmd+2", "Cmd+3", "Cmd+4", "Cmd+5", "Cmd+6", "Cmd+7", "Cmd+8", "Cmd+9", "Alt+ArrowLeft", "Alt+ArrowRight", "Cmd+ArrowLeft", "Cmd+ArrowRight", "Ctrl+r", "Ctrl+Shift+r", "F5", "Shift+F5", "Cmd+r", "Cmd+Shift+r", "Ctrl+h", "Ctrl+j", "Ctrl+d", "Ctrl+f", "Cmd+y", "Cmd+Option+b", "Cmd+d", "Cmd+f", "Ctrl+Shift+i", "Ctrl+Shift+j", "Ctrl+Shift+c", "Ctrl+u", "F12", "Cmd+Option+i", "Cmd+Option+j", "Cmd+Option+c", "Cmd+Option+u", "Ctrl+=", "Ctrl+-", "Ctrl+0", "Cmd+=", "Cmd+-", "Cmd+0", "Ctrl+p", "Ctrl+s", "Ctrl+o", "Cmd+p", "Cmd+s", "Cmd+o"],
+  _handlers: { keydown: {}, keyup: {} },
+};

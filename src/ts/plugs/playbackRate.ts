@@ -1,6 +1,6 @@
 import { BasePlug, type KeysPlug, type KeyMod } from ".";
 import type { REvent } from "../types/reactor";
-import { VideoBuild } from "../types/build";
+import { CtlrConfig } from "../types/config";
 import type { OptRange } from "../types/generics";
 import { clamp, rotate } from "../utils";
 
@@ -27,11 +27,11 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
     this.media.intent.playbackRate = value!;
   }
 
-  protected handleMinChange({ value: min }: REvent<VideoBuild, "settings.playbackRate.min">): void {
+  protected handleMinChange({ value: min }: REvent<CtlrConfig, "settings.playbackRate.min">): void {
     if (this.config.value! < min) this.config.value = min;
   }
 
-  protected handleMaxChange({ value: max }: REvent<VideoBuild, "settings.playbackRate.max">): void {
+  protected handleMaxChange({ value: max }: REvent<CtlrConfig, "settings.playbackRate.max">): void {
     if (this.config.value! > max) this.config.value = max;
   }
 
@@ -62,3 +62,5 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
     }
   }
 }
+
+export const PLAYBACK_RATE_BUILD: Partial<PlaybackRate> = { min: 0.25, max: 8, skip: 0.25 };

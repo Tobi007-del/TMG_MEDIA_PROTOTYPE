@@ -1,7 +1,7 @@
 import { BaseModule, OverlayPlug, SkeletonPlug } from "../";
 import type { REvent } from "../../types/reactor";
 import type { CtlrMedia } from "../../types/contract";
-import type { VideoBuild } from "../../types/build";
+import type { CtlrConfig } from "../../types/config";
 import type { ModesPlug } from "./";
 import { clamp, inDocView, inBoolArrOpt, setTimeout } from "../../utils";
 
@@ -43,7 +43,7 @@ export class MiniplayerModule extends BaseModule<MiniplayerModeConfig> {
     if (this.ctlr.state.readyState > 2) this.media.intent.miniplayer = "auto";
   }
 
-  protected handleDisabledConfig({ value }: REvent<VideoBuild, "settings.modes.miniplayer.disabled">): void {
+  protected handleDisabledConfig({ value }: REvent<CtlrConfig, "settings.modes.miniplayer.disabled">): void {
     this.media.tech.features.miniplayer = !value;
     if (value) this.media.intent.miniplayer = false;
   }
@@ -152,3 +152,5 @@ export class MiniplayerModule extends BaseModule<MiniplayerModeConfig> {
     ["mousedown", "touchstart"].forEach((type) => this.ctlr.videoContainer.removeEventListener(type, this.handleDragStart));
   }
 }
+
+export const MINIPLAYER_BUILD: Partial<MiniplayerModeConfig> = { disabled: false, minWindowWidth: 240 };

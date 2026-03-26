@@ -1,7 +1,7 @@
 import { BaseModule } from "../";
 import type { REvent } from "../../types/reactor";
 import type { CtlrMedia } from "../../types/contract";
-import type { VideoBuild } from "../../types/build";
+import type { CtlrConfig } from "../../types/config";
 import type { OrientationOption } from "../../types/generics";
 import type { ModesPlug } from "./";
 import { IS_MOBILE, enterFullscreen, exitFullscreen, queryFullscreenEl } from "../../utils";
@@ -28,7 +28,7 @@ export class FullscreenModule extends BaseModule<FullscreenModuleConfig> {
     this.media.tech.features.fullscreen = !this.config.disabled;
   }
 
-  protected handleDisabledConfig({ value }: REvent<VideoBuild, "settings.modes.fullscreen.disabled">): void {
+  protected handleDisabledConfig({ value }: REvent<CtlrConfig, "settings.modes.fullscreen.disabled">): void {
     this.media.tech.features.fullscreen = !value;
     if (value && this.ctlr.isUIActive("fullscreen")) this.media.intent.fullscreen = false;
   }
@@ -83,3 +83,5 @@ export class FullscreenModule extends BaseModule<FullscreenModuleConfig> {
     await orientation?.lock?.(option === "auto" ? (this.media.status.videoHeight > this.media.status.videoWidth ? "portrait" : "landscape") : option === true ? (orientation.angle === 0 ? "landscape" : "portrait") : (option as OrientationOption));
   }
 }
+
+export const FULLSCREEN_BUILD: Partial<FullscreenModuleConfig> = { disabled: false, orientationLock: "auto", onRotate: 90 };

@@ -1,7 +1,8 @@
 import { BaseModule } from "../";
 import type { REvent } from "../../types/reactor";
 import type { CtlrMedia } from "../../types/contract";
-import type { VideoBuild } from "../../types/build";
+import type { CtlrConfig } from "../../types/config";
+import { IS_MOBILE } from "../../utils";
 
 export type TheaterConfig = {
   disabled: boolean;
@@ -19,7 +20,7 @@ export class TheaterModule extends BaseModule<TheaterConfig> {
     this.media.tech.features.theater = !this.config.disabled;
   }
 
-  protected handleDisabledConfig({ value }: REvent<VideoBuild, "settings.modes.theater.disabled">): void {
+  protected handleDisabledConfig({ value }: REvent<CtlrConfig, "settings.modes.theater.disabled">): void {
     this.media.tech.features.theater = !value;
     if (value && this.ctlr.isUIActive("theater")) this.media.intent.theater = false;
   }
@@ -32,3 +33,5 @@ export class TheaterModule extends BaseModule<TheaterConfig> {
     e.resolve(this.name);
   }
 }
+
+export const THEATER_BUILD: Partial<TheaterConfig> = { disabled: !IS_MOBILE };

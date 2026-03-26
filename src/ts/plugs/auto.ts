@@ -1,7 +1,8 @@
 import { BasePlug } from ".";
 import type { REvent } from "../types/reactor";
-import { VideoBuild } from "../types/build";
+import { CtlrConfig } from "../types/config";
 import { CtlrMedia } from "../types/contract";
+import type { DeepPartial } from "../types/obj";
 import type { AptAutoplayOption, PosterPreview } from "../types/generics";
 import type { PlaylistPlug, ToastsPlug, TimePlug } from ".";
 import { clamp, addSources } from "../utils";
@@ -37,30 +38,27 @@ export class AutoPlug extends BasePlug<Auto> {
     this.media.element.autoplay = typeof value === "string" ? false : !!value;
   }
 
-  protected handleTimeUpdate({ target }: REvent<CtlrMedia, "state.currentTime">): void {
-    const dur = this.media.status.duration,
-      curr = target.value!;
-    if (this.media.status.readyState && curr && this.ctlr.state.readyState > 1 && Math.floor((this.ctlr.settings.time.end ?? dur) - curr) <= this.config.next.value) this.autonextVideo();
+  protected handleTimeUpdate({ value: curr }: REvent<CtlrMedia, "state.currentTime">): void {
+    if (this.media.status.readyState && curr && this.ctlr.state.readyState > 1 && Math.floor((this.ctlr.settings.time.end ?? this.media.status.duration) - curr) <= this.config.next.value) this.autonextVideo();
   }
 
   protected handleIntersectionChange(): void {
-    this.mediaAptAutoplay(this.config.pause, false);
-    this.mediaAptAutoplay();
+    (this.mediaAptAutoplay(this.config.pause, false), this.mediaAptAutoplay());
   }
 
-  protected handlePreviewUsePoster({ target: { value, object } }: REvent<VideoBuild, "settings.auto.next.preview.usePoster">): void {
+  protected handlePreviewUsePoster({ target: { value, object } }: REvent<CtlrConfig, "settings.auto.next.preview.usePoster">): void {
     if (!this.nextVideoPreview || (value && this.nextVideoPreview.poster)) return;
     if (object.tease) this.ctlr.settings.auto.next.preview.tease = true;
     else this.nextVideoPreview.currentTime = object.time;
   }
 
-  protected handlePreviewTease({ target: { value, object } }: REvent<VideoBuild, "settings.auto.next.preview.tease">): void {
+  protected handlePreviewTease({ target: { value, object } }: REvent<CtlrConfig, "settings.auto.next.preview.tease">): void {
     if (!this.nextVideoPreview) return;
     this.nextVideoPreview.ontimeupdate = () => this.nextVideoPreview && Number(this.nextVideoPreview.currentTime) >= object.time && this.nextVideoPreview.pause();
     if (value && (!object.usePoster || !this.nextVideoPreview.poster)) this.nextVideoPreview.play();
   }
 
-  protected handlePreviewTime({ target: { value, object } }: REvent<VideoBuild, "settings.auto.next.preview.time">): void {
+  protected handlePreviewTime({ target: { value, object } }: REvent<CtlrConfig, "settings.auto.next.preview.time">): void {
     if (!this.nextVideoPreview || (object.usePoster && this.nextVideoPreview.poster)) return;
     this.nextVideoPreview.currentTime = Number(value);
   }
@@ -94,7 +92,7 @@ export class AutoPlug extends BasePlug<Auto> {
         const el = this.ctlr.queryDOM(".tmg-video-next-countdown");
         if (el) el.textContent = String(Math.round((count * 1000 - time) / 1000) || 1);
       },
-      onClose: (timeElapsed: boolean) => (removeListeners(), timeElapsed && this.ctlr.getPlug<PlaylistPlug>("playlist")?.nextVideo()),
+      onClose: (timeElapsed) => (removeListeners(), timeElapsed && this.ctlr.getPlug<PlaylistPlug>("playlist")?.nextVideo()),
       tag: "tmg-anvi",
     });
     const cleanUp = (permanent = false) => (nVTId && window.t007?.toast.dismiss(nVTId, "instant"), (this.nextVideoPreview = null), (this.canAutoMovePlaylist = !permanent)),
@@ -109,3 +107,7 @@ export class AutoPlug extends BasePlug<Auto> {
     nVP?.previousElementSibling?.addEventListener("click", () => (cleanUp(true), this.ctlr.getPlug<PlaylistPlug>("playlist")?.nextVideo()), { capture: true });
   };
 }
+
+export const AUTO_BUILD: DeepPartial<Auto> = {
+  next: { value: 20, preview: { usePoster: true, time: 4, tease: true } },
+};

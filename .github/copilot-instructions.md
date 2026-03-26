@@ -51,8 +51,8 @@ Controllable<Config, State>
 
 ```ts
 export class MyPlug extends BasePlug<MyConfig, MyState> {
-  public static readonly plugName: string = "myPlug";  // required, camelCase
-  public static readonly isCore: boolean = false;       // true = shell infrastructure
+  public static readonly plugName: string = "myPlug"; // required, camelCase
+  public static readonly isCore: boolean = false; // true = shell infrastructure
 }
 ```
 
@@ -69,6 +69,7 @@ export class MyPlug extends BasePlug<MyConfig, MyState> {
 **MSC = Media, State, Config** - the ordering within each operation type (Getters, Setters, Watchers, Listeners).
 
 Dash convention:
+
 - Long `----------` = same MSC tier, next operation - do not repeat the tier name
 - Short `----` = MSC tier changed - do not repeat the operation name
 - Trailing fill dashes (`---- State --------`) = same operation, next MSC tier - operation word not repeated
@@ -97,14 +98,16 @@ public wire(): void {
 ```
 
 Real examples from the codebase:
-- `volume.ts`       -> `Ctlr Config Getters` -> `----------- Setters` -> `----------- Watchers` -> `---- Media Listeners` -> `---- Config --------`
-- `time.ts`         -> `Ctlr Config Getters` -> `---- Media Setters` -> `---- Config Watchers` -> `---- Media Listeners`
+
+- `volume.ts` -> `Ctlr Config Getters` -> `----------- Setters` -> `----------- Watchers` -> `---- Media Listeners` -> `---- Config --------`
+- `time.ts` -> `Ctlr Config Getters` -> `---- Media Setters` -> `---- Config Watchers` -> `---- Media Listeners`
 - `playbackRate.ts` -> `Ctlr Media Setters` -> `---- Config Watchers` -> `----------- Listeners`
-- `auto.ts`         -> `Ctlr Config Watchers` -> `---- Media Listeners` -> `---- State ---------` -> `---- Config --------`
+- `auto.ts` -> `Ctlr Config Watchers` -> `---- Media Listeners` -> `---- State ---------` -> `---- Config --------`
 
 Not every section is always present. Use only what the plug needs.
 
 ### mount() comment section order:
+
 ```ts
 public mount(): void {
   // Variables Assignment    <- createEl(), ComponentRegistry.init()
@@ -137,7 +140,7 @@ public mount(): void {
 ```ts
 export class MyComp extends BaseComponent<MyConfig, MyState, HTMLButtonElement> {
   public static readonly componentName: string = "myComp";
-  public static readonly isControl: boolean = false;  // true = shown in control panel
+  public static readonly isControl: boolean = false; // true = shown in control panel
 }
 ```
 
@@ -148,7 +151,8 @@ export class MyComp extends BaseComponent<MyConfig, MyState, HTMLButtonElement> 
 - `hide/show/disable/enable()` - CSS class toggles provided by base
 - `setBtnARIA(doubleKeyAction?)` - sets aria attrs from `this.state.label` and `this.state.cmd`
 - Acquire plug refs in `wire()`: `this.plug = this.ctlr.getPlug<TimePlug>("time")`
-- 
+-
+
 ---
 
 ## Controller (The God Object)
@@ -218,6 +222,7 @@ protected handleVolumeIntent(e) {
 - Smart-optimistic UI listens on bubble phase, checks `e.rejected` before reflecting
 
 Canonical example: `volume.ts` on `media.intent.volume` and `media.intent.muted`
+
 - **Intent handlers are always `void` (synchronous)**. `e.resolve(this.name)` goes at the bottom; async work goes in a `protected async doX()` method called fire-and-forget from the handler.
 
 ---
@@ -264,17 +269,9 @@ Canonical example: `volume.ts` on `media.intent.volume` and `media.intent.muted`
 
 ## Missing Plugs (To Write)
 
-| Plug            | File                 | Notes                                                                                         |
-| --------------- | -------------------- | --------------------------------------------------------------------------------------------- |
-| KeysPlug        | `plugs/keys.ts`      | Plugs call `keysPlug.register("action", handler)`; `settings.keys.shortcuts` grows at runtime |
-| NotifierPlug    | `plugs/notifiers.ts` | `.notify(key)` method, BaseNotifier component                                                 |
-
-## Keys Design
-
-- Routes `keydown` -> registered handler lookup
-- `settings.keys.mods` - modifier increments (Ctrl/Alt/Shift)
-- `settings.keys.shortcuts` - grows as plugs self-register
-- `keyShortcutActions` const array is seed/type guard for built-ins; do not remove it
+| Plug         | File                 | Notes                                         |
+| ------------ | -------------------- | --------------------------------------------- |
+| NotifierPlug | `plugs/notifiers.ts` | `.notify(key)` method, BaseNotifier component |
 
 ---
 

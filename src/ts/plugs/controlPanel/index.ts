@@ -1,12 +1,13 @@
 import { BasePlug } from "..";
 import type { Controller } from "../../core/controller";
-import type { VideoBuild } from "../../types/build";
+import type { CtlrConfig } from "../../types/config";
 import type { REvent } from "../../types/reactor";
 import { controls, bigControls } from "../../consts/generics";
 import { BaseComponent, Timeline } from "../../components";
 import { ComponentRegistry } from "../../core/registry";
-import { createEl, parsePanelBottomObj, initScrollAssist, observeResize, removeScrollAssist } from "../../utils";
-import { DraggableModule, type DraggableModuleConfig } from "./draggable";
+import type { DeepPartial } from "../../types/obj";
+import { createEl, parsePanelBottomObj, initScrollAssist, observeResize, removeScrollAssist, IS_MOBILE } from "../../utils";
+import { DraggableModule, DRAGGABLE_BUILD, type DraggableModuleConfig } from "./draggable";
 
 export * from "./draggable";
 
@@ -45,7 +46,6 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   protected topW!: HTMLElement;
   protected bottomW!: HTMLElement;
   protected scrollAssistEls: HTMLElement[] = [];
-  protected clups: (() => void)[] = [];
   public getControl<T extends BaseComponent = BaseComponent>(name: string): T | undefined {
     return this.controls.get(name) as T | undefined;
   }
@@ -98,24 +98,24 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     this.initScrollAndResize();
   }
 
-  protected handleMetaLayout({ target: { key, value } }: REvent<VideoBuild, "settings.controlPanel.title" | "settings.controlPanel.artist" | "settings.controlPanel.profile">): void {
+  protected handleMetaLayout({ target: { key, value } }: REvent<CtlrConfig, "settings.controlPanel.title" | "settings.controlPanel.artist" | "settings.controlPanel.profile">): void {
     // const meta = this.getControl<Meta>("meta");
     // value !== true && (meta[key][key === "profile" ? "src" : "textContent"] = meta[key].dataset["video" + capitalize(key)] = value || "");
   }
 
-  protected handleTopLayout({ value }: REvent<VideoBuild, "settings.controlPanel.top">): void {
+  protected handleTopLayout({ value }: REvent<CtlrConfig, "settings.controlPanel.top">): void {
     if (!value || typeof value === "boolean") return;
     const { left, center, right } = this.getSplitControls(value);
     this.fillSWrapper(this.topW, [(this.cZoneWs.top.left = this.getZoneW(left, this.zoneWs.top.left)), (this.cZoneWs.top.center = this.getZoneW(center, this.zoneWs.top.center)), (this.cZoneWs.top.right = this.getZoneW(right, this.zoneWs.top.right))]);
     (this.fillZone(this.cZoneWs.top.left, left), this.fillZone(this.cZoneWs.top.center, center), this.fillZone(this.cZoneWs.top.right, right));
   }
 
-  protected handleCenterLayout({ value }: REvent<VideoBuild, "settings.controlPanel.center">): void {
+  protected handleCenterLayout({ value }: REvent<CtlrConfig, "settings.controlPanel.center">): void {
     if (!value || typeof value === "boolean") return;
     this.fillZone(this.cZoneWs.center, value);
   }
 
-  protected handleBottomLayout({ value }: REvent<VideoBuild, "settings.controlPanel.bottom">): void {
+  protected handleBottomLayout({ value }: REvent<CtlrConfig, "settings.controlPanel.bottom">): void {
     if (!value || typeof value === "boolean") return;
     ([1, 2, 3] as Row[]).forEach((i) => {
       const { left, center, right } = this.getSplitControls((value as ControlPanelBottomTuple)[i]);
@@ -124,7 +124,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     });
   }
 
-  protected handleTimelineSeek({ currentTarget: { value } }: REvent<VideoBuild, "settings.controlPanel.timeline.seek">): void {
+  protected handleTimelineSeek({ currentTarget: { value } }: REvent<CtlrConfig, "settings.controlPanel.timeline.seek">): void {
     const timeline = this.getControl<Timeline>("timeline");
     if (timeline) timeline.config.scrub.relative = value!.relative;
     if (timeline) timeline.config.scrub.cancel = value!.cancel;
@@ -166,7 +166,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     this.zonesArr.forEach((zone) => {
       this.handleControlsView(zone);
       this.scrollAssistEls.push((initScrollAssist(zone, { pxPerSecond: 60 }), zone));
-      this.clups.push(observeResize(zone, () => this.handleControlsView(zone)));
+      observeResize(zone, () => this.handleControlsView(zone), this.signal);
       zone.addEventListener("scroll", this.handleDirtyScroll, { passive: true, signal: this.signal });
     });
   }
@@ -198,8 +198,24 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
 
   protected onDestroy(): void {
     this.draggable?.destroy();
-    this.clups.forEach((cleanup) => cleanup());
     this.scrollAssistEls.forEach(removeScrollAssist);
     (this.controls.forEach((instance) => instance.destroy()), this.controls.clear());
   }
 }
+
+export const CONTROL_PANEL_BUILD: DeepPartial<ControlPanel> = {
+  profile: true,
+  title: true,
+  artist: true,
+  top: ["expandminiplayer", "spacer", "meta", "spacer", "capture", "fullscreenlock", "fullscreenorientation", "removeminiplayer"],
+  center: ["bigprev", "bigplaypause", "bignext"],
+  bottom: {
+    1: [],
+    2: ["spacer", "timeline", "spacer"] as const,
+    3: [...(!IS_MOBILE ? (["prev", "playpause", "next"] as const) : []), "brightness", "volume", "timeandduration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"] as const,
+  },
+  buffer: "eclipse",
+  timeline: { thumbIndicator: true, seek: { relative: !IS_MOBILE, cancel: { delta: 15, timeout: 2000 } } },
+  progressBar: IS_MOBILE,
+  draggable: DRAGGABLE_BUILD,
+};

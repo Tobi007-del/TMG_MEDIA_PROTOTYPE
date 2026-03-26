@@ -79,3 +79,5 @@ export class FramePlug extends BasePlug<Frame> {
     this.media.state.paused && this.ctlr.throttle("frameStepping", () => (this.media.intent.currentTime = clamp(0, Math.round(this.media.state.currentTime * this.config.fps) + (dir === "backwards" ? -1 : 1), Math.floor(this.media.status.duration * this.config.fps)) / this.config.fps), Math.round(1000 / this.config.fps));
   }
 }
+
+export const FRAME_BUILD: Partial<Frame> = { disabled: false, fps: 30, captureAutoClose: 15000 };
