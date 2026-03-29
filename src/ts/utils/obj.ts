@@ -4,7 +4,9 @@ import type { UIObject, UISettings } from "../types/UIOptions";
 import { isObj, isArr, setAny } from ".";
 import { camelize } from ".";
 
-export { isDef, isArr, isObj, isStrictObj, isIter, inBoolArrOpt, setAny, getAny, deleteAny, inAny, parseAnyObj, parseEvOpts, mergeObjs, getTrailPaths, getTrailRecords, deepClone, nuke } from "sia-reactor/utils";
+export { isDef, isSym, isBool, isNum, isStr, isArr, isObj, isStrictObj, isIter, isFunc, inBoolArrOpt } from "@t007/utils";
+
+export { setAny, getAny, deleteAny, inAny, parseAnyObj, parseEvtOpts, mergeObjs, getTrailPaths, getTrailRecords, deepClone, nuke } from "sia-reactor/utils";
 
 // Type Guards
 export function isUISetting<T = unknown>(obj: any): obj is UISettings<T> {

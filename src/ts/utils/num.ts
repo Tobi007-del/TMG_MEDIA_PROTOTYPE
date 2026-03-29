@@ -1,11 +1,11 @@
-import { clamp } from "@t007/utils";
 import { AptRange } from "../types/generics";
+import { isNum, clamp } from "@t007/utils";
 
 // Validators
 export { clamp };
 
 export function isValidNum(val: any): boolean {
-  return !isNaN(val ?? NaN) && val !== Infinity;
+  return isNum(val) && !isNaN(val ?? NaN) && val !== Infinity;
 }
 
 export function safeNum(number: any, fallback = 0): number {
@@ -47,7 +47,7 @@ export function rotate(cur: any, steps: any, dir: "forwards" | "backwards" = "fo
     if (_stepsCache.has(key)) list = _stepsCache.get(key)!;
     else _stepsCache.set(key, (list = Array.from({ length: Math.floor((steps.max - steps.min) / steps.step) + 1 }, (_, i) => steps.min + i * steps.step)));
   }
-  let idx = "number" === typeof cur ? list.reduce((p, c, x) => (Math.abs(c - cur) < Math.abs(list[p] - cur) ? x : p), 0) : list.indexOf(cur);
+  let idx = isNum(cur) ? list.reduce((p, c, x) => (Math.abs(c - cur) < Math.abs(list[p] - cur) ? x : p), 0) : list.indexOf(cur);
   idx = idx + (dir === "forwards" ? 1 : -1);
   return list[wrap ? (idx + list.length) % list.length : clamp(0, idx, list.length - 1)];
 }

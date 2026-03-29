@@ -24,13 +24,4 @@ export function luid(key = LUID_KEY, prefix = "tmg_local_"): string {
 }
 
 // Checkers
-export function isSameURL(src1: unknown, src2: unknown): boolean {
-  if (typeof src1 !== "string" || typeof src2 !== "string" || !src1 || !src2) return false;
-  try {
-    const u1 = new URL(src1, window.location.href),
-      u2 = new URL(src2, window.location.href);
-    return decodeURIComponent(u1.origin + u1.pathname) === decodeURIComponent(u2.origin + u2.pathname);
-  } catch {
-    return src1.replace(/\\/g, "/").split("?")[0].trim() === src2.replace(/\\/g, "/").split("?")[0].trim();
-  }
-}
+export { isSameURL } from "@t007/utils";

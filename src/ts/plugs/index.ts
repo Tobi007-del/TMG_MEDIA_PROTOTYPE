@@ -6,6 +6,7 @@ export * from "./css";
 export * from "./skeleton";
 export * from "./controlPanel";
 export * from "./overlay";
+export * from "./notifiers";
 export * from "./media";
 export * from "./light-state";
 export * from "./gesture";

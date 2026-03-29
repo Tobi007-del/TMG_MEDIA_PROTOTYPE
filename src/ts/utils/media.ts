@@ -1,7 +1,7 @@
 import { MEDIA_INTENT_BUILD, MEDIA_SETTINGS_BUILD, MEDIA_STATE_BUILD, MEDIA_STATUS_BUILD } from "../consts/media";
 import { MediaState, MediaReport } from "../types/contract";
 import type { Source, Sources, Track, Tracks } from "../plugs";
-import { createEl, isIter, isSameURL, loadResource, queryFullscreenEl, queryPictureInPictureEl } from ".";
+import { isStr, isNum, createEl, isIter, isSameURL, loadResource, queryFullscreenEl, queryPictureInPictureEl } from ".";
 
 // ============ Video Utilities ============
 
@@ -207,7 +207,7 @@ export function isSameTracks(a?: Tracks, b?: Tracks): boolean {
 }
 const isTrack = (type: TrackType, term: any) => `${type}Track` in window && term instanceof (window as any)[`${type}Track`];
 export function getTrackIdx(medium: HTMLMediaElement, type: TrackType, term: any = "active"): number {
-  if ("number" === typeof term) return term;
+  if (isNum(term)) return term;
   const list = (medium as any)[`${type.toLowerCase()}Tracks`];
   if (term === "active") {
     if (type === "Text") for (let i = 0; i < +list?.length; i++) if (list[i].mode === "showing") return i;
@@ -215,7 +215,7 @@ export function getTrackIdx(medium: HTMLMediaElement, type: TrackType, term: any
     if (type === "Video") return list.selectedIndex ?? -1;
   }
   if (isTrack(type, term)) return Array.prototype.indexOf.call(list, term);
-  if ("string" === typeof term) {
+  if (isStr(term)) {
     term = term.toLowerCase();
     return !isNaN(+term) ? +term : Array.prototype.findIndex.call(list, (t: any) => t.id.toLowerCase() === term || t.label.toLowerCase() === term || t.srclang.toLowerCase() === term || t.language.toLowerCase() === term || isSameURL(t.src, term));
   }

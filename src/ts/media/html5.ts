@@ -3,7 +3,7 @@ import type { REvent, ListenerOptions } from "../types/reactor";
 import type { Controller } from "../core/controller";
 import type { CtlrMedia, MediaIntent } from "../types/contract";
 import type { WildPaths } from "../types/obj";
-import { type TrackType, enterFullscreen, exitFullscreen, getSources, getTracks, isSameURL, queryFullscreenEl, supportsFullscreen, supportsPictureInPicture, observeMutation, removeSources, addSources, isSameSources, isSameTracks, removeTracks, addTracks, getTrackIdx, setCurrentTrack, canVidCtrlVolume, canVidMuteVolume, canVidCtrlRate, canVidTextTracks, canVidVideoTracks, canVidAudioTracks } from "../utils";
+import { isStr, type TrackType, enterFullscreen, exitFullscreen, getSources, getTracks, isSameURL, queryFullscreenEl, supportsFullscreen, supportsPictureInPicture, observeMutation, removeSources, addSources, isSameSources, isSameTracks, removeTracks, addTracks, getTrackIdx, setCurrentTrack, canVidCtrlVolume, canVidMuteVolume, canVidCtrlRate, canVidTextTracks, canVidVideoTracks, canVidAudioTracks } from "../utils";
 
 export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   public static readonly techName: string = "html5";
@@ -383,7 +383,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
     this.config.status.waiting = this.config.status.stalled = false;
   }
   protected handleErrorStatus(e: any) {
-    this.config.status.error = this.el.error ?? ({ message: ("string" === typeof e && e) || e?.message } as MediaError);
+    this.config.status.error = this.el.error ?? ({ message: (isStr(e) && e) || e?.message } as MediaError);
     this.config.status.waiting = false;
   }
   protected handleTracksStatus(type: "textTracks" | "videoTracks" | "audioTracks", list: any) {

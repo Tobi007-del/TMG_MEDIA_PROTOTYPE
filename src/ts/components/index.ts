@@ -8,3 +8,4 @@ export * from "./screenlocked";
 export * from "./time";
 export * from "./timeandduration";
 export * from "./timeline";
+export * from "./notifier";

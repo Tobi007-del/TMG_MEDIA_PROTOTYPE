@@ -1,5 +1,4 @@
-import { createEl } from "./dom";
-import { clamp } from "./num";
+import { isStr, createEl, clamp } from ".";
 
 // Types
 type RGB = [number, number, number];
@@ -22,7 +21,7 @@ export function clampRGBBri([r, g, b]: RGB, m = 40): RGB {
 
 // Dominant Color Detection
 export async function getDominantColor(src: string | HTMLImageElement | HTMLCanvasElement | { canvas: HTMLCanvasElement; width: number; height: number }, format: DominantColorFormat = "rgb", raw = false): Promise<string | RGB | null> {
-  if (typeof src == "string")
+  if (isStr(src))
     src = await new Promise<HTMLImageElement>((res, rej) => {
       const i = createEl("img", { src: String(src), crossOrigin: "anonymous", onload: () => res(i), onerror: () => rej(new Error(`Image load error: ${src}`)) });
     });

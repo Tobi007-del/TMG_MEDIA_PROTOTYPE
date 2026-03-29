@@ -39,8 +39,7 @@ export class TimeAndDuration extends BaseComponent<TimeAndDurationConfig, Compon
   }
 
   protected updateUI(): void {
-    const bridgeText = { digital: "/", human: "of", "human-long": "out of" }[this.ctlr.settings.time.format];
-    this.bridge.textContent = bridgeText || "/";
+    this.bridge.textContent = { digital: "/", human: "of", "human-long": "out of" }[this.ctlr.settings.time.format] || "/";
     (this.updateTime(), this.updateDuration());
   }
   protected updateTime(): void {

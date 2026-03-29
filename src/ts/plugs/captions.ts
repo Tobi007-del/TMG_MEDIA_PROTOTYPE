@@ -71,6 +71,7 @@ export class CaptionsPlug extends BasePlug<Captions> {
     (this.ctlr.settings.css.currentCaptionsX, this.ctlr.settings.css.currentCaptionsY); // Read once so CSSPlug can cache computed values.
     const keys = this.ctlr.getPlug<KeysPlug>("keys");
     keys?.register("captions", this.toggleCaptions, { phase: "keyup" });
+    // JS: return this.media.status.textTracks[this.media.state.currentTextTrack] && this.notify("captions");
     keys?.register("captionsFontSizeUp", (_, mod) => this.changeFontSize(keys.getModded("captionsFontSize", mod, this.config.font.size.skip)), { phase: "keydown" });
     keys?.register("captionsFontSizeDown", (_, mod) => this.changeFontSize(-keys.getModded("captionsFontSize", mod, this.config.font.size.skip)), { phase: "keydown" });
     keys?.register("captionsFontFamily", this.rotateFontFamily, { phase: "keydown" });

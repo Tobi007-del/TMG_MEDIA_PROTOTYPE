@@ -1,4 +1,4 @@
-import { BasePlug } from "..";
+import { BasePlug, DraggableModule, DRAGGABLE_BUILD, type DraggableModuleConfig } from "..";
 import type { Controller } from "../../core/controller";
 import type { CtlrConfig } from "../../types/config";
 import type { REvent } from "../../types/reactor";
@@ -6,8 +6,7 @@ import { controls, bigControls } from "../../consts/generics";
 import { BaseComponent, Timeline } from "../../components";
 import { ComponentRegistry } from "../../core/registry";
 import type { DeepPartial } from "../../types/obj";
-import { createEl, parsePanelBottomObj, initScrollAssist, observeResize, removeScrollAssist, IS_MOBILE } from "../../utils";
-import { DraggableModule, DRAGGABLE_BUILD, type DraggableModuleConfig } from "./draggable";
+import { isBool, createEl, parsePanelBottomObj, initScrollAssist, observeResize, removeScrollAssist, IS_MOBILE } from "../../utils";
 
 export * from "./draggable";
 
@@ -104,19 +103,19 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   }
 
   protected handleTopLayout({ value }: REvent<CtlrConfig, "settings.controlPanel.top">): void {
-    if (!value || typeof value === "boolean") return;
+    if (!value || isBool(value)) return;
     const { left, center, right } = this.getSplitControls(value);
     this.fillSWrapper(this.topW, [(this.cZoneWs.top.left = this.getZoneW(left, this.zoneWs.top.left)), (this.cZoneWs.top.center = this.getZoneW(center, this.zoneWs.top.center)), (this.cZoneWs.top.right = this.getZoneW(right, this.zoneWs.top.right))]);
     (this.fillZone(this.cZoneWs.top.left, left), this.fillZone(this.cZoneWs.top.center, center), this.fillZone(this.cZoneWs.top.right, right));
   }
 
   protected handleCenterLayout({ value }: REvent<CtlrConfig, "settings.controlPanel.center">): void {
-    if (!value || typeof value === "boolean") return;
+    if (!value || isBool(value)) return;
     this.fillZone(this.cZoneWs.center, value);
   }
 
   protected handleBottomLayout({ value }: REvent<CtlrConfig, "settings.controlPanel.bottom">): void {
-    if (!value || typeof value === "boolean") return;
+    if (!value || isBool(value)) return;
     ([1, 2, 3] as Row[]).forEach((i) => {
       const { left, center, right } = this.getSplitControls((value as ControlPanelBottomTuple)[i]);
       this.fillSWrapper(this.bottomW.children[i - 1] as HTMLElement, [(this.cZoneWs.bottom[i].left = this.getZoneW(left, this.zoneWs.bottom[i].left)), (this.cZoneWs.bottom[i].center = this.getZoneW(center, this.zoneWs.bottom[i].center)), (this.cZoneWs.bottom[i].right = this.getZoneW(right, this.zoneWs.bottom[i].right))]);

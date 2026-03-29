@@ -1,6 +1,6 @@
 import { Player } from "./player";
 import { type Controller } from "../core/controller";
-import { setTimeout, queryFullscreen, observeMutation, type Dimensions } from "../utils";
+import { setTimeout, queryFullscreen, observeMutation, type Dimensions, isDef } from "../utils";
 
 // Defines states explicitly managed by the TMG Environment Observers
 export interface CtlrState {
@@ -20,7 +20,7 @@ export interface CtlrState {
 }
 
 // --- GLOBAL STATE ---
-const w = typeof window !== "undefined" ? window : undefined;
+const w = isDef(window) ? window : undefined;
 const flagMutationSet = new WeakSet<HTMLElement>(); // weak set for true magic
 let flagMutationId: number | undefined;
 // --- EXPORTS ---
@@ -79,7 +79,7 @@ function freeMutation(m: HTMLElement) {
 }
 
 export function mountMedia() {
-  if (typeof HTMLVideoElement === "undefined") return;
+  if (!isDef(HTMLVideoElement)) return;
   Object.defineProperty(HTMLVideoElement.prototype, "tmgcontrols", {
     get: function () {
       return this.hasAttribute("tmgcontrols");

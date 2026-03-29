@@ -1,11 +1,10 @@
-import { BasePlug } from ".";
+import { BasePlug, PlaylistPlug, ToastsPlug, TimePlug } from ".";
 import type { REvent } from "../types/reactor";
 import { CtlrConfig } from "../types/config";
 import { CtlrMedia } from "../types/contract";
 import type { DeepPartial } from "../types/obj";
 import type { AptAutoplayOption, PosterPreview } from "../types/generics";
-import type { PlaylistPlug, ToastsPlug, TimePlug } from ".";
-import { clamp, addSources } from "../utils";
+import { isStr, clamp, addSources } from "../utils";
 
 export interface Auto {
   play: boolean | AptAutoplayOption;
@@ -35,7 +34,7 @@ export class AutoPlug extends BasePlug<Auto> {
   }
 
   protected forwardAutoPlay(value?: boolean | AptAutoplayOption): void {
-    this.media.element.autoplay = typeof value === "string" ? false : !!value;
+    this.media.element.autoplay = isStr(value) ? false : !!value;
   }
 
   protected handleTimeUpdate({ value: curr }: REvent<CtlrMedia, "state.currentTime">): void {

@@ -4,6 +4,9 @@ import type { REvent } from "../types/reactor";
 import type { OptRange } from "../types/generics";
 import type { PreviewConfig, Timeline } from "../components";
 import { CtlrMedia } from "../types/contract";
+import type { Controller } from "../core/controller";
+import type { CtlrConfig } from "../types/config";
+import type { Paths } from "../types/obj";
 
 export interface CTime extends OptRange {
   mode: "elapsed" | "remaining";
@@ -15,20 +18,30 @@ export interface CTime extends OptRange {
   seekSync: boolean;
 }
 
-export class TimePlug extends BasePlug<CTime> {
+export interface TimeState {
+  guardedPaths: Extract<Paths<CtlrConfig>, `${string}time${string}`>[];
+}
+
+export class TimePlug extends BasePlug<CTime, TimeState> {
   public static readonly plugName: string = "time";
   private actualStart = 0;
   private pseudoStart = 0;
   private skipDuration = 0;
   private skipDurationId = -1;
   private currentSkipNotifier: HTMLElement | null = null;
-  public guardedTimePaths = ["lightState.preview.time", "settings.time.min", "settings.time.max", "settings.time.start", "settings.time.end", "settings.auto.next.preview.time"] as const;
+
+  constructor(ctlr: Controller, config: CTime) {
+    super(ctlr, config, {
+      guardedPaths: ["lightState.preview.time", "settings.time.min", "settings.time.max", "settings.time.start", "settings.time.end", "settings.auto.next.preview.time"],
+    });
+  }
 
   public wire(): void {
     // Variables Assignment
     this.pseudoStart = this.config.start ?? 0;
+    // State Listeners
+    this.state.on("guardedPaths", this.handleGuardedPathsState, { signal: this.signal, immediate: true, depth: 1 });
     // Ctlr Config Getters
-    this.guardTimeValues();
     // this.ctlr.config.get("settings.time.value", () => this.ctlr.media.state.currentTime, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
     // ---- Media Setters
     this.media.set("intent.currentTime", () => clamp(this.config.min, this.config.value!, this.config.max), { signal: this.signal });
@@ -44,6 +57,11 @@ export class TimePlug extends BasePlug<CTime> {
     keys?.register("skipBwd", this.handleKeySkipBwd, { phase: "keydown" });
     keys?.register("timeMode", this.toggleMode, { phase: "keyup" });
     keys?.register("timeFormat", this.rotateFormat, { phase: "keyup" });
+  }
+
+  protected handleGuardedPathsState({ value: paths = [], oldValue: prev = [] }: REvent<TimeState, "guardedPaths">): void {
+    prev.forEach((path) => this.ctlr.config.noget(path, this.toTimeVal));
+    paths.forEach((path) => this.ctlr.config.get(path, this.toTimeVal, { signal: this.signal }));
   }
 
   protected forwardTimeValue(value?: number): void {
@@ -63,7 +81,7 @@ export class TimePlug extends BasePlug<CTime> {
     if (value && IS_MOBILE && this.currentSkipNotifier) this.media.once("status.waiting", () => this.ctlr.getPlug<OverlayPlug>("overlay")?.remove(), { signal: this.signal });
   }
 
-  public toTimeVal(value?: number | string | null): number {
+  public toTimeVal(value?: any): number {
     return parseIfPercent(value ?? 0, this.media.status.duration);
   }
   public toTimeText(time = this.media.state.currentTime, useMode = false, showMs = false): string {
@@ -129,10 +147,6 @@ export class TimePlug extends BasePlug<CTime> {
     this.ctlr.getPlug<GesturePlug>("gesture")?.general?.deactivateSkipPersist();
     this.skip(-this.ctlr.getPlug<KeysPlug>("keys")!.getModded("skip", mod, this.config.skip));
     // JS: this.notify("bwd");
-  }
-
-  guardTimeValues() {
-    this.guardedTimePaths.forEach((p) => this.ctlr.config.get(p, this.toTimeVal, { signal: this.signal }));
   }
 }
 

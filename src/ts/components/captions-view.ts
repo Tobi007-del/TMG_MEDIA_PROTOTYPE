@@ -1,6 +1,6 @@
 import { BaseComponent, ComponentState } from ".";
 import { DeepPartial } from "../types/obj";
-import { capitalize, clamp, createEl, formatVttLine, isDef, isObj, parseIfPercent, parseVttText, safeNum, setTimeout } from "../utils";
+import { capitalize, clamp, createEl, formatVttLine, isDef, isObj, isStr, parseIfPercent, parseVttText, safeNum, setTimeout } from "../utils";
 
 export type CaptionsViewConfig = undefined;
 
@@ -71,7 +71,7 @@ export class CaptionsView extends BaseComponent<CaptionsViewConfig, ComponentSta
   }
 
   public preview(preview: CueLike | string = `${capitalize(this.ctlr.videoContainer.dataset.trackKind || "captions")} look like this`, flush = this.element.textContent.replace(/\s/g, "") === this.lastPreview?.replace(/\s/g, "")): void {
-    const text = "string" === typeof preview ? preview : preview.text || "",
+    const text = isStr(preview) ? preview : preview.text || "",
       should = flush || !this.ctlr.isUIActive("captions") || !this.element.textContent;
     should && this.ctlr.videoContainer.classList.add("tmg-video-captions-preview");
     this.render(should ? (isObj(preview) ? preview : { text: preview }) : this.lastCue);

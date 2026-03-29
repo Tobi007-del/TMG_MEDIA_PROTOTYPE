@@ -18,7 +18,7 @@ export class DisabledPlug extends BasePlug<Disabled, DisabledState> {
     this.ctlr.config.watch("disabled", (value) => (this.config = value), { signal: this.signal }); // #COMPUTED: config can lose reference
     // ---- Media Listeners
     this.media.on("state.paused", ({ value }) => !value && this.media.status.loadedMetadata && this.reactivate(), { signal: this.signal });
-    // ---------- Listeners
+    // ---- Config --------
     this.ctlr.config.on("disabled", this.handleDisabled, { immediate: true, signal: this.signal });
   }
 

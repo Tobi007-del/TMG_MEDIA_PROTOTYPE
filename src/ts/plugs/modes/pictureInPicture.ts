@@ -2,8 +2,8 @@ import { BaseModule, KeysPlug, MediaPlug, OverlayPlug, SkeletonPlug } from "../"
 import type { REvent } from "../../types/reactor";
 import type { CtlrMedia } from "../../types/contract";
 import type { CtlrConfig } from "../../types/config";
-import { mockAsync, breath, loadResource, observeMutation, isSameURL, createEl } from "../../utils";
 import { handleDOMMutation } from "../../tools/runtime";
+import { isStr, mockAsync, breath, loadResource, observeMutation, isSameURL, createEl } from "../../utils";
 
 export interface FloatingPlayerConfig {
   disabled: boolean;
@@ -75,7 +75,7 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
     this.floatingWindow!.document.documentElement.style.cssText = `height:100%; background:url(${this.ctlr.config.media?.profile}) center / 32px no-repeat, url(${this.media.state.poster}) center / ${this.ctlr.settings.css.bgSafeObjectFit} no-repeat, black;`;
     await breath(this.floatingWindow! as Window & typeof globalThis);
     const cssTexts = [],
-      parse = (src: string) => ("string" === typeof src ? src : null),
+      parse = (src: string) => (isStr(src) ? src : null),
       whitelist = this.whitelist.concat([parse(window.T007_TOAST_CSS_SRC!), parse(window.T007_INPUT_CSS_SRC!), parse(window.TMG_VIDEO_CSS_SRC!) ?? "https://cdn.jsdelivr.net/npm/tmg-media-player@latest/dist/index.min.css"].filter(Boolean) as string[]); // video CSS too experimental; needs a link :)
     for (const sheet of document.styleSheets) {
       try {

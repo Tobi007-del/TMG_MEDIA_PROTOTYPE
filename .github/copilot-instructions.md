@@ -64,13 +64,13 @@ export class MyPlug extends BasePlug<MyConfig, MyState> {
 - Constructor: always `super(ctlr, config, state)` first; instantiate sub-modules here
 - Other plugs access via `ctlr.getPlug<MyPlug>("myPlug")`
 
-### MSC Pattern - wire() comment section order
+### GSWL-MSC Pattern - wire() comment section order
 
 **MSC = Media, State, Config** - the ordering within each operation type (Getters, Setters, Watchers, Listeners).
 
 Dash convention:
 
-- Long `----------` = same MSC tier, next operation - do not repeat the tier name
+- Long `----------` = same MSC tier, next operation - do not repeat the tier name, only dash out word if prev comment had it.
 - Short `----` = MSC tier changed - do not repeat the operation name
 - Trailing fill dashes (`---- State --------`) = same operation, next MSC tier - operation word not repeated
 
@@ -79,12 +79,12 @@ public wire(): void {
   // Variables Assignment         <- plug refs, DOM refs, computed initial values
   // Event Listeners              <- native addEventListener
   // Plug Listeners               <- where applicable if plug has reactive state
-  // [If this.config or this.state is reactive -- own listeners come BEFORE ctlr.*]
-  // Own Config Getters           <- this.config.get()
-  // ----------- Setters          <- (long dashes: still own config, next op)
-  // ----------- Watchers
-  // ----------- Listeners
-  // Own State Listeners          <- this.state.on()
+  // [If this.config or this.state is reactive -- own listeners come BEFORE ctlr.*] - S->C
+  // State Getters           <- this.state.get()
+  // ------ Setters          <- (long dashes: still own config, next op)
+  // ------ Watchers
+  // ------ Listeners
+  // Config Listeners          <- this.config.on()
 
   // Ctlr Config Getters          <- ctlr.config.get()
   // ----------- Setters          <- (long dashes: still Ctlr Config, next op)
@@ -254,6 +254,8 @@ Canonical example: `volume.ts` on `media.intent.volume` and `media.intent.muted`
 - **No anonymous function wrappers around named methods**: all methods are pre-bound via `guardAllMethods`. Never write `() => this.handleX()` when passing a listener — pass `this.handleX` directly. The wrapping re-allocates a closure every call.
 - **Not-yet-existing plugs**: write the exact proto-3 JS call, prefix with `// JS:`, and leave it. No throwaway workarounds. Example: `// JS: this.notify("capture");`. When the plug is built the line is already there to uncomment.
 - **Handler naming**: `ctlr.media.on(...)` handlers → `handle` + camelCase(path key) + media sub-object suffix (`State`/`Intent`/`Status`/`Config`). E.g. `ctlr.media.on("state.pictureInPicture")` → `handlePictureInPictureState`. Never use "Change" in any watcher/listener handler name.
+- **Early-return terseness**: use one-line guard returns when they improve readability, but if the guard only skips the final statement in a function, prefer folding it into that final line (e.g. `if (x) doThing();`).
+- **DOM creation terseness**: use `createEl` utility instead of raw `document.createElement` in plugs/components, and inline assignment inside `append/prepend` where readable.
 
 ---
 
@@ -278,8 +280,6 @@ Canonical example: `volume.ts` on `media.intent.volume` and `media.intent.muted`
 ## Additional Coding Rules
 
 - **No arrow function class properties**: `getMainColor = async () =>` and `moveFrame = () =>` are anonymous — they bypass `guardAllMethods` binding. Always use named method syntax: `public async getMainColor(...) {}`, `public moveFrame(...) {}`. Arrow functions are fine for inline callbacks (`.then()`, Promise constructors, `throttle`, event listeners passed inline).
-- **`globalThis.Event` for DOM event params**: reactor exports its own `Event` type — use `globalThis.Event` for any method parameter typed as a DOM Event to avoid the name collision.
-- **`this.clups` for observe cleanups**: `observeResize(el, cb)` and `observeIntersection(el, cb)` return a `() => void` cleanup — push it to `this.clups`. `addEventListener` calls with `{ signal: this.signal }` need no push (signal handles it).
 - **`onDestroy` stays minimal**: `nullify()` on `Controllable` nukes all reactive state at end-of-life. Do NOT reset arrays, null out refs, or clear maps manually in `onDestroy` — only run `this.clups`, any `removeScrollAssist` calls, and destroy child instances/modules.
 - **`immediate: "auto"` vs `immediate: true`**: use `"auto"` for forwarding watchers (value may not exist yet); use `true` only for always-valid computed values wired at startup.
 - **Semantic property naming**: if a property already lives on a typed class, don't repeat the class in the name. `PlaylistPlug.currentIndex` not `currentPlaylistIndex` — the class already provides the namespace.

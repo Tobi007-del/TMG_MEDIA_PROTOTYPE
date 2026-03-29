@@ -1,3 +1,4 @@
+import { isDef } from "sia-reactor/utils";
 import { bindClupToSig } from "./fn";
 
 // Types
@@ -96,40 +97,35 @@ declare global {
   }
 }
 
-export const intersectionObserver =
-  typeof window !== "undefined"
-    ? new IntersectionObserver(
-        (entries) => {
-          for (const entry of entries) entry.target._tmgIntersectCbs?.forEach((cb) => cb(entry));
-        },
-        { root: null, rootMargin: "0px", threshold: 0.3 }
-      )
-    : null;
+export const intersectionObserver = isDef(window)
+  ? new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) entry.target._tmgIntersectCbs?.forEach((cb) => cb(entry));
+      },
+      { root: null, rootMargin: "0px", threshold: 0.3 }
+    )
+  : null;
 
-export const resizeObserver =
-  typeof window !== "undefined"
-    ? new ResizeObserver((entries) => {
-        for (const entry of entries) entry.target._tmgResizeCbs?.forEach((cb) => cb(entry));
-      })
-    : null;
+export const resizeObserver = isDef(window)
+  ? new ResizeObserver((entries) => {
+      for (const entry of entries) entry.target._tmgResizeCbs?.forEach((cb) => cb(entry));
+    })
+  : null;
 
-export const mutationObserver =
-  typeof window !== "undefined"
-    ? new MutationObserver((mutations) => {
-        // Dispatch to specific targets if they are being observed directly
-        // Note: MutationObserver works differently; this handles the 'root' observer callbacks
-        // We map the *target* of the observation, not the mutation target usually.
-        // For this util, we assume the observer instance calls the callback associated with the observed node.
-        // Since we use one global observer, we need to map back.
-        // Actually, for MutationObserver it's cleaner to keep separate instances if configs differ,
-        // but for "utils" style, we can use a Map logic or just basic callback sets.
-        // Current implementation assumes the caller handles the mutation list.
-        const target = mutations[0].target as Element; // Batch usually targets one observer
-        target._tmgMutationCbs?.forEach((cb) => cb(mutations));
-      })
-    : null;
-
-
+export const mutationObserver = isDef(window)
+  ? new MutationObserver((mutations) => {
+      // Dispatch to specific targets if they are being observed directly
+      // Note: MutationObserver works differently; this handles the 'root' observer callbacks
+      // We map the *target* of the observation, not the mutation target usually.
+      // For this util, we assume the observer instance calls the callback associated with the observed node.
+      // Since we use one global observer, we need to map back.
+      // Actually, for MutationObserver it's cleaner to keep separate instances if configs differ,
+      // but for "utils" style, we can use a Map logic or just basic callback sets.
+      // Current implementation assumes the caller handles the mutation list.
+      const target = mutations[0].target as Element; // Batch usually targets one observer
+      target._tmgMutationCbs?.forEach((cb) => cb(mutations));
+    })
+  : null;
 
 // --- PUBLIC API ---
 export function observeResize(el: Element, cb: (entry: ResizeObserverEntry) => void, sig?: AbortSignal) {

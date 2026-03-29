@@ -1,5 +1,5 @@
 ---
-# TVP CHRONICLES: State & Intent Architecture (S.I.A)
+# TVP CHRONICLES: State & Intent Architecture (S.I.A.)
 
 ### *The Basis of the New TVP Architecture*
 

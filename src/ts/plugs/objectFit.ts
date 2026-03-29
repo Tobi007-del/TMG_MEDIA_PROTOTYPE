@@ -36,11 +36,12 @@ export class ObjectFitPlug extends BasePlug<ObjectFit> {
 
   protected handleObjectFitState({ value: fit }: REvent<CtlrMedia, "state.objectFit">): void {
     this.ctlr.videoContainer.dataset.objectFit = fit;
-    this.ctlr.settings.css.bgSafeObjectFit = fit === "fill" ? "cover" : fit;
+    this.ctlr.settings.css.bgSafeObjectFit = fit === "fill" ? "contain" : fit;
   }
 
   public rotateObjectFit(dir: "forwards" | "backwards" = "forwards"): void {
     this.media.intent.objectFit = rotate<MediaState["objectFit"]>(this.media.state.objectFit, objectFits, dir);
+    // JS: this.DOM.objectFitNotifierContent.textContent = nextFit[1];
     // JS: this.ctlr.getPlug<NotifiersPlug>("notifiers")?.notify(`objectfit${this.media.intent.objectFit}`);
   }
 }

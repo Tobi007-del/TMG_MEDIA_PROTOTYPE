@@ -5,11 +5,13 @@
  * Copyright (c) Brightcove, Inc. and contributors
  */
 
+import { isDef } from "../utils";
+
 // Types
 type BrandEntry = { brand?: string; version?: string };
 
 // Environment guards
-const w = typeof window !== "undefined" ? window : undefined;
+const w = isDef(window) ? window : undefined;
 const nav = w?.navigator;
 const ua = nav?.userAgent || "";
 const uaData = (nav as Navigator & { userAgentData?: { platform?: string; brands?: BrandEntry[] } })?.userAgentData;

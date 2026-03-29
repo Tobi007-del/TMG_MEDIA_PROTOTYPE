@@ -1,6 +1,7 @@
 import { BasePlug, type KeysPlug, type KeyMod } from ".";
 import type { REvent } from "../types/reactor";
 import { CtlrConfig } from "../types/config";
+import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";
 import { clamp, rotate } from "../utils";
 
@@ -14,7 +15,9 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
     this.media.set("intent.playbackRate", (value) => clamp(this.config.min, value!, this.config.max), { signal: this.signal });
     // ---- Config Watchers
     this.ctlr.config.watch("settings.playbackRate.value", this.forwardRate, { signal: this.signal, immediate: "auto" });
-    // ----------- Listeners
+    // ---- Media Listeners
+    this.media.on("state.playbackRate", this.handlePlaybackRateState, { signal: this.signal });
+    // ---- Config --------
     this.ctlr.config.on("settings.playbackRate.min", this.handleMinChange, { signal: this.signal });
     this.ctlr.config.on("settings.playbackRate.max", this.handleMaxChange, { signal: this.signal });
     // Post Wiring
@@ -35,14 +38,18 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
     if (this.config.value! > max) this.config.value = max;
   }
 
+  protected handlePlaybackRateState({ value }: REvent<CtlrMedia, "state.playbackRate">): void {
+    // JS: this.DOM.playbackRateNotifierContent.textContent = `${this.settings.playbackRate.value}x`;
+    // JS: this.DOM.playbackRateNotifierText.textContent = `${this.settings.playbackRate.value}x`;
+    // JS: this.setControlsState("playbackrate");
+  }
+
   protected handleKeyRateUp(_: KeyboardEvent, mod: KeyMod): void {
     this.changeRate(this.ctlr.getPlug<KeysPlug>("keys")!.getModded("playbackRate", mod, this.config.skip));
-    // JS: this.notify("playbackrateup");
   }
 
   protected handleKeyRateDown(_: KeyboardEvent, mod: KeyMod): void {
     this.changeRate(-this.ctlr.getPlug<KeysPlug>("keys")!.getModded("playbackRate", mod, this.config.skip));
-    // JS: this.notify("playbackratedown");
   }
 
   public rotateRate(dir: "forwards" | "backwards" = "forwards"): void {
@@ -55,10 +62,10 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
     const rate = this.config.value!;
     if (sign === "-") {
       if (rate > this.config.min) this.config.value -= rate % value ? rate % value : value;
-      // return this.notify("playbackratedown");
+      // JS: return this.notify("playbackratedown");
     } else {
       if (rate < this.config.max) this.config.value += rate % value ? value - (rate % value) : value;
-      // return this.notify("playbackrateup");
+      // JS: return this.notify("playbackrateup");
     }
   }
 }

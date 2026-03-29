@@ -1,10 +1,12 @@
+import { isNum } from ".";
+
 // Media Time Formatting
 export function formatMediaTime({ time, format = "digital", elapsed = true, showMs = false, casing = "normal" }: { time?: number; format?: string; elapsed?: boolean; showMs?: boolean; casing?: "normal" | "upper" | "title" } = { time: 0 }): string {
   const long = format.endsWith("long"),
     sx = (n = 0) => (n == 1 ? "" : "s"),
     cs = (str: string) => (casing === "upper" ? str.toUpperCase() : casing === "title" ? str.replace(/^([a-z])/i, (m) => m.toUpperCase()) : str.toLowerCase()),
     wrd = (n = 0) => ({ h: cs(long ? " hour" + sx(n) + " " : "h"), m: cs(long ? " minute" + sx(n) + " " : "m"), s: cs(long ? " second" + sx(n) + " " : "s"), ms: cs(long ? " millisecond" + sx(n) + " " : "ms") }),
-    pad = (v: string | number, n = 2, f?: boolean) => (long && !f ? v : String(v).padStart(n, "number" === typeof +n ? "0" : "-"));
+    pad = (v: string | number, n = 2, f?: boolean) => (long && !f ? v : String(v).padStart(n, isNum(+n) ? "0" : "-"));
   if (isNaN(time ?? NaN) || time === Infinity) return format !== "digital" ? ("-" + wrd().h + pad("-") + wrd().m + (!elapsed ? "left" : "")).trim() : !elapsed ? "--:--" : "-:--";
   const s = Math.floor(Math.abs(time!) % 60),
     m = Math.floor(Math.abs(time!) / 60) % 60,

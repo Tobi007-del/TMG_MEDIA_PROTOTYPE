@@ -29,6 +29,7 @@ import type {
   LightState,
   Modes,
   Keys,
+  Notifiers,
 } from "../plugs";
 
 // NOTE: Use deep partial util where necessary after imports
@@ -47,7 +48,7 @@ export interface Settings {
   modes: Modes;
   objectFit: ObjectFit;
   frame: Frame;
-  notifiers: boolean;
+  notifiers: Notifiers;
   overlay: Overlay;
   persist: Persist;
   playbackRate: PlaybackRate;

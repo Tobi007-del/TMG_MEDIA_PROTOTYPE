@@ -45,7 +45,6 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
     this.wasPaused = this.media.state.paused;
     this.lastPlaybackRate = this.media.state.playbackRate;
     // JS: this.DOM.playbackRateNotifier?.classList.add("tmg-video-control-active");
-    // JS: this.DOM.playbackRateNotifier?.classList.add("tmg-video-control-active");
     setTimeout(pos === "backwards" && this.config.rewind ? this.rewind : this.fastForward, 0, this.signal);
   }
 
@@ -60,6 +59,7 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
   public rewind(rate = this.config.playbackRate): void {
     ((this.media.intent.playbackRate = 1), (this.rewindPlaybackRate = rate));
     this.state.isRewinding = true;
+    // JS: this.DOM.playbackRateNotifierText.textContent = `${rate}x`;
     // JS: this.DOM.playbackRateNotifier?.classList.add("tmg-video-rewind");
     this.media.element.addEventListener("play", () => this.rewindReset(), { signal: this.signal });
     this.speedIntervalId = setInterval(() => this.rewindVideo(), this.ctlr.state.pframeDelay - 20, this.signal);
@@ -74,7 +74,7 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
 
   protected rewindReset(): void {
     if (this.speedIntervalId) {
-      // this.notify("videopause"); // TODO: when notify exists
+      // JS: this.notify("videopause");
       this.media.intent.paused = true;
       clearInterval(this.speedIntervalId);
       this.speedIntervalId = null;

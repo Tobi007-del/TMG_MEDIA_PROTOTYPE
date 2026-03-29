@@ -1,4 +1,5 @@
 import { BasePlug, type KeysPlug, type KeyMod } from ".";
+import type { Controller } from "../core/controller";
 import type { REvent } from "../types/reactor";
 import type { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
@@ -10,14 +11,22 @@ export interface Volume extends OptRange {
   muted: boolean;
 }
 
-export class VolumePlug extends BasePlug<Volume> {
+export interface VolumeState {
+  aptVolume: number;
+}
+
+export class VolumePlug extends BasePlug<Volume, VolumeState> {
   public static readonly plugName: string = "volume";
-  protected lastVolume = 0;
   protected sliderAptVolume = 5;
   protected shouldMute = false;
   protected shouldSetLastVolume = false;
   protected audioSetup = false;
   protected gainNode?: GainNode;
+
+  constructor(ctlr: Controller, config: Volume) {
+    super(ctlr, config, { aptVolume: 0 });
+  }
+
   get ctime(): number {
     return AUDIO_CONTEXT?.currentTime ?? 0;
   }
@@ -28,10 +37,10 @@ export class VolumePlug extends BasePlug<Volume> {
 
   public wire(): void {
     // Variables Assignment
-    const configVolume = this.config.value ?? this.media.state.volume * 100;
-    this.lastVolume = clamp(this.config.min, configVolume, this.config.max);
+    const configVolume = this.config.value ?? this.media.state.volume;
+    this.state.aptVolume = clamp(this.config.min, configVolume, this.config.max);
     this.shouldMute = this.shouldSetLastVolume = this.media.element?.muted ?? false;
-    this.config.value = this.shouldMute ? 0 : this.lastVolume;
+    this.config.value = this.shouldMute ? 0 : this.state.aptVolume;
     // Event Listeners
     this.media.element.addEventListener("volumechange", this.handleNativeVolumeChange, { signal: this.signal });
     // Ctlr Config Getters
@@ -44,6 +53,7 @@ export class VolumePlug extends BasePlug<Volume> {
     // ---- Media Listeners
     this.media.on("intent.volume", this.handleVolumeIntent, { capture: true, signal: this.signal });
     this.media.on("intent.muted", this.handleMutedIntent, { capture: true, signal: this.signal });
+    this.media.on("state.volume", this.handleVolumeState, { signal: this.signal });
     // ---- Config --------
     this.ctlr.config.on("settings.volume.min", this.handleMin, { signal: this.signal });
     this.ctlr.config.on("settings.volume.max", this.handleMax, { signal: this.signal });
@@ -65,7 +75,7 @@ export class VolumePlug extends BasePlug<Volume> {
   protected handleVolumeIntent(e: REvent<CtlrMedia, "intent.volume">): void {
     if (e.resolved) return;
     if (this.media.element !== this.media.tech.element) return e.reject(this.name);
-    this.handleVolumeState(e.value);
+    this.setVolumeState(e.value);
     this.media.state.volume = e.value;
     e.resolve(this.name);
   }
@@ -74,7 +84,7 @@ export class VolumePlug extends BasePlug<Volume> {
     if (e.resolved) return;
     if (this.media.element !== this.media.tech.element) return e.reject(this.name);
     if (e.oldValue === e.value) return e.resolve(this.name);
-    this.handleMutedState(e.value);
+    this.setMutedState(e.value);
     this.media.state.muted = e.value;
     e.resolve(this.name);
   }
@@ -82,25 +92,27 @@ export class VolumePlug extends BasePlug<Volume> {
   protected handleMin({ target }: REvent<CtlrConfig, "settings.volume.min">): void {
     const min = target.value;
     if (this.config.value < min) this.config.value = min;
-    if (this.lastVolume < min) this.lastVolume = min;
+    if (this.state.aptVolume < min) this.state.aptVolume = min;
   }
 
   protected handleMax({ target }: REvent<CtlrConfig, "settings.volume.max">): void {
     const max = target.value;
     if (this.config.value > max) this.config.value = max;
-    if (this.lastVolume > max) this.lastVolume = max;
+    if (this.state.aptVolume > max) this.state.aptVolume = max;
     this.ctlr.videoContainer.classList.toggle("tmg-video-volume-boost", max > 100);
     this.ctlr.settings.css.volumeSliderPercent = Math.round((100 / max) * 100);
     this.ctlr.settings.css.maxVolumeRatio = max / 100;
   }
 
-  protected handleVolumeState(volume: number): void {
-    const v = clamp(this.shouldMute ? 0 : this.config.min, volume * 100, this.config.max),
+  protected handleVolumeState({ value }: REvent<CtlrMedia, "state.volume">): void {
+    const v = value,
       vLevel = v === 0 ? "muted" : v < 50 ? "low" : v <= 100 ? "high" : "boost",
       vPercent = (v - 0) / (this.config.max - 0);
-    if (this.gainNode) this.gainNode.gain.setTargetAtTime((v / 100) * 2, this.ctime, 0.05); // doubling for dat Android Feel
-    this.media.element.muted = this.media.element.defaultMuted = this.config.muted = v === 0;
+    // JS: this.DOM.volumeNotifierContent.textContent = v + "%";
     this.ctlr.videoContainer.dataset.volumeLevel = vLevel;
+    // JS: this.DOM.volumeSlider.value = v;
+    // JS: this.DOM.volumeSlider?.parentElement.setAttribute("data-volume", v);
+    // JS: this.DOM.touchVolumeContent.textContent = v + "%";
     this.ctlr.settings.css.currentVolumeTooltipPosition = `${10.5 + vPercent * 79.5}%`;
     if (this.config.max > 100) {
       if (v <= 100) {
@@ -115,19 +127,46 @@ export class VolumePlug extends BasePlug<Volume> {
     } else this.ctlr.settings.css.currentVolumeSliderPosition = vPercent;
   }
 
-  protected handleMutedState(muted: boolean): void {
+  protected setVolumeState(value: number): void {
+    const v = clamp(this.shouldMute ? 0 : this.config.min, value, this.config.max);
+    if (this.gainNode) this.gainNode.gain.setTargetAtTime((v / 100) * 2, this.ctime, 0.05);
+    this.media.element.muted = this.media.element.defaultMuted = this.config.muted = v === 0;
+  }
+
+  protected setMutedState(muted: boolean): void {
     if (muted) {
       if (this.config.value) {
-        this.lastVolume = this.config.value;
+        this.state.aptVolume = this.config.value;
         this.shouldSetLastVolume = true;
       }
       this.shouldMute = true;
       if (this.config.value) this.media.intent.volume = 0;
     } else {
-      const restore = this.shouldSetLastVolume ? this.lastVolume : this.config.value;
-      this.media.intent.volume = (restore ? restore : this.sliderAptVolume) / 100;
+      const restore = this.shouldSetLastVolume ? this.state.aptVolume : this.config.value;
+      this.media.intent.volume = restore ? restore : this.sliderAptVolume;
       this.shouldMute = this.shouldSetLastVolume = false;
     }
+  }
+
+  public toggleMute(option?: "auto"): void {
+    if (option === "auto" && this.shouldSetLastVolume && !this.state.aptVolume) this.state.aptVolume = this.config.skip;
+    this.config.muted = !this.config.muted;
+  }
+
+  public changeVolume(value: number): void {
+    const sign = value >= 0 ? "+" : "-";
+    value = Math.abs(value);
+    let volume = this.shouldSetLastVolume ? this.state.aptVolume : this.config.value;
+    if (sign === "-") {
+      if (volume > this.config.min) volume -= volume % value ? volume % value : value;
+      // JS: if (volume === 0) { this.notify("volumemuted"); break; }
+      // JS: this.notify("volumedown");
+    } else {
+      if (volume < this.config.max) volume += volume % value ? value - (volume % value) : value;
+      // JS: this.notify("volumeup");
+    }
+    // JS: if (this.shouldSetLastVolume) this.DOM.volumeNotifierContent.textContent = volume + "%";
+    this.shouldSetLastVolume ? (this.state.aptVolume = volume) : (this.config.value = volume);
   }
 
   protected setupAudio(): void {
@@ -139,30 +178,10 @@ export class VolumePlug extends BasePlug<Volume> {
   }
 
   protected cancelAudio(): void {
-    this.media.intent.volume = clamp(0, (this.gainNode?.gain?.value ?? 2) / 2, 1);
+    this.media.intent.volume = clamp(this.config.min, ((this.gainNode?.gain?.value ?? 2) / 2) * 100, this.config.max);
     (this.media.element as any).mediaElementSourceNode?.disconnect();
     this.gainNode?.disconnect();
     this.audioSetup = false;
-  }
-
-  public toggleMute(option?: "auto"): void {
-    if (option === "auto" && this.shouldSetLastVolume && !this.lastVolume) this.lastVolume = this.config.skip;
-    this.config.muted = !this.config.muted;
-  }
-
-  public changeVolume(value: number): void {
-    const sign = value >= 0 ? "+" : "-";
-    value = Math.abs(value);
-    let volume = this.shouldSetLastVolume ? this.lastVolume : this.config.value;
-    if (sign === "-") {
-      if (volume > this.config.min) volume -= volume % value ? volume % value : value;
-      // if (volume === 0) return this.ctlr.notify("volumemuted");
-      // this.ctlr.notify("volumedown");
-    } else {
-      if (volume < this.config.max) volume += volume % value ? value - (volume % value) : value;
-      // this.ctlr.notify("volumeup");
-    }
-    this.shouldSetLastVolume ? (this.lastVolume = volume) : (this.config.value = volume);
   }
 
   protected handleKeyMute(): void {

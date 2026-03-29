@@ -24,13 +24,13 @@ export class MiniplayerModule extends BaseModule<MiniplayerModeConfig> {
   public wire(): void {
     // Ctlr State Watchers
     this.ctlr.state.watch("dimensions.window.width", this.handleWindowWidth, { signal: this.signal });
-    // ----------- Listeners
+    // ---- Media  Listeners
+    this.media.on("intent.miniplayer", this.handleMiniplayerIntent, { capture: true, signal: this.signal });
+    this.media.on("state.paused", this.handlePaused, { signal: this.signal, immediate: true });
+    // ---- State --------
     this.ctlr.state.on("mediaParentIntersecting", this.handleMediaParentIntersecting, { signal: this.signal });
     // ---- Config --------
     this.ctlr.config.on("settings.modes.miniplayer.disabled", this.handleDisabledConfig, { signal: this.signal });
-    // ---- Media  --------
-    this.media.on("intent.miniplayer", this.handleMiniplayerIntent, { capture: true, signal: this.signal });
-    this.media.on("state.paused", this.handlePaused, { signal: this.signal, immediate: true });
     // Post Wiring
     this.media.tech.features.miniplayer = !this.config.disabled;
   }

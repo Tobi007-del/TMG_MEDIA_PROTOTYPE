@@ -1,4 +1,5 @@
 import { BasePlug, type KeysPlug, type KeyMod } from ".";
+import type { Controller } from "../core/controller";
 import type { REvent } from "../types/reactor";
 import type { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
@@ -9,19 +10,26 @@ export interface Brightness extends OptRange {
   dark: boolean;
 }
 
-export class BrightnessPlug extends BasePlug<Brightness> {
+export interface BrightnessState {
+  aptBrightness: number;
+}
+
+export class BrightnessPlug extends BasePlug<Brightness, BrightnessState> {
   public static readonly plugName: string = "brightness";
-  protected lastBrightness = 100;
   protected sliderAptBrightness = 100;
   protected shouldDark = false;
   protected shouldSetLastBrightness = false;
 
+  constructor(ctlr: Controller, config: Brightness) {
+    super(ctlr, config, { aptBrightness: 100 });
+  }
+
   public wire(): void {
     // Variables Assignment
     const configBrightness = this.config.value ?? this.ctlr.settings.css.brightness ?? 100;
-    this.lastBrightness = clamp(this.config.min, configBrightness, this.config.max);
+    this.state.aptBrightness = clamp(this.config.min, configBrightness, this.config.max);
     this.shouldDark = this.shouldSetLastBrightness = this.config.dark ?? false;
-    this.config.value = this.shouldDark ? 0 : this.lastBrightness;
+    this.config.value = this.shouldDark ? 0 : this.state.aptBrightness;
     // Ctlr Config Getters
     // this.ctlr.config.get("settings.brightness.value", () => Number(this.ctlr.settings.css.brightness ?? 100), { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
     // ----------- Setters
@@ -32,7 +40,8 @@ export class BrightnessPlug extends BasePlug<Brightness> {
     // ---- Media Listeners
     this.media.on("intent.brightness", this.handleBrightnessIntent, { capture: true, signal: this.signal });
     this.media.on("intent.dark", this.handleDarkIntent, { capture: true, signal: this.signal });
-    // ---- Config Listeners
+    this.media.on("state.brightness", this.handleBrightnessState, { signal: this.signal });
+    // ---- Config -------
     this.ctlr.config.on("settings.brightness.min", this.handleMin, { signal: this.signal });
     this.ctlr.config.on("settings.brightness.max", this.handleMax, { signal: this.signal });
     // Post Wiring
@@ -56,14 +65,14 @@ export class BrightnessPlug extends BasePlug<Brightness> {
 
   protected handleBrightnessIntent(e: REvent<CtlrMedia, "intent.brightness">): void {
     if (e.resolved) return;
-    this.handleBrightnessState(e.value);
+    this.setBrightnessState(e.value);
     this.media.state.brightness = e.value;
     e.resolve(this.name);
   }
 
   protected handleDarkIntent(e: REvent<CtlrMedia, "intent.dark">): void {
     if (e.resolved) return;
-    this.handleDarkState(e.value);
+    this.setDarkState(e.value);
     this.media.state.dark = e.value;
     e.resolve(this.name);
   }
@@ -71,25 +80,27 @@ export class BrightnessPlug extends BasePlug<Brightness> {
   protected handleMin({ target }: REvent<CtlrConfig, "settings.brightness.min">): void {
     const min = target.value;
     if (this.config.value < min) this.config.value = min;
-    if (this.lastBrightness < min) this.lastBrightness = min;
+    if (this.state.aptBrightness < min) this.state.aptBrightness = min;
   }
 
   protected handleMax({ target }: REvent<CtlrConfig, "settings.brightness.max">): void {
     const max = target.value;
     if (this.config.value > max) this.config.value = max;
-    if (this.lastBrightness > max) this.lastBrightness = max;
+    if (this.state.aptBrightness > max) this.state.aptBrightness = max;
     this.ctlr.videoContainer.classList.toggle("tmg-video-brightness-boost", max > 100);
     this.ctlr.settings.css.brightnessSliderPercent = Math.round((100 / max) * 100);
     this.ctlr.settings.css.maxBrightnessRatio = max / 100;
   }
 
-  protected handleBrightnessState(value: number): void {
-    const b = clamp(this.shouldDark ? 0 : this.config.min, value, this.config.max),
+  protected handleBrightnessState({ value }: REvent<CtlrMedia, "state.brightness">): void {
+    const b = value,
       bLevel = b === 0 ? "dark" : b < 50 ? "low" : b <= 100 ? "high" : "boost",
       bPercent = (b - 0) / (this.config.max - 0);
-    this.ctlr.settings.css.brightness = b;
-    this.config.dark = b === 0;
+    // JS: this.DOM.brightnessNotifierContent.textContent = b + "%";
     this.ctlr.videoContainer.dataset.brightnessLevel = bLevel;
+    // JS: this.DOM.brightnessSlider.value = b;
+    // JS: this.DOM.brightnessSlider?.parentElement.setAttribute("data-brightness", b);
+    // JS: this.DOM.touchBrightnessContent.textContent = b + "%";
     this.ctlr.settings.css.currentBrightnessTooltipPosition = `${10.5 + bPercent * 79.5}%`;
     if (this.config.max > 100) {
       if (b <= 100) {
@@ -104,39 +115,46 @@ export class BrightnessPlug extends BasePlug<Brightness> {
     } else this.ctlr.settings.css.currentBrightnessSliderPosition = bPercent;
   }
 
-  protected handleDarkState(dark: boolean): void {
+  protected setBrightnessState(value: number): void {
+    const b = clamp(this.shouldDark ? 0 : this.config.min, value, this.config.max);
+    this.ctlr.settings.css.brightness = b;
+    this.config.dark = b === 0;
+  }
+
+  protected setDarkState(dark: boolean): void {
     if (dark) {
       if (this.config.value) {
-        this.lastBrightness = this.config.value;
+        this.state.aptBrightness = this.config.value;
         this.shouldSetLastBrightness = true;
       }
       this.shouldDark = true;
       if (this.config.value) this.config.value = 0;
     } else {
-      const restore = this.shouldSetLastBrightness ? this.lastBrightness : this.config.value;
+      const restore = this.shouldSetLastBrightness ? this.state.aptBrightness : this.config.value;
       this.config.value = restore ? restore : this.sliderAptBrightness;
       this.shouldDark = this.shouldSetLastBrightness = false;
     }
   }
 
   public toggleDark(option?: "auto"): void {
-    if (option === "auto" && this.shouldSetLastBrightness && !this.lastBrightness) this.lastBrightness = this.config.skip;
+    if (option === "auto" && this.shouldSetLastBrightness && !this.state.aptBrightness) this.state.aptBrightness = this.config.skip;
     this.config.dark = !this.config.dark;
   }
 
   public changeBrightness(value: number): void {
     const sign = value >= 0 ? "+" : "-";
     value = Math.abs(value);
-    let brightness = this.shouldSetLastBrightness ? this.lastBrightness : this.config.value;
+    let brightness = this.shouldSetLastBrightness ? this.state.aptBrightness : this.config.value;
     if (sign === "-") {
       if (brightness > this.config.min) brightness -= brightness % value ? brightness % value : value;
-      // if (brightness === 0) return this.ctlr.notify("brightnessdark");
-      // this.ctlr.notify("brightnessdown");
+      // JS: if (brightness === 0) { this.notify("brightnessdark"); break; }
+      // JS: this.notify("brightnessdown");
     } else {
       if (brightness < this.config.max) brightness += brightness % value ? value - (brightness % value) : value;
-      // this.ctlr.notify("brightnessup");
+      // JS: this.notify("brightnessup");
     }
-    this.shouldSetLastBrightness ? (this.lastBrightness = brightness) : (this.config.value = brightness);
+    // JS: if (this.shouldSetLastBrightness) this.DOM.brightnessNotifierContent.textContent = brightness + "%";
+    this.shouldSetLastBrightness ? (this.state.aptBrightness = brightness) : (this.config.value = brightness);
   }
 
   protected handleKeyDark(): void {

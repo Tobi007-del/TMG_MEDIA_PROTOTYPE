@@ -17,7 +17,8 @@ export interface LockedState {
 export class LockedPlug extends BasePlug<Locked, LockedState> {
   public static readonly plugName: string = "locked";
   public lockOverlayDelayId = -1;
-  protected control: ScreenLocked | null = null;
+  public wrapper!: HTMLDivElement;
+  public control: ScreenLocked | null = null;
 
   constructor(ctlr: Controller, config: Locked) {
     super(ctlr, config, { visible: false });
@@ -25,11 +26,11 @@ export class LockedPlug extends BasePlug<Locked, LockedState> {
 
   public mount(): void {
     // Variables Assignment
-    const wrapper = createEl("div", { className: "tmg-video-screen-locked-wrapper", innerHTML: `<p>Screen Locked</p><p>Tap to Unlock</p>` });
+    this.wrapper = createEl("div", { className: "tmg-video-screen-locked-wrapper", innerHTML: `<p>Screen Locked</p><p>Tap to Unlock</p>` });
     this.control = ComponentRegistry.init<ScreenLocked>("screenlocked", this.ctlr);
     // DOM Injection
-    this.ctlr.DOM.containerContentWrapper?.appendChild(wrapper);
-    this.control && wrapper.prepend(this.control.element);
+    this.control?.mount();
+    this.ctlr.DOM.containerContentWrapper?.append(this.wrapper);
   }
 
   public wire(): void {

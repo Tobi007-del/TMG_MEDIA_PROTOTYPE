@@ -2,7 +2,7 @@ import { BasePlug, type KeysPlug } from ".";
 import type { CtlrConfig, Settings } from "../types/config";
 import type { REvent } from "../types/reactor";
 import type { DeepPartial } from "../types/obj";
-import { mergeObjs, isSameURL, deepClone } from "../utils";
+import { isBool, mergeObjs, isSameURL, deepClone } from "../utils";
 
 const timeKeys = ["min", "max", "start", "end", "previews"] as const;
 export type PlaylistItemTimeKey = (typeof timeKeys)[number];
@@ -29,12 +29,14 @@ export class PlaylistPlug extends BasePlug<Playlist> {
     // ----------- Watchers
     this.ctlr.config.watch("playlist", (value) => (this.config = value), { signal: this.signal }); // #COMPUTED: config can lose reference
     this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && (this.config![this.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
-    // ----------- Listners
+    // ----------- Listeners
     this.ctlr.config.on("playlist", this.handlePlaylistChange, { signal: this.signal, immediate: true, depth: 1 });
     // Post Wiring
     const keys = this.ctlr.getPlug<KeysPlug>("keys");
     keys?.register("prev", this.previousVideo, { phase: "keydown" });
+    // JS: return (this.previousVideo(), this.notify("videoprev"));
     keys?.register("next", this.nextVideo, { phase: "keydown" });
+    // JS: return (this.nextVideo(), this.notify("videonext"));
   }
 
   protected handlePlaylistChange({ root }: REvent<CtlrConfig, "playlist">): void {
@@ -49,7 +51,7 @@ export class PlaylistPlug extends BasePlug<Playlist> {
     if (!this.ctlr.config.playlist) return;
     this.currentIndex = index;
     this.applyItem(this.config![index]);
-    if (typeof shouldPlay === "boolean") this.media.intent.paused = !shouldPlay;
+    if (isBool(shouldPlay)) this.media.intent.paused = !shouldPlay;
   }
 
   protected applyItem(item: PlaylistItemConfig, reset = true): void {

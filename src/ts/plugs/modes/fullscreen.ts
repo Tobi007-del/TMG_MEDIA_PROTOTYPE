@@ -4,7 +4,7 @@ import type { CtlrMedia } from "../../types/contract";
 import type { CtlrConfig } from "../../types/config";
 import type { OrientationOption } from "../../types/generics";
 import type { ModesPlug } from "./";
-import { IS_MOBILE, enterFullscreen, exitFullscreen, queryFullscreenEl } from "../../utils";
+import { isBool, IS_MOBILE, enterFullscreen, exitFullscreen, queryFullscreenEl } from "../../utils";
 
 export type FullscreenModuleConfig = {
   disabled: boolean;
@@ -73,7 +73,7 @@ export class FullscreenModule extends BaseModule<FullscreenModuleConfig> {
 
   protected handleScreenOrientation(orientation: ScreenOrientation): void {
     if (!this.ctlr.state.mediaParentIntersecting || !IS_MOBILE || this.ctlr.state.readyState < 2 || this.config.onRotate === false || this.ctlr.isUIActive("fullscreen") || this.ctlr.isUIActive("miniplayer")) return;
-    const deg = typeof this.config.onRotate === "boolean" ? 90 : parseInt(String(this.config.onRotate));
+    const deg = isBool(this.config.onRotate) ? 90 : parseInt(String(this.config.onRotate));
     if (orientation.angle === deg || orientation.angle === 360 - deg) this.media.intent.fullscreen = !this.inFullscreen;
   }
 

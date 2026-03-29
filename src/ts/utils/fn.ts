@@ -1,5 +1,5 @@
 import { FN_KEY } from "../consts/generics";
-import { uid } from ".";
+import { isStr, uid } from ".";
 
 // ============ Timer Helpers ============
 // 3rd & 4th param are consumed if signal and window are used respectively
@@ -8,7 +8,7 @@ export function setTimeout(handler: TimerHandler, timeout?: number, ...args: any
   if (sig?.aborted) return -1;
   const w: Window = args[0] instanceof Window ? args.shift() : window;
   if (!sig) return w.setTimeout(handler, timeout, ...args);
-  const id = w.setTimeout(() => (sig.removeEventListener("abort", kill), typeof handler === "string" ? new Function(handler) : handler(...args)), timeout),
+  const id = w.setTimeout(() => (sig.removeEventListener("abort", kill), isStr(handler) ? new Function(handler) : handler(...args)), timeout),
     kill = () => w.clearTimeout(id);
   return (sig.addEventListener("abort", kill, { once: true }), id);
 }
@@ -53,7 +53,7 @@ interface LimitedHandle<T extends (...args: any[]) => any> {
 
 export function limited<T extends (...args: any[]) => any>(fn: T, opts: LimitedOptions | string = {}): LimitedHandle<T> {
   let count = 0,
-    { key, maxTimes: max = 1 } = "string" === typeof opts ? { key: opts } : opts;
+    { key, maxTimes: max = 1 } = isStr(opts) ? { key: opts } : opts;
   const getReg = () => JSON.parse(localStorage.getItem(FN_KEY) || "{}"),
     setReg = (r: Record<string, number>) => localStorage.setItem(FN_KEY, JSON.stringify(r));
   const handle = (...args: Parameters<T>): ReturnType<T> | void => {

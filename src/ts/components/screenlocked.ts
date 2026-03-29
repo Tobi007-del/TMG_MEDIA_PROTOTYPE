@@ -28,6 +28,11 @@ export class ScreenLocked extends BaseComponent<ScreenLockedConfig, ComponentSta
     this.plug?.state.on("visible", this.updateUI, { signal: this.signal, immediate: true });
   }
 
+  public mount(): void {
+    // DOM Injection
+    this.plug?.wrapper.append(this.el);
+  }
+
   protected updateUI(): void {
     if (!this.plug?.state.visible) this.el.classList.remove("tmg-video-control-unlock");
   }

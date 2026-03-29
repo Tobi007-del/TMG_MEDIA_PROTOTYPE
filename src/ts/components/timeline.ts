@@ -3,7 +3,7 @@ import type { Controller } from "../core/controller";
 import type { REvent } from "../types/reactor";
 import type { CtlrMedia } from "../types/contract";
 import type { TimePlug } from "../plugs";
-import { createEl, clamp, safeNum, setTimeout, formatMediaTime, getRenderedBox, IS_MOBILE, requestAnimationFrame } from "../utils";
+import { isBool, createEl, clamp, safeNum, setTimeout, formatMediaTime, getRenderedBox, IS_MOBILE, requestAnimationFrame } from "../utils";
 
 export type PreviewConfig =
   | boolean
@@ -180,7 +180,7 @@ export class Timeline extends RangeSlider<TimelineConfig> {
 
     const previewConfig = this.config.previews,
       type = this.ctlr.videoContainer.dataset.previewType;
-    if (type === "sprite" && previewConfig && typeof previewConfig !== "boolean" && previewConfig.cols && previewConfig.rows) {
+    if (type === "sprite" && previewConfig && !isBool(previewConfig) && previewConfig.cols && previewConfig.rows) {
       const duration = this.media.status.duration,
         spf = previewConfig.spf || 1,
         frameIndex = Math.floor((pos * (duration || 0)) / spf) || 1,
@@ -190,7 +190,7 @@ export class Timeline extends RangeSlider<TimelineConfig> {
         yPercent = (Math.floor(clampedI / cols) * 100) / (rows - 1 || 1);
       if (!IS_MOBILE) this.ctlr.settings.css.currentPreviewPosition = `${xPercent}% ${yPercent}%`;
       if (this.state.scrubbing) this.ctlr.settings.css.currentThumbnailPosition = `${xPercent}% ${yPercent}%`;
-    } else if (type === "image" && previewConfig && typeof previewConfig !== "boolean" && previewConfig.address) {
+    } else if (type === "image" && previewConfig && !isBool(previewConfig) && previewConfig.address) {
       const duration = this.media.status.duration,
         spf = previewConfig.spf || 1,
         frameIndex = Math.floor((pos * (duration || 0)) / spf) || 1,
