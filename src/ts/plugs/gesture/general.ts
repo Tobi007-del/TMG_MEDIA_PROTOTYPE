@@ -27,8 +27,8 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
   }
 
   protected handleAnyClick(): void {
-    this.ctlr.getPlug<OverlayPlug>("overlay")?.delay();
-    this.ctlr.getPlug<ControlPanelPlug>("controlPanel")?.getControl<Timeline>("timeline")?.stopScrubbing();
+    this.ctlr.plug<OverlayPlug>("overlay")?.delay();
+    this.ctlr.plug<ControlPanelPlug>("controlPanel")?.getControl<Timeline>("timeline")?.stopScrubbing();
   }
 
   protected handleRightClick(e: MouseEvent): void {
@@ -47,13 +47,13 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
 
   protected handleHoverPointerActive(e: Event): void {
     const { target, pointerType } = e as PointerEvent,
-      overlay = this.ctlr.getPlug<OverlayPlug>("overlay");
+      overlay = this.ctlr.plug<OverlayPlug>("overlay");
     (!pointerType || !IS_MOBILE) && overlay?.show();
     pointerType && (target as HTMLElement).closest(".tmg-video-side-controls-wrapper") && clearTimeout(overlay?.overlayDelayId ?? -1);
   }
 
   protected handleHoverPointerOut(): void {
-    const overlay = this.ctlr.getPlug<OverlayPlug>("overlay");
+    const overlay = this.ctlr.plug<OverlayPlug>("overlay");
     setTimeout(() => !IS_MOBILE && !this.ctlr.videoContainer.matches(":hover") && overlay?.remove());
   }
 
@@ -64,9 +64,9 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
     // if (onClick === "togglePlay")
     this.media.intent.paused = !this.media.state.paused;
     // else if (onClick === "fullscreen")
-    //   this.ctlr.getPlug<Mode>("mode")?.toggleFullscreen();
+    //   this.ctlr.plug<Mode>("mode")?.toggleFullscreen();
     // else if (onClick === "pictureInPicture")
-    //   this.ctlr.getPlug<Mode>("mode")?.togglePictureInPicture();
+    //   this.ctlr.plug<Mode>("mode")?.togglePictureInPicture();
   }
 
   protected handleDblClick(e: MouseEvent): void {
@@ -83,14 +83,14 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
       // if (onDblClick === "togglePlay")
       this.media.intent.paused = !this.media.state.paused;
       //  else if (onDblClick === "fullscreen")
-      //   this.ctlr.getPlug<Mode>("mode")?.toggleFullscreen();
+      //   this.ctlr.plug<Mode>("mode")?.toggleFullscreen();
       //  else if (onDblClick === "pictureInPicture")
-      //   this.ctlr.getPlug<Mode>("mode")?.togglePictureInPicture();
+      //   this.ctlr.plug<Mode>("mode")?.togglePictureInPicture();
       return;
     }
     if (this.state.skipPersist && detail === 2) return;
     if (!this.state.skipPersist) this.activateSkipPersist(pos as "left" | "right");
-    this.ctlr.getPlug<TimePlug>("time")?.skip(pos === "right" ? this.ctlr.settings.time.skip : -this.ctlr.settings.time.skip);
+    this.ctlr.plug<TimePlug>("time")?.skip(pos === "right" ? this.ctlr.settings.time.skip : -this.ctlr.settings.time.skip);
   }
 
   public activateSkipPersist(pos: "left" | "right"): void {

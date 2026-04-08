@@ -1,13 +1,12 @@
 import { BasePlug, CSSPlug, type KeysPlug } from ".";
 import type { CaptionsView } from "../components";
 import { ComponentRegistry } from "../core/registry";
-import type { REvent } from "../types/reactor";
+import { type REvent, type DeepPartial, type PathValue, setAny } from "../sia-reactor";
 import type { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";
-import type { DeepPartial, PathValue } from "../types/obj";
 import type { UIOption, UISettings } from "../types/UIOptions";
-import { camelize, parseUIObj, rotate, setAny } from "../utils";
+import { camelize, parseUIObj, rotate } from "../utils";
 
 export interface Captions {
   disabled: boolean;
@@ -69,7 +68,7 @@ export class CaptionsPlug extends BasePlug<Captions> {
     this.ctlr.config.on("settings.captions.font.size.max", this.handleFontSizeMax, { signal: this.signal, immediate: true });
     // Post Wiring
     (this.ctlr.settings.css.currentCaptionsX, this.ctlr.settings.css.currentCaptionsY); // Read once so CSSPlug can cache computed values.
-    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    const keys = this.ctlr.plug<KeysPlug>("keys");
     keys?.register("captions", this.toggleCaptions, { phase: "keyup" });
     // JS: return this.media.status.textTracks[this.media.state.currentTextTrack] && this.notify("captions");
     keys?.register("captionsFontSizeUp", (_, mod) => this.changeFontSize(keys.getModded("captionsFontSize", mod, this.config.font.size.skip)), { phase: "keydown" });
@@ -85,7 +84,7 @@ export class CaptionsPlug extends BasePlug<Captions> {
   }
 
   protected handleDisabledConfig({ value }: REvent<CtlrConfig, "settings.captions.disabled">): void {
-    const cssPlug = this.ctlr.getPlug<CSSPlug>("css");
+    const cssPlug = this.ctlr.plug<CSSPlug>("css");
     ((this.ctlr.settings.css.currentCaptionsX = cssPlug?._cache.currentCaptionsX!), (this.ctlr.settings.css.currentCaptionsY = cssPlug?._cache.currentCaptionsY!));
     if (!this.media.status.textTracks[this.media.state.currentTextTrack]) return;
     !value ? this.ctlr.videoContainer.classList.add("tmg-video-captions") : this.ctlr.videoContainer.classList.remove("tmg-video-captions", "tmg-video-captions-preview");

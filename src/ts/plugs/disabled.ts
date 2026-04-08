@@ -1,5 +1,5 @@
 import { BasePlug } from ".";
-import type { REvent } from "../types/reactor";
+import type { REvent } from "../sia-reactor";
 import type { CtlrConfig } from "../types/config";
 import type { OverlayPlug, ToastsPlug, ControlPanelPlug } from ".";
 import type { Timeline } from "../components";
@@ -28,10 +28,10 @@ export class DisabledPlug extends BasePlug<Disabled, DisabledState> {
       this.ctlr.cancelAllLoops();
       this.ctlr.videoContainer.classList.add("tmg-video-disabled");
       this.media.intent.paused = true;
-      this.ctlr.getPlug<OverlayPlug>("overlay")?.show();
+      this.ctlr.plug<OverlayPlug>("overlay")?.show();
       this.ctlr.DOM.containerContent?.setAttribute("inert", "");
       // JS: this.setKeyEventListeners("remove");
-      this.ctlr.getPlug<ToastsPlug>("toasts")?.toast?.warn("You cannot access the custom controls when disabled");
+      this.ctlr.plug<ToastsPlug>("toasts")?.toast?.warn("You cannot access the custom controls when disabled");
       this.ctlr.log("You cannot access the custom controls when disabled", "warn");
     } else {
       this.ctlr.videoContainer.classList.remove("tmg-video-disabled");
@@ -41,10 +41,10 @@ export class DisabledPlug extends BasePlug<Disabled, DisabledState> {
   }
 
   public deactivate(message: string): void {
-    this.ctlr.getPlug<OverlayPlug>("overlay")?.show();
+    this.ctlr.plug<OverlayPlug>("overlay")?.show();
     this.state.message = message;
     this.ctlr.DOM.containerContent?.setAttribute("data-message", message);
-    const timeline = this.ctlr.getPlug<ControlPanelPlug>("controlPanel")?.getControl<Timeline>("timeline");
+    const timeline = this.ctlr.plug<ControlPanelPlug>("controlPanel")?.getControl<Timeline>("timeline");
     timeline && this.ctlr.setCanvasFallback(timeline["previewCanvas"], timeline["previewContext"]!);
     timeline && this.ctlr.setCanvasFallback(timeline["thumbnailCanvas"], timeline["thumbnailContext"]!);
     this.ctlr.videoContainer.classList.add("tmg-video-inactive");

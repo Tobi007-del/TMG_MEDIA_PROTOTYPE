@@ -1,8 +1,7 @@
 import { BaseTech, BaseTechConfig } from ".";
-import type { REvent, ListenerOptions } from "../types/reactor";
+import type { REvent, ListenerOptions, WildPaths } from "../sia-reactor";
 import type { Controller } from "../core/controller";
 import type { CtlrMedia, MediaIntent } from "../types/contract";
-import type { WildPaths } from "../types/obj";
 import { isStr, type TrackType, enterFullscreen, exitFullscreen, getSources, getTracks, isSameURL, queryFullscreenEl, supportsFullscreen, supportsPictureInPicture, observeMutation, removeSources, addSources, isSameSources, isSameTracks, removeTracks, addTracks, getTrackIdx, setCurrentTrack, canVidCtrlVolume, canVidMuteVolume, canVidCtrlRate, canVidTextTracks, canVidVideoTracks, canVidAudioTracks } from "../utils";
 
 export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {

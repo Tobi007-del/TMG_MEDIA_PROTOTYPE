@@ -1,5 +1,5 @@
 import { BasePlug, type KeysPlug, type KeyMod } from ".";
-import type { REvent } from "../types/reactor";
+import type { REvent } from "../sia-reactor";
 import { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";
@@ -21,7 +21,7 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
     this.ctlr.config.on("settings.playbackRate.min", this.handleMinChange, { signal: this.signal });
     this.ctlr.config.on("settings.playbackRate.max", this.handleMaxChange, { signal: this.signal });
     // Post Wiring
-    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    const keys = this.ctlr.plug<KeysPlug>("keys");
     keys?.register("playbackRateUp", this.handleKeyRateUp, { phase: "keydown" });
     keys?.register("playbackRateDown", this.handleKeyRateDown, { phase: "keydown" });
   }
@@ -45,11 +45,11 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
   }
 
   protected handleKeyRateUp(_: KeyboardEvent, mod: KeyMod): void {
-    this.changeRate(this.ctlr.getPlug<KeysPlug>("keys")!.getModded("playbackRate", mod, this.config.skip));
+    this.changeRate(this.ctlr.plug<KeysPlug>("keys")!.getModded("playbackRate", mod, this.config.skip));
   }
 
   protected handleKeyRateDown(_: KeyboardEvent, mod: KeyMod): void {
-    this.changeRate(-this.ctlr.getPlug<KeysPlug>("keys")!.getModded("playbackRate", mod, this.config.skip));
+    this.changeRate(-this.ctlr.plug<KeysPlug>("keys")!.getModded("playbackRate", mod, this.config.skip));
   }
 
   public rotateRate(dir: "forwards" | "backwards" = "forwards"): void {

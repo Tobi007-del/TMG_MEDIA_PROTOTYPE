@@ -1,12 +1,11 @@
-import type { Control, ControlPanelBottomTuple } from "../plugs";
-import type { Paths, PathValue } from "../types/obj";
-import type { UIObject, UISettings } from "../types/UIOptions";
-import { isObj, isArr, setAny } from ".";
 import { camelize } from ".";
+import type { Control, ControlPanelBottomTuple } from "../plugs";
+import { type Paths, type PathValue, setAny } from "../sia-reactor";
+import type { UIObject, UISettings } from "../types/UIOptions";
+import { isObj, isArr } from "@t007/utils";
 
-export { isDef, isSym, isBool, isNum, isStr, isArr, isObj, isStrictObj, isIter, isFunc, inBoolArrOpt } from "@t007/utils";
-
-export { setAny, getAny, deleteAny, inAny, parseAnyObj, parseEvtOpts, mergeObjs, getTrailPaths, getTrailRecords, deepClone, nuke } from "sia-reactor/utils";
+export { isArr, isObj };
+export { isDef, isSym, isBool, isNum, isStr, isPOJO, isIter, isFunc, inBoolArrOpt } from "@t007/utils";
 
 // Type Guards
 export function isUISetting<T = unknown>(obj: any): obj is UISettings<T> {

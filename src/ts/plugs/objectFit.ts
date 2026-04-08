@@ -1,6 +1,6 @@
 import { BasePlug, type KeysPlug } from ".";
 import type { CtlrMedia, MediaState } from "../types/contract";
-import type { REvent } from "../types/reactor";
+import type { REvent } from "../sia-reactor";
 import { rotate } from "../utils";
 
 const objectFits = ["contain", "cover", "fill"] as const;
@@ -21,7 +21,7 @@ export class ObjectFitPlug extends BasePlug<ObjectFit> {
     this.media.on("state.objectFit", this.handleObjectFitState, { signal: this.signal, immediate: true });
     // Post Wiring
     this.media.tech.features.objectFit = true;
-    this.ctlr.getPlug<KeysPlug>("keys")?.register("objectFit", () => this.rotateObjectFit(), { phase: "keydown" });
+    this.ctlr.plug<KeysPlug>("keys")?.register("objectFit", () => this.rotateObjectFit(), { phase: "keydown" });
   }
 
   protected forwardObjectFit(value: ObjectFit): void {
@@ -42,7 +42,7 @@ export class ObjectFitPlug extends BasePlug<ObjectFit> {
   public rotateObjectFit(dir: "forwards" | "backwards" = "forwards"): void {
     this.media.intent.objectFit = rotate<MediaState["objectFit"]>(this.media.state.objectFit, objectFits, dir);
     // JS: this.DOM.objectFitNotifierContent.textContent = nextFit[1];
-    // JS: this.ctlr.getPlug<NotifiersPlug>("notifiers")?.notify(`objectfit${this.media.intent.objectFit}`);
+    // JS: this.ctlr.plug<NotifiersPlug>("notifiers")?.notify(`objectfit${this.media.intent.objectFit}`);
   }
 }
 

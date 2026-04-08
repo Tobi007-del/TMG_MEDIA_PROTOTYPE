@@ -1,5 +1,5 @@
 import { BaseModule, KeysPlug, MediaPlug, OverlayPlug, SkeletonPlug } from "../";
-import type { REvent } from "../../types/reactor";
+import type { REvent } from "../../sia-reactor";
 import type { CtlrMedia } from "../../types/contract";
 import type { CtlrConfig } from "../../types/config";
 import { handleDOMMutation } from "../../tools/runtime";
@@ -55,14 +55,14 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
     if (this.floatingWindow) return;
     if (value) {
       this.ctlr.videoContainer.classList.add("tmg-video-picture-in-picture");
-      this.ctlr.getPlug<OverlayPlug>("overlay")?.show();
+      this.ctlr.plug<OverlayPlug>("overlay")?.show();
       this.media.intent.miniplayer = false;
-      this.ctlr.getPlug<MediaPlug>("media")?.syncSession();
+      this.ctlr.plug<MediaPlug>("media")?.syncSession();
     } else {
       await mockAsync(180);
       this.ctlr.videoContainer.classList.remove("tmg-video-picture-in-picture");
       this.media.intent.miniplayer = "auto";
-      this.ctlr.getPlug<OverlayPlug>("overlay")?.delay();
+      this.ctlr.plug<OverlayPlug>("overlay")?.delay();
     }
   }
 
@@ -86,7 +86,7 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
     }
     this.floatingWindow!.document.head.append(createEl("style", { textContent: cssTexts.join("\n") }));
     await Promise.all(whitelist.map((href) => href.includes(".css") && loadResource(href, "style", undefined, this.floatingWindow!)));
-    this.ctlr.getPlug<SkeletonPlug>("skeleton")?.activatePseudoMode();
+    this.ctlr.plug<SkeletonPlug>("skeleton")?.activatePseudoMode();
     this.ctlr.videoContainer.classList.add("tmg-video-floating-player", "tmg-video-progress-bar");
     this.floatingWindow!.document.body.append(this.ctlr.videoContainer);
     this.floatingWindow!.document.documentElement.id = document.documentElement.id;
@@ -95,7 +95,7 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
     this.signal.addEventListener("abort", observeMutation(this.floatingWindow!.document.documentElement, handleDOMMutation, { childList: true, subtree: true }), { once: true });
     this.floatingWindow!.addEventListener("resize", this.handleFloatingPlayerResize, { signal: this.signal });
     this.floatingWindow!.addEventListener("pagehide", this.handleFloatingPlayerClose, { signal: this.signal });
-    this.ctlr.getPlug<KeysPlug>("keys")?.setKeyEventListeners("add");
+    this.ctlr.plug<KeysPlug>("keys")?.setKeyEventListeners("add");
     this.media.state.pictureInPicture = true;
   }
 
@@ -109,7 +109,7 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
     this.floatingWindow = null;
     this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", this.ctlr.settings.controlPanel.progressBar);
     this.ctlr.videoContainer.classList.remove("tmg-video-floating-player");
-    this.ctlr.getPlug<SkeletonPlug>("skeleton")?.deactivatePseudoMode();
+    this.ctlr.plug<SkeletonPlug>("skeleton")?.deactivatePseudoMode();
     this.media.intent.miniplayer = "auto";
     this.media.state.pictureInPicture = false;
   }

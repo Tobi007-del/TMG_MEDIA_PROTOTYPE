@@ -1,6 +1,6 @@
 import { BasePlug, type KeysPlug, type KeyMod } from ".";
 import type { Controller } from "../core/controller";
-import type { REvent } from "../types/reactor";
+import type { REvent } from "../sia-reactor";
 import type { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";
@@ -46,14 +46,14 @@ export class BrightnessPlug extends BasePlug<Brightness, BrightnessState> {
     this.ctlr.config.on("settings.brightness.max", this.handleMax, { signal: this.signal });
     // Post Wiring
     this.media.tech.features.brightness = true;
-    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    const keys = this.ctlr.plug<KeysPlug>("keys");
     keys?.register("dark", this.handleKeyDark, { phase: "keyup" });
     keys?.register("brightnessUp", this.handleKeyBrightnessUp, { phase: "keydown" });
     keys?.register("brightnessDown", this.handleKeyBrightnessDown, { phase: "keydown" });
   }
 
   protected getBrightnessStep(mod: KeyMod, fallback = this.config.skip): number {
-    return this.ctlr.getPlug<KeysPlug>("keys")?.getModded("brightness", mod, fallback) ?? fallback;
+    return this.ctlr.plug<KeysPlug>("keys")?.getModded("brightness", mod, fallback) ?? fallback;
   }
 
   protected forwardBrightness(value: number): void {
@@ -159,15 +159,15 @@ export class BrightnessPlug extends BasePlug<Brightness, BrightnessState> {
 
   protected handleKeyDark(): void {
     this.toggleDark("auto");
-    // JS: this.ctlr.config.stall(() => (this.config.value === 0 ? this.notify("brightnessdark") : this.notify("brightnessup")));
+    // JS: this.config.wonce("settings.brightness.value", (v) => (!v ? this.notify("brightnessdark") : this.notify("brightnessup")));
   }
 
   protected handleKeyBrightnessUp(_: KeyboardEvent, mod: KeyMod): void {
-    this.changeBrightness(this.ctlr.getPlug<KeysPlug>("keys")!.getModded("brightness", mod, this.config.skip));
+    this.changeBrightness(this.ctlr.plug<KeysPlug>("keys")!.getModded("brightness", mod, this.config.skip));
   }
 
   protected handleKeyBrightnessDown(_: KeyboardEvent, mod: KeyMod): void {
-    this.changeBrightness(-this.ctlr.getPlug<KeysPlug>("keys")!.getModded("brightness", mod, this.config.skip));
+    this.changeBrightness(-this.ctlr.plug<KeysPlug>("keys")!.getModded("brightness", mod, this.config.skip));
   }
 
   public handleSliderInput(brightness: number): void {

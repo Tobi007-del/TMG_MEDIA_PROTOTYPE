@@ -1,6 +1,6 @@
 import { Controller } from "../../core/controller";
 import { BasePlug, type KeysPlug } from "../";
-import type { DeepPartial } from "../../types/obj";
+import type { DeepPartial } from "../../sia-reactor";
 import { FullscreenModule, FULLSCREEN_BUILD, type FullscreenModuleConfig } from "./fullscreen";
 import { THEATER_BUILD, TheaterConfig, TheaterModule } from "./theater";
 import { PictureInPictureModule, PICTURE_IN_PICTURE_BUILD, type PictureInPictureModuleConfig } from "./pictureInPicture";
@@ -39,7 +39,7 @@ export class ModesPlug extends BasePlug<Modes> {
     this.pip.wire();
     this.miniplayer.wire();
     // Post Wiring
-    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    const keys = this.ctlr.plug<KeysPlug>("keys");
     keys?.register("fullscreen", () => (this.media.intent.fullscreen = !this.media.state.fullscreen), { phase: "keyup" });
     keys?.register("theater", () => !this.ctlr.isUIActive("fullscreen") && !this.ctlr.isUIActive("miniplayer") && !this.ctlr.isUIActive("floatingPlayer") && (this.media.intent.theater = !this.media.state.theater), { phase: "keyup" });
     keys?.register("pictureInPicture", () => (this.media.intent.pictureInPicture = !this.media.state.pictureInPicture), { phase: "keyup" });

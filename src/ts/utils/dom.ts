@@ -1,5 +1,4 @@
-import { isDef } from "sia-reactor/utils";
-import { bindClupToSig } from "./fn";
+import { bindCleanupToSignal as bindClupToSig } from "./fn";
 
 // Types
 type Direction = "x" | "y";
@@ -97,7 +96,7 @@ declare global {
   }
 }
 
-export const intersectionObserver = isDef(window)
+export const intersectionObserver = "undefined" !== typeof window
   ? new IntersectionObserver(
       (entries) => {
         for (const entry of entries) entry.target._tmgIntersectCbs?.forEach((cb) => cb(entry));
@@ -106,13 +105,13 @@ export const intersectionObserver = isDef(window)
     )
   : null;
 
-export const resizeObserver = isDef(window)
+export const resizeObserver = "undefined" !== typeof window
   ? new ResizeObserver((entries) => {
       for (const entry of entries) entry.target._tmgResizeCbs?.forEach((cb) => cb(entry));
     })
   : null;
 
-export const mutationObserver = isDef(window)
+export const mutationObserver = "undefined" !== typeof window
   ? new MutationObserver((mutations) => {
       // Dispatch to specific targets if they are being observed directly
       // Note: MutationObserver works differently; this handles the 'root' observer callbacks

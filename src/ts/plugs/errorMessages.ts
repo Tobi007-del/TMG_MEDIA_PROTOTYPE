@@ -1,6 +1,6 @@
 import { BasePlug } from ".";
 import type { DisabledPlug } from "./disabled";
-import type { REvent } from "../types/reactor";
+import type { REvent } from "../sia-reactor";
 import type { CtlrMedia } from "../types/contract";
 import type { ErrorCode } from "../types/generics";
 
@@ -18,7 +18,7 @@ export class ErrorMessagesPlug extends BasePlug<ErrorMessages> {
     if (!value) return;
     const code = value.code as ErrorCode | undefined,
       mssg = this.config[code ?? 5] || value.message || "An unknown error occurred with the video :(";
-    this.ctlr.getPlug<DisabledPlug>("disabled")?.deactivate(mssg);
+    this.ctlr.plug<DisabledPlug>("disabled")?.deactivate(mssg);
   }
 }
 

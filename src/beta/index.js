@@ -1,160 +1,36 @@
 "use strict";
 (() => {
-  // node_modules/sia-reactor/dist/chunk-DW7Z7YEA.js
-  var arrRx = /^([^\[\]]+)\[(\d+)\]$/;
-  function isDef(val) {
-    return "undefined" !== typeof val;
-  }
-  function isObj(obj, checkArr = true) {
-    return "object" === typeof obj && obj !== null && (checkArr ? !Array.isArray(obj) : true);
-  }
-  function isStrictObj(obj, crossRealms = false, typecheck = true) {
-    return (typecheck ? isObj(obj, false) : true) && (crossRealms ? Object.prototype.toString.call(obj) === "[object Object]" : obj.constructor === Object);
-  }
-  function setAny(target, key, value, separator = ".", keyFunc) {
-    if (!key.includes(separator)) return void (target[keyFunc ? keyFunc(key) : key] = value);
-    const keys = key.split(separator);
-    for (let currObj = target, i = 0, len = keys.length; i < len; i++) {
-      const key2 = keyFunc ? keyFunc(keys[i]) : keys[i], match = key2.includes("[") && key2.match(arrRx);
-      if (match) {
-        const [, key3, iStr] = match;
-        if (!Array.isArray(currObj[key3])) currObj[key3] = [];
-        if (i === len - 1) currObj[key3][Number(iStr)] = value;
-        else currObj[key3][Number(iStr)] ||= {}, currObj = currObj[key3][Number(iStr)];
-      } else {
-        if (i === len - 1) currObj[key2] = value;
-        else currObj[key2] ||= {}, currObj = currObj[key2];
-      }
-    }
-  }
-  function getAny(source, key, separator = ".", keyFunc) {
-    if (!key.includes(separator)) return source[keyFunc ? keyFunc(key) : key];
-    const keys = key.split(separator);
-    let currObj = source;
-    for (let i = 0, len = keys.length; i < len; i++) {
-      const key2 = keyFunc ? keyFunc(keys[i]) : keys[i], match = key2.includes("[") && key2.match(arrRx);
-      if (match) {
-        const [, key3, iStr] = match;
-        if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return void 0;
-        currObj = currObj[key3][Number(iStr)];
-      } else {
-        if (!isObj(currObj) || !(key2 in currObj)) return void 0;
-        currObj = currObj[key2];
-      }
-    }
-    return currObj;
-  }
-  function deleteAny(target, key, separator = ".", keyFunc) {
-    if (!key.includes(separator)) return void delete target[keyFunc ? keyFunc(key) : key];
-    const keys = key.split(separator);
-    for (let currObj = target, i = 0, len = keys.length; i < len; i++) {
-      const key2 = keyFunc ? keyFunc(keys[i]) : keys[i], match = key2.includes("[") && key2.match(arrRx);
-      if (match) {
-        const [, key3, iStr] = match;
-        if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return;
-        if (i === len - 1) delete currObj[key3][Number(iStr)];
-        else currObj = currObj[key3][Number(iStr)];
-      } else {
-        if (!isObj(currObj) || !(key2 in currObj)) return;
-        if (i === len - 1) delete currObj[key2];
-        else currObj = currObj[key2];
-      }
-    }
-  }
-  function inAny(source, key, separator = ".", keyFunc) {
-    if (!key.includes(separator)) return key in source;
-    const keys = key.split(separator);
-    for (let currObj = source, i = 0, len = keys.length; i < len; i++) {
-      const key2 = keyFunc ? keyFunc(keys[i]) : keys[i], match = key2.includes("[") && key2.match(arrRx);
-      if (match) {
-        const [, key3, iStr] = match;
-        if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return false;
-        if (i === len - 1) return true;
-        currObj = currObj[key3][Number(iStr)];
-      } else {
-        if (!isObj(currObj) || !(key2 in currObj)) return false;
-        if (i === len - 1) return true;
-        currObj = currObj[key2];
-      }
-    }
-    return true;
-  }
-  function parseAnyObj(obj, separator = ".", keyFunc = (p) => p, visited = /* @__PURE__ */ new WeakSet()) {
-    if (!isObj(obj) || visited.has(obj)) return obj;
-    visited.add(obj);
-    const result = {};
-    Object.keys(obj).forEach((k) => k.includes(separator) ? setAny(result, k, parseAnyObj(obj[k], separator, keyFunc, visited), separator, keyFunc) : result[k] = isObj(obj[k]) ? parseAnyObj(obj[k], separator, keyFunc, visited) : obj[k]);
-    return result;
-  }
-  function parseEvtOpts(options, opts, boolOpt = opts[0], result = {}) {
-    return Object.assign(result, "boolean" === typeof options ? { [boolOpt]: options } : options), result;
-  }
-  function mergeObjs(o1 = {}, o2 = {}) {
-    const merged = { ...o1 || {}, ...o2 || {} };
-    return Object.keys(merged).forEach((k) => isObj(o1?.[k]) && isObj(o2?.[k]) && (merged[k] = mergeObjs(o1[k], o2[k]))), merged;
-  }
-  function getTrailPaths(path, reverse = true) {
-    const parts = path.split("."), chain = ["*"];
-    let acc = "";
-    for (let i = 0, len = parts.length; i < len; i++) chain.push(acc += (i === 0 ? "" : ".") + parts[i]);
-    return reverse ? chain.reverse() : chain;
-  }
-  function getTrailRecords(obj, path) {
-    const parts = path.split("."), record = [["*", obj, obj]];
-    let acc = "", currObj = obj;
-    for (let i = 0, len = parts.length; i < len; i++) record.push([acc += (i ? "." : "") + parts[i], currObj, currObj = currObj?.[parts[i]]]);
-    return record;
-  }
-  function deepClone(obj, crossRealms, visited = /* @__PURE__ */ new WeakMap()) {
-    if (!(isStrictObj(obj, crossRealms) || Array.isArray(obj)) || visited.has(obj)) return obj;
-    const clone = Array.isArray(obj) ? [] : {};
-    visited.set(obj, clone);
-    const keys = Object.keys(obj);
-    for (let i = 0, len = keys.length; i < len; i++) clone[keys[i]] = deepClone(obj[keys[i]], crossRealms, visited);
-    return clone;
-  }
-  function nuke(target) {
-    let proto = target;
+  // node_modules/@t007/utils/node_modules/sia-reactor/dist/chunk-UQIMMJTY.js
+  function onAllMethods(owner, callback, skipOwn = true, nested = false) {
+    let proto = owner;
     while (proto && proto !== Object.prototype) {
-      const keys = Object.getOwnPropertyNames(proto);
-      for (let i = 0, len = keys.length; i < len; i++) {
-        if (keys[i] === "constructor") continue;
-        const desc = Object.getOwnPropertyDescriptor(proto, keys[i]);
-        if (desc && ("function" === typeof desc.value || desc.get || desc.set)) continue;
-        proto[keys[i]] = null;
+      for (const method of Object.getOwnPropertyNames(proto)) {
+        if (method === "constructor") continue;
+        if (nested && skipOwn && Object.prototype.hasOwnProperty.call(owner, method)) continue;
+        if ("function" === typeof Object.getOwnPropertyDescriptor(proto, method)?.value) callback(method, owner);
       }
-      proto = Object.getPrototypeOf(proto);
+      proto = Object.getPrototypeOf(proto), nested = true;
     }
+  }
+  function bindAllMethods(owner) {
+    onAllMethods(owner, (method, owner2) => {
+      owner2[method] = owner2[method].bind(owner2);
+    });
+  }
+  function clamp(min = 0, val, max = Infinity) {
+    return Math.min(Math.max(val, min), max);
+  }
+
+  // node_modules/@t007/utils/node_modules/sia-reactor/dist/chunk-4MJUBEI7.js
+  var RTR_BATCH = "undefined" !== typeof window ? ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window) : "undefined" !== typeof process && process.nextTick ? process.nextTick : setTimeout;
+  var RTR_LOG = console.log.bind(console, "[S.I.A Reactor]");
+  var EVT_WARN = console.warn.bind(console, "[S.I.A Event]");
+  var NIL = Object.freeze({});
+  function isObj(obj, arraycheck = true) {
+    return "object" === typeof obj && obj !== null && (arraycheck ? !Array.isArray(obj) : true);
   }
 
   // node_modules/@t007/utils/dist/index.js
-  function isSym(val) {
-    return "symbol" === typeof val;
-  }
-  function isStr(val) {
-    return "string" === typeof val;
-  }
-  function isArr(obj) {
-    return Array.isArray(obj);
-  }
-  function isIter(obj) {
-    return obj != null && "function" === typeof obj[Symbol.iterator];
-  }
-  function isFunc(val) {
-    return "function" === typeof val;
-  }
-  function uid(prefix = "") {
-    return prefix + Date.now().toString(36) + "_" + performance.now().toString(36).replace(".", "") + "_" + Math.random().toString(36).slice(2);
-  }
-  function isSameURL(src1, src2) {
-    if (!isStr(src1) || !isStr(src2) || !src1 || !src2) return false;
-    try {
-      const u1 = new URL(src1, window.location.href), u2 = new URL(src2, window.location.href);
-      return decodeURIComponent(u1.origin + u1.pathname) === decodeURIComponent(u2.origin + u2.pathname);
-    } catch {
-      return src1.replace(/\\/g, "/").split("?")[0].trim() === src2.replace(/\\/g, "/").split("?")[0].trim();
-    }
-  }
   function createEl(tag, props, dataset, styles, el = tag ? document?.createElement(tag) : null) {
     return assignEl(el, props, dataset, styles), el;
   }
@@ -198,23 +74,32 @@
     });
     return w.t007._resourceCache[src];
   }
-  function clamp(min = 0, val, max = Infinity) {
-    return Math.min(Math.max(val, min), max);
+  function isDef(val) {
+    return "undefined" !== typeof val;
   }
-  function onAllMethods(owner, callback) {
-    let proto = owner;
-    while (proto && proto !== Object.prototype) {
-      for (const method of Object.getOwnPropertyNames(proto)) {
-        if (method === "constructor") continue;
-        if (isFunc(Object.getOwnPropertyDescriptor(proto, method)?.value)) callback(method, owner);
-      }
-      proto = Object.getPrototypeOf(proto);
+  function isSym(val) {
+    return "symbol" === typeof val;
+  }
+  function isStr(val) {
+    return "string" === typeof val;
+  }
+  function isArr(obj) {
+    return Array.isArray(obj);
+  }
+  function isIter(obj) {
+    return obj != null && "function" === typeof obj[Symbol.iterator];
+  }
+  function uid(prefix = "") {
+    return prefix + Date.now().toString(36) + "_" + performance.now().toString(36).replace(".", "") + "_" + Math.random().toString(36).slice(2);
+  }
+  function isSameURL(src1, src2) {
+    if (!isStr(src1) || !isStr(src2) || !src1 || !src2) return false;
+    try {
+      const u1 = new URL(src1, window.location.href), u2 = new URL(src2, window.location.href);
+      return decodeURIComponent(u1.origin + u1.pathname) === decodeURIComponent(u2.origin + u2.pathname);
+    } catch {
+      return src1.replace(/\\/g, "/").split("?")[0].trim() === src2.replace(/\\/g, "/").split("?")[0].trim();
     }
-  }
-  function bindAllMethods(owner) {
-    onAllMethods(owner, (method, owner2) => {
-      owner2[method] = owner2[method].bind(owner2);
-    });
   }
   function initVScrollerator({ baseSpeed = 3, maxSpeed = 10, stepDelay = 2e3, baseRate = 16, lineHeight = 80, margin = 80, car = window } = {}) {
     let linesPerSec = baseSpeed, accelId = null, lastTime = null;
@@ -302,7 +187,7 @@
     return update(), t007._scrollers.get(el);
   }
   var removeScrollAssist = (el) => t007._scrollers.get(el)?.destroy();
-  if (isDef(window)) {
+  if ("undefined" !== typeof window) {
     window.t007 ??= {};
     t007.VIRTUAL_RESOURCE = VIRTUAL_RESOURCE;
     window.T007_TOAST_JS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/toast@latest`;
@@ -313,7 +198,11 @@
     window.T007_DIALOG_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/dialog@latest/dist/index.min.css`;
   }
 
-  // node_modules/sia-reactor/dist/chunk-KFPA5OPK.js
+  // node_modules/sia-reactor/dist/chunk-4MJUBEI7.js
+  var CTX = {
+    /** active `Autotracker` instance, override for automatic dependency collection on `Reactor` traps. */
+    autotracker: null
+  };
   var RAW = /* @__PURE__ */ Symbol.for("S.I.A_RAW");
   var INERTIA = /* @__PURE__ */ Symbol.for("S.I.A_INERTIA");
   var REJECTABLE = /* @__PURE__ */ Symbol.for("S.I.A_REJECTABLE");
@@ -321,37 +210,199 @@
   var TERMINATOR = /* @__PURE__ */ Symbol.for("S.I.A_TERMINATOR");
   var VERSION = /* @__PURE__ */ Symbol.for("S.I.A_VERSION");
   var SSVERSION = /* @__PURE__ */ Symbol.for("S.I.A_SNAPSHOT_VERSION");
-  var NIL = Object.freeze({});
+  var RTR_BATCH2 = "undefined" !== typeof window ? ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window) : "undefined" !== typeof process && process.nextTick ? process.nextTick : setTimeout;
+  var RTR_LOG2 = console.log.bind(console, "[S.I.A Reactor]");
+  var EVT_WARN2 = console.warn.bind(console, "[S.I.A Event]");
+  var EVT_OPTS = { LISTENER: ["capture", "depth", "once", "signal", "immediate"], MEDIATOR: ["lazy", "signal", "immediate"] };
+  var NIL2 = Object.freeze({});
   var NOOP = () => {
   };
-  var RTR_BATCH = (isDef(queueMicrotask) ? queueMicrotask : setTimeout).bind(window);
-  var RTR_LOG = console.log.bind(console, "[S.I.A Reactor]");
-  var EVT_WARN = console.warn.bind(console, "[S.I.A Event]");
-  var EVT_OPTS = { LISTENER: ["capture", "depth", "once", "signal", "immediate"], MEDIATOR: ["lazy", "signal", "immediate"] };
+  var arrRx = /^([^\[\]]+)\[(\d+)\]$/;
+  function isObj2(obj, arraycheck = true) {
+    return "object" === typeof obj && obj !== null && (arraycheck ? !Array.isArray(obj) : true);
+  }
+  function isPOJO2(obj, config = NIL2, typecheck = true) {
+    return (typecheck ? isObj2(obj, false) : true) && (config.crossRealms ? Object.prototype.toString.call(obj) === "[object Object]" : obj.constructor === Object);
+  }
+  function canHandle2(obj, config = NIL2, typecheck = true) {
+    if (typecheck && !isObj2(obj, false)) return false;
+    if (Array.isArray(obj) || !config.preserveContext && isPOJO2(obj, config, false)) return true;
+    if (config.preserveContext) return !(obj instanceof Map) && !(obj instanceof Set) && !(obj instanceof WeakMap) && !(obj instanceof WeakSet) && !(obj instanceof Error) && !(obj instanceof Number) && !(obj instanceof Date) && !(obj instanceof String) && !(obj instanceof RegExp) && !(obj instanceof ArrayBuffer) && !(obj instanceof Promise);
+    return false;
+  }
+  function getAny2(source, key, separator = ".", keyFunc) {
+    if (key === "*") return source;
+    if (!key.includes(separator)) return source[keyFunc ? keyFunc(key) : key];
+    const keys = key.split(separator);
+    let currObj = source;
+    for (let i = 0, len = keys.length; i < len; i++) {
+      const key2 = keyFunc ? keyFunc(keys[i]) : keys[i], match = key2.includes("[") && key2.match(arrRx);
+      if (match) {
+        const [, key3, iStr] = match;
+        if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return void 0;
+        currObj = currObj[key3][Number(iStr)];
+      } else {
+        if (!isObj2(currObj) || !(key2 in currObj)) return void 0;
+        currObj = currObj[key2];
+      }
+    }
+    return currObj;
+  }
+  function setAny2(target, key, value, separator = ".", keyFunc) {
+    if (key === "*") return Object.assign(target, value);
+    if (!key.includes(separator)) return void (target[keyFunc ? keyFunc(key) : key] = value);
+    const keys = key.split(separator);
+    for (let currObj = target, i = 0, len = keys.length; i < len; i++) {
+      const key2 = keyFunc ? keyFunc(keys[i]) : keys[i], match = key2.includes("[") && key2.match(arrRx);
+      if (match) {
+        const [, key3, iStr] = match;
+        if (!Array.isArray(currObj[key3])) currObj[key3] = [];
+        if (i === len - 1) currObj[key3][Number(iStr)] = value;
+        else currObj[key3][Number(iStr)] ||= {}, currObj = currObj[key3][Number(iStr)];
+      } else {
+        if (i === len - 1) currObj[key2] = value;
+        else currObj[key2] ||= {}, currObj = currObj[key2];
+      }
+    }
+  }
+  function deleteAny2(target, key, separator = ".", keyFunc) {
+    if (key === "*") {
+      const keys2 = Object.keys(target);
+      for (let i = 0, len = keys2.length; i < len; i++) delete target[keys2[i]];
+      return;
+    }
+    if (!key.includes(separator)) return void delete target[keyFunc ? keyFunc(key) : key];
+    const keys = key.split(separator);
+    for (let currObj = target, i = 0, len = keys.length; i < len; i++) {
+      const key2 = keyFunc ? keyFunc(keys[i]) : keys[i], match = key2.includes("[") && key2.match(arrRx);
+      if (match) {
+        const [, key3, iStr] = match;
+        if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return;
+        if (i === len - 1) delete currObj[key3][Number(iStr)];
+        else currObj = currObj[key3][Number(iStr)];
+      } else {
+        if (!isObj2(currObj) || !(key2 in currObj)) return;
+        if (i === len - 1) delete currObj[key2];
+        else currObj = currObj[key2];
+      }
+    }
+  }
+  function inAny2(source, key, separator = ".", keyFunc) {
+    if (key === "*") return true;
+    if (!key.includes(separator)) return key in source;
+    const keys = key.split(separator);
+    for (let currObj = source, i = 0, len = keys.length; i < len; i++) {
+      const key2 = keyFunc ? keyFunc(keys[i]) : keys[i], match = key2.includes("[") && key2.match(arrRx);
+      if (match) {
+        const [, key3, iStr] = match;
+        if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return false;
+        if (i === len - 1) return true;
+        currObj = currObj[key3][Number(iStr)];
+      } else {
+        if (!isObj2(currObj) || !(key2 in currObj)) return false;
+        if (i === len - 1) return true;
+        currObj = currObj[key2];
+      }
+    }
+    return true;
+  }
+  function parseAnyObj2(obj, separator = ".", keyFunc = (p) => p, seen = /* @__PURE__ */ new WeakSet()) {
+    if (!isObj2(obj) || seen.has(obj)) return obj;
+    seen.add(obj);
+    const result = {};
+    Object.keys(obj).forEach((k) => k === "*" || k.includes(separator) ? setAny2(result, k, parseAnyObj2(obj[k], separator, keyFunc, seen), separator, keyFunc) : result[k] = isObj2(obj[k]) ? parseAnyObj2(obj[k], separator, keyFunc, seen) : obj[k]);
+    return result;
+  }
+  function parseEvtOpts2(options, opts, boolOpt = opts[0], result = {}) {
+    return Object.assign(result, "boolean" === typeof options ? { [boolOpt]: options } : options), result;
+  }
+  function mergeObjs2(o1 = {}, o2 = {}) {
+    const merged = { ...o1 || {}, ...o2 || {} };
+    return Object.keys(merged).forEach((k) => isObj2(o1?.[k]) && isObj2(o2?.[k]) && (merged[k] = mergeObjs2(o1[k], o2[k]))), merged;
+  }
+  function getTrailRecords2(obj, path, reverse = false) {
+    const parts = path.split("."), chain = [["*", obj, obj]];
+    for (let acc = "", currObj = obj, i = 0, len = parts.length; i < len; i++) chain.push([acc += (i ? "." : "") + parts[i], currObj, currObj = currObj?.[parts[i]]]);
+    return reverse ? chain.reverse() : chain;
+  }
+  function deepClone2(obj, config = NIL2, seen = /* @__PURE__ */ new WeakMap()) {
+    if (!obj || "object" !== typeof obj) return obj;
+    const cloned = seen.get(obj);
+    if (cloned) return cloned;
+    if (!canHandle2(obj, config, false)) return obj;
+    const clone = config.preserveContext ? Object.create(Object.getPrototypeOf(obj)) : Array.isArray(obj) ? [] : {};
+    seen.set(obj, clone);
+    const keys = config.preserveContext ? Reflect.ownKeys(obj) : Object.keys(obj);
+    for (let i = 0, len = keys.length; i < len; i++) clone[keys[i]] = deepClone2(obj[keys[i]], config, seen);
+    return clone;
+  }
+  function nuke2(target) {
+    let proto = target;
+    while (proto && proto !== Object.prototype) {
+      const keys = Object.getOwnPropertyNames(proto);
+      for (let i = 0, len = keys.length; i < len; i++) {
+        if (keys[i] === "constructor") continue;
+        const desc = Object.getOwnPropertyDescriptor(proto, keys[i]);
+        if (desc && ("function" === typeof desc.value || desc.get || desc.set)) continue;
+        proto[keys[i]] = null;
+      }
+      proto = Object.getPrototypeOf(proto);
+    }
+  }
+
+  // node_modules/sia-reactor/dist/chunk-Q2AKMIHN.js
   var ReactorEvent = class _ReactorEvent {
+    /** No active propagation phase. */
     static NONE = 0;
+    /** Capture phase: root to target parent. */
     static CAPTURING_PHASE = 1;
+    /** Target phase: target listeners run. */
     static AT_TARGET = 2;
+    /** Bubble phase: target parent to root. */
     static BUBBLING_PHASE = 3;
+    /** Current propagation phase for this event instance. */
     eventPhase = _ReactorEvent.NONE;
+    /** Current event type for the active propagation path, clone immediately if async */
     type;
+    /**
+     * Current target context for the active propagation path, clone immediately if async.
+     * Also use to survive future object shape changes from nesting for a path callback.
+     */
     currentTarget;
+    /** Original event type before propagation remapping. */
     staticType;
+    /** Original event target context. */
     target;
+    /** Root reactive object for this event wave. */
     root;
+    /** Original target path for this event wave. */
     path;
+    /** Current value at the event target path. */
     value;
+    /** Previous value at the event target path. */
     oldValue;
+    /** Whether resolve/reject intent semantics are allowed for this event. */
     rejectable;
+    /** Whether this event wave can bubble back up to ancestors or just capture down. */
     bubbles;
-    // readonly timestamp: number;
+    /**
+     * `DOMHighResTimeStamp` for this event payload for native event parity and accuracy.
+     * Enable `eventTimeStamps` option, then use this over custom timestamps in listeners for accuracy.
+     * */
+    timestamp;
     _warn = NOOP;
     _resolved = "";
     _rejected = "";
     _propagationStopped = false;
     _immediatePropagationStopped = false;
-    constructor(payload, bubbles = false, canWarn = true) {
-      this.type = this.staticType = payload.type;
+    /**
+     * @param payload Source payload for this event instance.
+     * @param bubbles Whether bubbling is enabled for this wave.
+     * @param canWarn Whether warning output is enabled.
+     * @param canStamp Whether timestamping is enabled.
+     */
+    constructor(payload, bubbles = false, canStamp = false, canWarn = true) {
+      this.staticType = this.type = payload.type;
       this.target = payload.target;
       this.currentTarget = payload.currentTarget;
       this.root = payload.root;
@@ -360,39 +411,62 @@
       this.oldValue = payload.target.oldValue;
       this.rejectable = payload.rejectable;
       this.bubbles = bubbles;
-      if (canWarn) this._warn = EVT_WARN;
+      if (canStamp) this.timestamp = performance.now();
+      if (canWarn) this._warn = EVT_WARN2;
     }
+    /** Whether propagation has been stopped. */
     get propagationStopped() {
       return this._propagationStopped;
     }
+    /** Stops propagation to remaining listeners in later nodes/phases. */
     stopPropagation() {
       this._propagationStopped = true;
     }
+    /** Whether immediate propagation has been stopped. */
     get immediatePropagationStopped() {
       return this._immediatePropagationStopped;
     }
+    /** Stops propagation immediately, including remaining listeners on current path. */
     stopImmediatePropagation() {
       this._propagationStopped = true;
       this._immediatePropagationStopped = true;
     }
+    /** Resolution message for rejectable events. */
     get resolved() {
       return this._resolved;
     }
+    /**
+     * Marks a rejectable event as resolved.
+     * @param message Optional resolution message or identity.
+     * @example e.resolve("html5Tech"); // identity
+     * @example e.resolve("API Load successful"); // message
+     */
     resolve(message) {
-      if (!this.rejectable) return this._warn(`Ignored resolve() call on a non-rejectable ${this.staticType} at "${this.path}"`);
-      if (this.eventPhase !== _ReactorEvent.CAPTURING_PHASE) this._warn(`Resolving an intent on ${this.staticType} at "${this.path}" outside of the capture phase is unadvised.`);
+      if (!this.rejectable) return this._warn(`[ReactorEvent] Ignored resolve() call on a non-rejectable ${this.staticType} at "${this.path}"`);
+      if (this.eventPhase !== _ReactorEvent.CAPTURING_PHASE) this._warn(`[ReactorEvent] Resolving an intent on ${this.staticType} at "${this.path}" outside of the capture phase is unadvised.`);
       if (this.rejectable) this._resolved = message || `Could ${this.staticType} intended value at "${this.path}"`;
     }
+    /** Rejection reason for rejectable events. */
     get rejected() {
       return this._rejected;
     }
+    /**
+     * Marks a rejectable event as rejected.
+     * @param reason Optional rejection reason or identity.
+     * @example e.resolve("html5Tech"); // identity
+     * @example e.resolve("User is not logged in"); // reason
+     */
     reject(reason) {
-      if (!this.rejectable) return this._warn(`Ignored reject() call on a non-rejectable ${this.staticType} at "${this.path}"`);
-      if (this.eventPhase !== _ReactorEvent.CAPTURING_PHASE) this._warn(`Rejecting an intent on ${this.staticType} at "${this.path}" outside of the capture phase is unadvised.`);
+      if (!this.rejectable) return this._warn(`[ReactorEvent] Ignored reject() call on a non-rejectable ${this.staticType} at "${this.path}"`);
+      if (this.eventPhase !== _ReactorEvent.CAPTURING_PHASE) this._warn(`[ReactorEvent] Rejecting an intent on ${this.staticType} at "${this.path}" outside of the capture phase is unadvised.`);
       if (this.rejectable) this._rejected = reason || `Couldn't ${this.staticType} intended value at "${this.path}"`;
     }
-    trailPaths() {
-      return getTrailPaths(this.path);
+    /**
+     * Returns event path values from target to root.
+     * @returns Composed path values in bubbling order.
+     */
+    composedPath() {
+      return getTrailRecords2(this.root, this.path, true).map((r) => r[2]);
     }
     get canWarn() {
       return this._warn !== NOOP;
@@ -402,19 +476,14 @@
     log = NOOP;
     core;
     // `?:`s | pay the ~800 byte price upfront for what u might never use
+    plugins;
     config;
-    isLogging = false;
-    // keeping track so API getter doesn't slow down internal iterations in any way
-    isTracing = false;
-    // Lineage Tracing
-    isTracking = false;
-    // Reference Tracking
-    isSCloning = false;
-    // Smart Cloning
     isBatching = false;
     // Async Batching
     isCascading = false;
     // Setter Cascading
+    isLogging = false;
+    // keeping track so API getter doesn't slow down internal iterations in any way
     queue;
     // Tasks to run after flush
     batch;
@@ -428,63 +497,67 @@
     deleters;
     watchers;
     listeners;
-    constructor(obj = {}, options) {
+    /**
+     * Creates a new Reactor instance.
+     * @param object Initial state object.
+     * @param build Reactor bootstrap/build configuration.
+     * @example
+     * const rtr = new Reactor({ count: 0 });
+     */
+    constructor(object = {}, build) {
       this[INERTIA] = true;
-      this.config = { crossRealms: false, eventBubbling: true, preserveContext: false, equalityFunction: Object.is, batchingFunction: RTR_BATCH, ...options };
-      this.core = this.proxied(obj);
-      if (!options) return;
-      this.canLog = !!options.debug;
-      if (this.isTracking = !!options.referenceTracking) this.lineage = /* @__PURE__ */ new WeakMap();
-      if (this.isSCloning = this.isTracking && !!options.smartCloning) this.snapCache = /* @__PURE__ */ new WeakMap();
-      this.isTracing = this.isTracking && !!options.lineageTracing;
+      this.config = { crossRealms: false, smartCloning: false, eventBubbling: true, lineageTracing: false, preserveContext: false, equalityFunction: Object.is, batchingFunction: RTR_BATCH2, ...build };
+      this.core = this.proxied(object);
+      if (build) this.canLog = !!build.debug;
     }
     proxied(obj, rejectable = false, indiffable = false, parent, key, path) {
       if (!obj || "object" !== typeof obj) return obj;
-      if (!(isStrictObj(obj, this.config.crossRealms, false) || Array.isArray(obj)) || obj[INERTIA]) return obj;
       obj = obj[RAW] || obj;
-      if (this.isTracking && parent && key) this.link(obj, parent, key, false);
-      if (this.proxyCache.has(obj)) return this.proxyCache.get(obj);
+      if (this.config.referenceTracking && parent && key && !this.link(obj, parent, key, false)) return obj;
+      const cached = this.proxyCache.get(obj);
+      if (cached) return cached;
+      if (obj[INERTIA] || !canHandle2(obj, this.config, false)) return obj;
       rejectable ||= obj[REJECTABLE];
       indiffable ||= obj[INDIFFABLE];
       const proxy = new Proxy(obj, {
         // Robust Proxy handler
         get: (object, key2, receiver) => {
-          if (key2 === RAW) return object;
+          if (key2 === RAW) return this.log(`\u{1F440} [Reactor \`get\` Trap] Peeked at ${object}`), object;
           let value = !this.config.preserveContext ? object[key2] : Reflect.get(object, key2, receiver);
-          const safeKey = String(key2), fullPath = this.isTracing ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracing ? this.trace(object, safeKey) : fullPath;
-          this.log(`\u{1F440} [GET Trap] Initiated for "${safeKey}" on "${paths}"`);
+          const keyStr = String(key2), fullPath = path ? path + "." + keyStr : keyStr, paths = this.config.lineageTracing ? this.trace(object, keyStr) : fullPath;
+          this.log(`\u{1F50D} [Reactor \`get\` Trap] Initiated for "${keyStr}" on "${paths}"`), CTX.autotracker?.track(fullPath, this);
           if (this.config.get) value = this.config.get(object, key2, value, receiver, paths);
           if (this.getters) {
             const wildcords = this.getters.get("*");
-            for (let i = 0, len = this.isTracing ? paths.length : 1; i < len; i++) {
-              const currPath = this.isTracing ? paths[i] : fullPath, cords = this.getters.get(currPath);
+            for (let i = 0, len = this.config.lineageTracing ? paths.length : 1; i < len; i++) {
+              const currPath = this.config.lineageTracing ? paths[i] : fullPath, cords = this.getters.get(currPath);
               if (!cords && !wildcords) continue;
-              const target = { path: currPath, value, key: safeKey, object: receiver }, payload = { type: "get", target, currentTarget: target, root: this.core, rejectable };
+              const target = { path: currPath, value, key: keyStr, keyExisted: true, object: receiver }, payload = { type: "get", target, currentTarget: target, root: this.core, rejectable };
               if (cords) value = this.mediate(currPath, payload, "get", cords);
               if (!wildcords) continue;
               target.value = value;
               value = this.mediate("*", payload, "get", wildcords);
             }
           }
-          return this.proxied(value, rejectable, indiffable, object, safeKey, fullPath);
+          return this.proxied(value, rejectable, indiffable, object, keyStr, fullPath);
         },
         set: (object, key2, value, receiver) => {
           let unchanged, safeValue, safeOldValue, terminated = false;
-          const safeKey = String(key2), fullPath = this.isTracing ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracing ? this.trace(object, safeKey) : fullPath, loopLen = this.isTracing ? paths.length : 1, oldValue = !this.config.preserveContext ? object[key2] : Reflect.get(object, key2, receiver);
-          if (this.isTracking || !indiffable) {
+          const keyStr = String(key2), fullPath = path ? path + "." + keyStr : keyStr, paths = this.config.lineageTracing ? this.trace(object, keyStr) : fullPath, loopLen = this.config.lineageTracing ? paths.length : 1, oldValue = !this.config.preserveContext ? object[key2] : Reflect.get(object, key2, receiver), keyExisted = !this.config.preserveContext ? key2 in object : Reflect.has(object, key2);
+          this.log(`\u270F\uFE0F [Reactor \`set\` Trap] Initiated for "${keyStr}" on "${paths}"`), CTX.autotracker?.track(fullPath, this, true);
+          if (this.config.referenceTracking || !indiffable) {
             safeOldValue = oldValue?.[RAW] || oldValue;
             safeValue = value?.[RAW] || value;
             unchanged = this.config.equalityFunction(safeValue, safeOldValue);
           }
-          if (!indiffable && unchanged && !this.isCascading) return true;
-          this.log(`\u270F\uFE0F [SET Trap] Initiated for "${safeKey}" on "${paths}"`);
+          if (!indiffable && unchanged && !this.isCascading) return this.log(`\u{1F504} [Reactor \`set\` Trap] Unchanged for "${keyStr}" on "${paths}"`), true;
           if (this.config.set) terminated = (value = this.config.set(object, key2, value, oldValue, receiver, paths)) === TERMINATOR;
           if (this.setters) {
             const wildcords = this.setters.get("*");
             for (let i = 0; i < loopLen; i++) {
-              const currPath = this.isTracking ? paths[i] : fullPath, cords = this.setters.get(currPath);
+              const currPath = this.config.lineageTracing ? paths[i] : fullPath, cords = this.setters.get(currPath);
               if (!cords && !wildcords) continue;
-              const target = { path: currPath, value, oldValue, key: safeKey, object: receiver }, payload = { type: "set", target, currentTarget: target, root: this.core, terminated, rejectable };
+              const target = { path: currPath, value, oldValue, key: keyStr, keyExisted, object: receiver }, payload = { type: "set", target, currentTarget: target, root: this.core, terminated, rejectable };
               if (cords) {
                 const result2 = this.mediate(currPath, payload, "set", cords);
                 if (!(terminated ||= payload.terminated)) value = result2;
@@ -495,27 +568,28 @@
               if (!(terminated ||= payload.terminated)) value = result;
             }
           }
-          if (terminated) return this.log(`\u{1F6E1}\uFE0F [SET Mediator] Terminated on "${paths}"`), true;
-          !this.config.preserveContext ? object[key2] = value : Reflect.set(object, key2, value, receiver);
-          if (this.isTracking && !unchanged) this.isSCloning && this.stamp(object), this.unlink(safeOldValue, object, safeKey), this.link(safeValue, object, safeKey);
+          if (terminated) return this.log(`\u{1F6E1}\uFE0F [Reactor \`set\` Trap] Terminated for "${keyStr}" on "${paths}"`), true;
+          const success = !this.config.preserveContext ? (object[key2] = value, true) : Reflect.set(object, key2, value, receiver);
+          if (!success) return this.log(`\u274C [Reactor \`set\` Trap] Failed for "${keyStr}" on "${paths}"`), false;
+          if (this.config.referenceTracking && !unchanged) this.config.smartCloning && this.stamp(object), this.unlink(safeOldValue, object, keyStr), this.link(safeValue, object, keyStr);
           if (this.watchers || this.listeners)
             for (let i = 0; i < loopLen; i++) {
-              const currPath = this.isTracking ? paths[i] : fullPath, target = { path: currPath, value, oldValue, key: safeKey, object: receiver };
+              const currPath = this.config.lineageTracing ? paths[i] : fullPath, target = { path: currPath, value, oldValue, key: keyStr, keyExisted, object: receiver };
               this.notify(currPath, { type: "set", target, currentTarget: target, root: this.core, terminated, rejectable });
             }
           return true;
         },
         deleteProperty: (object, key2) => {
           let value, receiver = this.proxyCache.get(object), terminated = false;
-          const safeKey = String(key2), fullPath = this.isTracing ? void 0 : path ? path + "." + safeKey : safeKey, paths = this.isTracing ? this.trace(object, safeKey) : fullPath, loopLen = this.isTracing ? paths.length : 1, oldValue = !this.config.preserveContext ? object[key2] : Reflect.get(object, key2, receiver);
-          this.log(`\u{1F5D1}\uFE0F [DELETE Trap] Initiated for "${safeKey}" on "${paths}"`);
-          if (this.config.delete) terminated = (value = this.config.delete(object, key2, oldValue, receiver, paths)) === TERMINATOR;
+          const keyStr = String(key2), fullPath = path ? path + "." + keyStr : keyStr, paths = this.config.lineageTracing ? this.trace(object, keyStr) : fullPath, loopLen = this.config.lineageTracing ? paths.length : 1, oldValue = !this.config.preserveContext ? object[key2] : Reflect.get(object, key2, receiver), keyExisted = !this.config.preserveContext ? key2 in object : Reflect.has(object, key2);
+          this.log(`\u{1F5D1}\uFE0F [Reactor \`deleteProperty\` Trap] Initiated for "${keyStr}" on "${paths}"`), CTX.autotracker?.track(fullPath, this, true);
+          if (this.config.deleteProperty) terminated = (value = this.config.deleteProperty(object, key2, oldValue, receiver, paths)) === TERMINATOR;
           if (this.deleters) {
             const wildcords = this.deleters.get("*");
             for (let i = 0; i < loopLen; i++) {
-              const currPath = this.isTracking ? paths[i] : fullPath, cords = this.deleters.get(currPath);
+              const currPath = this.config.lineageTracing ? paths[i] : fullPath, cords = this.deleters.get(currPath);
               if (!cords && !wildcords) continue;
-              const target = { path: currPath, value, oldValue, key: safeKey, object: receiver }, payload = { type: "delete", target, currentTarget: target, root: this.core, rejectable };
+              const target = { path: currPath, value, oldValue, key: keyStr, keyExisted, object: receiver }, payload = { type: "delete", target, currentTarget: target, root: this.core, rejectable };
               if (cords) {
                 const result2 = this.mediate(currPath, payload, "delete", cords);
                 if (!(terminated ||= payload.terminated)) value = result2;
@@ -525,47 +599,72 @@
               if (!(terminated ||= payload.terminated)) value = result;
             }
           }
-          if (terminated) return this.log(`\u{1F6E1}\uFE0F [DELETE Mediator] Terminated on "${paths}"`), true;
-          !this.config.preserveContext ? delete object[key2] : Reflect.deleteProperty(object, key2);
-          if (this.isTracking) this.isSCloning && this.stamp(object), this.unlink(oldValue?.[RAW] || oldValue, object, safeKey);
+          if (terminated) return this.log(`\u{1F6E1}\uFE0F [Reactor \`deleteProperty\` Trap] Terminated for "${keyStr}" on "${paths}"`), true;
+          const success = !this.config.preserveContext ? delete object[key2] : Reflect.deleteProperty(object, key2);
+          if (!success) return this.log(`\u274C [Reactor \`deleteProperty\` Trap] Failed for "${keyStr}" on "${paths}"`), false;
+          if (this.config.referenceTracking) this.config.smartCloning && this.stamp(object), this.unlink(oldValue?.[RAW] || oldValue, object, keyStr);
           if (this.watchers || this.listeners)
             for (let i = 0; i < loopLen; i++) {
-              const currPath = this.isTracking ? paths[i] : fullPath, target = { path: currPath, value, oldValue, key: safeKey, object: receiver };
+              const currPath = this.config.lineageTracing ? paths[i] : fullPath, target = { path: currPath, value, oldValue, key: keyStr, keyExisted, object: receiver };
               this.notify(currPath, { type: "delete", target, currentTarget: target, root: this.core, rejectable });
             }
           return true;
+        },
+        has: (object, key2) => {
+          let has = !this.config.preserveContext ? key2 in object : Reflect.has(object, key2);
+          const keyStr = String(key2), fullPath = path ? path + "." + keyStr : keyStr;
+          this.log(`\u2753 [Reactor \`has\` Trap] Initiated for "${keyStr}" on "${fullPath}"`), CTX.autotracker?.track(fullPath, this);
+          if (this.config.has) has = this.config.has(object, key2, has, this.proxyCache.get(object), fullPath);
+          return has;
+        },
+        getOwnPropertyDescriptor: (object, key2) => {
+          let descriptor = !this.config.preserveContext ? Object.getOwnPropertyDescriptor(object, key2) : Reflect.getOwnPropertyDescriptor(object, key2);
+          const keyStr = String(key2), fullPath = path ? path + "." + keyStr : keyStr;
+          this.log(`\u{1F4CB} [Reactor \`getOwnPropertyDescriptor\` Trap] Initiated for "${keyStr}" on "${fullPath}"`), CTX.autotracker?.track(fullPath, this);
+          if (this.config.getOwnPropertyDescriptor) descriptor = this.config.getOwnPropertyDescriptor(object, key2, descriptor, this.proxyCache.get(object), this.config.lineageTracing ? this.trace(object, keyStr) : fullPath);
+          return descriptor;
+        },
+        ownKeys: (object) => {
+          let ownKeys = Reflect.ownKeys(object);
+          const safePath = path || "*";
+          this.log(`\u{1F511} [Reactor \`ownKeys\` Trap] Initiated on "${safePath}"`), CTX.autotracker?.track(safePath, this);
+          if (this.config.ownKeys) ownKeys = this.config.ownKeys(object, ownKeys, this.proxyCache.get(object), safePath);
+          return ownKeys;
         }
       });
       return this.proxyCache.set(obj, proxy), proxy;
     }
-    trace(target, path, paths = [], visited = /* @__PURE__ */ new WeakSet()) {
+    trace(target, path, paths = [], seen = /* @__PURE__ */ new WeakSet()) {
       if (Object.is(target, this.core[RAW] || this.core)) return paths.push(path), paths;
-      if (visited.has(target)) return paths;
-      visited.add(target);
-      const es = this.lineage.get(target);
+      if (seen.has(target)) return paths;
+      seen.add(target);
+      const es = (this.lineage ??= /* @__PURE__ */ new WeakMap()).get(target);
       if (!es) return paths;
-      for (let i = 0, len = es.length; i < len; i += 2) this.trace(es[i], es[i + 1] ? es[i + 1] + "." + path : path, paths, visited);
+      for (let i = 0, len = es.length; i < len; i += 2) this.trace(es[i], es[i + 1] ? es[i + 1] + "." + path : path, paths, seen);
       return paths;
     }
-    // won't be called without `.isTracking` so internal guard avoided
+    // won't be called without `.config.referenceTracking` so internal guard avoided
     link(target, parent, key, typecheck = true, es) {
-      if (typecheck && !(isStrictObj(target, this.config.crossRealms) || Array.isArray(target))) return;
-      es = this.lineage.get(target) ?? (this.lineage.set(target, es = []), es);
-      for (let i = 0, len = es.length; i < len; i += 2) if (Object.is(es[i], parent) && es[i + 1] === key) return;
-      es.push(parent, key);
+      if (!canHandle2(target, this.config, typecheck)) return false;
+      es = (this.lineage ??= /* @__PURE__ */ new WeakMap()).get(target) ?? (this.lineage.set(target, es = []), es);
+      for (let i = 0, len = es.length; i < len; i += 2) if (Object.is(es[i], parent) && es[i + 1] === key) return true;
+      return es.push(parent, key), true;
     }
     unlink(target, parent, key) {
-      if (!(isStrictObj(target, this.config.crossRealms) || Array.isArray(target))) return;
-      const es = this.lineage.get(target);
+      if (!canHandle2(target, this.config)) return;
+      const es = (this.lineage ??= /* @__PURE__ */ new WeakMap()).get(target);
       if (es) {
         for (let i = 0, len = es.length; i < len; i += 2) if (Object.is(es[i], parent) && es[i + 1] === key) return void es.splice(i, 2);
       }
     }
-    stamp(target, typecheck = true) {
+    stamp(target, typecheck = true, seen = /* @__PURE__ */ new WeakSet()) {
       if (typecheck && "object" !== typeof target) return;
+      target = target[RAW] || target;
+      if (seen.has(target)) return;
+      seen.add(target);
       target[VERSION] = (target[VERSION] || 0) + 1;
-      const es = this.lineage?.get(target);
-      if (es) for (let i = 0, len = es.length; i < len; i += 2) this.stamp(es[i]);
+      const es = (this.lineage ??= /* @__PURE__ */ new WeakMap()).get(target);
+      if (es) for (let i = 0, len = es.length; i < len; i += 2) this.stamp(es[i], false, seen);
     }
     mediate(path, payload, type, cords) {
       let terminated = false, value = payload.target.value;
@@ -573,7 +672,7 @@
       for (let i = !isGet ? 0 : cords.length - 1, len = !isGet ? cords.length : -1; i !== len; i += !isGet ? 1 : -1) {
         const response = isGet ? cords[i].cb(value, payload) : isSet ? cords[i].cb(value, terminated, payload) : cords[i].cb(terminated, payload);
         if (isGet || !(terminated ||= payload.terminated = response === TERMINATOR)) value = response;
-        if (cords[i].once) cords.splice(i--, 1), !cords.length && mediators.delete(path);
+        if (cords[i].once) cords.splice((len--, i--), 1), !cords.length && mediators.delete(path);
       }
       return value;
     }
@@ -583,12 +682,12 @@
         if (cords)
           for (let i = 0, len = cords.length; i < len; i++) {
             cords[i].cb(payload.target.value, payload);
-            if (cords[i].once) cords.splice(i--, 1), !cords.length && this.watchers.delete(path);
+            if (cords[i].once) cords.splice((len--, i--), 1), !cords.length && this.watchers.delete(path);
           }
         if (wildcords)
           for (let i = 0, len = wildcords.length; i < len; i++) {
             wildcords[i].cb(payload.target.value, payload);
-            if (wildcords[i].once) wildcords.splice(i--, 1), !wildcords.length && this.watchers.delete("*");
+            if (wildcords[i].once) wildcords.splice((len--, i--), 1), !wildcords.length && this.watchers.delete("*");
           }
       }
       this.listeners && this.schedule(path, payload);
@@ -605,7 +704,7 @@
       if (this.queue?.size) for (const task of this.queue) task(), this.queue.delete(task);
     }
     wave(path, payload) {
-      const e = new ReactorEvent(payload, this.config.eventBubbling, this.isLogging), chain = getTrailRecords(this.core, path);
+      const e = new ReactorEvent(payload, this.config.eventBubbling, this.config.eventTimeStamps, this.isLogging), chain = getTrailRecords2(this.core, path);
       e.eventPhase = ReactorEvent.CAPTURING_PHASE;
       for (let i = 0; i <= chain.length - 2; i++) {
         if (e.propagationStopped) break;
@@ -625,60 +724,84 @@
     fire([path, object, value], e, isCapture, cords = this.listeners.get(path)) {
       if (!cords) return;
       e.type = path !== e.target.path ? "update" : e.staticType;
-      e.currentTarget = { path, value, oldValue: e.type !== "update" ? e.target.oldValue : void 0, key: e.type !== "update" ? path : path.slice(path.lastIndexOf(".") + 1) || "", object };
-      for (let i = 0, len = cords.length, tDepth, lDepth; i < len; i++) {
+      e.currentTarget = { path, value, oldValue: e.type !== "update" ? e.target.oldValue : void 0, key: e.type !== "update" ? path : path.slice(path.lastIndexOf(".") + 1) || "", keyExisted: e.type !== "update" ? e.target.keyExisted : true, object };
+      for (let i = 0, len = cords.length, tDepth; i < len; i++) {
         if (e.immediatePropagationStopped) break;
         if (cords[i].capture !== isCapture) continue;
         if (cords[i].depth !== void 0) {
-          tDepth ??= this.getDepth(e.target.path), lDepth ??= this.getDepth(path);
-          if (tDepth > lDepth + cords[i].depth) continue;
+          tDepth ??= this.getDepth(e.target.path);
+          if (tDepth > cords[i].lDepth + cords[i].depth) continue;
         }
         cords[i].cb(e);
-        if (cords[i].once) cords.splice(i--, 1), !cords.length && this.listeners.delete(path);
+        if (cords[i].once) cords.splice((len--, i--), 1), !cords.length && this.listeners.delete(path);
       }
     }
+    /**
+     * Flushes queued listener payloads.
+     * @param paths Optional path (or paths) to flush.
+     * @example
+     * rtr.tick(); // to flush all paths in batch or pass "*" wildcard
+     * @example
+     * rtr.tick("user.profile.name");
+     */
     tick(paths) {
-      if (!paths) return this.flush();
+      if (!paths || paths === "*") return this.flush();
       if ("string" === typeof paths) {
-        const task = this.batch?.get(paths);
-        task && (this.wave(paths, task), this.batch.delete(paths));
+        const payload = this.batch?.get(paths);
+        payload && (this.batch.delete(paths), this.wave(paths, payload));
       } else
         for (const path of paths) {
-          const task = this.batch.get(path);
-          task && (this.wave(path, task), this.batch.delete(path));
+          const payload = this.batch.get(path);
+          payload && (this.batch.delete(path), this.wave(path, payload));
         }
     }
+    /**
+     * Queues a task to run after the current flush cycle.
+     * @param task Task callback.
+     * @example
+     * const task = () => console.log("after flush");
+     * rtr.stall(task);
+     */
     stall(task) {
       (this.queue ??= /* @__PURE__ */ new Set()).add(task), !this.isBatching && this.initBatching();
     }
+    /**
+     * Removes a queued post-flush task.
+     * @param task Task callback.
+     * @returns `undefined` when no queue, `false` when queue exist but callback is not found, `true` when removed.
+     */
     nostall(task) {
       return this.queue?.delete(task);
     }
-    bind(cord, sig) {
+    getDepth(path, depth = !path ? 0 : 1) {
+      for (let i = 0, len = path.length; i < len; i++) if (path.charCodeAt(i) === 46) depth++;
+      return depth;
+    }
+    getContext(path) {
+      const lastDot = path.lastIndexOf("."), value = getAny2(this.core, path), object = lastDot === -1 ? this.core : getAny2(this.core, path.slice(0, lastDot));
+      return { path, value, key: path.slice(lastDot + 1) || "", keyExisted: true, object };
+    }
+    bindSignal(cord, sig) {
       if (sig) sig.aborted ? cord.clup() : sig.addEventListener("abort", cord.clup, { once: true });
       return cord.sclup = !sig || sig.aborted ? NOOP : () => sig.removeEventListener("abort", cord.clup), cord.clup;
     }
-    clone(obj, raw, visited = /* @__PURE__ */ new WeakMap()) {
-      if (!(isStrictObj(obj, this.config.crossRealms) || Array.isArray(obj)) || visited.has(obj)) return obj;
-      const version = obj[VERSION] || 0, cached = !raw && this.isSCloning && this.snapCache.get(obj);
+    cloned(obj, raw, seen = /* @__PURE__ */ new WeakMap()) {
+      if (!obj || "object" !== typeof obj) return obj;
+      obj = obj[RAW] || obj;
+      const cloned = seen.get(obj);
+      if (cloned) return cloned;
+      if (!canHandle2(obj, this.config, false)) return obj;
+      const version = obj[VERSION] || 0, cached = !raw && this.config.smartCloning && (this.snapCache ??= /* @__PURE__ */ new WeakMap()).get(obj);
       if (cached && obj[SSVERSION] === version) return cached;
-      const clone = !raw ? Array.isArray(obj) ? [] : {} : obj[RAW] || obj;
-      visited.set(obj, clone);
-      const keys = Object.keys(obj);
-      for (let i = 0, len = keys.length; i < len; i++) clone[keys[i]] = this.clone(obj[keys[i]], raw, visited);
-      if (!raw && this.isSCloning) this.snapCache.set(obj, clone), obj[SSVERSION] = version;
+      const clone = !raw ? this.config.preserveContext ? Object.create(Object.getPrototypeOf(obj)) : Array.isArray(obj) ? [] : {} : obj[RAW] || obj;
+      seen.set(obj, clone);
+      const keys = this.config.preserveContext ? Reflect.ownKeys(obj) : Object.keys(obj);
+      for (let i = 0, len = keys.length; i < len; i++) clone[keys[i]] = this.cloned(obj[keys[i]], raw, seen);
+      if (!raw && this.config.smartCloning) this.snapCache.set(obj, clone), obj[SSVERSION] = version;
       return clone;
     }
-    getDepth(path, d = !path ? 0 : 1) {
-      for (let i = 0, len = path.length; i < len; i++) if (path.charCodeAt(i) === 46) d++;
-      return d;
-    }
-    getContext(path) {
-      const lastDot = path.lastIndexOf("."), value = path === "*" ? this.core : getAny(this.core, path), object = lastDot === -1 ? this.core : getAny(this.core, path.slice(0, lastDot));
-      return { path, value, key: path.slice(lastDot + 1) || "", object };
-    }
     syncAdd(key, path, cb, opts, onImmediate = NOOP) {
-      const { lazy = false, once = false, signal, immediate = false } = parseEvtOpts(opts, EVT_OPTS.MEDIATOR), store = this[`${key}${key.endsWith("t") ? "t" : ""}ers`] ??= /* @__PURE__ */ new Map();
+      const { lazy = false, once = false, signal, immediate = false } = parseEvtOpts2(opts, EVT_OPTS.MEDIATOR), store = this[`${key}${key.endsWith("t") ? "t" : ""}ers`] ??= /* @__PURE__ */ new Map();
       let cords = store.get(path), cord;
       if (cords) {
         for (let i = 0, len = cords.length; i < len; i++)
@@ -693,53 +816,128 @@
       immediate && onImmediate(immediate);
       task = () => (cords ?? (store.set(path, cords = []), cords)).push(cord);
       lazy ? this.stall(task) : task();
-      return this.bind(cord, signal);
+      return this.bindSignal(cord, signal);
     }
     syncDrop(store, path, cb) {
       const cords = store?.get(path);
       if (!cords) return void 0;
-      for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return cords[i].sclup(), cords.splice(i--, 1), !cords.length && store.delete(path), true;
+      for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, cb)) return cords[i].sclup(), cords.splice((len--, i--), 1), !cords.length && store.delete(path), true;
       return false;
     }
+    /**
+     * Registers a get mediator for a path.
+     * @param path Path or wildcard path.
+     * @param callback Mediator callback.
+     * @param options Sync options.
+     * @returns Cleanup function.
+     * @example
+     * const cleanup = rtr.get("user.name", (value) => String(value).trim());
+     */
     get(path, callback, options) {
-      return this.syncAdd("get", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && getAny(this.core, path));
+      return this.syncAdd("get", path, callback, options, (imm) => (imm !== "auto" || inAny2(this.core, path)) && getAny2(this.core, path));
     }
+    /** Registers a get mediator for a path that only triggers once. */
     gonce(path, callback, options) {
-      return this.get(path, callback, { ...parseEvtOpts(options, EVT_OPTS.MEDIATOR), once: true });
+      return this.get(path, callback, { ...parseEvtOpts2(options, EVT_OPTS.MEDIATOR), once: true });
     }
+    /**
+     * Removes a get mediator for a path.
+     * @param path Path or wildcard path.
+     * @param callback Mediator callback to remove.
+     * @returns `undefined` when the path has no records, `false` when records exist but callback is not found, `true` when removed.
+     */
     noget(path, callback) {
       return this.syncDrop(this.getters, path, callback);
     }
+    /**
+     * Registers a set mediator for a path.
+     * @param path Path or wildcard path.
+     * @param callback Mediator callback.
+     * @param options Sync options.
+     * @returns Cleanup function.
+     * @example
+     * rtr.set("user.name", (value) => String(value).trim());
+     */
     set(path, callback, options) {
-      return this.syncAdd("set", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && setAny(this.core, path, getAny(this.core, path)));
+      return this.syncAdd("set", path, callback, options, (imm) => (imm !== "auto" || inAny2(this.core, path)) && setAny2(this.core, path, getAny2(this.core, path)));
     }
+    /** Registers a set mediator for a path that only triggers once. */
     sonce(path, callback, options) {
-      return this.set(path, callback, Object.assign(parseEvtOpts(options, EVT_OPTS.MEDIATOR), { once: true }));
+      return this.set(path, callback, Object.assign(parseEvtOpts2(options, EVT_OPTS.MEDIATOR), { once: true }));
     }
+    /**
+     * Removes a set mediator for a path.
+     * @param path Path or wildcard path.
+     * @param callback Mediator callback to remove.
+     * @returns `undefined` when the path has no records, `false` when records exist but callback is not found, `true` when removed.
+     */
     noset(path, callback) {
       return this.syncDrop(this.setters, path, callback);
     }
+    /**
+     * Registers a delete mediator for a path.
+     * @param path Path or wildcard path.
+     * @param callback Mediator callback.
+     * @param options Sync options.
+     * @returns Cleanup function.
+     * @example
+     * rtr.delete("cache.temp", () => TERMINATOR);
+     */
     delete(path, callback, options) {
-      return this.syncAdd("delete", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && deleteAny(this.core, path, void 0));
+      return this.syncAdd("delete", path, callback, options, (imm) => (imm !== "auto" || inAny2(this.core, path)) && deleteAny2(this.core, path, void 0));
     }
+    /** Registers a delete mediator for a path that only triggers once. */
     donce(path, callback, options) {
-      return this.delete(path, callback, Object.assign(parseEvtOpts(options, EVT_OPTS.MEDIATOR), { once: true }));
+      return this.delete(path, callback, Object.assign(parseEvtOpts2(options, EVT_OPTS.MEDIATOR), { once: true }));
     }
+    /**
+     * Removes a delete mediator for a path.
+     * @param path Path or wildcard path.
+     * @param callback Mediator callback to remove.
+     * @returns `undefined` when the path has no records, `false` when records exist but callback is not found, `true` when removed.
+     */
     nodelete(path, callback) {
       return this.syncDrop(this.deleters, path, callback);
     }
+    /**
+     * Registers a watcher for a path.
+     * Watch callbacks run synchronously with the operation.
+     * @param path Path or wildcard path.
+     * @param callback Watch callback.
+     * @param options Sync options.
+     * @returns Cleanup function.
+     * @example
+     * const cleanup = rtr.watch("user.name", (value) => console.log(value));
+     */
     watch(path, callback, options) {
-      return this.syncAdd("watch", path, callback, options, (imm) => imm !== "auto" && inAny(this.core, path) && ((target) => callback(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false }))(this.getContext(path)));
+      return this.syncAdd("watch", path, callback, options, (imm) => imm !== "auto" && inAny2(this.core, path) && ((target) => callback(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false }))(this.getContext(path)));
     }
+    /** Registers a watcher for a path that only triggers once. */
     wonce(path, callback, options) {
-      return this.watch(path, callback, Object.assign(parseEvtOpts(options, EVT_OPTS.MEDIATOR), { once: true }));
+      return this.watch(path, callback, Object.assign(parseEvtOpts2(options, EVT_OPTS.MEDIATOR), { once: true }));
     }
+    /**
+     * Removes a watcher for a path.
+     * @param path Path or wildcard path.
+     * @param callback Watch callback to remove.
+     * @returns `undefined` when the path has no records, `false` when records exist but callback is not found, `true` when removed.
+     */
     nowatch(path, callback) {
       return this.syncDrop(this.watchers, path, callback);
     }
+    /**
+     * Registers an event listener for a path.
+     * `on` listeners are batched and notified asynchronously by default e.g. `queueMicrotask()`.
+     * @param path Path or wildcard path.
+     * @param callback Listener callback.
+     * @param options Listener options.
+     * @returns Cleanup function.
+     * @example
+     * const cleanup = rtr.on("user.name", (e) => console.log(e.type, e.path));
+     */
     on(path, callback, options) {
       this.listeners ??= /* @__PURE__ */ new Map();
-      const { capture = false, once = false, signal, immediate = false, depth } = parseEvtOpts(options, EVT_OPTS.LISTENER);
+      const { capture = false, once = false, signal, immediate = false, depth } = parseEvtOpts2(options, EVT_OPTS.LISTENER);
       let cords = this.listeners.get(path), cord;
       if (cords) {
         for (let i = 0, len = cords.length; i < len; i++)
@@ -749,73 +947,118 @@
           }
       }
       if (cord) return cord.clup;
-      cord = { cb: callback, capture, depth, once, clup: () => this.off(path, callback, options) };
-      if (immediate && (immediate !== "auto" || inAny(this.core, path))) {
+      cord = { cb: callback, capture, depth, once, clup: () => this.off(path, callback, options), lDepth: depth !== void 0 ? this.getDepth(path) : depth };
+      if (immediate && (immediate !== "auto" || inAny2(this.core, path))) {
         const target = this.getContext(path);
         callback(new ReactorEvent({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, this.config.eventBubbling, this.isLogging));
       }
       (cords ?? (this.listeners.set(path, cords = []), cords)).push(cord);
-      return this.bind(cord, signal);
+      return this.bindSignal(cord, signal);
     }
+    /** Registers an event listener for a path that only triggers once. */
     once(path, callback, options) {
-      return this.on(path, callback, Object.assign(parseEvtOpts(options, EVT_OPTS.LISTENER), { once: true }));
+      return this.on(path, callback, Object.assign(parseEvtOpts2(options, EVT_OPTS.LISTENER), { once: true }));
     }
+    /**
+     * Removes an event listener for a path.
+     * @param path Path or wildcard path.
+     * @param callback Listener callback to remove.
+     * @param options Listener options used during registration.
+     * @returns `undefined` when the path has no records, `false` when records exist but callback is not found, `true` when removed.
+     * @example
+     * const cb = (e: REvent<T>) => console.log(e.path);
+     * rtr.on("user.name", cb);
+     * rtr.off("user.name", cb);
+     */
     off(path, callback, options) {
       const cords = this.listeners?.get(path);
       if (!cords) return void 0;
-      const { capture } = parseEvtOpts(options, EVT_OPTS.LISTENER);
-      for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, callback) && cords[i].capture === capture) return cords[i].sclup(), cords.splice(i--, 1), !cords.length && this.listeners.delete(path), true;
+      const { capture } = parseEvtOpts2(options, EVT_OPTS.LISTENER);
+      for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, callback) && cords[i].capture === capture) return cords[i].sclup(), cords.splice((len--, i--), 1), !cords.length && this.listeners.delete(path), true;
       return false;
     }
-    snapshot(raw = !this.isSCloning, branch = this.core) {
-      return this.clone(branch, raw);
+    /**
+     * Creates a snapshot; possibly clone of state (or a state branch).
+     * You could alternatively use or serialize your proxied state "as is" except the environment demands no proxies or new references.
+     * @param raw Use raw (deep unproxied & uncloned) version of branch.
+     * @param branch Branch to clone.
+     * @returns Snapshot deep or smart (structurally shared) clone.
+     * @example
+     * const snap = rtr.snapshot();
+     * @example
+     * const snap = rtr.snapshot(false, rtr.core.history.past);
+     */
+    snapshot(raw = !this.config.smartCloning, branch = this.core) {
+      return this.cloned(branch, raw);
     }
-    cascade({ type, currentTarget: { path, value: news, oldValue: olds } }, objSafe = true) {
-      if (type !== "set" && type !== "delete" || !(isStrictObj(news, this.config.crossRealms) || Array.isArray(news)) || (objSafe ? !(isStrictObj(olds, this.config.crossRealms) || Array.isArray(olds)) : false)) return;
-      const obj = objSafe ? mergeObjs(olds, news) : news, keys = Object.keys(obj);
+    /**
+     * Cascades object updates into direct child paths.
+     * @param payload Event or payload source.
+     * @param objectSafe Merge old/new object values before cascading, don't set for arrays; merger doesn't play nice
+     * @example
+     * rtr.on("user", (event) => rtr.cascade(event));
+     * @example
+     * rtr.watch("user", (_value, payload) => rtr.cascade(payload));
+     */
+    cascade({ type, currentTarget: { path, value: news, oldValue: olds } }, objectSafe = true) {
+      if (type !== "set" && type !== "delete" || !canHandle2(news, this.config) || (objectSafe ? !canHandle2(olds, this.config) : false)) return;
+      const obj = objectSafe ? mergeObjs2(olds, news) : news, keys = Object.keys(obj);
       this.isCascading = true;
-      for (let i = 0, len = keys.length; i < len; i++) setAny(this.core, path + "." + keys[i], obj[keys[i]]);
+      for (let i = 0, len = keys.length; i < len; i++) setAny2(this.core, path === "*" ? keys[i] : path + "." + keys[i], obj[keys[i]]);
       this.isCascading = false;
     }
+    /**
+     * Installs a plugin instance.
+     * @param plugin Plugin instance.
+     * @returns Current reactor for fluent chaining.
+     */
+    plugIn(plugin) {
+      const name = plugin.constructor.plugName;
+      this.plugins?.get(name)?.destroy();
+      return (this.plugins ??= /* @__PURE__ */ new Map()).set(name, (plugin.setup(this), plugin)), this;
+    }
+    /** Resets the reactor to its initial state. */
     reset() {
-      this.getters?.clear(), this.setters?.clear(), this.deleters?.clear(), this.watchers?.clear(), this.listeners?.clear(), this.queue?.clear(), this.batch?.clear();
-      this.isBatching = false, this.proxyCache = /* @__PURE__ */ new WeakMap();
+      this.getters?.clear(), this.setters?.clear(), this.deleters?.clear(), this.watchers?.clear(), this.listeners?.clear();
+      this.batch?.clear(), this.queue?.clear(), this.isBatching = false;
     }
     destroy() {
-      this.reset(), nuke(this);
+      if (this.plugins) for (const plug of this.plugins.values()) plug.destroy();
+      this.reset(), nuke2(this);
     }
     get canLog() {
       return this.isLogging = this.log !== NOOP;
     }
     set canLog(value) {
-      this.log = (this.isLogging = value) ? RTR_LOG : NOOP;
-    }
-    get canTrackReferences() {
-      return this.isTracking;
+      this.log = (this.isLogging = value) ? RTR_LOG2 : NOOP;
     }
     get canTraceLineage() {
-      return this.isTracing;
+      return this.config.referenceTracking && !!this.config.lineageTracing;
     }
     get canSmartClone() {
-      return this.isSCloning;
+      return this.config.referenceTracking && !!this.config.smartCloning;
     }
   };
+
+  // node_modules/sia-reactor/dist/chunk-KIQP7G7W.js
   var methods = ["tick", "stall", "nostall", "get", "gonce", "noget", "set", "sonce", "noset", "delete", "donce", "nodelete", "watch", "wonce", "nowatch", "on", "once", "off", "cascade", "snapshot", "reset", "destroy"];
-  function reactive(target, options, prefs = NIL) {
+  function reactive(target, build, preferences = NIL2) {
     if ("__Reactor__" in target) return target;
-    const descriptors = {}, rtr = target instanceof Reactor ? target : new Reactor(target, options), locks = { enumerable: false, configurable: true, writable: false }, hasAffix = !!(prefs.prefix || prefs.suffix);
+    const descriptors = {}, rtr = target instanceof Reactor ? target : new Reactor(target, build), locks = { enumerable: false, configurable: true, writable: false }, hasAffix = !!(preferences.prefix || preferences.suffix);
     for (let i = 0, len = methods.length; i < len; i++) {
       let key = methods[i];
-      if (hasAffix) (prefs.whitelist?.includes(key) ?? true) && (key = `${prefs.prefix || ""}${key}${prefs.suffix || ""}`);
-      else if (prefs.whitelist?.includes(key)) continue;
+      if (hasAffix) (preferences.whitelist?.includes(key) ?? true) && (key = `${preferences.prefix || ""}${key}${preferences.suffix || ""}`);
+      else if (preferences.whitelist?.includes(key)) continue;
       descriptors[key] = { value: rtr[key].bind(rtr), ...locks };
     }
     descriptors["__Reactor__"] = { value: rtr, ...locks };
     return Object.defineProperties(rtr.core, descriptors), rtr.core;
   }
   function volatile(target) {
-    target[INDIFFABLE] = true;
-    return target;
+    return getRaw(target)[INDIFFABLE] = true, target;
+  }
+  function getRaw(target) {
+    return target?.[RAW] || target;
   }
 
   // src/beta/beta.js
@@ -3101,9 +3344,9 @@
         case "timeFormat":
           return this.rotateTimeFormat();
         case "mute":
-          return this.toggleMute("auto"), this.config.stall(() => this.settings.volume.value === 0 ? this.notify("volumemuted") : this.notify("volumeup"));
+          return this.toggleMute("auto"), this.config.wonce("settings.volume.value", (v) => !v ? this.notify("volumemuted") : this.notify("volumeup"));
         case "dark":
-          return this.toggleDark("auto"), this.config.stall(() => this.settings.brightness.value === 0 ? this.notify("brightnessdark") : this.notify("brightnessup"));
+          return this.toggleDark("auto"), this.config.wonce("settings.brightness.value", (v) => !v ? this.notify("brightnessdark") : this.notify("brightnessup"));
         case "captions":
           this.toggleCaptions();
           return this.video.textTracks[this.textTrackIndex] && this.notify("captions");
@@ -3511,7 +3754,6 @@
     isDef,
     isIter,
     isObj,
-    isStrictObj,
     isArr,
     isValidNum: (number) => !isNaN(number ?? NaN) && number !== Infinity,
     inBoolArrOpt: (opt, str) => opt?.includes?.(str) ?? opt,
@@ -3532,8 +3774,8 @@
       })();
       tmg.setAny(target, path, parsedValue, "--", (p) => tmg.camelize(p));
     },
-    setAny,
-    getAny,
+    setAny: setAny2,
+    getAny: getAny2,
     bindAllMethods,
     volatile,
     safeNum: (number, fallback = 0) => tmg.isValidNum(number) ? number : fallback,
@@ -3555,14 +3797,14 @@
       }
       return result;
     },
-    parseAnyObj,
+    parseAnyObj: parseAnyObj2,
     parsePanelBottomObj(obj = [], arr = false) {
       if (!tmg.isObj(obj) && !tmg.isArr(obj)) return false;
       const [third = [], second = [], first = []] = tmg.isObj(obj) ? Object.values(obj).reverse() : tmg.isArr(obj[0]) ? obj.toReversed() : [obj];
       return !arr ? { 1: first, 2: second, 3: third } : [...third, ...second, ...first];
     },
-    mergeObjs,
-    deepClone,
+    mergeObjs: mergeObjs2,
+    deepClone: deepClone2,
     formatMediaTime({ time, format = "digital", elapsed = true, showMs = false, casing = "normal" } = {}) {
       const long = format.endsWith("long"), sx = (n = 0) => n == 1 ? "" : "s", cs = (str) => casing === "upper" ? str.toUpperCase() : casing === "title" ? tmg.capitalize(str) : str.toLowerCase(), wrd = (n = 0) => ({ h: cs(long ? ` hour${sx(n)} ` : "h"), m: cs(long ? ` minute${sx(n)} ` : "m"), s: cs(long ? ` second${sx(n)} ` : "s"), ms: cs(long ? ` millisecond${sx(n)} ` : "ms") }), pad = (v, n = 2, f) => long && !f ? v : String(v).padStart(n, "number" === typeof +n ? "0" : "-");
       if (!this.isValidNum(time)) return format !== "digital" ? `-${wrd().h}${pad("-")}${wrd().m}${!elapsed ? "left" : ""}`.trim() : !elapsed ? "--:--" : "-:--";

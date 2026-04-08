@@ -1,4 +1,4 @@
-import { isDef, isIter, isObj, isStrictObj, isArr, loadResource, isSameURL, uid, clamp, bindAllMethods, createEl, initVScrollerator, initScrollAssist, removeScrollAssist } from "@t007/utils";
+import { isDef, isIter, isObj, isArr, loadResource, isSameURL, uid, clamp, bindAllMethods, createEl, initVScrollerator, initScrollAssist, removeScrollAssist } from "@t007/utils";
 import { reactive, TERMINATOR, volatile } from "sia-reactor";
 import { setAny, getAny, parseAnyObj, mergeObjs, deepClone } from "sia-reactor/utils";
 
@@ -2393,9 +2393,9 @@ class tmg_Video_Controller {
       case "timeFormat":
         return this.rotateTimeFormat();
       case "mute":
-        return (this.toggleMute("auto"), this.config.stall(() => (this.settings.volume.value === 0 ? this.notify("volumemuted") : this.notify("volumeup"))));
+        return (this.toggleMute("auto"), this.config.wonce("settings.volume.value", (v) => (!v ? this.notify("volumemuted") : this.notify("volumeup"))));
       case "dark":
-        return (this.toggleDark("auto"), this.config.stall(() => (this.settings.brightness.value === 0 ? this.notify("brightnessdark") : this.notify("brightnessup"))));
+        return (this.toggleDark("auto"), this.config.wonce("settings.brightness.value", (v) => (!v ? this.notify("brightnessdark") : this.notify("brightnessup"))));
       case "captions":
         this.toggleCaptions();
         return this.video.textTracks[this.textTrackIndex] && this.notify("captions");
@@ -2817,7 +2817,6 @@ var tmg = {
   isDef: isDef,
   isIter: isIter,
   isObj: isObj,
-  isStrictObj: isStrictObj,
   isArr: isArr,
   isValidNum: (number) => !isNaN(number ?? NaN) && number !== Infinity,
   inBoolArrOpt: (opt, str) => opt?.includes?.(str) ?? opt,
@@ -3356,3 +3355,4 @@ if (typeof window !== "undefined") {
   (console.error("TMG Media Player cannot run in a terminal!"), console.warn("Consider moving to a browser environment to use the TMG Media Player"));
 }
 // npx esbuild src/beta/beta.js --bundle --outfile=src/beta/index.js
+// // npm install sia-reactor@latest @t007/dialog@latest @t007/input@latest @t007/toast@latest @t007/utils@latest

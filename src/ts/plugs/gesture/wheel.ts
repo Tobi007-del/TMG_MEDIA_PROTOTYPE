@@ -27,7 +27,7 @@ export class WheelModule extends BaseModule<WheelConfig> {
   }
 
   protected canHandle(e: WheelEvent): boolean {
-    return !this.ctlr.settings.locked && !this.ctlr.config.disabled && e.target === this.ctlr.DOM.controlsContainer && !this.ctlr.getPlug<GesturePlug>("gesture")?.touch.xCheck && !this.ctlr.getPlug<GesturePlug>("gesture")?.touch.yCheck && !this.ctlr.getPlug<FastPlayPlug>("fastPlay")?.speedCheck;
+    return !this.ctlr.settings.locked && !this.ctlr.config.disabled && e.target === this.ctlr.DOM.controlsContainer && !this.ctlr.plug<GesturePlug>("gesture")?.touch.xCheck && !this.ctlr.plug<GesturePlug>("gesture")?.touch.yCheck && !this.ctlr.plug<FastPlayPlug>("fastPlay")?.speedCheck;
   }
 
   protected handleWheel(e: WheelEvent): void {
@@ -96,7 +96,7 @@ export class WheelModule extends BaseModule<WheelConfig> {
   protected applyRange(key: "volume" | "brightness", percent: number, sign: string): void {
     const range = this.ctlr.settings[key],
       value = range.value! + (sign === "+" ? percent : -percent) * range.max;
-    this.ctlr.getPlug<VolumePlug>(key)?.handleSliderInput(clamp(0, Math.round(value), range.max));
+    this.ctlr.plug<VolumePlug>(key)?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }
 }
 

@@ -11,7 +11,7 @@ export class TimeAndDuration extends BaseComponent<TimeAndDurationConfig, Compon
   protected bridge!: HTMLElement;
   protected duration!: HTMLElement;
   protected get plug() {
-    return this.ctlr.getPlug<TimePlug>("time");
+    return this.ctlr.plug<TimePlug>("time");
   }
 
   public create() {

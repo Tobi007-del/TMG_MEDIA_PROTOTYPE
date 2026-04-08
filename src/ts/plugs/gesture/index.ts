@@ -1,6 +1,6 @@
 import { Controller } from "../../core/controller";
 import { BasePlug } from "..";
-import type { DeepPartial } from "../../types/obj";
+import type { DeepPartial } from "../../sia-reactor";
 import { WheelModule, WHEEL_BUILD, type WheelConfig } from "./wheel";
 import { TouchModule, TOUCH_BUILD, type TouchConfig } from "./touch";
 import { GeneralModule, GENERAL_BUILD, type GeneralConfig } from "./general";

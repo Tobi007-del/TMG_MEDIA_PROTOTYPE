@@ -1,10 +1,10 @@
 import { Controller } from "../core/controller";
 import { Controllers } from "./runtime";
-import { loadResource, mergeObjs, parseAnyObj, isIter, setHTMLConfig, cleanKeyCombo, isObj, supportsFullscreen, supportsPictureInPicture, setAny, luid } from "../utils";
+import { loadResource, isIter, setHTMLConfig, isObj, supportsFullscreen, supportsPictureInPicture, luid } from "../utils";
 import { CONFIG_BUILD } from "../consts";
 import { PLAYLIST_ITEM_BUILD } from "../plugs";
 import type { CtlrConfig } from "../types/config";
-import { DeepPartial, Paths, PathValue } from "../types/obj";
+import { DeepPartial, Paths, PathValue, mergeObjs, parseAnyObj, setAny } from "../sia-reactor";
 
 export type BuildPaths = Paths<CtlrConfig>;
 export type BuildParam = DeepPartial<CtlrConfig> & Record<BuildPaths, PathValue<CtlrConfig, BuildPaths>>;
@@ -36,9 +36,6 @@ export class Player {
   public configure(customBuild: BuildParam): void {
     if (!this.queryBuild() || !isObj(customBuild)) return;
     this._build = mergeObjs(this._build, parseAnyObj(customBuild));
-    const keys = this._build.settings.keys as any;
-    keys && Object.keys(keys.shortcuts || {}).forEach((k) => (keys.shortcuts[k] = cleanKeyCombo(keys.shortcuts[k])));
-    keys && ["blocks", "overrides"].forEach((k) => (keys[k] = cleanKeyCombo(keys[k])));
   }
 
   public async attach(medium: HTMLMediaElement) {

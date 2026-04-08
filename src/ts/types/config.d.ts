@@ -55,11 +55,12 @@ export interface Settings {
   playsInline: PlaysInline;
   techOrder: string[];
   time: CTime;
+  timeTravel: TimeTravel;
   toasts: Toasts;
   volume: Volume;
 }
 
-export type CtlrConfig = {
+export interface CtlrConfig {
   id: string;
   debug: boolean;
   disabled: boolean;
@@ -75,5 +76,5 @@ export type CtlrConfig = {
   srcObject: SrcObject;
   tracks: Tracks;
   cloneOnDetach: boolean; // stateful issues, src resets - freezing, etc.
-  noPlugList: string[]; // for non-core plugs
-};
+  noPlugList: (keyof Settings | keyof CtlrConfig | string)[]; // for non-core plugs
+}

@@ -1,6 +1,6 @@
 import { BasePlug } from ".";
 import type { Controller } from "../core/controller";
-import type { REvent } from "../types/reactor";
+import type { REvent } from "../sia-reactor";
 import { createEl } from "../utils";
 
 export interface Notifiers {
@@ -32,12 +32,12 @@ export class NotifiersPlug extends BasePlug<Notifiers, NotifiersState> {
     // Event Listeners
     Array.prototype.forEach.call(this.container.children, (node: Element) => node.addEventListener("animationend", this.handleAnimationEnd, { signal: this.signal }));
     // State Listeners
-    this.state.on("events", this.handleEventsState, { signal: this.signal, immediate: true, depth: 1 });
+    this.state.on("events", this.handleEventsState, { signal: this.signal, immediate: true });
   }
 
-  protected handleEventsState({ value: events = [], oldValue: prev = [] }: REvent<NotifiersState, "events">): void {
-    prev.forEach((eN) => this.container.removeEventListener(eN, this.handleNotifierEvent));
-    events.forEach((eN) => this.container.addEventListener(eN, this.handleNotifierEvent, { signal: this.signal }));
+  protected handleEventsState({ value: events = [], oldValue: prevs = [] }: REvent<NotifiersState, "events">): void {
+    for (const eN of prevs) this.container.removeEventListener(eN, this.handleNotifierEvent);
+    for (const eN of events) this.container.addEventListener(eN, this.handleNotifierEvent, { signal: this.signal });
   }
 
   protected handleAnimationEnd(): void {

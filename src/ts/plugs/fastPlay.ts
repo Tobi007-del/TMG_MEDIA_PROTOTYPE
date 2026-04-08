@@ -1,5 +1,5 @@
 import { BasePlug, type TimePlug, type OverlayPlug } from ".";
-import type { DeepPartial } from "../types/obj";
+import type { DeepPartial } from "../sia-reactor";
 import { setTimeout, setInterval } from "../utils";
 
 export interface FastPlay {
@@ -52,7 +52,7 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
     this.media.intent.playbackRate = rate;
     this.state.isRewinding = false;
     // JS: this.DOM.playbackRateNotifier?.classList.remove("tmg-video-rewind");
-    // JS: this.DOM.playbackRateNotifier?.setAttribute("data-current-time",this.ctlr.getPlug<TimePlug>("time")?.toTimeText(this.media.state.currentTime, true) ?? "0:00");
+    // JS: this.DOM.playbackRateNotifier?.setAttribute("data-current-time",this.ctlr.plug<TimePlug>("time")?.toTimeText(this.media.state.currentTime, true) ?? "0:00");
     this.media.intent.paused = false;
   }
 
@@ -69,7 +69,7 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
     if (!this.media.state.paused) this.media.intent.paused = true;
     this.media.intent.currentTime = this.media.state.currentTime - this.rewindPlaybackRate / this.ctlr.settings.frame.fps;
     this.ctlr.settings.css.currentPlayedPosition = this.ctlr.settings.css.currentThumbPosition = this.media.state.currentTime / this.media.status.duration;
-    // JS: this.DOM.playbackRateNotifier?.setAttribute("data-current-time", this.ctlr.getPlug<TimePlug>("time")?.toTimeText(this.media.state.currentTime, true) ?? "0:00");
+    // JS: this.DOM.playbackRateNotifier?.setAttribute("data-current-time", this.ctlr.plug<TimePlug>("time")?.toTimeText(this.media.state.currentTime, true) ?? "0:00");
   }
 
   protected rewindReset(): void {
@@ -90,7 +90,7 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
     this.rewindPlaybackRate = 0;
     this.state.isRewinding = false;
     this.media.intent.paused = this.config.reset ? this.wasPaused : false;
-    this.ctlr.getPlug<OverlayPlug>("overlay")?.remove();
+    this.ctlr.plug<OverlayPlug>("overlay")?.remove();
     // JS: this.DOM.playbackRateNotifier?.classList.remove("tmg-video-control-active", "tmg-video-rewind");
   }
 

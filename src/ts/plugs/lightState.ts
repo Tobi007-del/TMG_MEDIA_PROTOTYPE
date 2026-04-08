@@ -1,9 +1,7 @@
 import { BasePlug, OverlayPlug, ControlPanelPlug, Control, BigControl } from ".";
 import type { PosterPreview } from "../types/generics";
 import type { CtlrConfig } from "../types/config";
-import type { DeepPartial } from "../types/obj";
-import type { REvent } from "../types/reactor";
-import { TERMINATOR } from "../core/reactor";
+import { type DeepPartial, type REvent, TERMINATOR } from "../sia-reactor";
 import { inBoolArrOpt } from "../utils";
 
 export interface LightState {
@@ -72,8 +70,8 @@ export class LightStatePlug extends BasePlug<LightState> {
   }
 
   protected stall(): void {
-    this.ctlr.getPlug<OverlayPlug>("overlay")?.show();
-    const bigPlayBtn = this.ctlr.getPlug<ControlPanelPlug>("controlPanel")?.getControlEl("big-play-pause");
+    this.ctlr.plug<OverlayPlug>("overlay")?.show();
+    const bigPlayBtn = this.ctlr.plug<ControlPanelPlug>("controlPanel")?.getControlEl("big-play-pause");
     bigPlayBtn && this.ctlr.videoContainer.classList.add("tmg-video-stall");
     bigPlayBtn?.addEventListener("animationend", () => this.ctlr.videoContainer.classList.remove("tmg-video-stall"), { once: true, signal: this.signal });
   }

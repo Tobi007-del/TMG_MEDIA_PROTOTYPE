@@ -1,6 +1,7 @@
 import { BaseModule, OverlayPlug } from "..";
 import type { BigControl, ControlPanelBottomTuple, ControlPanelPlug, SControl, ZoneSlot, ZoneW } from ".";
-import { getAny, getElSiblingAt, inBoolArrOpt, setAny, setTimeout, requestAnimationFrame } from "../../utils";
+import { getAny, setAny } from "../../sia-reactor";
+import { getElSiblingAt, inBoolArrOpt, setTimeout, requestAnimationFrame } from "../../utils";
 
 export type DraggableModuleConfig = ("" | "big" | "wrapper")[] | boolean;
 
@@ -10,7 +11,7 @@ export class DraggableModule extends BaseModule<DraggableModuleConfig> {
   protected replaced: { target: HTMLElement; child: HTMLElement } | null = null;
   protected safeTimeoutId = -1;
   protected get plug(): ControlPanelPlug {
-    return this.ctlr.getPlug<ControlPanelPlug>("controlPanel")!; // `!`: only ctl panel plug will instantiate after all
+    return this.ctlr.plug<ControlPanelPlug>("controlPanel")!; // `!`: only ctl panel plug will instantiate after all
   }
 
   public wire() {
@@ -79,7 +80,7 @@ export class DraggableModule extends BaseModule<DraggableModuleConfig> {
   }
 
   protected handleDrag(): void {
-    this.ctlr.getPlug<OverlayPlug>("overlay")?.delay();
+    this.ctlr.plug<OverlayPlug>("overlay")?.delay();
     clearTimeout(this.safeTimeoutId);
   }
 

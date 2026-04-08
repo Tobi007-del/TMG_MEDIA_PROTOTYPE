@@ -1,5 +1,5 @@
 import { BasePlug } from ".";
-import type { REvent } from "../types/reactor";
+import type { REvent } from "../sia-reactor";
 import type { CtlrMedia } from "../types/contract";
 import { assignEl, IS_MOBILE } from "../utils";
 

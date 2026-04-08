@@ -1,7 +1,8 @@
 import { BasePlug, type FastPlayPlug, type GesturePlug, type ModesPlug, type OverlayPlug, type TimePlug, type VolumePlug } from ".";
 import type { KeyShortcutAction, ModdedKeyShortcutAction } from "../types/generics";
-import type { DeepPartial } from "../types/obj";
-import { cleanKeyCombo, formatKeyShortcutsForDisplay, isArr, keyEventAllowed } from "../utils";
+import type { DeepPartial } from "../sia-reactor";
+import { keysBlocks, keysWhitelist } from "../consts/generics";
+import { formatKeyShortcutsForDisplay, isArr, keyEventAllowed, keysSettings } from "../utils";
 
 export type KeyPhase = "keydown" | "keyup";
 export type KeyMod = "" | "ctrl" | "alt" | "shift";
@@ -14,11 +15,7 @@ export type KeyRegOptions = {
   zen?: boolean; // an isolated mode where only flagged keys work, made for 3d flipped settings view
 };
 
-export interface Keys {
-  disabled: boolean;
-  strictMatches: boolean;
-  overrides: string[];
-  blocks: string[];
+export interface Keys extends Required<keysSettings> {
   shortcuts: Record<KeyShortcutAction, string | string[]>;
   mods: { disabled: boolean } & Record<ModdedKeyShortcutAction, Partial<Record<Exclude<KeyMod, "">, number>>>;
   _handlers: Record<KeyPhase, Record<string, KeyHook>>;
@@ -53,7 +50,7 @@ export class KeysPlug extends BasePlug<Keys> {
 
   public register(action: string, handler: KeyHandler, options: KeyRegOptions = {}): void {
     (options.phase ? (isArr(options.phase) ? options.phase : [options.phase]) : ["keyup"]).forEach((phase) => (this.config._handlers[phase as KeyPhase][action] = { fn: handler, zen: !!options.zen }));
-    if (options.shortcut && ((this.config.shortcuts as any)[action] == null || options.overwrite)) (this.config.shortcuts as any)[action] = cleanKeyCombo(options.shortcut);
+    if (options.shortcut && ((this.config.shortcuts as any)[action] == null || options.overwrite)) (this.config.shortcuts as any)[action] = options.shortcut;
   }
 
   public unregister(action: string, phase?: KeyPhase): void {
@@ -66,18 +63,18 @@ export class KeysPlug extends BasePlug<Keys> {
   }
 
   protected handleKeyDown(e: KeyboardEvent): void {
-    const action = keyEventAllowed(e, this.ctlr.settings),
+    const action = keyEventAllowed(e, this.ctlr.settings.keys),
       mod = this.getMod(e);
     if (action === false) return;
-    action && this.ctlr.getPlug<OverlayPlug>("overlay")?.show();
+    action && this.ctlr.plug<OverlayPlug>("overlay")?.show();
     this.ctlr.throttle("keyDown", () => this.config._handlers.keydown[action]?.fn(e, mod), 30);
   }
 
   protected handleKeyUp(e: KeyboardEvent, zen = false): void {
-    const action = keyEventAllowed(e, this.ctlr.settings),
+    const action = keyEventAllowed(e, this.ctlr.settings.keys),
       mod = this.getMod(e);
     if (action === false) return;
-    action && this.ctlr.getPlug<OverlayPlug>("overlay")?.show();
+    action && this.ctlr.plug<OverlayPlug>("overlay")?.show();
     const hook = this.config._handlers.keyup[action];
     hook && (!zen || hook.zen) && hook.fn(e, mod);
   }
@@ -88,18 +85,18 @@ export class KeysPlug extends BasePlug<Keys> {
   protected handlePlayTriggerDown(e: KeyboardEvent): void {
     this.playTriggerCounter++;
     this.playTriggerCounter === 1 && (e.currentTarget as Window | null)?.addEventListener("keyup", this.handlePlayTriggerUp, { signal: this.signal });
-    this.playTriggerCounter === 2 && this.ctlr.settings.fastPlay.key && this.ctlr.getPlug<FastPlayPlug>("fastPlay")?.fastPlay(e.shiftKey ? "backwards" : "forwards");
+    this.playTriggerCounter === 2 && this.ctlr.settings.fastPlay.key && this.ctlr.plug<FastPlayPlug>("fastPlay")?.fastPlay(e.shiftKey ? "backwards" : "forwards");
   }
 
   protected handlePlayTriggerUp(e: KeyboardEvent): void {
-    const action = keyEventAllowed(e, this.ctlr.settings);
-    action && this.ctlr.getPlug<OverlayPlug>("overlay")?.show();
+    const action = keyEventAllowed(e, this.ctlr.settings.keys);
+    action && this.ctlr.plug<OverlayPlug>("overlay")?.show();
     if (action !== false && [" ", "playpause"].includes(action)) {
       e.stopImmediatePropagation();
       if (this.playTriggerCounter === 1) this.media.intent.paused = !this.media.state.paused;
       // JS: this.media.state.paused ? this.notify("videopause") : this.notify("videoplay");
     }
-    if (this.playTriggerCounter > 1 && this.ctlr.getPlug<FastPlayPlug>("fastPlay")?.speedCheck) this.ctlr.getPlug<FastPlayPlug>("fastPlay")?.slowDown();
+    if (this.playTriggerCounter > 1 && this.ctlr.plug<FastPlayPlug>("fastPlay")?.speedCheck) this.ctlr.plug<FastPlayPlug>("fastPlay")?.slowDown();
     this.playTriggerCounter = 0;
     (e.currentTarget as Window | null)?.removeEventListener("keyup", this.handlePlayTriggerUp);
   }
@@ -110,21 +107,21 @@ export class KeysPlug extends BasePlug<Keys> {
   }
 
   protected handleArrowLeft(_: KeyboardEvent, mod: KeyMod): void {
-    this.ctlr.getPlug<GesturePlug>("gesture")?.general?.deactivateSkipPersist();
-    this.ctlr.getPlug<TimePlug>("time")?.skip(-this.getModded("skip", mod, 5));
+    this.ctlr.plug<GesturePlug>("gesture")?.general?.deactivateSkipPersist();
+    this.ctlr.plug<TimePlug>("time")?.skip(-this.getModded("skip", mod, 5));
     // JS: this.notify("bwd");
   }
   protected handleArrowRight(_: KeyboardEvent, mod: KeyMod): void {
-    this.ctlr.getPlug<GesturePlug>("gesture")?.general?.deactivateSkipPersist();
-    this.ctlr.getPlug<TimePlug>("time")?.skip(this.getModded("skip", mod, 5));
+    this.ctlr.plug<GesturePlug>("gesture")?.general?.deactivateSkipPersist();
+    this.ctlr.plug<TimePlug>("time")?.skip(this.getModded("skip", mod, 5));
     // JS: this.notify("fwd");
   }
   protected handleArrowUp(_: KeyboardEvent, mod: KeyMod): void {
-    this.ctlr.getPlug<VolumePlug>("volume")?.changeVolume(this.getModded("volume", mod, 5));
+    this.ctlr.plug<VolumePlug>("volume")?.changeVolume(this.getModded("volume", mod, 5));
     // JS: this.notify("volumeup");
   }
   protected handleArrowDown(_: KeyboardEvent, mod: KeyMod): void {
-    this.ctlr.getPlug<VolumePlug>("volume")?.changeVolume(-this.getModded("volume", mod, 5));
+    this.ctlr.plug<VolumePlug>("volume")?.changeVolume(-this.getModded("volume", mod, 5));
     // JS: this.settings.volume.value === 0 ? this.notify("volumemuted") : this.notify("volumedown");
   }
 
@@ -141,7 +138,7 @@ export class KeysPlug extends BasePlug<Keys> {
   }
 
   protected getWindows(): Window[] {
-    const floating = this.ctlr.getPlug<ModesPlug>("modes")?.pip?.floatingWindow;
+    const floating = this.ctlr.plug<ModesPlug>("modes")?.pip?.floatingWindow;
     return floating ? [floating, window] : [window];
   }
 
@@ -197,8 +194,8 @@ export const KEYS_BUILD: DeepPartial<Keys> = {
     captionsTextAlignment: "x",
     settings: "?",
   },
+  blocks: keysBlocks,
+  whitelist: keysWhitelist,
   mods: { disabled: false, skip: { ctrl: 60, shift: 10 }, volume: { ctrl: 50, shift: 10 }, brightness: { ctrl: 50, shift: 10 }, playbackRate: { ctrl: 1 }, captionsFontSize: {} },
-  // prettier-ignore
-  blocks: ["Ctrl+Tab", "Ctrl+Shift+Tab", "Ctrl+PageUp", "Ctrl+PageDown", "Cmd+Option+ArrowRight", "Cmd+Option+ArrowLeft", "Ctrl+1", "Ctrl+2", "Ctrl+3", "Ctrl+4", "Ctrl+5", "Ctrl+6", "Ctrl+7", "Ctrl+8", "Ctrl+9", "Cmd+1", "Cmd+2", "Cmd+3", "Cmd+4", "Cmd+5", "Cmd+6", "Cmd+7", "Cmd+8", "Cmd+9", "Alt+ArrowLeft", "Alt+ArrowRight", "Cmd+ArrowLeft", "Cmd+ArrowRight", "Ctrl+r", "Ctrl+Shift+r", "F5", "Shift+F5", "Cmd+r", "Cmd+Shift+r", "Ctrl+h", "Ctrl+j", "Ctrl+d", "Ctrl+f", "Cmd+y", "Cmd+Option+b", "Cmd+d", "Cmd+f", "Ctrl+Shift+i", "Ctrl+Shift+j", "Ctrl+Shift+c", "Ctrl+u", "F12", "Cmd+Option+i", "Cmd+Option+j", "Cmd+Option+c", "Cmd+Option+u", "Ctrl+=", "Ctrl+-", "Ctrl+0", "Cmd+=", "Cmd+-", "Cmd+0", "Ctrl+p", "Ctrl+s", "Ctrl+o", "Cmd+p", "Cmd+s", "Cmd+o"],
   _handlers: { keydown: {}, keyup: {} },
 };

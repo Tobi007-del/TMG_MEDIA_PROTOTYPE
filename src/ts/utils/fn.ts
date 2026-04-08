@@ -1,72 +1,18 @@
 import { FN_KEY } from "../consts/generics";
-import { isStr, uid } from ".";
+import {  uid } from ".";
+import { limited as limitedOrig, LimitedOptions, LimitedHandle } from "@t007/utils";
 
 // ============ Timer Helpers ============
-// 3rd & 4th param are consumed if signal and window are used respectively
-export function setTimeout(handler: TimerHandler, timeout?: number, ...args: any[]) {
-  const sig = args[0] instanceof AbortSignal ? args.shift() : undefined;
-  if (sig?.aborted) return -1;
-  const w: Window = args[0] instanceof Window ? args.shift() : window;
-  if (!sig) return w.setTimeout(handler, timeout, ...args);
-  const id = w.setTimeout(() => (sig.removeEventListener("abort", kill), isStr(handler) ? new Function(handler) : handler(...args)), timeout),
-    kill = () => w.clearTimeout(id);
-  return (sig.addEventListener("abort", kill, { once: true }), id);
-}
 
-export function setInterval(handler: TimerHandler, timeout?: number, ...args: any[]) {
-  const sig = args[0] instanceof AbortSignal ? args.shift() : undefined;
-  if (sig?.aborted) return -1;
-  const w: Window = args[0] instanceof Window ? args.shift() : window,
-    id = w.setInterval(handler, timeout, ...args);
-  return (sig?.addEventListener("abort", () => w.clearInterval(id), { once: true }), id);
-}
-
-export function requestAnimationFrame(callback: FrameRequestCallback, sig?: AbortSignal, w = window) {
-  if (sig?.aborted) return -1;
-  if (!sig) return w.requestAnimationFrame(callback);
-  const id = w.requestAnimationFrame((t) => (sig.removeEventListener("abort", kill), callback(t))),
-    kill = () => w.cancelAnimationFrame(id);
-  return (sig.addEventListener("abort", kill, { once: true }), id);
-}
+export { setTimeout, setInterval, requestAnimationFrame } from "@t007/utils";
 
 // ============ Async Helpers ============
 
-export const mockAsync = (timeout = 250): Promise<void> => new Promise((resolve) => setTimeout(resolve, timeout));
-
-export const breath = (w = window) => new Promise((res) => w.requestAnimationFrame(res)); // The "Single Frame" breathe - GPU Readiness, the loading animation is the build process itself. Sike!!
-
-export const deepBreath = (w = window) => new Promise((res) => w.requestAnimationFrame(() => w.requestAnimationFrame(res))); // The "Double Frame" breathe - guaranteed layout completion
+export { mockAsync, breath, deepBreath } from "@t007/utils";
 
 // ============ Limited Call Helpers ============
 
-interface LimitedOptions {
-  key?: string /** Key for localStorage persistence (if omitted, uses session-only) */;
-  maxTimes?: number /** Max times to call (default: 1) */;
-}
-interface LimitedHandle<T extends (...args: any[]) => any> {
-  (...args: Parameters<T>): ReturnType<T> | void;
-  count: number;
-  left: number;
-  reset: () => void;
-  block: () => void;
-}
-
-export function limited<T extends (...args: any[]) => any>(fn: T, opts: LimitedOptions | string = {}): LimitedHandle<T> {
-  let count = 0,
-    { key, maxTimes: max = 1 } = isStr(opts) ? { key: opts } : opts;
-  const getReg = () => JSON.parse(localStorage.getItem(FN_KEY) || "{}"),
-    setReg = (r: Record<string, number>) => localStorage.setItem(FN_KEY, JSON.stringify(r));
-  const handle = (...args: Parameters<T>): ReturnType<T> | void => {
-    if (!key) return count++ < max ? fn(...args) : undefined;
-    const r = getReg(),
-      c = r[key] || 0;
-    return c < max ? ((r[key] = c + 1), setReg(r), fn(...args)) : undefined;
-  };
-  handle.left = max - (handle.count = count);
-  handle.reset = () => ((count = 0), key && ((r) => (delete r[key], setReg(r)))(getReg()));
-  handle.block = () => ((count = max), key && ((r) => ((r[key] = max), setReg(r)))(getReg()));
-  return handle;
-}
+export const limited = <T extends (...args: any[]) => any>(fn: T, opts: LimitedOptions | string = {}): LimitedHandle<T> => limitedOrig(FN_KEY, fn, opts);
 
 export const oncePerSession = <T extends (...args: any[]) => any>(fn: T) => limited(fn);
 export const onceEver = <T extends (...args: any[]) => any>(fn: T, key = uid()) => limited(fn, key);
@@ -93,8 +39,4 @@ export function deprecateForMajor(major: number, oldName: string, newName?: stri
 
 // ============ Generic Helpers ============
 
-export function bindClupToSig<Cb extends () => any>(clup: Cb, signal?: AbortSignal): Cb {
-  signal?.aborted ? clup() : signal?.addEventListener("abort", clup, { once: true });
-  if (signal && !signal.aborted) clup = (() => (signal.removeEventListener("abort", clup), clup())) as Cb;
-  return clup; // once incase spec changes, memory leaks too
-}
+export { bindCleanupToSignal } from "@t007/utils";

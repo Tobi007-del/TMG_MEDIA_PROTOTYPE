@@ -14,7 +14,7 @@ export class FramePlug extends BasePlug<Frame> {
 
   public wire(): void {
     // Post Wiring
-    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    const keys = this.ctlr.plug<KeysPlug>("keys");
     keys?.register("capture", (e) => this.captureFrame(e.altKey ? "monochrome" : ""), { phase: "keyup" });
     keys?.register("stepFwd", () => this.moveFrame("forwards"), { phase: "keydown" });
     keys?.register("stepBwd", () => this.moveFrame("backwards"), { phase: "keydown" });
@@ -41,7 +41,7 @@ export class FramePlug extends BasePlug<Frame> {
 
   public async captureFrame(display = "", time = this.media.state.currentTime): Promise<void> {
     // JS: this.notify("capture");
-    const toast = this.ctlr.getPlug<ToastsPlug>("toasts")?.toast,
+    const toast = this.ctlr.plug<ToastsPlug>("toasts")?.toast,
       tTxt = formatMediaTime({ time, format: "human", showMs: true }),
       fTxt = `video frame ${display === "monochrome" ? "in b&w " : ""}at ${tTxt}`,
       frameToastId = toast?.loading(`Capturing ${fTxt}...`, { delay: parseCSSTime(this.ctlr.settings.css.notifiersAnimationTime), image: window.TMG_VIDEO_ALT_IMG_SRC, tag: `tmg-${this.ctlr.config.media.title ?? "Video"}fcpa${tTxt}${display}` }) as string,

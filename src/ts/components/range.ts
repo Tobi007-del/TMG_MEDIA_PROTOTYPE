@@ -1,8 +1,8 @@
 import { BaseComponent, ComponentState } from "./";
 import type { Controller } from "../core/controller";
-import type { REvent } from "../types/reactor";
+import { type REvent, reactive, type Reactive } from "../sia-reactor";
 import type { AptRange } from "../types/generics";
-import { reactive, type Reactive, createEl, clamp, setTimeout, stepNum } from "../utils";
+import { createEl, clamp, setTimeout, stepNum } from "../utils";
 
 export interface RangeConfig extends AptRange {
   value: number;
@@ -40,7 +40,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
   protected cancelScrubTimeoutId: number | null = null;
   protected rect!: DOMRect;
 
-  constructor(ctlr: Controller, config: Partial<Config> = {}) {
+  constructor(ctlr: Controller, config?: Partial<Config>) {
     const defaults = { label: "Range", min: 0, max: 100, value: 0, previewValue: 50, step: 1, scrub: { sync: false, relative: true, cancel: { delta: 15, timeout: 2000 }, wheel: { disabled: false, axisRatio: 6 } } };
     super(ctlr, reactive({ ...defaults, ...config }) as unknown as Reactive<Config>, { scrubbing: false, shouldCancelScrub: false, stallCancelScrub: false } as State);
   }

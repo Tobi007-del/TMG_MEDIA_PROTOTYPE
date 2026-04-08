@@ -17,7 +17,7 @@ const base = {
 console.log("Generating IIFE build...");
 await esbuild.build({
   ...base,
-  outfile: "dist/tmg-player.global.js",
+  outfile: "dist/index.global.js",
   format: "iife", // <- single global file
   globalName: "tmg", // window.tmg
   sourcemap: !isProd,
@@ -27,7 +27,7 @@ console.log("IIEFE build complete.");
 console.log("Generating ESM build...");
 await esbuild.build({
   ...base,
-  outfile: "dist/tmg-player.js",
+  outfile: "dist/index.js",
   format: "esm",
   sourcemap: !isProd,
 });
@@ -35,7 +35,7 @@ console.log("ESM build complete.");
 
 try {
   console.log("Generating types...");
-  execSync("npx dts-bundle-generator -o dist/tmg-player.d.ts src/index.ts");
+  execSync("npx dts-bundle-generator -o dist/index.d.ts src/index.ts");
   console.log("Type generation complete.");
 } catch (e) {
   console.error("Type generation failed.");

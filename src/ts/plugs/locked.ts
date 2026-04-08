@@ -2,7 +2,7 @@ import { BasePlug, OverlayPlug } from ".";
 import type { Controller } from "../core/controller";
 import type { ScreenLocked } from "../components";
 import type { CtlrConfig } from "../types/config";
-import type { REvent } from "../types/reactor";
+import type { REvent } from "../sia-reactor";
 import { ComponentRegistry } from "../core/registry";
 import { setTimeout, parseCSSTime, mockAsync, createEl } from "../utils";
 
@@ -50,14 +50,14 @@ export class LockedPlug extends BasePlug<Locked, LockedState> {
       // JS: this.ctlr.leaveSettingsView?.();
       setTimeout(this.showOverlay, 0, this.signal);
       this.ctlr.videoContainer.classList.add("tmg-video-locked", "tmg-video-progress-bar");
-      this.ctlr.getPlug<OverlayPlug>("overlay")?.remove("force");
+      this.ctlr.plug<OverlayPlug>("overlay")?.remove("force");
       // JS: this.ctlr.setKeyEventListeners?.("remove");
     } else {
       this.removeOverlay();
       await mockAsync(parseCSSTime(this.ctlr.settings.css.switchTransitionTime));
       this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", this.ctlr.settings.controlPanel.progressBar);
       this.ctlr.videoContainer.classList.remove("tmg-video-locked");
-      this.ctlr.getPlug<OverlayPlug>("overlay")?.show();
+      this.ctlr.plug<OverlayPlug>("overlay")?.show();
       // JS: this.ctlr.setKeyEventListeners?.("add");
     }
   }

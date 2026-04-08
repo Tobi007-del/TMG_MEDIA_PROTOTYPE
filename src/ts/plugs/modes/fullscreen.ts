@@ -1,5 +1,5 @@
 import { BaseModule } from "../";
-import type { REvent } from "../../types/reactor";
+import type { REvent } from "../../sia-reactor";
 import type { CtlrMedia } from "../../types/contract";
 import type { CtlrConfig } from "../../types/config";
 import type { OrientationOption } from "../../types/generics";
@@ -37,7 +37,7 @@ export class FullscreenModule extends BaseModule<FullscreenModuleConfig> {
     if (e.resolved) return;
     if (this.config.disabled && !this.inFullscreen) return e.resolve(this.name);
     if (!this.ctlr.isUIActive("fullscreen")) {
-      const fW = this.ctlr.getPlug<ModesPlug>("modes")?.pip?.floatingWindow;
+      const fW = this.ctlr.plug<ModesPlug>("modes")?.pip?.floatingWindow;
       if (this.ctlr.isUIActive("floatingPlayer")) return (fW?.addEventListener("pagehide", this.enter, { signal: this.signal }), fW?.close(), e.resolve(this.name));
       if (this.ctlr.isUIActive("pictureInPicture")) this.media.intent.pictureInPicture = false;
       this.media.intent.miniplayer = false;

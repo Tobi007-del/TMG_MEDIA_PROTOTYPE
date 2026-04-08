@@ -1,6 +1,6 @@
 import { BasePlug, type FramePlug } from ".";
 import type { CtlrMedia } from "../types/contract";
-import type { REvent } from "../types/reactor";
+import type { REvent } from "../sia-reactor";
 import { uncamelize } from "../utils";
 
 export type Css = Record<string, string | number> & {
@@ -42,7 +42,7 @@ export class CSSPlug extends BasePlug<Css> {
   }
 
   protected async handleLoadedMetadataStatus({ value }: REvent<CtlrMedia, "status.loadedMetadata">) {
-    const color = value && (await this.ctlr.getPlug<FramePlug>("frame")?.getMainColor()),
+    const color = value && (await this.ctlr.plug<FramePlug>("frame")?.getMainColor()),
       keys = Object.keys(this.ctlr.settings.css.syncWithMedia).filter((k) => this.ctlr.settings.css.syncWithMedia[k]);
     keys.forEach((k) => (this.ctlr.settings.css[k] = String((value ? color : null) ?? this._cache[k])));
   }

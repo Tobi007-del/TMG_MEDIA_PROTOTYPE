@@ -1,20 +1,17 @@
 import type { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
-import type { Volatile } from "../types/reactor";
+import { type Volatile, reactive, type Reactive, inert, intent, state, volatile, nuke } from "../sia-reactor";
 import { TechRegistry, PlugRegistry } from "./registry";
 import { STATE_BUILD, type CtlrState } from "../tools/runtime";
 import { TechConstructor, BaseTech, HTML5Tech } from "../media";
 import { PlugConstructor, ToastsPlug, type BasePlug as Plug } from "../plugs";
-import { reactive, type Reactive, guardAllMethods, guardMethod, inert, intent, state, volatile, nuke, setTimeout, requestAnimationFrame, getWindow, clamp, uncamelize, cloneMedia, getMediaReport, isSameURL, isSameSources, observeIntersection, observeResize, getSizeTier, createEl } from "../utils";
+import { guardAllMethods, guardMethod, setTimeout, requestAnimationFrame, getWindow, clamp, uncamelize, cloneMedia, getMediaReport, isSameURL, isSameSources, observeIntersection, observeResize, getSizeTier, createEl } from "../utils";
 
 // --- CONTROLLER (The Orchestrator) ---
 export class Controller {
   // --- CORE SYSTEM ---
   public readonly id: string;
   public plugs = new Map<string, Plug>();
-  public getPlug<T extends Plug = Plug>(name: string): T | undefined {
-    return this.plugs.get(name) as T | undefined;
-  }
   private ac = new AbortController();
   public readonly signal = this.ac.signal;
   // --- RUNTIME (Global Controller States) ---
@@ -39,9 +36,9 @@ export class Controller {
 
   constructor(medium: HTMLVideoElement, build: CtlrConfig) {
     this.setReadyState(0, medium);
-    guardAllMethods(this, this.guard, true);
+    guardAllMethods(this, this.guard);
     this.id = build.id;
-    this.config = reactive(volatile(build), { lineageTracing: true, smartCloning: true }); // `referenceTracking: false` so clone before reassigning "already in state" objects, `lineageTracing: true` & `smartCloning: true` for structural sharing
+    this.config = reactive(volatile(build), { referenceTracking: true, smartCloning: true }); // `lineageTracing: false` so clone before reassigning "already in state" objects, `referenceTracking: true` & `smartCloning: true` for structural sharing
     this.state = reactive<CtlrState>(STATE_BUILD);
     const defs = getMediaReport(medium); // returns defaults and initials
     this.media = reactive<CtlrMedia>({
@@ -71,14 +68,17 @@ export class Controller {
   private connectPlugs() {
     for (const PlugClass of PlugRegistry.getOrdered()) {
       const key = PlugClass.plugName;
-      this.plugin(PlugClass, key in this.config ? (this.config as any)[key] : (this.config.settings as any)[key]);
+      this.plugIn(PlugClass, key in this.config ? (this.config as any)[key] : (this.config.settings as any)[key]);
     }
   }
-  public plugin(PlugClass: PlugConstructor, config?: any): void {
+  public plugIn(PlugClass: PlugConstructor, config?: any) {
     if (this.config.noPlugList.includes(PlugClass.plugName) && !PlugClass.isCore) return; // Core plugs are mandatory
-    this.getPlug(PlugClass.plugName)?.destroy();
+    this.plug(PlugClass.plugName)?.destroy();
     const plug = new PlugClass(this, config);
-    this.plugs.set(PlugClass.plugName, (plug.setup(), plug));
+    return (this.plugs.set(PlugClass.plugName, (plug.setup(), plug)), this); // for devx chaining
+  }
+  public plug<T extends Plug = Plug>(name: string): T | undefined {
+    return this.plugs.get(name) as T | undefined;
   }
 
   protected wireTechOverseer() {
@@ -124,9 +124,8 @@ export class Controller {
   }
 
   public get payload() {
-    const readyState = this.state?.readyState ?? 0;
-    ((this._payload.readyState = readyState), (this._payload.initialized = readyState > 0), (this._payload.destroyed = readyState < 0));
-    return this._payload;
+    const rS = this.state?.readyState ?? 0;
+    return (((this._payload.readyState = rS), (this._payload.initialized = rS > 0), (this._payload.destroyed = rS < 0)), this._payload);
   }
   public setReadyState(state?: number, medium?: HTMLVideoElement) {
     const readyState = !this.state ? 0 : clamp(0, state ?? this.state.readyState + 1, 3);
@@ -134,9 +133,9 @@ export class Controller {
     this.fire("tmgreadystatechange", this.payload, medium);
   }
 
-  public guard = <T extends Function>(fn: T, { silent = false } = {}) => {
-    return guardMethod(fn, (e) => (this.log(e, "error", "swallow"), !silent && this.getPlug<ToastsPlug>("toasts")?.toast?.("Something went wrong", { tag: "tmg-stwr" })));
-  }; // ()=>{}: needs to be bounded even before initialization
+  public guard = <Fn extends Function>(fn: Fn, { silent = false } = {}) => {
+    return guardMethod(fn, (e) => (this.log(e, "error", "swallow"), !silent && this.plug<ToastsPlug>("toasts")?.toast?.("Something went wrong", { tag: "tmg-stwr" }))); // treated as one log identity
+  }; // `()=>{}`: needs to be bounded even before initialization
   public log(mssg: any, type: "error" | "warn" | "log" = "log", action?: "swallow") {
     if (!this.config.debug) return;
     switch (type) {
@@ -180,10 +179,10 @@ export class Controller {
     const container = isPseudo ? this.pseudoVideoContainer : this.videoContainer;
     return all ? container.querySelectorAll(query) : container.querySelector(query);
   }
-  setImgLoadState<T extends { target: HTMLImageElement }>({ target: img }: T): void {
+  setImgLoadState<Ev extends { target: HTMLImageElement }>({ target: img }: Ev): void {
     img?.setAttribute("data-loaded", String(img.complete && img.naturalWidth > 0));
   }
-  setImgFallback<T extends { target: HTMLImageElement }>({ target: img }: T): void {
+  setImgFallback<Ev extends { target: HTMLImageElement }>({ target: img }: Ev): void {
     img.src = window.TMG_VIDEO_ALT_IMG_SRC!;
   }
   setCanvasFallback(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, img?: HTMLImageElement): void {

@@ -1,11 +1,10 @@
 import { BasePlug, DraggableModule, DRAGGABLE_BUILD, type DraggableModuleConfig } from "..";
 import type { Controller } from "../../core/controller";
 import type { CtlrConfig } from "../../types/config";
-import type { REvent } from "../../types/reactor";
+import { type REvent, type DeepPartial } from "../../sia-reactor";
 import { controls, bigControls } from "../../consts/generics";
 import { BaseComponent, Timeline } from "../../components";
 import { ComponentRegistry } from "../../core/registry";
-import type { DeepPartial } from "../../types/obj";
 import { isBool, createEl, parsePanelBottomObj, initScrollAssist, observeResize, removeScrollAssist, IS_MOBILE } from "../../utils";
 
 export * from "./draggable";

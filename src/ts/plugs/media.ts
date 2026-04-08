@@ -1,7 +1,6 @@
 import { BasePlug } from ".";
 import type { CtlrConfig } from "../types/config";
-import type { DeepPartial } from "../types/obj";
-import type { REvent } from "../types/reactor";
+import { type DeepPartial, type REvent } from "../sia-reactor";
 import { capitalize } from "../utils";
 import type { PlaylistPlug, TimePlug } from ".";
 
@@ -77,12 +76,12 @@ export class MediaPlug extends BasePlug<Media> {
     const set = (...args: Parameters<typeof navigator.mediaSession.setActionHandler>) => navigator.mediaSession.setActionHandler(...args);
     set("play", () => (this.media.intent.paused = false));
     set("pause", () => (this.media.intent.paused = true));
-    const timePlug = this.ctlr.getPlug<TimePlug>("time");
+    const timePlug = this.ctlr.plug<TimePlug>("time");
     set("seekbackward", timePlug ? () => timePlug.skip(-this.ctlr.settings.time.skip) : null);
     set("seekforward", timePlug ? () => timePlug.skip(this.ctlr.settings.time.skip) : null);
-    const playlistPlug = this.ctlr.getPlug<PlaylistPlug>("playlist"),
+    const playlistPlug = this.ctlr.plug<PlaylistPlug>("playlist"),
       playlist = this.ctlr.config.playlist,
-      currentIndex = this.ctlr.getPlug<PlaylistPlug>("playlist")?.currentIndex ?? 0;
+      currentIndex = this.ctlr.plug<PlaylistPlug>("playlist")?.currentIndex ?? 0;
     set("previoustrack", playlist && currentIndex > 0 && playlistPlug ? playlistPlug.previousVideo : null);
     set("nexttrack", playlist && currentIndex < (playlist?.length ?? 0) - 1 && playlistPlug ? playlistPlug.nextVideo : null);
   }

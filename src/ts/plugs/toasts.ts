@@ -1,5 +1,5 @@
 import { BasePlug } from ".";
-import type { REvent } from "../types/reactor";
+import type { REvent } from "../sia-reactor";
 import type { CtlrConfig } from "../types/config";
 import type { ToastOptions } from "@t007/toast";
 import { IS_MOBILE } from "../utils";

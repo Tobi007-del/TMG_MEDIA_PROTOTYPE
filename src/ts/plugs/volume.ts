@@ -1,6 +1,6 @@
 import { BasePlug, type KeysPlug, type KeyMod } from ".";
 import type { Controller } from "../core/controller";
-import type { REvent } from "../types/reactor";
+import type { REvent } from "../sia-reactor";
 import type { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";
@@ -59,7 +59,7 @@ export class VolumePlug extends BasePlug<Volume, VolumeState> {
     this.ctlr.config.on("settings.volume.max", this.handleMax, { signal: this.signal });
     // Post Wiring
     this.media.tech.features.volume = true;
-    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    const keys = this.ctlr.plug<KeysPlug>("keys");
     keys?.register("mute", this.handleKeyMute, { phase: "keyup" });
     keys?.register("volumeUp", this.handleKeyVolumeUp, { phase: "keydown" });
     keys?.register("volumeDown", this.handleKeyVolumeDown, { phase: "keydown" });
@@ -186,15 +186,15 @@ export class VolumePlug extends BasePlug<Volume, VolumeState> {
 
   protected handleKeyMute(): void {
     this.toggleMute("auto");
-    // JS: this.ctlr.config.stall(() => (this.config.value === 0 ? this.notify("volumemuted") : this.notify("volumeup")));
+    // JS: this.config.wonce("settings.volume.value", (v) => (!v ? this.notify("volumemuted") : this.notify("volumeup")));
   }
 
   protected handleKeyVolumeUp(_: KeyboardEvent, mod: KeyMod): void {
-    this.changeVolume(this.ctlr.getPlug<KeysPlug>("keys")!.getModded("volume", mod, this.config.skip));
+    this.changeVolume(this.ctlr.plug<KeysPlug>("keys")!.getModded("volume", mod, this.config.skip));
   }
 
   protected handleKeyVolumeDown(_: KeyboardEvent, mod: KeyMod): void {
-    this.changeVolume(-this.ctlr.getPlug<KeysPlug>("keys")!.getModded("volume", mod, this.config.skip));
+    this.changeVolume(-this.ctlr.plug<KeysPlug>("keys")!.getModded("volume", mod, this.config.skip));
   }
 
   public handleSliderInput(volume: number): void {

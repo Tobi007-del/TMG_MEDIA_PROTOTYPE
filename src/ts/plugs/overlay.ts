@@ -1,8 +1,8 @@
 import { Controller } from "../core/controller";
 import { BasePlug } from ".";
 import type { CtlrConfig } from "../types/config";
-import type { REvent } from "../types/reactor";
-import { type Reactive, setTimeout, IS_MOBILE } from "../utils";
+import { type REvent, type Reactive } from "../sia-reactor";
+import { setTimeout, IS_MOBILE } from "../utils";
 
 export interface Overlay {
   delay: number;

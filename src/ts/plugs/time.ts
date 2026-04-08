@@ -1,12 +1,11 @@
 import { BasePlug, GesturePlug, OverlayPlug, type KeysPlug, type KeyMod } from ".";
 import { parseIfPercent, clamp, safeNum, formatMediaTime, parseCSSTime, setTimeout, IS_MOBILE } from "../utils";
-import type { REvent } from "../types/reactor";
+import { type REvent, type Paths } from "../sia-reactor";
 import type { OptRange } from "../types/generics";
 import type { PreviewConfig, Timeline } from "../components";
 import { CtlrMedia } from "../types/contract";
 import type { Controller } from "../core/controller";
 import type { CtlrConfig } from "../types/config";
-import type { Paths } from "../types/obj";
 
 export interface CTime extends OptRange {
   mode: "elapsed" | "remaining";
@@ -40,7 +39,7 @@ export class TimePlug extends BasePlug<CTime, TimeState> {
     // Variables Assignment
     this.pseudoStart = this.config.start ?? 0;
     // State Listeners
-    this.state.on("guardedPaths", this.handleGuardedPathsState, { signal: this.signal, immediate: true, depth: 1 });
+    this.state.on("guardedPaths", this.handleGuardedPathsState, { signal: this.signal, immediate: true });
     // Ctlr Config Getters
     // this.ctlr.config.get("settings.time.value", () => this.ctlr.media.state.currentTime, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
     // ---- Media Setters
@@ -52,16 +51,16 @@ export class TimePlug extends BasePlug<CTime, TimeState> {
     this.media.on("state.currentTime", this.handleCurrentTimeState, { signal: this.signal, immediate: true });
     this.media.on("status.waiting", this.handleWaitingStatus, { signal: this.signal });
     // Post Wiring
-    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    const keys = this.ctlr.plug<KeysPlug>("keys");
     keys?.register("skipFwd", this.handleKeySkipFwd, { phase: "keydown" });
     keys?.register("skipBwd", this.handleKeySkipBwd, { phase: "keydown" });
     keys?.register("timeMode", this.toggleMode, { phase: "keyup" });
     keys?.register("timeFormat", this.rotateFormat, { phase: "keyup" });
   }
 
-  protected handleGuardedPathsState({ value: paths = [], oldValue: prev = [] }: REvent<TimeState, "guardedPaths">): void {
-    prev.forEach((path) => this.ctlr.config.noget(path, this.toTimeVal));
-    paths.forEach((path) => this.ctlr.config.get(path, this.toTimeVal, { signal: this.signal }));
+  protected handleGuardedPathsState({ value: paths = [], oldValue: prevs = [] }: REvent<TimeState, "guardedPaths">): void {
+    for (const path of prevs) this.ctlr.config.noget(path, this.toTimeVal);
+    for (const path of paths) this.ctlr.config.get(path, this.toTimeVal, { signal: this.signal });
   }
 
   protected forwardTimeValue(value?: number): void {
@@ -78,7 +77,7 @@ export class TimePlug extends BasePlug<CTime, TimeState> {
   }
 
   protected handleWaitingStatus({ value }: REvent<CtlrMedia, "status.waiting">): void {
-    if (value && IS_MOBILE && this.currentSkipNotifier) this.media.once("status.waiting", () => this.ctlr.getPlug<OverlayPlug>("overlay")?.remove(), { signal: this.signal });
+    if (value && IS_MOBILE && this.currentSkipNotifier) this.media.once("status.waiting", () => this.ctlr.plug<OverlayPlug>("overlay")?.remove(), { signal: this.signal });
   }
 
   public toTimeVal(value?: any): number {
@@ -105,12 +104,12 @@ export class TimePlug extends BasePlug<CTime, TimeState> {
   }
 
   public skip(duration: number): void {
-    const overlay = this.ctlr.getPlug<OverlayPlug>("overlay"),
+    const overlay = this.ctlr.plug<OverlayPlug>("overlay"),
       notifier = duration > 0 ? this.ctlr.queryDOM(".tmg-video-fwd-notifier") : this.ctlr.queryDOM(".tmg-video-bwd-notifier");
     duration = duration > 0 ? (this.media.status.duration - this.media.state.currentTime > duration ? duration : this.media.status.duration - this.media.state.currentTime) : duration < 0 ? (this.media.state.currentTime > Math.abs(duration) ? duration : -this.media.state.currentTime) : 0;
     this.media.intent.currentTime = this.media.state.currentTime + duration;
     this.ctlr.settings.css.currentPlayedPosition = this.ctlr.settings.css.currentThumbPosition = safeNum(this.media.intent.currentTime / this.media.status.duration);
-    const mdle = this.ctlr.getPlug<GesturePlug>("gesture")?.general;
+    const mdle = this.ctlr.plug<GesturePlug>("gesture")?.general;
     if (mdle?.state.skipPersist) {
       if (this.currentSkipNotifier && notifier !== this.currentSkipNotifier) {
         this.skipDuration = 0;
@@ -138,14 +137,14 @@ export class TimePlug extends BasePlug<CTime, TimeState> {
   }
 
   protected handleKeySkipFwd(_: KeyboardEvent, mod: KeyMod): void {
-    this.ctlr.getPlug<GesturePlug>("gesture")?.general?.deactivateSkipPersist();
-    this.skip(this.ctlr.getPlug<KeysPlug>("keys")!.getModded("skip", mod, this.config.skip));
+    this.ctlr.plug<GesturePlug>("gesture")?.general?.deactivateSkipPersist();
+    this.skip(this.ctlr.plug<KeysPlug>("keys")!.getModded("skip", mod, this.config.skip));
     // JS: this.notify("fwd");
   }
 
   protected handleKeySkipBwd(_: KeyboardEvent, mod: KeyMod): void {
-    this.ctlr.getPlug<GesturePlug>("gesture")?.general?.deactivateSkipPersist();
-    this.skip(-this.ctlr.getPlug<KeysPlug>("keys")!.getModded("skip", mod, this.config.skip));
+    this.ctlr.plug<GesturePlug>("gesture")?.general?.deactivateSkipPersist();
+    this.skip(-this.ctlr.plug<KeysPlug>("keys")!.getModded("skip", mod, this.config.skip));
     // JS: this.notify("bwd");
   }
 }

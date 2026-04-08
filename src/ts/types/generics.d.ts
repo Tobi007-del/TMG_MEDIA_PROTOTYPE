@@ -1,6 +1,4 @@
-import {
-  whiteListedKeys,
-  errorCodes,
+import {errorCodes,
   modes,
   keyShortcutActions,
   moddedKeyShortcutActions,
@@ -8,9 +6,7 @@ import {
   orientationOptions,
 } from "../consts/generics";
 
-export type whiteListedKey = (typeof whiteListedKeys)[number];
 export type ErrorCode = (typeof errorCodes)[number];
-
 export type Mode = (typeof modes)[number];
 export type KeyShortcutAction = (typeof keyShortcutActions)[number];
 export type ModdedKeyShortcutAction = (typeof moddedKeyShortcutActions)[number];

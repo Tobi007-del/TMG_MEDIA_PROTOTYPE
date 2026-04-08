@@ -8,7 +8,7 @@ export class Duration extends BaseComponent<DurationConfig, ComponentState, HTML
   public static readonly componentName: string = "duration";
   public static readonly isControl: boolean = true;
   protected get plug() {
-    return this.ctlr.getPlug<TimePlug>("time");
+    return this.ctlr.plug<TimePlug>("time");
   }
 
   public create() {

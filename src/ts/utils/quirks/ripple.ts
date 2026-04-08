@@ -18,7 +18,7 @@ export function rippleHandler(e: PointerEvent, target?: HTMLElement, forceCenter
     if (!canRelease) return ripple?.addEventListener("animationend", release, { once: true });
     ripple?.classList.replace("tmg-video-ripple-hold", "tmg-video-ripple-fade");
     ripple?.addEventListener("animationend", () => setTimeout(() => wrapper?.remove()));
-    ["pointerup", "pointercancel"].forEach((evt) => el.ownerDocument.defaultView?.removeEventListener(evt, release));
+    ["pointerup", "pointercancel"].forEach((evt) => (el.ownerDocument?.defaultView || window).removeEventListener(evt, release));
   };
-  ["pointerup", "pointercancel"].forEach((evt) => el.ownerDocument.defaultView?.addEventListener(evt, release));
+  ["pointerup", "pointercancel"].forEach((evt) => (el.ownerDocument?.defaultView || window).addEventListener(evt, release));
 }

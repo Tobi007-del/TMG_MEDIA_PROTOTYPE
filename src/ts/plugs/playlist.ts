@@ -1,8 +1,7 @@
 import { BasePlug, type KeysPlug } from ".";
 import type { CtlrConfig, Settings } from "../types/config";
-import type { REvent } from "../types/reactor";
-import type { DeepPartial } from "../types/obj";
-import { isBool, mergeObjs, isSameURL, deepClone } from "../utils";
+import { type REvent, type DeepPartial, mergeObjs, deepClone } from "../sia-reactor";
+import { isBool, isSameURL } from "../utils";
 
 const timeKeys = ["min", "max", "start", "end", "previews"] as const;
 export type PlaylistItemTimeKey = (typeof timeKeys)[number];
@@ -32,7 +31,7 @@ export class PlaylistPlug extends BasePlug<Playlist> {
     // ----------- Listeners
     this.ctlr.config.on("playlist", this.handlePlaylistChange, { signal: this.signal, immediate: true, depth: 1 });
     // Post Wiring
-    const keys = this.ctlr.getPlug<KeysPlug>("keys");
+    const keys = this.ctlr.plug<KeysPlug>("keys");
     keys?.register("prev", this.previousVideo, { phase: "keydown" });
     // JS: return (this.previousVideo(), this.notify("videoprev"));
     keys?.register("next", this.nextVideo, { phase: "keydown" });

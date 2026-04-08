@@ -8,7 +8,7 @@ export class Time extends BaseComponent<TimeConfig, ComponentState, HTMLButtonEl
   public static readonly componentName: string = "time";
   public static readonly isControl: boolean = true;
   protected get plug() {
-    return this.ctlr.getPlug<TimePlug>("time");
+    return this.ctlr.plug<TimePlug>("time");
   }
 
   public create() {

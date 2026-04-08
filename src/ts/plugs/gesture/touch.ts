@@ -31,7 +31,7 @@ export class TouchModule extends BaseModule<TouchConfig> {
   }
 
   protected canHandle(e: TouchEvent): boolean {
-    return !this.ctlr.config.disabled && e.touches?.length === 1 && e.target === this.ctlr.DOM.controlsContainer && !this.ctlr.getPlug<FastPlayPlug>("fastPlay")?.speedCheck;
+    return !this.ctlr.config.disabled && e.touches?.length === 1 && e.target === this.ctlr.DOM.controlsContainer && !this.ctlr.plug<FastPlayPlug>("fastPlay")?.speedCheck;
   }
 
   protected handleStart(e: TouchEvent): void {
@@ -46,7 +46,7 @@ export class TouchModule extends BaseModule<TouchConfig> {
 
   protected handleInit(e: Event): void {
     const te = e as TouchEvent;
-    if (te.touches?.length > 1 || this.ctlr.getPlug<FastPlayPlug>("fastPlay")?.speedCheck) return;
+    if (te.touches?.length > 1 || this.ctlr.plug<FastPlayPlug>("fastPlay")?.speedCheck) return;
     te.preventDefault();
     const tc = this.config,
       rect = this.ctlr.videoContainer.getBoundingClientRect(),
@@ -143,7 +143,7 @@ export class TouchModule extends BaseModule<TouchConfig> {
         this.config.sliderTimeout,
         this.signal
       );
-      if (!this.canCancel) this.ctlr.getPlug<OverlayPlug>("overlay")?.remove();
+      if (!this.canCancel) this.ctlr.plug<OverlayPlug>("overlay")?.remove();
     }
     clearTimeout(this.cancelTimeoutId);
     this.canCancel = true;
@@ -161,7 +161,7 @@ export class TouchModule extends BaseModule<TouchConfig> {
   protected applyRange(key: "volume" | "brightness", percent: number, sign: string): void {
     const range = this.ctlr.settings[key],
       value = sign === "+" ? range.value! + percent * range.max : range.value! - percent * range.max;
-    this.ctlr.getPlug<VolumePlug>(key)?.handleSliderInput(clamp(0, Math.round(value), range.max));
+    this.ctlr.plug<VolumePlug>(key)?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }
 }
 

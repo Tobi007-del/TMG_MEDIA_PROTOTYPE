@@ -1,6 +1,3 @@
-// Mixins
-export * from "./mixins/reactive";
-export * from "./mixins/methodist";
 // DOM & UI
 export * from "./dom";
 // Media
@@ -17,6 +14,7 @@ export * from "./browser";
 export * from "./keys";
 // Function Helpers
 export * from "./fn";
+export * from "./methd";
 // Quirks
 export * from "./quirks/ripple";
 export * from "./quirks/scroll";

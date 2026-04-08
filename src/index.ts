@@ -2,11 +2,10 @@ import "./css/index.scss";
 import "./ts/types/global.d.ts";
 import { init } from "./ts/tools/runtime";
 import { loadResource } from "./ts/utils/dom";
-import { isDef } from "sia-reactor/utils";
 
 export * from "./api";
 
-if (isDef(window)) {
+if ("undefined" !== typeof window) {
   window.tmg ??= {} as any; // bundler will handle the rest
   window.TMG_VIDEO_ALT_IMG_SRC ??= "https://cdn.jsdelivr.net/npm/tmg-media-player/assets/movie-tape.png";
   window.TMG_VIDEO_CSS_SRC ??= "https://cdn.jsdelivr.net/npm/tmg-media-player@latest/dist/index.min.css";

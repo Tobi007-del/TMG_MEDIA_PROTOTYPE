@@ -7,7 +7,7 @@ export type ScreenLockedConfig = undefined;
 export class ScreenLocked extends BaseComponent<ScreenLockedConfig, ComponentState, HTMLButtonElement> {
   public static readonly componentName: string = "screenlocked";
   protected get plug() {
-    return this.ctlr.getPlug<LockedPlug>("locked");
+    return this.ctlr.plug<LockedPlug>("locked");
   }
 
   public create() {

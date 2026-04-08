@@ -62,7 +62,7 @@ export class MyPlug extends BasePlug<MyConfig, MyState> {
 - `mount()` - pure DOM work. NO reactive listeners here
 - `wire()` - ALL reactive bindings. Comment sections follow MSC order (see below)
 - Constructor: always `super(ctlr, config, state)` first; instantiate sub-modules here
-- Other plugs access via `ctlr.getPlug<MyPlug>("myPlug")`
+- Other plugs access via `ctlr.plug<MyPlug>("myPlug")`
 
 ### GSWL-MSC Pattern - wire() comment section order
 
@@ -150,16 +150,14 @@ export class MyComp extends BaseComponent<MyConfig, MyState, HTMLButtonElement> 
 - Initialized via `ComponentRegistry.init<T>("name", ctlr)` -> calls `create()` then `setup()`
 - `hide/show/disable/enable()` - CSS class toggles provided by base
 - `setBtnARIA(doubleKeyAction?)` - sets aria attrs from `this.state.label` and `this.state.cmd`
-- Acquire plug refs in `wire()`: `this.plug = this.ctlr.getPlug<TimePlug>("time")`
--
-
----
+- Acquire plug refs in `wire()`: `this.plug = this.ctlr.plug<TimePlug>("time")`
+- ***
 
 ## Controller (The God Object)
 
 | Member                                              | Description                                                            |
 | --------------------------------------------------- | ---------------------------------------------------------------------- |
-| `ctlr.getPlug<T>(name)`                             | Get plug by plugName                                                   |
+| `ctlr.plug<T>(name)`                                | Get plug by plugName                                                   |
 | `ctlr.config`                                       | `Reactive<VideoBuild>` - full build config                             |
 | `ctlr.state`                                        | `Reactive<RuntimeState>` - readyState, dimensions                      |
 | `ctlr.media`                                        | `Reactive<CtlrMedia>` - state, intent, status, settings, tech, element |

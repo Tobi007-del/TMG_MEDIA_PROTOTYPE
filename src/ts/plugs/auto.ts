@@ -1,8 +1,7 @@
 import { BasePlug, PlaylistPlug, ToastsPlug, TimePlug } from ".";
-import type { REvent } from "../types/reactor";
+import { type REvent, type DeepPartial } from "../sia-reactor";
 import { CtlrConfig } from "../types/config";
 import { CtlrMedia } from "../types/contract";
-import type { DeepPartial } from "../types/obj";
 import type { AptAutoplayOption, PosterPreview } from "../types/generics";
 import { isStr, clamp, addSources } from "../utils";
 
@@ -68,12 +67,12 @@ export class AutoPlug extends BasePlug<Auto> {
   }
 
   protected autonextVideo = (): void => {
-    if (!this.media.status.loadedMetadata || !this.ctlr.config.playlist || this.config.next.value < 0 || !this.canAutoMovePlaylist || this.ctlr.getPlug<PlaylistPlug>("playlist")!.currentIndex >= this.ctlr.config.playlist.length - 1 || this.media.state.paused || this.media.status.waiting) return;
+    if (!this.media.status.loadedMetadata || !this.ctlr.config.playlist || this.config.next.value < 0 || !this.canAutoMovePlaylist || this.ctlr.plug<PlaylistPlug>("playlist")!.currentIndex >= this.ctlr.config.playlist.length - 1 || this.media.state.paused || this.media.status.waiting) return;
     this.canAutoMovePlaylist = false;
     const count = clamp(1, Math.round((this.ctlr.settings.time.end ?? this.media.status.duration) - this.media.state.currentTime), this.config.next.value),
-      v = this.ctlr.config.playlist[this.ctlr.getPlug<PlaylistPlug>("playlist")!.currentIndex + 1],
-      toastsPlug = this.ctlr.getPlug<ToastsPlug>("toasts"),
-      timePlug = this.ctlr.getPlug<TimePlug>("time");
+      v = this.ctlr.config.playlist[this.ctlr.plug<PlaylistPlug>("playlist")!.currentIndex + 1],
+      toastsPlug = this.ctlr.plug<ToastsPlug>("toasts"),
+      timePlug = this.ctlr.plug<TimePlug>("time");
     const nVTId = toastsPlug?.toast?.("", {
       autoClose: count * 1000,
       hideProgressBar: false,
@@ -91,7 +90,7 @@ export class AutoPlug extends BasePlug<Auto> {
         const el = this.ctlr.queryDOM(".tmg-video-next-countdown");
         if (el) el.textContent = String(Math.round((count * 1000 - time) / 1000) || 1);
       },
-      onClose: (timeElapsed) => (removeListeners(), timeElapsed && this.ctlr.getPlug<PlaylistPlug>("playlist")?.nextVideo()),
+      onClose: (timeElapsed) => (removeListeners(), timeElapsed && this.ctlr.plug<PlaylistPlug>("playlist")?.nextVideo()),
       tag: "tmg-anvi",
     });
     const cleanUp = (permanent = false) => (nVTId && window.t007?.toast.dismiss(nVTId, "instant"), (this.nextVideoPreview = null), (this.canAutoMovePlaylist = !permanent)),
@@ -103,7 +102,7 @@ export class AutoPlug extends BasePlug<Auto> {
     if (v.sources?.length) addSources(v.sources, nVP);
     ["loadedmetadata", "loaded", "durationchange"].forEach((e) => nVP?.addEventListener(e, ({ target: p }) => ((p as HTMLVideoElement).nextElementSibling!.textContent = timePlug?.toTimeText((p as HTMLVideoElement).duration) ?? "0:00")));
     this.ctlr.settings.auto.next.preview = this.config.next.preview; // force update
-    nVP?.previousElementSibling?.addEventListener("click", () => (cleanUp(true), this.ctlr.getPlug<PlaylistPlug>("playlist")?.nextVideo()), { capture: true });
+    nVP?.previousElementSibling?.addEventListener("click", () => (cleanUp(true), this.ctlr.plug<PlaylistPlug>("playlist")?.nextVideo()), { capture: true });
   };
 }
 

@@ -2,7 +2,7 @@ import { isStr, createEl, clamp } from ".";
 
 // Types
 type RGB = [number, number, number];
-type DominantColorFormat = "rgb" | "hex";
+type ColorFormat = "rgb" | "hex";
 
 // RGB Analysis
 export function getRGBBri([r, g, b]: RGB): number {
@@ -20,7 +20,7 @@ export function clampRGBBri([r, g, b]: RGB, m = 40): RGB {
 }
 
 // Dominant Color Detection
-export async function getDominantColor(src: string | HTMLImageElement | HTMLCanvasElement | { canvas: HTMLCanvasElement; width: number; height: number }, format: DominantColorFormat = "rgb", raw = false): Promise<string | RGB | null> {
+export async function getDominantColor(src: string | HTMLImageElement | HTMLCanvasElement | { canvas: HTMLCanvasElement; width: number; height: number }, format: ColorFormat = "rgb", raw = false): Promise<string | RGB | null> {
   if (isStr(src))
     src = await new Promise<HTMLImageElement>((res, rej) => {
       const i = createEl("img", { src: String(src), crossOrigin: "anonymous", onload: () => res(i), onerror: () => rej(new Error(`Image load error: ${src}`)) });
