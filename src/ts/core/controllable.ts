@@ -11,7 +11,7 @@ export abstract class Controllable<Config = any, State = any> {
   protected readonly media: Controller["media"];
   public readonly ctlr: Controller;
   public config: Config; // may be a reactive obj node or the obj itself
-  public state!: State extends object ? Reactive<State> : State; // for reactivity needs of those who pass it up
+  public readonly state!: State extends object ? Reactive<State> : State; // for reactivity needs of those who pass it up
 
   constructor(ctlr: Controller, config: Config, state?: State) {
     guardAllMethods(this, ctlr.guard);

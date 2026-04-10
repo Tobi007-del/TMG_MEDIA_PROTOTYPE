@@ -12,7 +12,7 @@ export class PersistPlug extends BasePlug<Persist> {
     // Variables Assignment
     this.plugin = new PersistPlugin({ key: `TMG_${this.ctlr.id}_SETTINGS`, ...(this.config as any) });
     // Utility Injection
-    this.ctlr.config.__Reactor__.plugIn(this.plugin);
+    this.ctlr.config.plugIn(this.plugin);
   }
 
   public wire() {

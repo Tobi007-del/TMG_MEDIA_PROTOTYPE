@@ -38,7 +38,7 @@ export class Controller {
     this.setReadyState(0, medium);
     guardAllMethods(this, this.guard);
     this.id = build.id;
-    this.config = reactive(volatile(build), { referenceTracking: true, smartCloning: true }); // `lineageTracing: false` so clone before reassigning "already in state" objects, `referenceTracking: true` & `smartCloning: true` for structural sharing
+    this.config = reactive(volatile(build)); // `lineageTracing: false` so clone before reassigning "already in state" objects
     this.state = reactive<CtlrState>(STATE_BUILD);
     const defs = getMediaReport(medium); // returns defaults and initials
     this.media = reactive<CtlrMedia>({

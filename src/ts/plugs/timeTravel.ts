@@ -12,7 +12,7 @@ export class TimeTravelPlug extends BasePlug<TimeTravel> {
     // Variables Assignment
     this.plugin = new TimeTravelPlugin(this.config);
     // Utility Injection
-    this.media.__Reactor__.plugIn(this.plugin);
+    this.media.plugIn(this.plugin);
   }
 
   public wire() {
