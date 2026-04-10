@@ -12,7 +12,7 @@ export class ObjectFitPlug extends BasePlug<ObjectFit> {
 
   public wire(): void {
     // Ctlr Config Getters
-    // this.ctlr.config.get("settings.objectFit", () => this.ctlr.settings.css.objectFit, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
+    this.ctlr.config.get("settings.objectFit", () => this.ctlr.settings.css.objectFit, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
     // ----------- Watchers
     this.ctlr.config.watch("settings.objectFit", (value) => (this.config = value), { signal: this.signal }); // #COMPUTED: config can lose reference
     this.ctlr.config.watch("settings.objectFit", this.forwardObjectFit, { signal: this.signal, immediate: "auto" });

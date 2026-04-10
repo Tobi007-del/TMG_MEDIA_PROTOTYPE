@@ -26,7 +26,9 @@ export class SrcPlug extends BasePlug<Src> {
   public static readonly isCore: boolean = true;
 
   public wire() {
-    // Ctlr Config Watchers
+    // Ctlr Config Getters
+    this.ctlr.config.get("src", () => this.media.state.src, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
+    // ----------- Watchers
     this.ctlr.config.watch("src", this.forwardSrc, { signal: this.signal, immediate: "auto" });
   }
 
@@ -40,6 +42,9 @@ export class SourcesPlug extends BasePlug<Sources> {
   public static readonly isCore: boolean = true;
 
   public wire() {
+    // Ctlr Config Getters
+    this.ctlr.config.get("sources", () => this.media.state.sources, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
+    // ----------- Watchers
     this.ctlr.config.watch("sources", this.forwardSources, { signal: this.signal, immediate: "auto" });
   }
 
@@ -53,7 +58,9 @@ export class SrcObjectPlug extends BasePlug<SrcObject> {
   public static readonly isCore: boolean = true;
 
   public wire() {
-    // Ctlr Config Watchers
+    // Ctlr Config Getters
+    this.ctlr.config.get("srcObject", () => this.media.state.srcObject, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
+    // ----------- Watchers
     this.ctlr.config.watch("srcObject", this.forwardSrcObject, { signal: this.signal, immediate: "auto" });
   }
 
@@ -67,7 +74,9 @@ export class TracksPlug extends BasePlug<Tracks> {
   public static readonly isCore: boolean = true;
 
   public wire() {
-    // Ctlr Config Watchers
+    // Ctlr Config Getters
+    this.ctlr.config.get("tracks", () => this.media.state.tracks, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
+    // ----------- Watchers
     this.ctlr.config.watch("tracks", this.forwardTracks, { signal: this.signal, immediate: "auto" });
   }
 
@@ -80,7 +89,9 @@ export class PlaysInlinePlug extends BasePlug<PlaysInline> {
   public static readonly plugName: string = "playsInline";
 
   public wire() {
-    // Ctlr Config Watchers
+    // Ctlr Config Getters
+    this.ctlr.config.get("settings.playsInline", () => this.media.state.playsInline, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
+    // ----------- Watchers
     this.ctlr.config.watch("settings.playsInline", this.forwardPlaysInline, { signal: this.signal, immediate: "auto" });
   }
 

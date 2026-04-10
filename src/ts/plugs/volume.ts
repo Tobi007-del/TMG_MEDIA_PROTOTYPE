@@ -44,7 +44,7 @@ export class VolumePlug extends BasePlug<Volume, VolumeState> {
     // Event Listeners
     this.media.element.addEventListener("volumechange", this.handleNativeVolumeChange, { signal: this.signal });
     // Ctlr Config Getters
-    // this.ctlr.config.get("settings.volume.value", (value) => (this.gainNode ? Math.round(((this.gainNode.gain?.value ?? 2) / 2) * 100) : value), true);  // VIRTUAL: reliable return value
+    this.ctlr.config.get("settings.volume.value", (value) => (this.gainNode ? Math.round(((this.gainNode.gain?.value ?? 2) / 2) * 100) : value), true);  // VIRTUAL: reliable return value
     // ----------- Setters
     this.ctlr.config.set("settings.volume.value", (value) => clamp(this.config.min, value, this.config.max), { signal: this.signal });
     // ----------- Watchers

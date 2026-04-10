@@ -204,7 +204,7 @@ export class MyComp extends BaseComponent<MyConfig, MyState, HTMLButtonElement> 
 Plugs that own a browser API for an intent path listen with `{ capture: true }`:
 
 ```ts
-this.ctlr.media.on("intent.volume", this.handleVolumeIntent, { capture: true, signal: this.signal });
+this.media.on("intent.volume", this.handleVolumeIntent, { capture: true, signal: this.signal });
 
 protected handleVolumeIntent(e) {
   if (e.resolved) return;          // stand down if already claimed

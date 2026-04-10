@@ -1,6 +1,75 @@
 "use strict";
 (() => {
-  // node_modules/@t007/utils/node_modules/sia-reactor/dist/chunk-UQIMMJTY.js
+  // node_modules/sia-reactor/dist/chunk-5A44QFT6.js
+  function stringifyKeyEvent(e) {
+    const parts = [];
+    if (e.ctrlKey) parts.push("ctrl");
+    if (e.altKey) parts.push("alt");
+    if (e.shiftKey) parts.push("shift");
+    if (e.metaKey) parts.push("meta");
+    parts.push(e.key?.toLowerCase() ?? "");
+    return parts.join("+");
+  }
+  function cleanKeyCombo(combo) {
+    const clean = (combo2) => {
+      const m = ["ctrl", "alt", "shift", "meta"], alias = { cmd: "meta", space: " " };
+      if (combo2 === " " || combo2 === "+") return combo2;
+      combo2 = combo2.replace(/\+\s*\+$/, "+plus");
+      const p = combo2.toLowerCase().split("+").filter((k) => k !== "").map((k) => alias[k] || (k === "plus" ? "+" : k.trim() || " "));
+      return [...p.filter((k) => m.includes(k)).sort((a, b) => m.indexOf(a) - m.indexOf(b)), ...p.filter((k) => !m.includes(k)) || ""].join("+");
+    };
+    return Array.isArray(combo) ? combo.map(clean) : clean(combo);
+  }
+  function matchKeys(required, actual, strict = false) {
+    actual = cleanKeyCombo(actual);
+    const match = (required2, actual2) => {
+      required2 = cleanKeyCombo(required2);
+      if (strict) return required2 === actual2;
+      const reqKeys = required2.split("+"), actKeys = actual2.split("+");
+      return reqKeys.every((k) => actKeys.includes(k));
+    };
+    return Array.isArray(required) ? required.some((req) => match(req, actual)) : match(required, actual);
+  }
+  function getTermsForKey(combo, settings) {
+    const terms = { override: false, block: false, whitelisted: false, action: null }, { overrides = [], shortcuts = {}, blocks = [], strictMatches: s = false, whitelist = [] } = settings || {};
+    combo = cleanKeyCombo(combo);
+    if (matchKeys(overrides, combo, s)) terms.override = true;
+    if (matchKeys(blocks, combo, s)) terms.block = true;
+    if (matchKeys(whitelist, combo)) terms.whitelisted = true;
+    terms.action = Object.keys(shortcuts).find((key) => matchKeys(shortcuts[key], combo, s)) || null;
+    return terms;
+  }
+  function keyEventAllowed(e, settings) {
+    if (settings.disabled || (e.key === " " || e.key === "Enter") && (e.target?.ownerDocument || document).activeElement?.tagName === "BUTTON" || (e.target?.ownerDocument || document).activeElement?.matches("input,textarea,[contenteditable='true']")) return false;
+    const combo = stringifyKeyEvent(e), { override, block, action, whitelisted } = getTermsForKey(combo, settings);
+    if (block) return false;
+    if (override) e.preventDefault();
+    if (action) return action;
+    if (whitelisted) return e.key.toLowerCase();
+    return false;
+  }
+  var formatKeyForDisplay = (combo) => ` ${(Array.isArray(combo) ? combo : [combo]).map((c) => `(${cleanKeyCombo(c).replace(" ", "space")})`).join(" or ")}`;
+  function parseForARIAKS(s, formatted = true) {
+    const m = { ctrl: "Control", cmd: "Meta", space: "Space", plus: "+" };
+    return (formatted && !Array.isArray(s) ? s : formatKeyForDisplay(s)).toLowerCase().replace(/[()]/g, "").replace(/\bor\b/g, " ").replace(/\w+/g, (k) => m[k] || k).replace(/\s+/g, " ").trim();
+  }
+  function createEl(tag, props, dataset, styles, el = tag ? document?.createElement(tag) : null) {
+    return assignEl(el, props, dataset, styles), el;
+  }
+  function assignEl(el, props, dataset, styles) {
+    if (!el) return;
+    if (props) {
+      for (const k of Object.keys(props)) if (props[k] !== void 0) el[k] = props[k];
+    }
+    if (dataset) {
+      for (const k of Object.keys(dataset)) if (dataset[k] !== void 0) el.dataset[k] = String(dataset[k]);
+    }
+    if (styles) {
+      for (const k of Object.keys(styles)) if (styles[k] !== void 0) el.style[k] = styles[k];
+    }
+  }
+
+  // node_modules/sia-reactor/dist/chunk-P37ADJMM.js
   function onAllMethods(owner, callback, skipOwn = true, nested = false) {
     let proto = owner;
     while (proto && proto !== Object.prototype) {
@@ -17,35 +86,188 @@
       owner2[method] = owner2[method].bind(owner2);
     });
   }
+  function guardAllMethods(owner, guardFn = guardMethod, bound = true) {
+    onAllMethods(owner, (method, owner2) => {
+      owner2[method] = guardFn(bound ? owner2[method].bind(owner2) : owner2[method]);
+    });
+  }
+  function guardMethod(fn, onError = (e) => console.error(e)) {
+    return ((...args) => {
+      try {
+        const result = fn(...args);
+        return result instanceof Promise ? result.catch((e) => onError(e)) : result;
+      } catch (e) {
+        onError(e);
+      }
+    });
+  }
+  function setTimeout2(handler, timeout, ...args) {
+    const sig = args[0] instanceof AbortSignal ? args.shift() : void 0;
+    if (sig?.aborted) return -1;
+    const win = args[0] instanceof Window ? args.shift() : window;
+    if (!sig) return win.setTimeout(handler, timeout, ...args);
+    const id = win.setTimeout(() => (sig.removeEventListener("abort", kill), "string" === typeof handler ? new Function(handler) : handler(...args)), timeout), kill = () => win.clearTimeout(id);
+    return sig.addEventListener("abort", kill, { once: true }), id;
+  }
   function clamp(min = 0, val, max = Infinity) {
     return Math.min(Math.max(val, min), max);
   }
 
-  // node_modules/@t007/utils/node_modules/sia-reactor/dist/chunk-4MJUBEI7.js
+  // node_modules/sia-reactor/dist/chunk-DP74DVRT.js
+  var CTX = {
+    /** Flag indicating whether the application is running in development mode. */
+    isDevEnv: "undefined" !== typeof process ? true : true,
+    /** active `Autotracker` instance, override for automatic dependency collection on `Reactor` traps. */
+    autotracker: null
+  };
+  var RAW = /* @__PURE__ */ Symbol.for("S.I.A_RAW");
+  var INERTIA = /* @__PURE__ */ Symbol.for("S.I.A_INERTIA");
+  var REJECTABLE = /* @__PURE__ */ Symbol.for("S.I.A_REJECTABLE");
+  var INDIFFABLE = /* @__PURE__ */ Symbol.for("S.I.A_INDIFFABLE");
+  var TERMINATOR = /* @__PURE__ */ Symbol.for("S.I.A_TERMINATOR");
+  var VERSION = /* @__PURE__ */ Symbol.for("S.I.A_VERSION");
+  var SSVERSION = /* @__PURE__ */ Symbol.for("S.I.A_SNAPSHOT_VERSION");
   var RTR_BATCH = "undefined" !== typeof window ? ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window) : "undefined" !== typeof process && process.nextTick ? process.nextTick : setTimeout;
   var RTR_LOG = console.log.bind(console, "[S.I.A Reactor]");
   var EVT_WARN = console.warn.bind(console, "[S.I.A Event]");
+  var EVT_OPTS = { LISTENER: ["capture", "depth", "once", "signal", "immediate"], MEDIATOR: ["lazy", "signal", "immediate"] };
   var NIL = Object.freeze({});
+  var NOOP = () => {
+  };
+  var arrRx = /^([^\[\]]+)\[(\d+)\]$/;
   function isObj(obj, arraycheck = true) {
     return "object" === typeof obj && obj !== null && (arraycheck ? !Array.isArray(obj) : true);
   }
+  function isPOJO(obj, config = NIL, typecheck = true) {
+    return (typecheck ? isObj(obj, false) : true) && (config.crossRealms ? Object.prototype.toString.call(obj) === "[object Object]" : obj.constructor === Object);
+  }
+  function canHandle(obj, config = NIL, typecheck = true) {
+    if (typecheck && !isObj(obj, false)) return false;
+    if (Array.isArray(obj) || !config.preserveContext && isPOJO(obj, config, false)) return true;
+    if (config.preserveContext) return !(obj instanceof Map) && !(obj instanceof Set) && !(obj instanceof WeakMap) && !(obj instanceof WeakSet) && !(obj instanceof Error) && !(obj instanceof Number) && !(obj instanceof Date) && !(obj instanceof String) && !(obj instanceof RegExp) && !(obj instanceof ArrayBuffer) && !(obj instanceof Promise);
+    return false;
+  }
+  function getAny(source, key, separator = ".", keyFunc) {
+    if (key === "*") return source;
+    if (!key.includes(separator)) return source[keyFunc ? keyFunc(key) : key];
+    const keys2 = key.split(separator);
+    let currObj = source;
+    for (let i = 0, len = keys2.length; i < len; i++) {
+      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRx);
+      if (match) {
+        const [, key3, iStr] = match;
+        if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return void 0;
+        currObj = currObj[key3][Number(iStr)];
+      } else {
+        if (!isObj(currObj) || !(key2 in currObj)) return void 0;
+        currObj = currObj[key2];
+      }
+    }
+    return currObj;
+  }
+  function setAny(target, key, value, separator = ".", keyFunc) {
+    if (key === "*") return Object.assign(target, value);
+    if (!key.includes(separator)) return void (target[keyFunc ? keyFunc(key) : key] = value);
+    const keys2 = key.split(separator);
+    for (let currObj = target, i = 0, len = keys2.length; i < len; i++) {
+      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRx);
+      if (match) {
+        const [, key3, iStr] = match;
+        if (!Array.isArray(currObj[key3])) currObj[key3] = [];
+        if (i === len - 1) currObj[key3][Number(iStr)] = value;
+        else currObj[key3][Number(iStr)] ||= {}, currObj = currObj[key3][Number(iStr)];
+      } else {
+        if (i === len - 1) currObj[key2] = value;
+        else currObj[key2] ||= {}, currObj = currObj[key2];
+      }
+    }
+  }
+  function deleteAny(target, key, separator = ".", keyFunc) {
+    if (key === "*") {
+      const keys22 = Object.keys(target);
+      for (let i = 0, len = keys22.length; i < len; i++) delete target[keys22[i]];
+      return;
+    }
+    if (!key.includes(separator)) return void delete target[keyFunc ? keyFunc(key) : key];
+    const keys2 = key.split(separator);
+    for (let currObj = target, i = 0, len = keys2.length; i < len; i++) {
+      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRx);
+      if (match) {
+        const [, key3, iStr] = match;
+        if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return;
+        if (i === len - 1) delete currObj[key3][Number(iStr)];
+        else currObj = currObj[key3][Number(iStr)];
+      } else {
+        if (!isObj(currObj) || !(key2 in currObj)) return;
+        if (i === len - 1) delete currObj[key2];
+        else currObj = currObj[key2];
+      }
+    }
+  }
+  function inAny(source, key, separator = ".", keyFunc) {
+    if (key === "*") return true;
+    if (!key.includes(separator)) return key in source;
+    const keys2 = key.split(separator);
+    for (let currObj = source, i = 0, len = keys2.length; i < len; i++) {
+      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRx);
+      if (match) {
+        const [, key3, iStr] = match;
+        if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return false;
+        if (i === len - 1) return true;
+        currObj = currObj[key3][Number(iStr)];
+      } else {
+        if (!isObj(currObj) || !(key2 in currObj)) return false;
+        if (i === len - 1) return true;
+        currObj = currObj[key2];
+      }
+    }
+    return true;
+  }
+  function parseAnyObj(obj, separator = ".", keyFunc = (p) => p, seen = /* @__PURE__ */ new WeakSet()) {
+    if (!isObj(obj) || seen.has(obj)) return obj;
+    seen.add(obj);
+    const result = {};
+    Object.keys(obj).forEach((k) => k === "*" || k.includes(separator) ? setAny(result, k, parseAnyObj(obj[k], separator, keyFunc, seen), separator, keyFunc) : result[k] = isObj(obj[k]) ? parseAnyObj(obj[k], separator, keyFunc, seen) : obj[k]);
+    return result;
+  }
+  function parseEvtOpts(options, opts, boolOpt = opts[0], result = {}) {
+    return Object.assign(result, "boolean" === typeof options ? { [boolOpt]: options } : options), result;
+  }
+  function mergeObjs(o1 = {}, o2 = {}) {
+    const merged = { ...o1 || {}, ...o2 || {} };
+    return Object.keys(merged).forEach((k) => isObj(o1?.[k]) && isObj(o2?.[k]) && (merged[k] = mergeObjs(o1[k], o2[k]))), merged;
+  }
+  function getTrailRecords(obj, path, reverse = false) {
+    const parts = path.split("."), chain = [["*", obj, obj]];
+    for (let acc = "", currObj = obj, i = 0, len = parts.length; i < len; i++) chain.push([acc += (i ? "." : "") + parts[i], currObj, currObj = currObj?.[parts[i]]]);
+    return reverse ? chain.reverse() : chain;
+  }
+  function deepClone(obj, config = NIL, seen = /* @__PURE__ */ new WeakMap()) {
+    if (!obj || "object" !== typeof obj) return obj;
+    const cloned = seen.get(obj);
+    if (cloned) return cloned;
+    if (!canHandle(obj, config, false)) return obj;
+    const clone = config.preserveContext ? Object.create(Object.getPrototypeOf(obj)) : Array.isArray(obj) ? [] : {};
+    seen.set(obj, clone);
+    const keys2 = config.preserveContext ? Reflect.ownKeys(obj) : Object.keys(obj);
+    for (let i = 0, len = keys2.length; i < len; i++) clone[keys2[i]] = deepClone(obj[keys2[i]], config, seen);
+    return clone;
+  }
+  function nuke(target) {
+    let proto = target;
+    while (proto && proto !== Object.prototype) {
+      const keys2 = Object.getOwnPropertyNames(proto);
+      for (let i = 0, len = keys2.length; i < len; i++) {
+        if (keys2[i] === "constructor") continue;
+        const desc = Object.getOwnPropertyDescriptor(proto, keys2[i]);
+        if (desc && ("function" === typeof desc.value || desc.get || desc.set)) continue;
+        proto[keys2[i]] = null;
+      }
+      proto = Object.getPrototypeOf(proto);
+    }
+  }
 
   // node_modules/@t007/utils/dist/index.js
-  function createEl(tag, props, dataset, styles, el = tag ? document?.createElement(tag) : null) {
-    return assignEl(el, props, dataset, styles), el;
-  }
-  function assignEl(el, props, dataset, styles) {
-    if (!el) return;
-    if (props) {
-      for (const k of Object.keys(props)) if (props[k] !== void 0) el[k] = props[k];
-    }
-    if (dataset) {
-      for (const k of Object.keys(dataset)) if (dataset[k] !== void 0) el.dataset[k] = String(dataset[k]);
-    }
-    if (styles) {
-      for (const k of Object.keys(styles)) if (styles[k] !== void 0) el.style[k] = styles[k];
-    }
-  }
   var VIRTUAL_RESOURCE = /* @__PURE__ */ Symbol.for("T007_VIRTUAL_RESOURCE");
   function loadResource(req, type = "style", { module, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, attempts = 3, retryKey = false } = {}, w = window) {
     w.t007 ??= {}, w.t007._resourceCache ??= {};
@@ -198,161 +420,7 @@
     window.T007_DIALOG_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/dialog@latest/dist/index.min.css`;
   }
 
-  // ../t007-tools/packages/sia-reactor/dist/chunk-DP74DVRT.js
-  var CTX = {
-    /** Flag indicating whether the application is running in development mode. */
-    isDevEnv: "undefined" !== typeof process ? true : true,
-    /** active `Autotracker` instance, override for automatic dependency collection on `Reactor` traps. */
-    autotracker: null
-  };
-  var RAW = /* @__PURE__ */ Symbol.for("S.I.A_RAW");
-  var INERTIA = /* @__PURE__ */ Symbol.for("S.I.A_INERTIA");
-  var REJECTABLE = /* @__PURE__ */ Symbol.for("S.I.A_REJECTABLE");
-  var INDIFFABLE = /* @__PURE__ */ Symbol.for("S.I.A_INDIFFABLE");
-  var TERMINATOR = /* @__PURE__ */ Symbol.for("S.I.A_TERMINATOR");
-  var VERSION = /* @__PURE__ */ Symbol.for("S.I.A_VERSION");
-  var SSVERSION = /* @__PURE__ */ Symbol.for("S.I.A_SNAPSHOT_VERSION");
-  var RTR_BATCH2 = "undefined" !== typeof window ? ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window) : "undefined" !== typeof process && process.nextTick ? process.nextTick : setTimeout;
-  var RTR_LOG2 = console.log.bind(console, "[S.I.A Reactor]");
-  var EVT_WARN2 = console.warn.bind(console, "[S.I.A Event]");
-  var EVT_OPTS = { LISTENER: ["capture", "depth", "once", "signal", "immediate"], MEDIATOR: ["lazy", "signal", "immediate"] };
-  var NIL2 = Object.freeze({});
-  var NOOP = () => {
-  };
-  var arrRx = /^([^\[\]]+)\[(\d+)\]$/;
-  function isObj2(obj, arraycheck = true) {
-    return "object" === typeof obj && obj !== null && (arraycheck ? !Array.isArray(obj) : true);
-  }
-  function isPOJO2(obj, config = NIL2, typecheck = true) {
-    return (typecheck ? isObj2(obj, false) : true) && (config.crossRealms ? Object.prototype.toString.call(obj) === "[object Object]" : obj.constructor === Object);
-  }
-  function canHandle2(obj, config = NIL2, typecheck = true) {
-    if (typecheck && !isObj2(obj, false)) return false;
-    if (Array.isArray(obj) || !config.preserveContext && isPOJO2(obj, config, false)) return true;
-    if (config.preserveContext) return !(obj instanceof Map) && !(obj instanceof Set) && !(obj instanceof WeakMap) && !(obj instanceof WeakSet) && !(obj instanceof Error) && !(obj instanceof Number) && !(obj instanceof Date) && !(obj instanceof String) && !(obj instanceof RegExp) && !(obj instanceof ArrayBuffer) && !(obj instanceof Promise);
-    return false;
-  }
-  function getAny2(source, key, separator = ".", keyFunc) {
-    if (key === "*") return source;
-    if (!key.includes(separator)) return source[keyFunc ? keyFunc(key) : key];
-    const keys2 = key.split(separator);
-    let currObj = source;
-    for (let i = 0, len = keys2.length; i < len; i++) {
-      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRx);
-      if (match) {
-        const [, key3, iStr] = match;
-        if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return void 0;
-        currObj = currObj[key3][Number(iStr)];
-      } else {
-        if (!isObj2(currObj) || !(key2 in currObj)) return void 0;
-        currObj = currObj[key2];
-      }
-    }
-    return currObj;
-  }
-  function setAny2(target, key, value, separator = ".", keyFunc) {
-    if (key === "*") return Object.assign(target, value);
-    if (!key.includes(separator)) return void (target[keyFunc ? keyFunc(key) : key] = value);
-    const keys2 = key.split(separator);
-    for (let currObj = target, i = 0, len = keys2.length; i < len; i++) {
-      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRx);
-      if (match) {
-        const [, key3, iStr] = match;
-        if (!Array.isArray(currObj[key3])) currObj[key3] = [];
-        if (i === len - 1) currObj[key3][Number(iStr)] = value;
-        else currObj[key3][Number(iStr)] ||= {}, currObj = currObj[key3][Number(iStr)];
-      } else {
-        if (i === len - 1) currObj[key2] = value;
-        else currObj[key2] ||= {}, currObj = currObj[key2];
-      }
-    }
-  }
-  function deleteAny2(target, key, separator = ".", keyFunc) {
-    if (key === "*") {
-      const keys22 = Object.keys(target);
-      for (let i = 0, len = keys22.length; i < len; i++) delete target[keys22[i]];
-      return;
-    }
-    if (!key.includes(separator)) return void delete target[keyFunc ? keyFunc(key) : key];
-    const keys2 = key.split(separator);
-    for (let currObj = target, i = 0, len = keys2.length; i < len; i++) {
-      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRx);
-      if (match) {
-        const [, key3, iStr] = match;
-        if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return;
-        if (i === len - 1) delete currObj[key3][Number(iStr)];
-        else currObj = currObj[key3][Number(iStr)];
-      } else {
-        if (!isObj2(currObj) || !(key2 in currObj)) return;
-        if (i === len - 1) delete currObj[key2];
-        else currObj = currObj[key2];
-      }
-    }
-  }
-  function inAny2(source, key, separator = ".", keyFunc) {
-    if (key === "*") return true;
-    if (!key.includes(separator)) return key in source;
-    const keys2 = key.split(separator);
-    for (let currObj = source, i = 0, len = keys2.length; i < len; i++) {
-      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRx);
-      if (match) {
-        const [, key3, iStr] = match;
-        if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return false;
-        if (i === len - 1) return true;
-        currObj = currObj[key3][Number(iStr)];
-      } else {
-        if (!isObj2(currObj) || !(key2 in currObj)) return false;
-        if (i === len - 1) return true;
-        currObj = currObj[key2];
-      }
-    }
-    return true;
-  }
-  function parseAnyObj2(obj, separator = ".", keyFunc = (p) => p, seen = /* @__PURE__ */ new WeakSet()) {
-    if (!isObj2(obj) || seen.has(obj)) return obj;
-    seen.add(obj);
-    const result = {};
-    Object.keys(obj).forEach((k) => k === "*" || k.includes(separator) ? setAny2(result, k, parseAnyObj2(obj[k], separator, keyFunc, seen), separator, keyFunc) : result[k] = isObj2(obj[k]) ? parseAnyObj2(obj[k], separator, keyFunc, seen) : obj[k]);
-    return result;
-  }
-  function parseEvtOpts2(options, opts, boolOpt = opts[0], result = {}) {
-    return Object.assign(result, "boolean" === typeof options ? { [boolOpt]: options } : options), result;
-  }
-  function mergeObjs2(o1 = {}, o2 = {}) {
-    const merged = { ...o1 || {}, ...o2 || {} };
-    return Object.keys(merged).forEach((k) => isObj2(o1?.[k]) && isObj2(o2?.[k]) && (merged[k] = mergeObjs2(o1[k], o2[k]))), merged;
-  }
-  function getTrailRecords2(obj, path, reverse = false) {
-    const parts = path.split("."), chain = [["*", obj, obj]];
-    for (let acc = "", currObj = obj, i = 0, len = parts.length; i < len; i++) chain.push([acc += (i ? "." : "") + parts[i], currObj, currObj = currObj?.[parts[i]]]);
-    return reverse ? chain.reverse() : chain;
-  }
-  function deepClone2(obj, config = NIL2, seen = /* @__PURE__ */ new WeakMap()) {
-    if (!obj || "object" !== typeof obj) return obj;
-    const cloned = seen.get(obj);
-    if (cloned) return cloned;
-    if (!canHandle2(obj, config, false)) return obj;
-    const clone = config.preserveContext ? Object.create(Object.getPrototypeOf(obj)) : Array.isArray(obj) ? [] : {};
-    seen.set(obj, clone);
-    const keys2 = config.preserveContext ? Reflect.ownKeys(obj) : Object.keys(obj);
-    for (let i = 0, len = keys2.length; i < len; i++) clone[keys2[i]] = deepClone2(obj[keys2[i]], config, seen);
-    return clone;
-  }
-  function nuke2(target) {
-    let proto = target;
-    while (proto && proto !== Object.prototype) {
-      const keys2 = Object.getOwnPropertyNames(proto);
-      for (let i = 0, len = keys2.length; i < len; i++) {
-        if (keys2[i] === "constructor") continue;
-        const desc = Object.getOwnPropertyDescriptor(proto, keys2[i]);
-        if (desc && ("function" === typeof desc.value || desc.get || desc.set)) continue;
-        proto[keys2[i]] = null;
-      }
-      proto = Object.getPrototypeOf(proto);
-    }
-  }
-
-  // ../t007-tools/packages/sia-reactor/dist/chunk-VPR5SP3E.js
+  // node_modules/sia-reactor/dist/chunk-VPR5SP3E.js
   var ReactorEvent = class _ReactorEvent {
     /** No active propagation phase. */
     static NONE = 0;
@@ -414,7 +482,7 @@
       this.rejectable = payload.rejectable;
       this.bubbles = bubbles;
       if (canStamp) this.timestamp = performance.now();
-      if (canWarn) this._warn = EVT_WARN2;
+      if (canWarn) this._warn = EVT_WARN;
     }
     /** Whether propagation has been stopped. */
     get propagationStopped() {
@@ -468,7 +536,7 @@
      * @returns Composed path values in bubbling order.
      */
     composedPath() {
-      return getTrailRecords2(this.root, this.path, true).map((r) => r[2]);
+      return getTrailRecords(this.root, this.path, true).map((r) => r[2]);
     }
     get canWarn() {
       return this._warn !== NOOP;
@@ -508,7 +576,7 @@
      */
     constructor(object = {}, build) {
       this[INERTIA] = true;
-      this.config = { crossRealms: false, smartCloning: false, eventBubbling: true, lineageTracing: false, preserveContext: false, equalityFunction: Object.is, batchingFunction: RTR_BATCH2, ...build };
+      this.config = { crossRealms: false, smartCloning: false, eventBubbling: true, lineageTracing: false, preserveContext: false, equalityFunction: Object.is, batchingFunction: RTR_BATCH, ...build };
       this.core = this.proxied(object);
       if (build) this.canLog = !!build.debug;
     }
@@ -518,7 +586,7 @@
       if (this.config.referenceTracking && parent && key && !this.link(obj, parent, key, false)) return obj;
       const cached = this.proxyCache.get(obj);
       if (cached) return cached;
-      if (obj[INERTIA] || !canHandle2(obj, this.config, false)) return obj;
+      if (obj[INERTIA] || !canHandle(obj, this.config, false)) return obj;
       rejectable ||= obj[REJECTABLE];
       indiffable ||= obj[INDIFFABLE];
       const proxy = new Proxy(obj, {
@@ -647,13 +715,13 @@
     }
     // won't be called without `.config.referenceTracking` so internal guard avoided
     link(target, parent, key, typecheck = true, es) {
-      if (!canHandle2(target, this.config, typecheck)) return false;
+      if (!canHandle(target, this.config, typecheck)) return false;
       es = (this.lineage ??= /* @__PURE__ */ new WeakMap()).get(target) ?? (this.lineage.set(target, es = []), es);
       for (let i = 0, len = es.length; i < len; i += 2) if (Object.is(es[i], parent) && es[i + 1] === key) return true;
       return es.push(parent, key), true;
     }
     unlink(target, parent, key) {
-      if (!canHandle2(target, this.config)) return;
+      if (!canHandle(target, this.config)) return;
       const es = (this.lineage ??= /* @__PURE__ */ new WeakMap()).get(target);
       if (es) {
         for (let i = 0, len = es.length; i < len; i += 2) if (Object.is(es[i], parent) && es[i + 1] === key) return void es.splice(i, 2);
@@ -706,7 +774,7 @@
       if (this.queue?.size) for (const task of this.queue) task(), this.queue.delete(task);
     }
     wave(path, payload) {
-      const e = new ReactorEvent(payload, this.config.eventBubbling, this.config.eventTimeStamps, this.isLogging), chain = getTrailRecords2(this.core, path);
+      const e = new ReactorEvent(payload, this.config.eventBubbling, this.config.eventTimeStamps, this.isLogging), chain = getTrailRecords(this.core, path);
       e.eventPhase = ReactorEvent.CAPTURING_PHASE;
       for (let i = 0; i <= chain.length - 2; i++) {
         if (e.propagationStopped) break;
@@ -780,7 +848,7 @@
       return depth;
     }
     getContext(path) {
-      const lastDot = path.lastIndexOf("."), value = getAny2(this.core, path), object = lastDot === -1 ? this.core : getAny2(this.core, path.slice(0, lastDot));
+      const lastDot = path.lastIndexOf("."), value = getAny(this.core, path), object = lastDot === -1 ? this.core : getAny(this.core, path.slice(0, lastDot));
       return { path, value, key: path.slice(lastDot + 1) || "", hadKey: true, object };
     }
     bindSignal(cord, sig) {
@@ -792,7 +860,7 @@
       obj = obj[RAW] || obj;
       const cloned = seen.get(obj);
       if (cloned) return cloned;
-      if (!canHandle2(obj, this.config, false)) return obj;
+      if (!canHandle(obj, this.config, false)) return obj;
       const version = obj[VERSION] || 0, cached = !raw && this.config.smartCloning && (this.snapCache ??= /* @__PURE__ */ new WeakMap()).get(obj);
       if (cached && obj[SSVERSION] === version) return cached;
       const clone = !raw ? this.config.preserveContext ? Object.create(Object.getPrototypeOf(obj)) : Array.isArray(obj) ? [] : {} : obj[RAW] || obj;
@@ -803,7 +871,7 @@
       return clone;
     }
     syncAdd(key, path, cb, opts, onImmediate = NOOP) {
-      const { lazy = false, once = false, signal, immediate = false } = parseEvtOpts2(opts, EVT_OPTS.MEDIATOR), store = this[`${key}${key.endsWith("t") ? "t" : ""}ers`] ??= /* @__PURE__ */ new Map();
+      const { lazy = false, once = false, signal, immediate = false } = parseEvtOpts(opts, EVT_OPTS.MEDIATOR), store = this[`${key}${key.endsWith("t") ? "t" : ""}ers`] ??= /* @__PURE__ */ new Map();
       let cords = store.get(path), cord;
       if (cords) {
         for (let i = 0, len = cords.length; i < len; i++)
@@ -836,11 +904,11 @@
      * const cleanup = rtr.get("user.name", (value) => String(value).trim());
      */
     get(path, callback, options) {
-      return this.syncAdd("get", path, callback, options, (imm) => (imm !== "auto" || inAny2(this.core, path)) && getAny2(this.core, path));
+      return this.syncAdd("get", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && getAny(this.core, path));
     }
     /** Registers a get mediator for a path that only triggers once. */
     gonce(path, callback, options) {
-      return this.get(path, callback, { ...parseEvtOpts2(options, EVT_OPTS.MEDIATOR), once: true });
+      return this.get(path, callback, { ...parseEvtOpts(options, EVT_OPTS.MEDIATOR), once: true });
     }
     /**
      * Removes a get mediator for a path.
@@ -861,11 +929,11 @@
      * rtr.set("user.name", (value) => String(value).trim());
      */
     set(path, callback, options) {
-      return this.syncAdd("set", path, callback, options, (imm) => (imm !== "auto" || inAny2(this.core, path)) && setAny2(this.core, path, getAny2(this.core, path)));
+      return this.syncAdd("set", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && setAny(this.core, path, getAny(this.core, path)));
     }
     /** Registers a set mediator for a path that only triggers once. */
     sonce(path, callback, options) {
-      return this.set(path, callback, Object.assign(parseEvtOpts2(options, EVT_OPTS.MEDIATOR), { once: true }));
+      return this.set(path, callback, Object.assign(parseEvtOpts(options, EVT_OPTS.MEDIATOR), { once: true }));
     }
     /**
      * Removes a set mediator for a path.
@@ -886,11 +954,11 @@
      * rtr.delete("cache.temp", () => TERMINATOR);
      */
     delete(path, callback, options) {
-      return this.syncAdd("delete", path, callback, options, (imm) => (imm !== "auto" || inAny2(this.core, path)) && deleteAny2(this.core, path, void 0));
+      return this.syncAdd("delete", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && deleteAny(this.core, path, void 0));
     }
     /** Registers a delete mediator for a path that only triggers once. */
     donce(path, callback, options) {
-      return this.delete(path, callback, Object.assign(parseEvtOpts2(options, EVT_OPTS.MEDIATOR), { once: true }));
+      return this.delete(path, callback, Object.assign(parseEvtOpts(options, EVT_OPTS.MEDIATOR), { once: true }));
     }
     /**
      * Removes a delete mediator for a path.
@@ -912,11 +980,11 @@
      * const cleanup = rtr.watch("user.name", (value) => console.log(value));
      */
     watch(path, callback, options) {
-      return this.syncAdd("watch", path, callback, options, (imm) => imm !== "auto" && inAny2(this.core, path) && ((target) => callback(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false }))(this.getContext(path)));
+      return this.syncAdd("watch", path, callback, options, (imm) => imm !== "auto" && inAny(this.core, path) && ((target) => callback(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false }))(this.getContext(path)));
     }
     /** Registers a watcher for a path that only triggers once. */
     wonce(path, callback, options) {
-      return this.watch(path, callback, Object.assign(parseEvtOpts2(options, EVT_OPTS.MEDIATOR), { once: true }));
+      return this.watch(path, callback, Object.assign(parseEvtOpts(options, EVT_OPTS.MEDIATOR), { once: true }));
     }
     /**
      * Removes a watcher for a path.
@@ -939,7 +1007,7 @@
      */
     on(path, callback, options) {
       this.listeners ??= /* @__PURE__ */ new Map();
-      const { capture = false, once = false, signal, immediate = false, depth } = parseEvtOpts2(options, EVT_OPTS.LISTENER);
+      const { capture = false, once = false, signal, immediate = false, depth } = parseEvtOpts(options, EVT_OPTS.LISTENER);
       let cords = this.listeners.get(path), cord;
       if (cords) {
         for (let i = 0, len = cords.length; i < len; i++)
@@ -950,7 +1018,7 @@
       }
       if (cord) return cord.clup;
       cord = { cb: callback, capture, depth, once, clup: () => this.off(path, callback, options), lDepth: depth !== void 0 ? this.getDepth(path) : depth };
-      if (immediate && (immediate !== "auto" || inAny2(this.core, path))) {
+      if (immediate && (immediate !== "auto" || inAny(this.core, path))) {
         const target = this.getContext(path);
         callback(new ReactorEvent({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, this.config.eventBubbling, this.isLogging));
       }
@@ -959,7 +1027,7 @@
     }
     /** Registers an event listener for a path that only triggers once. */
     once(path, callback, options) {
-      return this.on(path, callback, Object.assign(parseEvtOpts2(options, EVT_OPTS.LISTENER), { once: true }));
+      return this.on(path, callback, Object.assign(parseEvtOpts(options, EVT_OPTS.LISTENER), { once: true }));
     }
     /**
      * Removes an event listener for a path.
@@ -975,7 +1043,7 @@
     off(path, callback, options) {
       const cords = this.listeners?.get(path);
       if (!cords) return void 0;
-      const { capture } = parseEvtOpts2(options, EVT_OPTS.LISTENER);
+      const { capture } = parseEvtOpts(options, EVT_OPTS.LISTENER);
       for (let i = 0, len = cords.length; i < len; i++) if (Object.is(cords[i].cb, callback) && cords[i].capture === capture) return cords[i].sclup(), cords.splice((len--, i--), 1), !cords.length && this.listeners.delete(path), true;
       return false;
     }
@@ -1003,10 +1071,10 @@
      * rtr.watch("user", (_value, payload) => rtr.cascade(payload));
      */
     cascade({ type, currentTarget: { path, value: news, oldValue: olds } }, objectSafe = true) {
-      if (type !== "set" && type !== "delete" || !canHandle2(news, this.config) || (objectSafe ? !canHandle2(olds, this.config) : false)) return;
-      const obj = objectSafe ? mergeObjs2(olds, news) : news, keys2 = Object.keys(obj);
+      if (type !== "set" && type !== "delete" || !canHandle(news, this.config) || (objectSafe ? !canHandle(olds, this.config) : false)) return;
+      const obj = objectSafe ? mergeObjs(olds, news) : news, keys2 = Object.keys(obj);
       this.isCascading = true;
-      for (let i = 0, len = keys2.length; i < len; i++) setAny2(this.core, path === "*" ? keys2[i] : path + "." + keys2[i], obj[keys2[i]]);
+      for (let i = 0, len = keys2.length; i < len; i++) setAny(this.core, path === "*" ? keys2[i] : path + "." + keys2[i], obj[keys2[i]]);
       this.isCascading = false;
     }
     /**
@@ -1026,13 +1094,13 @@
     }
     destroy() {
       if (this.plugins) for (const plug of this.plugins.values()) plug.destroy();
-      this.reset(), nuke2(this);
+      this.reset(), nuke(this);
     }
     get canLog() {
       return this.isLogging = this.log !== NOOP;
     }
     set canLog(value) {
-      this.log = (this.isLogging = value) ? RTR_LOG2 : NOOP;
+      this.log = (this.isLogging = value) ? RTR_LOG : NOOP;
     }
     get canTraceLineage() {
       return this.config.referenceTracking && !!this.config.lineageTracing;
@@ -1042,7 +1110,7 @@
     }
   };
   var methods = ["tick", "stall", "nostall", "get", "gonce", "noget", "set", "sonce", "noset", "delete", "donce", "nodelete", "watch", "wonce", "nowatch", "on", "once", "off", "snapshot", "cascade", "plugIn", "reset", "destroy"];
-  function reactive(target, build, preferences = NIL2) {
+  function reactive(target, build, preferences = NIL) {
     if ("__Reactor__" in target) return target;
     const descriptors = {}, rtr = getReactor(target, true, build), locks = { enumerable: false, configurable: true, writable: false }, hasAffix = !!(preferences.prefix || preferences.suffix);
     for (let i = 0, len = methods.length; i < len; i++) {
@@ -1064,115 +1132,7 @@
     return target?.[RAW] || target;
   }
 
-  // ../t007-tools/packages/sia-reactor/dist/chunk-5A44QFT6.js
-  function stringifyKeyEvent(e) {
-    const parts = [];
-    if (e.ctrlKey) parts.push("ctrl");
-    if (e.altKey) parts.push("alt");
-    if (e.shiftKey) parts.push("shift");
-    if (e.metaKey) parts.push("meta");
-    parts.push(e.key?.toLowerCase() ?? "");
-    return parts.join("+");
-  }
-  function cleanKeyCombo(combo) {
-    const clean = (combo2) => {
-      const m = ["ctrl", "alt", "shift", "meta"], alias = { cmd: "meta", space: " " };
-      if (combo2 === " " || combo2 === "+") return combo2;
-      combo2 = combo2.replace(/\+\s*\+$/, "+plus");
-      const p = combo2.toLowerCase().split("+").filter((k) => k !== "").map((k) => alias[k] || (k === "plus" ? "+" : k.trim() || " "));
-      return [...p.filter((k) => m.includes(k)).sort((a, b) => m.indexOf(a) - m.indexOf(b)), ...p.filter((k) => !m.includes(k)) || ""].join("+");
-    };
-    return Array.isArray(combo) ? combo.map(clean) : clean(combo);
-  }
-  function matchKeys(required, actual, strict = false) {
-    actual = cleanKeyCombo(actual);
-    const match = (required2, actual2) => {
-      required2 = cleanKeyCombo(required2);
-      if (strict) return required2 === actual2;
-      const reqKeys = required2.split("+"), actKeys = actual2.split("+");
-      return reqKeys.every((k) => actKeys.includes(k));
-    };
-    return Array.isArray(required) ? required.some((req) => match(req, actual)) : match(required, actual);
-  }
-  function getTermsForKey(combo, settings) {
-    const terms = { override: false, block: false, whitelisted: false, action: null }, { overrides = [], shortcuts = {}, blocks = [], strictMatches: s = false, whitelist = [] } = settings || {};
-    combo = cleanKeyCombo(combo);
-    if (matchKeys(overrides, combo, s)) terms.override = true;
-    if (matchKeys(blocks, combo, s)) terms.block = true;
-    if (matchKeys(whitelist, combo)) terms.whitelisted = true;
-    terms.action = Object.keys(shortcuts).find((key) => matchKeys(shortcuts[key], combo, s)) || null;
-    return terms;
-  }
-  function keyEventAllowed(e, settings) {
-    if (settings.disabled || (e.key === " " || e.key === "Enter") && (e.target?.ownerDocument || document).activeElement?.tagName === "BUTTON" || (e.target?.ownerDocument || document).activeElement?.matches("input,textarea,[contenteditable='true']")) return false;
-    const combo = stringifyKeyEvent(e), { override, block, action, whitelisted } = getTermsForKey(combo, settings);
-    if (block) return false;
-    if (override) e.preventDefault();
-    if (action) return action;
-    if (whitelisted) return e.key.toLowerCase();
-    return false;
-  }
-  var formatKeyForDisplay = (combo) => ` ${(Array.isArray(combo) ? combo : [combo]).map((c) => `(${cleanKeyCombo(c).replace(" ", "space")})`).join(" or ")}`;
-  function parseForARIAKS(s, formatted = true) {
-    const m = { ctrl: "Control", cmd: "Meta", space: "Space", plus: "+" };
-    return (formatted && !Array.isArray(s) ? s : formatKeyForDisplay(s)).toLowerCase().replace(/[()]/g, "").replace(/\bor\b/g, " ").replace(/\w+/g, (k) => m[k] || k).replace(/\s+/g, " ").trim();
-  }
-  function createEl2(tag, props, dataset, styles, el = tag ? document?.createElement(tag) : null) {
-    return assignEl2(el, props, dataset, styles), el;
-  }
-  function assignEl2(el, props, dataset, styles) {
-    if (!el) return;
-    if (props) {
-      for (const k of Object.keys(props)) if (props[k] !== void 0) el[k] = props[k];
-    }
-    if (dataset) {
-      for (const k of Object.keys(dataset)) if (dataset[k] !== void 0) el.dataset[k] = String(dataset[k]);
-    }
-    if (styles) {
-      for (const k of Object.keys(styles)) if (styles[k] !== void 0) el.style[k] = styles[k];
-    }
-  }
-
-  // ../t007-tools/packages/sia-reactor/dist/chunk-P37ADJMM.js
-  function onAllMethods2(owner, callback, skipOwn = true, nested = false) {
-    let proto = owner;
-    while (proto && proto !== Object.prototype) {
-      for (const method of Object.getOwnPropertyNames(proto)) {
-        if (method === "constructor") continue;
-        if (nested && skipOwn && Object.prototype.hasOwnProperty.call(owner, method)) continue;
-        if ("function" === typeof Object.getOwnPropertyDescriptor(proto, method)?.value) callback(method, owner);
-      }
-      proto = Object.getPrototypeOf(proto), nested = true;
-    }
-  }
-  function guardAllMethods2(owner, guardFn = guardMethod2, bound = true) {
-    onAllMethods2(owner, (method, owner2) => {
-      owner2[method] = guardFn(bound ? owner2[method].bind(owner2) : owner2[method]);
-    });
-  }
-  function guardMethod2(fn, onError = (e) => console.error(e)) {
-    return ((...args) => {
-      try {
-        const result = fn(...args);
-        return result instanceof Promise ? result.catch((e) => onError(e)) : result;
-      } catch (e) {
-        onError(e);
-      }
-    });
-  }
-  function setTimeout3(handler, timeout, ...args) {
-    const sig = args[0] instanceof AbortSignal ? args.shift() : void 0;
-    if (sig?.aborted) return -1;
-    const win = args[0] instanceof Window ? args.shift() : window;
-    if (!sig) return win.setTimeout(handler, timeout, ...args);
-    const id = win.setTimeout(() => (sig.removeEventListener("abort", kill), "string" === typeof handler ? new Function(handler) : handler(...args)), timeout), kill = () => win.clearTimeout(id);
-    return sig.addEventListener("abort", kill, { once: true }), id;
-  }
-  function clamp2(min = 0, val, max = Infinity) {
-    return Math.min(Math.max(val, min), max);
-  }
-
-  // ../t007-tools/packages/sia-reactor/dist/plugins.js
+  // node_modules/sia-reactor/dist/plugins.js
   var BaseReactorPlugin = class {
     static plugName;
     get name() {
@@ -1184,10 +1144,10 @@
     config;
     state;
     constructor(config, rtr, state2) {
-      guardAllMethods2(this, this.guard);
+      guardAllMethods(this, this.guard);
       this.rtr = rtr;
-      this.config = isObj2(config) ? reactive(config) : config;
-      this.state = isObj2(state2) ? reactive(state2) : state2;
+      this.config = isObj(config) ? reactive(config) : config;
+      this.state = isObj(state2) ? reactive(state2) : state2;
     }
     /** Entry point called to initialize plugin wiring. */
     setup(rtr) {
@@ -1205,7 +1165,7 @@
      * window.addEventListener("resize", this.guard(() => this.syncLayout(true)), { signal: this.signal });
      */
     guard = (fn) => {
-      return guardMethod2(fn, (e) => this.rtr.log(`[Reactor "${this.name}" Plug] Error: ${e}`));
+      return guardMethod(fn, (e) => this.rtr.log(`[Reactor "${this.name}" Plug] Error: ${e}`));
     };
     // `()=>{}`: needs to be bounded even before initialization
   };
@@ -1221,7 +1181,7 @@
     wire() {
       this.rtr.config.referenceTracking = this.rtr.config.smartCloning = this.rtr.config.eventTimeStamps = true;
       if (!this.state.history.length || this.state.initialState == null) this.state.initialState = this.rtr.snapshot();
-      this.state.set("currentFrame", (v = 0) => clamp2(0, v, this.state.history.length), { signal: this.signal, immediate: true });
+      this.state.set("currentFrame", (v = 0) => clamp(0, v, this.state.history.length), { signal: this.signal, immediate: true });
       this.config.on("paths", this.handlePathsState, { signal: this.signal, immediate: true });
       !this.state.paused && this.play();
     }
@@ -1250,12 +1210,12 @@
     /** Instant state reconstruction (Teleport). Glides through deltas natively. */
     jumpTo(index = 0, keepShield = false) {
       this.state.paused = false;
-      const target = clamp2(0, index, this.state.history.length), forward = target > this.state.currentFrame;
+      const target = clamp(0, index, this.state.history.length), forward = target > this.state.currentFrame;
       while (this.state.currentFrame !== target) {
         const e = this.state.history[forward ? this.state.currentFrame : this.state.currentFrame - 1];
         if (!e) break;
-        if (forward) e.type === "delete" ? deleteAny2(this.rtr.core, e.path) : setAny2(this.rtr.core, e.path, deepClone2(e.value, this.rtr.config));
-        else !e.hadKey ? deleteAny2(this.rtr.core, e.path) : setAny2(this.rtr.core, e.path, deepClone2(e.oldValue, this.rtr.config));
+        if (forward) e.type === "delete" ? deleteAny(this.rtr.core, e.path) : setAny(this.rtr.core, e.path, deepClone(e.value, this.rtr.config));
+        else !e.hadKey ? deleteAny(this.rtr.core, e.path) : setAny(this.rtr.core, e.path, deepClone(e.oldValue, this.rtr.config));
         forward ? this.state.currentFrame++ : this.state.currentFrame--;
         if (e.rejected) this.rtr.log(`[Reactor ${this.name} Plug] ${forward ? "Replaying" : "Reversing"} REJECTED intent at "${e.path}"`);
       }
@@ -1280,7 +1240,7 @@
       while ((forward ? this.state.currentFrame < this.state.history.length : this.state.currentFrame > 0) && !this.state.paused) {
         const currIndex = forward ? this.state.currentFrame : this.state.currentFrame - 1, e = this.state.history[currIndex], nextE = this.state.history[forward ? currIndex + 1 : currIndex - 1], delay = nextE && e ? Math.abs(nextE.timestamp - e.timestamp) : 0;
         this.jumpTo(this.state.currentFrame + (forward ? 1 : -1), true);
-        if (delay > 0) await new Promise((res) => this.playbackTimeoutId = setTimeout3(() => res(0), clamp2(0, delay, this.config.maxPlaybackDelay), this.signal));
+        if (delay > 0) await new Promise((res) => this.playbackTimeoutId = setTimeout2(() => res(0), clamp(0, delay, this.config.maxPlaybackDelay), this.signal));
       }
       this.state.paused = true;
     }
@@ -1300,10 +1260,10 @@
     /** Imports a session from a JSON string, allowing you to replay or analyze past states. */
     import(json) {
       try {
-        setAny2(this.state, "*", JSON.parse(json));
+        setAny(this.state, "*", JSON.parse(json));
         const resume = !this.state.paused, target = this.state.currentFrame;
         this.state.paused = false;
-        setAny2(this.rtr.core, "*", deepClone2(this.state.initialState, this.rtr.config));
+        setAny(this.rtr.core, "*", deepClone(this.state.initialState, this.rtr.config));
         this.rtr.tick();
         this.state.currentFrame = 0;
         this.jumpTo(target), resume && this.play();
@@ -1314,7 +1274,7 @@
   };
   var TIME_TRAVEL_PLUGIN_BUILD = { maxPlaybackDelay: 2e3 };
 
-  // ../t007-tools/packages/sia-reactor/dist/chunk-RFQ2JJSV.js
+  // node_modules/sia-reactor/dist/chunk-RFQ2JJSV.js
   var Autotracker = class {
     proxy;
     deps = /* @__PURE__ */ new Map();
@@ -1345,7 +1305,7 @@
       if (!obj || "object" !== typeof obj) return obj;
       const cached = this.proxyCache.get(obj);
       if (cached) return cached;
-      if (!canHandle2(obj, this.rtr.config, false)) return obj;
+      if (!canHandle(obj, this.rtr.config, false)) return obj;
       const proxy = new Proxy(obj, {
         // Minimal Proxy Handler
         get: (object, key, receiver) => {
@@ -1427,7 +1387,7 @@
      * state.user.name;
      * CTX.autotracker = prev;
      */
-    callback(cb, options = NIL2) {
+    callback(cb, options = NIL) {
       this.cleanup();
       const method = options.sync ? "watch" : "on";
       for (const [rtr, paths] of this.deps) {
@@ -1443,7 +1403,7 @@
       this.clups.length = 0;
     }
     destroy() {
-      this.deps.clear(), this.cleanup(), nuke2(this);
+      this.deps.clear(), this.cleanup(), nuke(this);
     }
   };
   function withTracker(tracker, run, rtr) {
@@ -1484,31 +1444,31 @@
       this.time = time;
       this.config = reactive({ container: document.body, color: "", startOpen: false, devOnly: true, title: `Time Travel Overlay ${this.index = ++_TimeTravelOverlay.count}`, ...build });
       this.state.open = !!this.config.startOpen;
-      const host = createEl2("div", { className: "tt-overlay-host" });
-      const toggle = createEl2("button", { className: "tt-overlay-toggle", type: "button", onclick: () => this.state.open = !this.state.open });
-      const panel = createEl2("aside", { className: "tt-overlay", ariaLabel: "time travel overlay" });
-      const title = createEl2("div", { className: "title" });
-      const frame = createEl2("span", { className: "muted" });
-      const history = createEl2("span", { className: "muted" });
-      const paused = createEl2("span", { className: "muted" });
-      const clrHistory = createEl2("button", { textContent: `Clear History${formatKeyForDisplay(keys.shortcuts.clrHistory)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.clrHistory, false), onclick: () => (this.time.clear(), this.state.import = "") });
-      const undo = createEl2("button", { textContent: `Undo${formatKeyForDisplay(keys.shortcuts.undo[0])}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.undo, false), onclick: this.time.undo });
-      const redo = createEl2("button", { textContent: `Redo${formatKeyForDisplay(keys.shortcuts.redo[0])}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.redo, false), onclick: this.time.redo });
-      const genesis = createEl2("button", { textContent: `Genesis${formatKeyForDisplay(keys.shortcuts.genesis[0])}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.genesis, false), onclick: () => this.time.jumpTo(0) });
-      const playPause = createEl2("button", { onclick: () => this.time[this.time.state.paused ? "play" : "pause"](), ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.playPause, false) });
-      const rewind = createEl2("button", { textContent: `Rewind${formatKeyForDisplay(keys.shortcuts.rewind)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.rewind, false), onclick: this.time.rewind });
-      const range = createEl2("input", { type: "range", min: "0", max: "0", value: "0", title: "time travel frame", ariaLabel: "time travel frame", oninput: () => this.time.jumpTo(Number(range.value)) });
-      const exp = createEl2("button", { textContent: `Export${formatKeyForDisplay(keys.shortcuts.export)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.export, false), onclick: () => this.state.import = this.time.export() });
-      const imp = createEl2("button", { textContent: `Import${formatKeyForDisplay(keys.shortcuts.import)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.import, false), onclick: () => this.state.import.trim().length && this.time.import(this.state.import) });
-      const clr = createEl2("button", { textContent: `Clear${formatKeyForDisplay(keys.shortcuts.clear)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.clear, false), onclick: () => this.state.import = "" });
-      const io = createEl2("textarea", { className: "tt-io", placeholder: "timeline payload json", oninput: () => this.state.import = io.value });
-      const foot = createEl2("p", { className: "tt-footnote", textContent: "Want this in your app? " });
-      const link = createEl2("a", { target: "_blank", rel: "noreferrer noopener", textContent: "sia-reactor", href: "https://www.npmjs.com/package/sia-reactor" });
-      const box = createEl2("div", { className: "tt-status-box" });
-      const status = createEl2("div", { className: "tt-status-row" });
-      const row1 = createEl2("div", { className: "tt-row" });
-      const row2 = createEl2("div", { className: "tt-row" });
-      const row3 = createEl2("div", { className: "tt-row" });
+      const host = createEl("div", { className: "tt-overlay-host" });
+      const toggle = createEl("button", { className: "tt-overlay-toggle", type: "button", onclick: () => this.state.open = !this.state.open });
+      const panel = createEl("aside", { className: "tt-overlay", ariaLabel: "time travel overlay" });
+      const title = createEl("div", { className: "title" });
+      const frame = createEl("span", { className: "muted" });
+      const history = createEl("span", { className: "muted" });
+      const paused = createEl("span", { className: "muted" });
+      const clrHistory = createEl("button", { textContent: `Clear History${formatKeyForDisplay(keys.shortcuts.clrHistory)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.clrHistory, false), onclick: () => (this.time.clear(), this.state.import = "") });
+      const undo = createEl("button", { textContent: `Undo${formatKeyForDisplay(keys.shortcuts.undo[0])}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.undo, false), onclick: this.time.undo });
+      const redo = createEl("button", { textContent: `Redo${formatKeyForDisplay(keys.shortcuts.redo[0])}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.redo, false), onclick: this.time.redo });
+      const genesis = createEl("button", { textContent: `Genesis${formatKeyForDisplay(keys.shortcuts.genesis[0])}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.genesis, false), onclick: () => this.time.jumpTo(0) });
+      const playPause = createEl("button", { onclick: () => this.time[this.time.state.paused ? "play" : "pause"](), ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.playPause, false) });
+      const rewind = createEl("button", { textContent: `Rewind${formatKeyForDisplay(keys.shortcuts.rewind)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.rewind, false), onclick: this.time.rewind });
+      const range = createEl("input", { type: "range", min: "0", max: "0", value: "0", title: "time travel frame", ariaLabel: "time travel frame", oninput: () => this.time.jumpTo(Number(range.value)) });
+      const exp = createEl("button", { textContent: `Export${formatKeyForDisplay(keys.shortcuts.export)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.export, false), onclick: () => this.state.import = this.time.export() });
+      const imp = createEl("button", { textContent: `Import${formatKeyForDisplay(keys.shortcuts.import)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.import, false), onclick: () => this.state.import.trim().length && this.time.import(this.state.import) });
+      const clr = createEl("button", { textContent: `Clear${formatKeyForDisplay(keys.shortcuts.clear)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.clear, false), onclick: () => this.state.import = "" });
+      const io = createEl("textarea", { className: "tt-io", placeholder: "timeline payload json", oninput: () => this.state.import = io.value });
+      const foot = createEl("p", { className: "tt-footnote", textContent: "Want this in your app? " });
+      const link = createEl("a", { target: "_blank", rel: "noreferrer noopener", textContent: "sia-reactor", href: "https://www.npmjs.com/package/sia-reactor" });
+      const box = createEl("div", { className: "tt-status-box" });
+      const status = createEl("div", { className: "tt-status-row" });
+      const row1 = createEl("div", { className: "tt-row" });
+      const row2 = createEl("div", { className: "tt-row" });
+      const row3 = createEl("div", { className: "tt-row" });
       status.append((box.append(frame, history, paused), box), clrHistory);
       panel.append(title, status, (row1.append(undo, redo, genesis), row1), (row2.append(playPause, rewind), row2), range, (row3.append(exp, imp, clr), row3), io, (foot.appendChild(link), foot));
       host.append(toggle, panel);
@@ -1555,7 +1515,7 @@
       this.clups.forEach((fn) => fn());
       this.keyup && window.removeEventListener("keydown", this.keyup);
       this.els.host.remove();
-      nuke2(this), --_TimeTravelOverlay.count;
+      nuke(this), --_TimeTravelOverlay.count;
     }
   };
   function getDirChild(parent, className) {
@@ -1564,9 +1524,9 @@
   function getDock(container) {
     const host = container && container !== document.documentElement ? container : document.body;
     if (host !== document.body && getComputedStyle(host).position === "static") host.style.position = "relative";
-    const layer = getDirChild(host, "tt-overlay-layer") || createEl2("div", { className: "tt-overlay-layer" }, void 0, { position: host === document.body ? "fixed" : "absolute" });
+    const layer = getDirChild(host, "tt-overlay-layer") || createEl("div", { className: "tt-overlay-layer" }, void 0, { position: host === document.body ? "fixed" : "absolute" });
     if (layer.parentElement !== host) host.appendChild(layer);
-    const dock = getDirChild(layer, "tt-overlay-dock") || createEl2("div", { className: "tt-overlay-dock" });
+    const dock = getDirChild(layer, "tt-overlay-dock") || createEl("div", { className: "tt-overlay-dock" });
     return dock.parentElement !== layer && layer.appendChild(dock), dock;
   }
 
@@ -2152,7 +2112,7 @@
       this.config.set("lightState.disabled", (value) => this.readyState !== 1 ? TERMINATOR : value);
       this.config.on("lightState.disabled", ({ target: { value, object }, root }) => {
         if (value) {
-          if (this.settings.time.start != null) this.actualTimeStart = this.currentTime = this.settings.time.start;
+          if (this.settings.time.start != null) this.actualTimeStart = this.settings.time.value = this.settings.time.start;
           this.videoContainer.classList.remove("tmg-video-light");
           this.video.removeEventListener("play", this.removeLightState);
           this.DOM.controlsContainer.removeEventListener("click", this._handleLightStateClick);
@@ -2165,8 +2125,8 @@
         }
       });
       this.config.on("lightState.controls", () => this.queryDOM("[data-control-id]", false, true).forEach((c) => c.dataset.lightControl = this.isLight(c.dataset.controlId) ? "true" : "false"), { immediate: true });
-      this.config.on("lightState.preview.usePoster", ({ target: { value, object }, root }) => !root.lightState.disabled && (!value || !this.video.poster) && (this.currentTime = object.time));
-      this.config.on("lightState.preview.time", ({ target: { object }, root }) => !root.lightState.disabled && (!object.usePoster || !this.video.poster) && (this.currentTime = object.time));
+      this.config.on("lightState.preview.usePoster", ({ target: { value, object }, root }) => !root.lightState.disabled && (!value || !this.video.poster) && (this.settings.time.value = object.time));
+      this.config.on("lightState.preview.time", ({ target: { object }, root }) => !root.lightState.disabled && (!object.usePoster || !this.video.poster) && (this.settings.time.value = object.time));
     }
     addLightState = () => this.config.lightState.disabled = false;
     removeLightState = () => {
@@ -2591,15 +2551,6 @@
     }
     showUIMessage = (message) => message && this.DOM.videoContainerContent.setAttribute("data-message", message);
     removeUIMessage = () => this.DOM.videoContainerContent.removeAttribute("data-message");
-    get duration() {
-      return tmg.safeNum(this.video.duration);
-    }
-    get currentTime() {
-      return tmg.safeNum(this.video.currentTime);
-    }
-    set currentTime(value) {
-      this.video.currentTime = tmg.safeNum(tmg.clamp(this.settings.time.min, value, this.settings.time.max));
-    }
     _handleLoadedError(error) {
       this.loaded = false;
       this.settings.css.currentBufferedPosition = 0;
@@ -2615,7 +2566,7 @@
     _handleLoadedMetadata() {
       this.loaded = true;
       this.actualTimeStart = this.settings.time.start;
-      if (this.settings.time.start != null && this.config.lightState.disabled) this.currentTime = this.actualTimeStart;
+      if (this.settings.time.start != null && this.config.lightState.disabled) this.settings.time.value = this.actualTimeStart;
       this.pseudoVideo.src = this.video.currentSrc;
       this.pseudoVideo.crossOrigin = this.video.crossOrigin;
       this.pseudoVideo.addEventListener("timeupdate", ({ target: v }) => v.ontimeupdate = this.syncCanvasPreviews, { once: true });
@@ -2634,7 +2585,7 @@
       for (let i = 0; i < this.video.buffered.length; i++) if (this.video.buffered.start(this.video.buffered.length - 1 - i) < this.currentTime) return this.settings.css.currentBufferedPosition = this.video.buffered.end(this.video.buffered.length - 1 - i) / this.duration;
     }
     togglePlay = async (bool) => await this.video[("boolean" === typeof bool ? bool : this.video.paused) ? "play" : "pause"]();
-    replay = () => (this.currentTime = 0, this.video.play());
+    replay = () => (this.settings.time.value = 0, this.video.play());
     // ! - start is 0 and falsy
     previousVideo = () => this.currentTime >= 3 ? this.replay() : this.config.playlist && this.currentPlaylistIndex > 0 && this.movePlaylistTo(this.currentPlaylistIndex - 1, true);
     nextVideo = () => this.config.playlist && this.currentPlaylistIndex < this.config.playlist.length - 1 && this.movePlaylistTo(this.currentPlaylistIndex + 1, true);
@@ -2714,7 +2665,16 @@
       tmg.ON_MOBILE && (buffered === "skip" ? this.removeOverlay() : this.delayOverlay());
       this.videoContainer.classList.remove("tmg-video-buffering");
     }
+    get duration() {
+      return tmg.safeNum(this.video.duration);
+    }
+    get currentTime() {
+      return tmg.safeNum(this.video.currentTime);
+    }
     plugTimeSettings() {
+      this.config.watch("settings.time.value", (value) => {
+        this.video.currentTime = tmg.safeNum(tmg.clamp(this.settings.time.min, value, this.settings.time.max));
+      });
       this.config.set("settings.time.previews", (value, _, { target: { oldValue } }) => tmg.isObj(value) && tmg.isObj(oldValue) ? tmg.mergeObjs(oldValue, value) : value);
       this.config.on("settings.time.previews", ({ type, currentTarget: { value } }) => {
         if (type === "update") return;
@@ -2757,7 +2717,7 @@
       this.isScrubbing = false;
       const newPos = this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = this.shouldCancelTimeScrub ? this.lastTimelineThumbPosition : this.settings.css.currentThumbPosition;
       this.DOM.currentTimeElement.textContent = this.toTimeText(newPos * this.duration, true);
-      if (!this.shouldCancelTimeScrub) this.currentTime = newPos * this.duration;
+      if (!this.shouldCancelTimeScrub) this.settings.time.value = newPos * this.duration;
       cancelAnimationFrame(this.scrubbingId);
       this.togglePlay(!this.wasPaused);
       this.videoContainer.classList.remove("tmg-video-scrubbing");
@@ -2790,7 +2750,7 @@
           if (this.isScrubbing) {
             this.settings.css.currentThumbPosition = p;
             if (this.settings.time.seekSync) this.settings.css.currentPlayedPosition = p;
-            if (this.settings.time.seekSync && this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.toTimeText(this.currentTime = p * this.duration, true);
+            if (this.settings.time.seekSync && this.DOM.currentTimeElement) this.DOM.currentTimeElement.textContent = this.toTimeText(this.settings.time.value = p * this.duration, true);
             Math.abs(currX - this.lastTimelineThumbPosition * rect.width) < this.settings.controlPanel.timeline.seek.cancel.delta ? this.cancelTimeScrubbing() : this.allowTimeScrubbing();
             this.showOverlay();
           }
@@ -2817,7 +2777,7 @@
       percent = percent * multiplier;
       const time = sign === "+" ? this.currentTime + percent * this.duration : this.currentTime - percent * this.duration;
       this.gestureNextTime = tmg.clamp(0, time, this.duration);
-      if (this.overTimeline) this.currentTime = this.gestureNextTime;
+      if (this.overTimeline) this.settings.time.value = this.gestureNextTime;
       this.DOM.touchTimelineNotifier.textContent = `${sign}${this.toTimeText(Math.abs(this.gestureNextTime - this.currentTime))} (${this.toTimeText(this.gestureNextTime, true)}) ${multiplier < 1 ? `x${multiplier}` : ""}`;
     }
     _handleTimelineKeyDown(e) {
@@ -2837,7 +2797,7 @@
     _handleTimeUpdate() {
       const t = { c: this.currentTime, vc: this.video.currentTime, d: this.duration, s: this.settings };
       this.video.paused && this._handleTimeUpdateLoop(false, t.vc, t.s);
-      if (t.c < t.s.time.min || t.c > t.s.time.max) this.currentTime = t.s.time.loop ? t.s.time.min : t.c, !t.s.time.loop && this.togglePlay(false);
+      if (t.c < t.s.time.min || t.c > t.s.time.max) this.settings.time.value = t.s.time.loop ? t.s.time.min : t.c, !t.s.time.loop && this.togglePlay(false);
       this.DOM.currentTimeElement.textContent = this.toTimeText(t.vc, true);
       if (this.speedCheck && !this.video.paused) this.DOM.playbackRateNotifier?.setAttribute("data-current-time", this.toTimeText(t.vc, true));
       if (this.video.readyState && t.c && this.readyState > 1) {
@@ -2911,7 +2871,7 @@
       this.stats = { ...m, now, fps, droppedFrames };
       this.frameCallbackId = this.video.requestVideoFrameCallback?.(this._handleFrameUpdate);
     }
-    moveVideoFrame = (dir = "forwards") => this.video.paused && this.throttle("frameStepping", () => this.currentTime = tmg.clamp(0, Math.round(this.currentTime * this.pfps) + (dir === "backwards" ? -1 : 1), Math.floor(this.duration * this.pfps)) / this.pfps, this.pframeDelay);
+    moveVideoFrame = (dir = "forwards") => this.video.paused && this.throttle("frameStepping", () => this.settings.time.value = tmg.clamp(0, Math.round(this.currentTime * this.pfps) + (dir === "backwards" ? -1 : 1), Math.floor(this.duration * this.pfps)) / this.pfps, this.pframeDelay);
     plugPlaybackRateSettings() {
       this.config.watch("settings.playbackRate.value", (value, { target: { object } }) => this.video.playbackRate = this.video.defaultPlaybackRate = tmg.clamp(object.min, value, object.max));
       this.config.watch("settings.playbackRate.min", (min, { target: { object } }) => object.value < min && (object.value = min));
@@ -3644,7 +3604,7 @@
       if (this.gestureWheelXCheck) {
         this.gestureWheelXCheck = false;
         this.DOM.touchTimelineNotifier?.classList.remove("tmg-video-control-active");
-        this.currentTime = this.gestureNextTime;
+        this.settings.time.value = this.gestureNextTime;
       }
     }
     _handleGestureTouchStart(e) {
@@ -3698,7 +3658,7 @@
         this.gestureTouchXCheck = false;
         this.videoContainer.removeEventListener("touchmove", this._handleGestureTouchXMove, { passive: false });
         this.DOM.touchTimelineNotifier?.classList.remove("tmg-video-control-active");
-        if (!this.gestureTouchCanCancel) this.currentTime = this.gestureNextTime;
+        if (!this.gestureTouchCanCancel) this.settings.time.value = this.gestureNextTime;
       }
       if (this.gestureTouchYCheck) {
         this.gestureTouchYCheck = false;
@@ -3870,7 +3830,7 @@
         case "home":
         // -w
         case "0":
-          return this.currentTime = 0;
+          return this.settings.time.value = 0;
         case "1":
         // -w
         case "2":
@@ -3888,9 +3848,9 @@
         case "8":
         // -w
         case "9":
-          return this.currentTime = action / 10 * this.duration;
+          return this.settings.time.value = action / 10 * this.duration;
         case "end":
-          return this.currentTime = this.duration;
+          return this.settings.time.value = this.duration;
       }
     }
     _handlePlayTriggerUp(e) {
@@ -4293,8 +4253,8 @@
       })();
       tmg.setAny(target, path, parsedValue, "--", (p) => tmg.camelize(p));
     },
-    setAny: setAny2,
-    getAny: getAny2,
+    setAny,
+    getAny,
     bindAllMethods,
     volatile,
     safeNum: (number, fallback = 0) => tmg.isValidNum(number) ? number : fallback,
@@ -4316,14 +4276,14 @@
       }
       return result;
     },
-    parseAnyObj: parseAnyObj2,
+    parseAnyObj,
     parsePanelBottomObj(obj = [], arr = false) {
       if (!tmg.isObj(obj) && !tmg.isArr(obj)) return false;
       const [third = [], second = [], first = []] = tmg.isObj(obj) ? Object.values(obj).reverse() : tmg.isArr(obj[0]) ? obj.toReversed() : [obj];
       return !arr ? { 1: first, 2: second, 3: third } : [...third, ...second, ...first];
     },
-    mergeObjs: mergeObjs2,
-    deepClone: deepClone2,
+    mergeObjs,
+    deepClone,
     formatMediaTime({ time, format = "digital", elapsed = true, showMs = false, casing = "normal" } = {}) {
       const long = format.endsWith("long"), sx = (n = 0) => n == 1 ? "" : "s", cs = (str) => casing === "upper" ? str.toUpperCase() : casing === "title" ? tmg.capitalize(str) : str.toLowerCase(), wrd = (n = 0) => ({ h: cs(long ? ` hour${sx(n)} ` : "h"), m: cs(long ? ` minute${sx(n)} ` : "m"), s: cs(long ? ` second${sx(n)} ` : "s"), ms: cs(long ? ` millisecond${sx(n)} ` : "ms") }), pad = (v, n = 2, f) => long && !f ? v : String(v).padStart(n, "number" === typeof +n ? "0" : "-");
       if (!this.isValidNum(time)) return format !== "digital" ? `-${wrd().h}${pad("-")}${wrd().m}${!elapsed ? "left" : ""}`.trim() : !elapsed ? "--:--" : "-:--";

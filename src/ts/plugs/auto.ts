@@ -20,7 +20,9 @@ export class AutoPlug extends BasePlug<Auto> {
   protected canAutoMovePlaylist = true;
 
   public wire(): void {
-    // Ctlr Config Watchers
+    // Ctlr Config Getters
+    this.ctlr.config.get("settings.auto.play", () => this.media.state.autoplay, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
+    // ----------- Watchers
     this.ctlr.config.watch("settings.auto.play", this.forwardAutoPlay, { signal: this.signal, immediate: "auto" });
     // ---- Media Listeners
     this.media.on("state.currentTime", this.handleTimeUpdate, { signal: this.signal, immediate: true });
@@ -33,7 +35,7 @@ export class AutoPlug extends BasePlug<Auto> {
   }
 
   protected forwardAutoPlay(value?: boolean | AptAutoplayOption): void {
-    this.media.element.autoplay = isStr(value) ? false : !!value;
+    this.media.intent.autoplay = isStr(value) ? false : !!value;
   }
 
   protected handleTimeUpdate({ value: curr }: REvent<CtlrMedia, "state.currentTime">): void {
