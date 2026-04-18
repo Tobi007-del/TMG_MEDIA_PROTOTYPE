@@ -1,5 +1,6 @@
 import { Controller } from "./controller";
-import { type Reactive, reactive, nuke } from "../sia-reactor";
+import { type Reactive, reactive } from "sia-reactor";
+import { nuke } from "sia-reactor/utils";
 import { guardAllMethods, isObj } from "../utils";
 
 // A lifecylce controlled by it's Controller
@@ -24,7 +25,7 @@ export abstract class Controllable<Config = any, State = any> {
   }
 
   public setup() {
-    this.onSetup(); // We let the subclass do its work
+    return this.onSetup(), this; // We let the subclass do its work
   }
   protected abstract onSetup(): void;
 

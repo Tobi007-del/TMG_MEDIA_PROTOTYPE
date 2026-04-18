@@ -1,19 +1,19 @@
-import { BaseModule } from "../";
-import type { REvent } from "../../sia-reactor";
+import { BasePin, ModesPlug } from "../";
+import type { REvent } from "sia-reactor";
 import type { CtlrMedia } from "../../types/contract";
 import type { CtlrConfig } from "../../types/config";
 import type { OrientationOption } from "../../types/generics";
-import type { ModesPlug } from "./";
 import { isBool, IS_MOBILE, enterFullscreen, exitFullscreen, queryFullscreenEl } from "../../utils";
 
-export type FullscreenModuleConfig = {
+export type ModesFullscreen = {
   disabled: boolean;
   orientationLock: boolean | OrientationOption;
   onRotate: boolean | number; // 0-portrait, 90-landscape, 180, 270
 };
 
-export class FullscreenModule extends BaseModule<FullscreenModuleConfig> {
-  public static readonly moduleName = "fullscreen";
+export class ModesFullscreenPin extends BasePin<ModesPlug, ModesFullscreen> {
+  public static readonly pinName: string = "fullscreen";
+  public static readonly plugName: string = "modes";
   public inFullscreen = false; // a quick notice flag for external deps
 
   public wire(): void {
@@ -84,4 +84,4 @@ export class FullscreenModule extends BaseModule<FullscreenModuleConfig> {
   }
 }
 
-export const FULLSCREEN_BUILD: Partial<FullscreenModuleConfig> = { disabled: false, orientationLock: "auto", onRotate: 90 };
+export const MODES_FULLSCREEN_BUILD: Partial<ModesFullscreen> = { disabled: false, orientationLock: "auto", onRotate: 90 };

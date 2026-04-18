@@ -1,6 +1,7 @@
 import type { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
-import { type Volatile, reactive, type Reactive, inert, intent, state, volatile, nuke } from "../sia-reactor";
+import { type Volatile, reactive, type Reactive, inert, intent, state, volatile } from "sia-reactor";
+import { nuke } from "sia-reactor/utils";
 import { TechRegistry, PlugRegistry } from "./registry";
 import { STATE_BUILD, type CtlrState } from "../tools/runtime";
 import { TechConstructor, BaseTech, HTML5Tech } from "../media";
@@ -74,8 +75,7 @@ export class Controller {
   public plugIn(PlugClass: PlugConstructor, config?: any) {
     if (this.config.noPlugList.includes(PlugClass.plugName) && !PlugClass.isCore) return; // Core plugs are mandatory
     this.plug(PlugClass.plugName)?.destroy();
-    const plug = new PlugClass(this, config);
-    return (this.plugs.set(PlugClass.plugName, (plug.setup(), plug)), this); // for devx chaining
+    return (this.plugs.set(PlugClass.plugName, new PlugClass(this, config).setup()), this); // for devx chaining
   }
   public plug<T extends Plug = Plug>(name: string): T | undefined {
     return this.plugs.get(name) as T | undefined;
@@ -113,7 +113,7 @@ export class Controller {
   public switchTech(TechClass: TechConstructor, config = this.media): void {
     if (this.media.tech && TechClass === this.media.tech.constructor) return;
     if (this.media.tech) (this.media.tech.destroy(), this.log(`Switching tech from '${this.media.tech.name}' -> '${TechClass.name}'`));
-    (this.media.tech = new TechClass(this, config)).setup();
+    this.media.tech = new TechClass(this, config).setup();
   }
 
   private wireCtlrState() {
@@ -138,14 +138,9 @@ export class Controller {
   }; // `()=>{}`: needs to be bounded even before initialization
   public log(mssg: any, type: "error" | "warn" | "log" = "log", action?: "swallow") {
     if (!this.config.debug) return;
-    switch (type) {
-      case "error":
-        return action === "swallow" ? console.warn(`[TMG Controller] swallowed error:`, mssg) : console.error(`[TMG Controller] error:`, mssg);
-      case "warn":
-        return console.warn(`[TMG Controller] warning:`, mssg);
-      default:
-        return console.log(`[TMG Controller] log:`, mssg);
-    }
+    if (type === "error") return action === "swallow" ? console.warn(`[TMG Controller] swallowed error:`, mssg) : console.error(`[TMG Controller] error:`, mssg);
+    else if (type === "warn") return console.warn(`[TMG Controller] warning:`, mssg);
+    else return console.log(`[TMG Controller] log:`, mssg);
   }
   public fire(eN: string, detail: any = null, el: HTMLElement | EventTarget = this.media.element, bubbles = true, cancelable = true) {
     eN && el?.dispatchEvent(new CustomEvent(eN, { detail, bubbles, cancelable }));

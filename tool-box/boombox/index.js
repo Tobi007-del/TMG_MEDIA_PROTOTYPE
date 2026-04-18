@@ -25,7 +25,9 @@ class Boombox {
   }
   constructor() {
     tmg.bindAllMethods(this);
-    this.state = reactive(structuredClone(bbState));
+    this.state = window.bbState = tmg.reactive(structuredClone(bbState));
+    this.state.use((window[`TTM`] = new tmg.TimeTravelModule({ blacklist: ["audio.vibe"] })));
+    window[`TTO`] = new tmg.TimeTravelOverlay(window[`TTM`], { title: `TMG Boombox Time` });
     this.media = new Audio("/tmg-media-player/assets/media/Subway-Surfers-Theme-Sound-Effect.mp3");
     this.media.loop = true;
     this.bbSens = { translate: 1.2, rotate: 0.6, zoom: 2.4, overflow: 70 }; // S.I.A. configuration
@@ -162,7 +164,6 @@ class Boombox {
     this.volumeSlider.max = value;
   }
   onMuted(muted, { target: { oldValue } }) {
-    if (muted === oldValue) return TERMINATOR;
     if (muted) {
       this.lastVolume = this.state.audio.volume.value;
       this.state.audio.volume.value = 0;

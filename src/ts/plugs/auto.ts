@@ -1,5 +1,5 @@
 import { BasePlug, PlaylistPlug, ToastsPlug, TimePlug } from ".";
-import { type REvent, type DeepPartial } from "../sia-reactor";
+import { type REvent, type DeepPartial } from "sia-reactor";
 import { CtlrConfig } from "../types/config";
 import { CtlrMedia } from "../types/contract";
 import type { AptAutoplayOption, PosterPreview } from "../types/generics";

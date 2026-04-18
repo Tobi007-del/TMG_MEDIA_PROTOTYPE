@@ -1,6 +1,6 @@
 import { BasePlug } from ".";
 import type { CtlrConfig } from "../types/config";
-import { type DeepPartial, type REvent } from "../sia-reactor";
+import { type DeepPartial, type REvent } from "sia-reactor";
 import { capitalize } from "../utils";
 import type { PlaylistPlug, TimePlug } from ".";
 

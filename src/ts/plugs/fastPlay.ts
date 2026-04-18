@@ -1,5 +1,5 @@
 import { BasePlug, type TimePlug, type OverlayPlug } from ".";
-import type { DeepPartial } from "../sia-reactor";
+import type { DeepPartial } from "sia-reactor";
 import { setTimeout, setInterval } from "../utils";
 
 export interface FastPlay {

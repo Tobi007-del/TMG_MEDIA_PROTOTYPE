@@ -1,18 +1,19 @@
 import { BasePlug } from ".";
-import { type REvent, type TimeTravelConfig, TimeTravelPlugin, TIME_TRAVEL_PLUGIN_BUILD } from "../sia-reactor";
+import { type REvent } from "sia-reactor";
+import { type TimeTravelConfig, TimeTravelModule, TIME_TRAVEL_MODULE_BUILD } from "sia-reactor/modules";
 import { CtlrConfig } from "../types/config";
 
 export type TimeTravel = TimeTravelConfig<any>;
 
 export class TimeTravelPlug extends BasePlug<TimeTravel> {
   public static readonly plugName: string = "timeTravel";
-  public plugin!: TimeTravelPlugin<any>;
+  public module!: TimeTravelModule<any>;
 
   public mount() {
     // Variables Assignment
-    this.plugin = new TimeTravelPlugin(this.config);
+    this.module = new TimeTravelModule(this.config);
     // Utility Injection
-    this.media.plugIn(this.plugin);
+    this.media.use(this.module);
   }
 
   public wire() {
@@ -20,9 +21,9 @@ export class TimeTravelPlug extends BasePlug<TimeTravel> {
     this.ctlr.config.on("settings.timeTravel", this.handleTimeTravelChange, { signal: this.signal, immediate: false, depth: 1 });
   }
 
-  protected handleTimeTravelChange({ type, target: { key, value } }: REvent<CtlrConfig, "settings.timeTravel">) {
-    type === "update" ? ((this.plugin.config as any)[key] = value) : Object.assign(this.plugin.config, value); // plugin's config is non-volatile
+  protected handleTimeTravelChange(e: REvent<CtlrConfig, "settings.timeTravel", 1>) {
+    e.type === "update" ? (this.module.config[e.target.key] = e.value as any) : Object.assign(this.module.config, e.value); // plugin's config is non-volatile
   }
 }
 
-export const TIME_TRAVEL_BUILD: Partial<TimeTravel> = { ...TIME_TRAVEL_PLUGIN_BUILD };
+export const TIME_TRAVEL_BUILD: Partial<TimeTravel> = { ...TIME_TRAVEL_MODULE_BUILD };

@@ -4,7 +4,8 @@ import { loadResource, isIter, setHTMLConfig, isObj, supportsFullscreen, support
 import { CONFIG_BUILD } from "../consts";
 import { PLAYLIST_ITEM_BUILD } from "../plugs";
 import type { CtlrConfig } from "../types/config";
-import { DeepPartial, Paths, PathValue, mergeObjs, parseAnyObj, setAny } from "../sia-reactor";
+import { DeepPartial, Paths, PathValue } from "sia-reactor";
+import { mergeObjs, parseAnyObj, setAny } from "sia-reactor/utils";
 
 export type BuildPaths = Paths<CtlrConfig>;
 export type BuildParam = DeepPartial<CtlrConfig> & Record<BuildPaths, PathValue<CtlrConfig, BuildPaths>>;

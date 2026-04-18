@@ -1,18 +1,16 @@
-import { BaseModule, OverlayPlug } from "..";
+import { BasePin, OverlayPlug } from "..";
 import type { BigControl, ControlPanelBottomTuple, ControlPanelPlug, SControl, ZoneSlot, ZoneW } from ".";
-import { getAny, setAny } from "../../sia-reactor";
+import { getAny, setAny } from "sia-reactor/utils";
 import { getElSiblingAt, inBoolArrOpt, setTimeout, requestAnimationFrame } from "../../utils";
 
-export type DraggableModuleConfig = ("" | "big" | "wrapper")[] | boolean;
+export type ControlPanelDraggable = ("" | "big" | "wrapper")[] | boolean;
 
-export class DraggableModule extends BaseModule<DraggableModuleConfig> {
-  public static readonly moduleName: string = "controlPanelDrag";
+export class ControlPanelDraggablePin extends BasePin<ControlPanelPlug, ControlPanelDraggable> {
+  public static readonly pinName: string = "draggable";
+  public static readonly plugName: string = "controlPanel";
   protected draggingEl: HTMLElement | null = null;
   protected replaced: { target: HTMLElement; child: HTMLElement } | null = null;
   protected safeTimeoutId = -1;
-  protected get plug(): ControlPanelPlug {
-    return this.ctlr.plug<ControlPanelPlug>("controlPanel")!; // `!`: only ctl panel plug will instantiate after all
-  }
 
   public wire() {
     // Ctlr Config Watchers
@@ -129,4 +127,4 @@ export class DraggableModule extends BaseModule<DraggableModuleConfig> {
   }
 }
 
-export const DRAGGABLE_BUILD: DraggableModuleConfig = ["", "wrapper"];
+export const CONTROL_PANEL_DRAGGABLE_BUILD: ControlPanelDraggable = ["", "wrapper"];

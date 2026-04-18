@@ -1,18 +1,19 @@
 import { BasePlug } from ".";
-import { type REvent, type PersistConfig, PersistPlugin, PERSIST_PLUGIN_BUILD } from "../sia-reactor";
+import { type REvent } from "sia-reactor";
+import { type PersistConfig, PersistModule, PERSIST_MODULE_BUILD } from "sia-reactor/modules";
 import { CtlrConfig } from "../types/config";
 
 export type Persist = PersistConfig<any>;
 
 export class PersistPlug extends BasePlug<Persist> {
   public static readonly plugName: string = "persist";
-  public plugin!: PersistPlugin<any>;
+  public module!: PersistModule<any>;
 
   public mount() {
     // Variables Assignment
-    this.plugin = new PersistPlugin({ key: `TMG_${this.ctlr.id}_SETTINGS`, ...(this.config as any) });
+    this.module = new PersistModule({ key: `TMG_${this.ctlr.id}_SETTINGS`, ...(this.config as Partial<Persist>) });
     // Utility Injection
-    this.ctlr.config.plugIn(this.plugin);
+    this.ctlr.config.use(this.module);
   }
 
   public wire() {
@@ -20,9 +21,9 @@ export class PersistPlug extends BasePlug<Persist> {
     this.ctlr.config.on("settings.persist", this.handlePersistChange, { signal: this.signal, immediate: false, depth: 1 });
   }
 
-  protected handlePersistChange({ type, target: { key, value } }: REvent<CtlrConfig, "settings.persist">) {
-    type === "update" ? ((this.plugin.config as any)[key] = value) : Object.assign(this.plugin.config, value); // plugin's config is non-volatile
+  protected handlePersistChange(e: REvent<CtlrConfig, "settings.persist", 1>) {
+    e.type === "update" ? (this.module.config[e.target.key] = e.value as never) : Object.assign(this.module.config, e.value); // module's config is non-volatile
   }
 }
 
-export const PERSIST_BUILD: Partial<Persist> = { ...PERSIST_PLUGIN_BUILD, paths: ["settings"] };
+export const PERSIST_BUILD: Partial<Persist> = { ...PERSIST_MODULE_BUILD, whitelist: ["settings"] };

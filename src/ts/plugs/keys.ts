@@ -1,6 +1,6 @@
 import { BasePlug, type FastPlayPlug, type GesturePlug, type ModesPlug, type OverlayPlug, type TimePlug, type VolumePlug } from ".";
 import type { KeyShortcutAction, ModdedKeyShortcutAction } from "../types/generics";
-import type { DeepPartial } from "../sia-reactor";
+import type { DeepPartial } from "sia-reactor";
 import { keysBlocks, keysWhitelist } from "../consts/generics";
 import { formatKeyShortcutsForDisplay, isArr, keyEventAllowed, keysSettings } from "../utils";
 

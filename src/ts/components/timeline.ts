@@ -1,6 +1,6 @@
 import { RangeSlider, type RangeConfig, type RangeState } from "./";
 import type { Controller } from "../core/controller";
-import type { REvent } from "../sia-reactor";
+import type { REvent } from "sia-reactor";
 import type { CtlrMedia } from "../types/contract";
 import type { TimePlug } from "../plugs";
 import { isBool, createEl, clamp, safeNum, setTimeout, formatMediaTime, getRenderedBox, IS_MOBILE, requestAnimationFrame } from "../utils";

@@ -225,7 +225,7 @@ class CapturePlug {
 ```typescript
 class MiniplayerPlug {
   // Lines 2091-2134: Smart activation logic
-  toggleMiniplayerMode(bool?: boolean, behavior?: ScrollBehavior): void
+  toggleModesMiniplayerPin(bool?: boolean, behavior?: ScrollBehavior): void
   - Auto-activates when: not paused, not in view, window > minWindowWidth
   - Adds .tmg-video-miniplayer + .tmg-video-progress-bar classes
   - Enables drag event listeners

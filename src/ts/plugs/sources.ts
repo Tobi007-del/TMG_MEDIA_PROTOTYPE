@@ -59,7 +59,7 @@ export class SrcObjectPlug extends BasePlug<SrcObject> {
 
   public wire() {
     // Ctlr Config Getters
-    this.ctlr.config.get("srcObject", () => this.media.state.srcObject, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
+    this.ctlr.config.get("srcObject", () => this.media.settings.srcObject, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
     // ----------- Watchers
     this.ctlr.config.watch("srcObject", this.forwardSrcObject, { signal: this.signal, immediate: "auto" });
   }

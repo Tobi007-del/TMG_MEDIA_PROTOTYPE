@@ -1,32 +1,31 @@
+import { BasePlug, GestureWheelPin, GESTURE_WHEEL_BUILD, type GestureWheel, GestureTouchPin, GESTURE_TOUCH_BUILD, type GestureTouch, GestureGeneralPin, GESTURE_GENERAL_BUILD, type GestureGeneral } from "..";
 import { Controller } from "../../core/controller";
-import { BasePlug } from "..";
-import type { DeepPartial } from "../../sia-reactor";
-import { WheelModule, WHEEL_BUILD, type WheelConfig } from "./wheel";
-import { TouchModule, TOUCH_BUILD, type TouchConfig } from "./touch";
-import { GeneralModule, GENERAL_BUILD, type GeneralConfig } from "./general";
+import type { DeepPartial } from "sia-reactor";
 export * from "./general";
 export * from "./touch";
 export * from "./wheel";
 
-export type Gesture = GeneralConfig & {
-  wheel: WheelConfig;
-  touch: TouchConfig;
+export type Gesture = GestureGeneral & {
+  wheel: GestureWheel;
+  touch: GestureTouch;
 };
 
 export class GesturePlug extends BasePlug<Gesture> {
   public static readonly plugName: string = "gesture";
-  public general!: GeneralModule;
-  public wheel!: WheelModule;
-  public touch!: TouchModule;
+  public general!: GestureGeneralPin;
+  public wheel!: GestureWheelPin;
+  public touch!: GestureTouchPin;
 
   constructor(ctlr: Controller, config: Gesture, state?: any) {
     super(ctlr, config, state);
-    this.general = new GeneralModule(this.ctlr, { click: this.config.click, dblClick: this.config.dblClick });
-    this.wheel = new WheelModule(this.ctlr, this.config.wheel);
-    this.touch = new TouchModule(this.ctlr, this.config.touch);
+    // Variables Assignment
+    this.general = new GestureGeneralPin(this.ctlr, { click: this.config.click, dblClick: this.config.dblClick }).setup();
+    this.wheel = new GestureWheelPin(this.ctlr, this.config.wheel).setup();
+    this.touch = new GestureTouchPin(this.ctlr, this.config.touch).setup();
   }
 
   public wire() {
+    // Utility Injection
     const wire = () => (this.general.wire(), this.wheel.wire(), this.touch.wire());
     if (this.ctlr.state.readyState > 1) wire();
     else this.ctlr.state.once("readyState", wire, { signal: this.signal }); // waits for light state or first play
@@ -41,7 +40,7 @@ export class GesturePlug extends BasePlug<Gesture> {
 }
 
 export const GESTURE_BUILD: DeepPartial<Gesture> = {
-  ...GENERAL_BUILD,
-  touch: TOUCH_BUILD,
-  wheel: WHEEL_BUILD,
+  ...GESTURE_GENERAL_BUILD,
+  touch: GESTURE_TOUCH_BUILD,
+  wheel: GESTURE_WHEEL_BUILD,
 };

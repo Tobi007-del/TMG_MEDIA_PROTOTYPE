@@ -1,6 +1,6 @@
 import { BasePlug, type KeysPlug } from ".";
 import type { CtlrMedia, MediaState } from "../types/contract";
-import type { REvent } from "../sia-reactor";
+import type { REvent } from "sia-reactor";
 import { rotate } from "../utils";
 
 const objectFits = ["contain", "cover", "fill"] as const;

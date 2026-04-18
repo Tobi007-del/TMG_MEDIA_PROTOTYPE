@@ -1,6 +1,6 @@
 # TMG Media Prototype - Agent Instructions
 
-> Copilot context recovery file. Read this before touching any plug, component, module, or tech file.
+> Copilot context recovery file. Read this before touching any plug, pin, component, or tech file.
 
 ---
 
@@ -14,7 +14,7 @@ TMG is a TypeScript video player replacing beta: `src/beta/index.js`. The archit
 
 ```
 core/          controllable.ts, controller.ts, reactor.ts, registry.ts, storage.ts
-plugs/         one file per plug + gesture/ (sub-modules)
+plugs/         one file per plug + / (sub-pins)
 components/    one file per component
 media/         tech classes (BaseTech, HlsTech, etc.)
 types/         build.d.ts, contract.d.ts, generics.d.ts, reactor.d.ts
@@ -28,7 +28,7 @@ css/           zones/, perks/, core/, states/, controls/, settings/
 ```
 Controllable<Config, State>
   +-- BasePlug<Config, State>       -- plugs/
-  +-- BaseModule<Config, State>     -- sub-modules inside plugs
+  +-- BasePin<Config, State>     -- sub-pins inside plugs
   +-- BaseComponent<Config, State>  -- components/
        +-- RangeSlider<Config, State>
             +-- Timeline
@@ -61,7 +61,7 @@ export class MyPlug extends BasePlug<MyConfig, MyState> {
 - `onSetup()` (inherited): calls `mount?.()`, then defers `wire?.()` until `readyState > 0` via `wonce`
 - `mount()` - pure DOM work. NO reactive listeners here
 - `wire()` - ALL reactive bindings. Comment sections follow MSC order (see below)
-- Constructor: always `super(ctlr, config, state)` first; instantiate sub-modules here
+- Constructor: always `super(ctlr, config, state)` first; instantiate sub-pins here
 - Other plugs access via `ctlr.plug<MyPlug>("myPlug")`
 
 ### GSWL-MSC Pattern - wire() comment section order
@@ -111,27 +111,28 @@ Not every section is always present. Use only what the plug needs.
 ```ts
 public mount(): void {
   // Variables Assignment    <- createEl(), ComponentRegistry.init()
-  // DOM Injection           <- append/prepend/insertAdjacentHTML
+  // DOM Injection           <- append/prepend/insertAdjacentHTML, can apply to modules too
+  // Utility Injection       <- rare but for subs like pins, modules. can apply to modules too
   // Post Mounting
 }
 ```
 
 ---
 
-## BaseModule
+## BasePin
 
-- Same lifecycle as BasePlug - `static moduleName` instead of `plugName`
+- Same lifecycle as BasePlug - `static pinName` instead of `plugName`
 - Instantiated in parent plug's **constructor** (not setup/mount/wire)
 - Parent plug's `wire()` controls deferred timing:
   ```ts
   public wire() {
-    const wire = () => (this.moduleA.wire(), this.moduleB.wire());
+    const wire = () => (this.pinA.wire(), this.pinB.wire());
     if (this.ctlr.state.readyState > 1) wire();
     else this.ctlr.state.once("readyState", wire, { signal: this.signal });
   }
   ```
-- `onDestroy()` in parent must call each module's `.destroy()`
-- Do NOT suffix with "Module" - `GeneralModule`, `WheelModule`, `FullscreenMode`, etc.
+- `onDestroy()` in parent must call each pin's `.destroy()`
+- Suffix samples - `GestureGeneralPin`, `GestureWheelPin`, `ModesFullscreenPin`, etc.
 
 ---
 
@@ -278,7 +279,7 @@ Canonical example: `volume.ts` on `media.intent.volume` and `media.intent.muted`
 ## Additional Coding Rules
 
 - **No arrow function class properties**: `getMainColor = async () =>` and `moveFrame = () =>` are anonymous — they bypass `guardAllMethods` binding. Always use named method syntax: `public async getMainColor(...) {}`, `public moveFrame(...) {}`. Arrow functions are fine for inline callbacks (`.then()`, Promise constructors, `throttle`, event listeners passed inline).
-- **`onDestroy` stays minimal**: `nullify()` on `Controllable` nukes all reactive state at end-of-life. Do NOT reset arrays, null out refs, or clear maps manually in `onDestroy` — only run `this.clups`, any `removeScrollAssist` calls, and destroy child instances/modules.
+- **`onDestroy` stays minimal**: `nullify()` on `Controllable` nukes all reactive state at end-of-life. Do NOT reset arrays, null out refs, or clear maps manually in `onDestroy` — only run `this.clups`, any `removeScrollAssist` calls, and destroy child instances/pins.
 - **`immediate: "auto"` vs `immediate: true`**: use `"auto"` for forwarding watchers (value may not exist yet); use `true` only for always-valid computed values wired at startup.
 - **Semantic property naming**: if a property already lives on a typed class, don't repeat the class in the name. `PlaylistPlug.currentIndex` not `currentPlaylistIndex` — the class already provides the namespace.
 - **Imports in all files**: always import from `"."` (the barrel index), except when a direct path is required to break a circular dependency or the folder has not index.ts.

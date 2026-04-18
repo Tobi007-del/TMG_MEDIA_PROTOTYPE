@@ -1,7 +1,7 @@
-import { BasePlug, DraggableModule, DRAGGABLE_BUILD, type DraggableModuleConfig } from "..";
+import { BasePlug, ControlPanelDraggablePin, CONTROL_PANEL_DRAGGABLE_BUILD, type ControlPanelDraggable } from "..";
 import type { Controller } from "../../core/controller";
 import type { CtlrConfig } from "../../types/config";
-import { type REvent, type DeepPartial } from "../../sia-reactor";
+import { type REvent, type DeepPartial } from "sia-reactor";
 import { controls, bigControls } from "../../consts/generics";
 import { BaseComponent, Timeline } from "../../components";
 import { ComponentRegistry } from "../../core/registry";
@@ -23,7 +23,7 @@ export type ControlPanel = {
   buffer: "eclipse" | "accent" | boolean;
   timeline: { thumbIndicator: boolean; seek: { relative: boolean; cancel: { delta: number; timeout: number } } };
   progressBar: boolean;
-  draggable: DraggableModuleConfig;
+  draggable: ControlPanelDraggable;
 };
 
 const rowsArr = [1, 2, 3] as const;
@@ -37,7 +37,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   public static readonly plugName: string = "controlPanel";
   public static readonly isCore: boolean = false;
   public controls = new Map<string, BaseComponent<any, any>>();
-  public draggable!: DraggableModule;
+  public draggable!: ControlPanelDraggablePin;
   public zoneWs!: ControlPanelZoneWs;
   public cZoneWs!: ControlPanelCurrentZoneWs;
   public zonesArr!: HTMLElement[];
@@ -53,7 +53,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
 
   constructor(ctlr: Controller, config: ControlPanel) {
     super(ctlr, config);
-    this.draggable = new DraggableModule(this.ctlr, this.config.draggable);
+    this.draggable = new ControlPanelDraggablePin(this.ctlr, this.config.draggable).setup();
   }
 
   public mount(): void {
@@ -215,5 +215,5 @@ export const CONTROL_PANEL_BUILD: DeepPartial<ControlPanel> = {
   buffer: "eclipse",
   timeline: { thumbIndicator: true, seek: { relative: !IS_MOBILE, cancel: { delta: 15, timeout: 2000 } } },
   progressBar: IS_MOBILE,
-  draggable: DRAGGABLE_BUILD,
+  draggable: CONTROL_PANEL_DRAGGABLE_BUILD,
 };

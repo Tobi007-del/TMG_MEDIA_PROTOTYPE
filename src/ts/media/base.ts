@@ -1,7 +1,7 @@
 import { Controllable } from "../core/controllable";
 import type { Controller } from "../core/controller";
 import type { CtlrMedia, MediaFeatures } from "../types/contract";
-import { type REvent, reactive, type Reactive } from "../sia-reactor";
+import { type REvent, reactive, type Reactive } from "sia-reactor";
 import { capitalize } from "../utils";
 
 export type BaseTechConfig = Reactive<CtlrMedia>; // Must extend to add more

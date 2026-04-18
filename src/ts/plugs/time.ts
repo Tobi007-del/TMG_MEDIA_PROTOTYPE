@@ -1,6 +1,6 @@
 import { BasePlug, GesturePlug, OverlayPlug, type KeysPlug, type KeyMod } from ".";
 import { parseIfPercent, clamp, safeNum, formatMediaTime, parseCSSTime, setTimeout, IS_MOBILE } from "../utils";
-import { type REvent, type Paths } from "../sia-reactor";
+import { type REvent, type Paths } from "sia-reactor";
 import type { OptRange } from "../types/generics";
 import type { PreviewConfig, Timeline } from "../components";
 import { CtlrMedia } from "../types/contract";

@@ -1,7 +1,7 @@
 import type { Controller } from "./controller";
-import { Inert, Intent, State, Volatile } from "./reactor";
-import { Sources, Src, SrcObject, Tracks, ObjectFit } from "../plugs";
-import { BaseTech } from "../media";
+import type { Inert, Intent, State, Volatile } from "sia-reactor";
+import type { Sources, Src, SrcObject, Tracks, ObjectFit } from "../plugs";
+import type { BaseTech } from "../media";
 
 export interface MediaContract {
   // "Must Haves" to be even considered media

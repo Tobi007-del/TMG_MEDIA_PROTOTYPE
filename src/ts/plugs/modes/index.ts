@@ -1,39 +1,37 @@
 import { Controller } from "../../core/controller";
-import { BasePlug, type KeysPlug } from "../";
-import type { DeepPartial } from "../../sia-reactor";
-import { FullscreenModule, FULLSCREEN_BUILD, type FullscreenModuleConfig } from "./fullscreen";
-import { THEATER_BUILD, TheaterConfig, TheaterModule } from "./theater";
-import { PictureInPictureModule, PICTURE_IN_PICTURE_BUILD, type PictureInPictureModuleConfig } from "./pictureInPicture";
-import { MINIPLAYER_BUILD, MiniplayerModule, type MiniplayerModeConfig } from "./miniplayer";
+import { BasePlug, type KeysPlug, ModesFullscreenPin, MODES_FULLSCREEN_BUILD, type ModesFullscreen, MODES_THEATER_BUILD, ModesTheater, ModesTheaterPin, ModesPictureInPicturePin, MODES_PICTURE_IN_PICTURE_BUILD, type ModesPictureInPicture, MODES_MINIPLAYER_BUILD, ModesMiniplayerPin, type ModesMiniplayer } from "../";
+import type { DeepPartial } from "sia-reactor";
 export * from "./fullscreen";
 export * from "./theater";
 export * from "./pictureInPicture";
 export * from "./miniplayer";
 
 export interface Modes {
-  fullscreen: FullscreenModuleConfig;
-  theater: TheaterConfig;
-  pictureInPicture: PictureInPictureModuleConfig;
-  miniplayer: MiniplayerModeConfig;
+  fullscreen: ModesFullscreen;
+  theater: ModesTheater;
+  pictureInPicture: ModesPictureInPicture;
+  miniplayer: ModesMiniplayer;
 }
 
 export class ModesPlug extends BasePlug<Modes> {
-  public static readonly plugName = "modes";
-  public fullscreen!: FullscreenModule;
-  public theater!: TheaterModule;
-  public pip!: PictureInPictureModule;
-  public miniplayer!: MiniplayerModule;
+  public static readonly plugName: string = "modes";
+  public fullscreen!: ModesFullscreenPin;
+  public theater!: ModesTheaterPin;
+  public pip!: ModesPictureInPicturePin;
+  public miniplayer!: ModesMiniplayerPin;
 
   constructor(ctlr: Controller, config: Modes) {
     super(ctlr, config);
-    this.fullscreen = new FullscreenModule(this.ctlr, this.config.fullscreen);
-    this.theater = new TheaterModule(this.ctlr, this.config.theater);
-    this.pip = new PictureInPictureModule(this.ctlr, this.config.pictureInPicture);
-    this.miniplayer = new MiniplayerModule(this.ctlr, this.config.miniplayer);
+    // Variables Assignment
+    this.fullscreen = new ModesFullscreenPin(this.ctlr, this.config.fullscreen).setup();
+    this.theater = new ModesTheaterPin(this.ctlr, this.config.theater).setup();
+    this.pip = new ModesPictureInPicturePin(this.ctlr, this.config.pictureInPicture).setup();
+    this.miniplayer = new ModesMiniplayerPin(this.ctlr, this.config.miniplayer).setup();
     if (this.ctlr.config.initialMode) this.media.intent[this.ctlr.config.initialMode] = true; // one-time courtesy, use for theater mode maybe
   }
 
   public wire(): void {
+    // Utility Injection
     this.fullscreen.wire();
     this.theater.wire();
     this.pip.wire();
@@ -55,8 +53,8 @@ export class ModesPlug extends BasePlug<Modes> {
 }
 
 export const MODES_BUILD: DeepPartial<Modes> = {
-  fullscreen: FULLSCREEN_BUILD,
-  theater: THEATER_BUILD,
-  pictureInPicture: PICTURE_IN_PICTURE_BUILD,
-  miniplayer: MINIPLAYER_BUILD,
+  fullscreen: MODES_FULLSCREEN_BUILD,
+  theater: MODES_THEATER_BUILD,
+  pictureInPicture: MODES_PICTURE_IN_PICTURE_BUILD,
+  miniplayer: MODES_MINIPLAYER_BUILD,
 };

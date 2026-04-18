@@ -1,6 +1,7 @@
 import { BasePlug, type KeysPlug } from ".";
 import type { CtlrConfig, Settings } from "../types/config";
-import { type REvent, type DeepPartial, mergeObjs, deepClone } from "../sia-reactor";
+import { type REvent, type DeepPartial } from "sia-reactor";
+import { mergeObjs, deepClone } from "sia-reactor/utils";
 import { isBool, isSameURL } from "../utils";
 
 const timeKeys = ["min", "max", "start", "end", "previews"] as const;
@@ -38,9 +39,8 @@ export class PlaylistPlug extends BasePlug<Playlist> {
     // JS: return (this.nextVideo(), this.notify("videonext"));
   }
 
-  protected handlePlaylistChange({ root }: REvent<CtlrConfig, "playlist">): void {
+  protected handlePlaylistChange({ currentTarget: { value: list }, root }: REvent<CtlrConfig, "playlist", 1>): void {
     if (this.media.status.readyState < 1) return;
-    const list = root.playlist;
     const v = list?.find((v) => (v.media.id && v.media.id === root.media.id) || isSameURL(v.src, root.src));
     this.currentIndex = (v && list?.indexOf(v)) ?? 0;
     v ? this.applyItem(v, false) : this.movePlaylistTo(this.currentIndex);

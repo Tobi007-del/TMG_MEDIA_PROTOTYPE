@@ -1,5 +1,5 @@
 import { BasePlug } from ".";
-import type { REvent } from "../sia-reactor";
+import type { REvent } from "sia-reactor";
 import type { CtlrConfig } from "../types/config";
 import type { OverlayPlug, ToastsPlug, ControlPanelPlug } from ".";
 import type { Timeline } from "../components";

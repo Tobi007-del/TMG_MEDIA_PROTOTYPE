@@ -1,7 +1,7 @@
 import { clamp, setTimeout } from "../../utils";
-import { BaseModule, OverlayPlug, VolumePlug, type FastPlayPlug } from "../";
+import { BasePin, GesturePlug, OverlayPlug, VolumePlug, type FastPlayPlug } from "../";
 
-export interface TouchConfig {
+export interface GestureTouch {
   volume: boolean;
   brightness: boolean;
   timeline: boolean;
@@ -13,8 +13,9 @@ export interface TouchConfig {
   inset: number;
 }
 
-export class TouchModule extends BaseModule<TouchConfig> {
-  public static readonly moduleName: string = "touch gesture";
+export class GestureTouchPin extends BasePin<GesturePlug, GestureTouch> {
+  public static readonly pinName: string = "touch";
+  public static readonly plugName: string = "gesture";
   protected lastX = 0;
   protected lastY = 0;
   protected zone: { x: "left" | "right"; y: "top" | "bottom" } | null = null;
@@ -165,4 +166,4 @@ export class TouchModule extends BaseModule<TouchConfig> {
   }
 }
 
-export const TOUCH_BUILD: Partial<TouchConfig> = { volume: true, brightness: true, timeline: true, threshold: 200, axesRatio: 3, inset: 20, sliderTimeout: 1000, xRatio: 1, yRatio: 1 };
+export const GESTURE_TOUCH_BUILD: Partial<GestureTouch> = { volume: true, brightness: true, timeline: true, threshold: 200, axesRatio: 3, inset: 20, sliderTimeout: 1000, xRatio: 1, yRatio: 1 };

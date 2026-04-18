@@ -1,6 +1,7 @@
 import { camelize } from ".";
 import type { Control, ControlPanelBottomTuple } from "../plugs";
-import { type Paths, type PathValue, setAny } from "../sia-reactor";
+import { type Paths, type PathValue } from "sia-reactor";
+import { setAny } from "sia-reactor/utils";
 import type { UIObject, UISettings } from "../types/UIOptions";
 import { isObj, isArr } from "@t007/utils";
 

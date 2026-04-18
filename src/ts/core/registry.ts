@@ -131,7 +131,7 @@ export class ComponentRegistry extends BaseRegistry<ComponentConstructor> {
     const Comp = this.instance.get(name);
     if (!Comp) return null;
     const instance = new Comp(ctlr, options) as T;
-    return (instance.create(), instance.setup(), instance);
+    return (instance.create(), instance.setup());
   }
   static getAll(): ComponentConstructor[] {
     return this.instance.getAll();

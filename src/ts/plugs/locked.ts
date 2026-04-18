@@ -2,7 +2,7 @@ import { BasePlug, OverlayPlug } from ".";
 import type { Controller } from "../core/controller";
 import type { ScreenLocked } from "../components";
 import type { CtlrConfig } from "../types/config";
-import type { REvent } from "../sia-reactor";
+import type { REvent } from "sia-reactor";
 import { ComponentRegistry } from "../core/registry";
 import { setTimeout, parseCSSTime, mockAsync, createEl } from "../utils";
 

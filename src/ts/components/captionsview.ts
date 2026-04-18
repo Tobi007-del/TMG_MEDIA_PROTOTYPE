@@ -1,5 +1,5 @@
 import { BaseComponent, ComponentState } from ".";
-import { DeepPartial } from "../sia-reactor";
+import { DeepPartial } from "sia-reactor";
 import { capitalize, clamp, createEl, formatVttLine, isDef, isObj, isStr, parseIfPercent, parseVttText, safeNum, setTimeout } from "../utils";
 
 export type CaptionsViewConfig = undefined;

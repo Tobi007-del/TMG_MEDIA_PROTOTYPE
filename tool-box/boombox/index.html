@@ -23,6 +23,7 @@
     <meta name="twitter:label2" content="Interact" />
     <meta name="twitter:data2" content="Drag, Spin, & Vibe" />
     <link rel="icon" type="image/jpeg" sizes="32x32" href="../../assets/icons/movie-tape-two.jpeg" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sia-reactor/dist/styles/time-travel-overlay.css" />
     <style>
       :root {
         --brand: #e26e02;
@@ -179,7 +180,7 @@
           wrapper = document.createElement("div"),
           onColorChange = ({ target: { value: val } }) => {
             if (val === "custom") return cColorField.inputEl.click();
-            document.documentElement.style.setProperty("--brand", val);
+            document.documentElement.style.setProperty("--brand", (window[`TTO`].config.color = val));
             cColorField.inputEl.value = val;
             colorField.inputEl.value = colors.includes(val) ? val : "custom";
           };

@@ -1,4 +1,5 @@
-import {errorCodes,
+import {
+  errorCodes,
   modes,
   keyShortcutActions,
   moddedKeyShortcutActions,

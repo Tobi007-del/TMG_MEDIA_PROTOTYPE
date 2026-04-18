@@ -1,5 +1,5 @@
 import { BaseTech, BaseTechConfig } from ".";
-import type { REvent, ListenerOptions, WildPaths } from "../sia-reactor";
+import type { REvent, ListenerOptions, Paths } from "sia-reactor";
 import type { Controller } from "../core/controller";
 import type { CtlrMedia, MediaIntent } from "../types/contract";
 import { isStr, type TrackType, enterFullscreen, exitFullscreen, getSources, getTracks, isSameURL, queryFullscreenEl, supportsFullscreen, supportsPictureInPicture, observeMutation, removeSources, addSources, isSameSources, isSameTracks, removeTracks, addTracks, getTrackIdx, setCurrentTrack, canVidCtrlVolume, canVidMuteVolume, canVidCtrlRate, canVidTextTracks, canVidVideoTracks, canVidAudioTracks } from "../utils";
@@ -110,7 +110,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
     this.config.set(`intent.current${type}Track`, (term) => getTrackIdx(this.el, type, term), { signal: this.signal }); // pass `any` term, the track will surely be found if available
     const list = (this.el as any)[`${type.toLowerCase()}Tracks`];
     list?.addEventListener("change", () => this.setCurrentTrackState(type, list), this.eOpts.REACTOR);
-    this.config.on(`intent.current${type}Track`, (e: REvent<CtlrMedia, `intent.current${typeof type}Track`>) => this.handleCurrentTrackIntent(e, type), this.eOpts.REACTOR);
+    this.config.on(`intent.current${type}Track`, (e) => this.handleCurrentTrackIntent(e, type), this.eOpts.REACTOR);
   }
   protected wireCurrentAudioTrack() {
     this.wireCurrentTrack("Audio");
@@ -127,7 +127,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   }
   // --- Attribute Wiring ---
   protected bindAttr<K extends keyof MediaIntent>(key: K, isBool = false) {
-    this.config.on(`intent.${key}`, (e: REvent<CtlrMedia, `intent.${K}`>) => this.handleAttributeIntent(e, key, isBool), this.eOpts.REACTOR);
+    this.config.on(`intent.${key}` as Paths<CtlrMedia>, (e) => this.handleAttributeIntent(e, key, isBool), this.eOpts.REACTOR); // non-casted union reached peak ts complexity :)
   }
   protected wirePoster() {
     this.bindAttr("poster");
@@ -332,7 +332,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
     setCurrentTrack(this.el, type, e.value, false); // (el), (type), (idx), (no flush: `hidden` & !`disabled`)
     e.resolve(HTML5Tech.techName);
   }
-  protected handleAttributeIntent(e: REvent<CtlrMedia, WildPaths<CtlrMedia>>, key: string, isBool: boolean) {
+  protected handleAttributeIntent(e: REvent<CtlrMedia>, key: string, isBool: boolean) {
     if (e.resolved || (key === "poster" && isSameURL(e.value, this.config.state[key]))) return;
     const attr = key.toLowerCase();
     isBool ? this.el.toggleAttribute(attr, Boolean(e.value)) : e.value ? this.el.setAttribute(attr, e.value) : this.el.removeAttribute(attr); // (this.el as any)[key] = isBool ? Boolean(e.value) : (e.value ?? ""); // Generic handler for simple attributes

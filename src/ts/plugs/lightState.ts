@@ -1,7 +1,7 @@
 import { BasePlug, OverlayPlug, ControlPanelPlug, Control, BigControl } from ".";
 import type { PosterPreview } from "../types/generics";
 import type { CtlrConfig } from "../types/config";
-import { type DeepPartial, type REvent, TERMINATOR } from "../sia-reactor";
+import { type DeepPartial, type REvent, TERMINATOR } from "sia-reactor";
 import { inBoolArrOpt } from "../utils";
 
 export interface LightState {

@@ -1,7 +1,8 @@
 import { BasePlug, CSSPlug, type KeysPlug } from ".";
 import type { CaptionsView } from "../components";
 import { ComponentRegistry } from "../core/registry";
-import { type REvent, type DeepPartial, type PathValue, setAny } from "../sia-reactor";
+import { type REvent, type DeepPartial, type PathValue } from "sia-reactor";
+import { setAny } from "sia-reactor/utils";
 import type { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";

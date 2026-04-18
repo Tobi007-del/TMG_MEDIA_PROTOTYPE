@@ -1,6 +1,6 @@
 import { BasePlug } from ".";
 import type { DisabledPlug } from "./disabled";
-import type { REvent } from "../sia-reactor";
+import type { REvent } from "sia-reactor";
 import type { CtlrMedia } from "../types/contract";
 import type { ErrorCode } from "../types/generics";
 

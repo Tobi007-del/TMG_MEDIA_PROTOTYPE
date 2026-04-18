@@ -1,12 +1,12 @@
 import { BasePlug, type FramePlug } from ".";
 import type { CtlrMedia } from "../types/contract";
-import type { REvent } from "../sia-reactor";
+import type { REvent } from "sia-reactor";
 import { uncamelize } from "../utils";
 
 export type Css = Record<string, string | number> & {
   captionsCharacterEdgeStyle: "none" | "raised" | "depressed" | "outline" | "drop-shadow";
   captionsTextAlignment: "left" | "center" | "right";
-  syncWithMedia: Record<keyof Css, boolean>; // not a live synced key
+  syncWithMedia: Record<string, boolean>; // not a live synced key
 };
 
 export class CSSPlug extends BasePlug<Css> {
@@ -20,7 +20,7 @@ export class CSSPlug extends BasePlug<Css> {
     const entries = Object.entries(this.config);
     this.ctlr.settings.css.altImgUrl = `url(${window.TMG_VIDEO_ALT_IMG_SRC})`;
     // Ctlr Config Getters
-    this.ctlr.config.get("*", (val, { target: { key, path } }) => {
+    this.ctlr.config.get("*", (val, { target: { key, path } }: any) => {
       if (!path.startsWith("settings.css.") || path.includes("sync")) return val;
       return ((this._cache[key] ||= val = this.get(key)), val);
     });
@@ -28,7 +28,7 @@ export class CSSPlug extends BasePlug<Css> {
     this.media.watch("status.videoWidth", this.syncAspectRatio, { signal: this.signal, immediate: true });
     this.media.watch("status.videoHeight", this.syncAspectRatio, { signal: this.signal });
     // ---- Config -------
-    this.ctlr.config.watch("*", (val, { target: { key, path } }) => path.startsWith("settings.css.") && !path.includes("sync") && this.set(key, val), { signal: this.signal }); // `.watch()`: CSSOM needs immediate updates for visual sync
+    this.ctlr.config.watch("*", (val, { target: { key, path } }: any) => path.startsWith("settings.css.") && !path.includes("sync") && this.set(key, val), { signal: this.signal }); // `.watch()`: CSSOM needs immediate updates for visual sync
     // ---- State --------
     this.ctlr.state.watch("dimensions.container.width", (w) => (this.ctlr.settings.css.currentContainerWidth = `${w || 0}px`), { signal: this.signal, immediate: true });
     this.ctlr.state.watch("dimensions.container.height", (h) => (this.ctlr.settings.css.currentContainerHeight = `${h || 0}px`), { signal: this.signal, immediate: true });

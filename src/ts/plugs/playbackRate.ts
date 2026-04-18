@@ -1,5 +1,5 @@
 import { BasePlug, type KeysPlug, type KeyMod } from ".";
-import type { REvent } from "../sia-reactor";
+import type { REvent } from "sia-reactor";
 import { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";

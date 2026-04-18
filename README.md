@@ -3,15 +3,18 @@
 > **Something big is coming to the video player space.**
 
 [![Status](https://img.shields.io/badge/Status-In_Development-F5A623.svg)]()
-[![Ecosystem](https://img.shields.io/badge/Powered_By-S.I.A_Reactor-blue.svg)](https://github.com/Tobi007-del/t007-tools)
+[![Ecosystem](https://img.shields.io/badge/Powered_By-S.I.A_Reactor-blue.svg)](https://github.com/Tobi007-del/sia-reactor)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+[Live Demo](https://tmg-video-player.vercel.app) | [Prototype 1](https://tobi007-del.github.io/tmg-media-player/prototype-1/index.html) | [Prototype 2](https://tobi007-del.github.io/tmg-media-player/prototype-2/index.html) | [Beta Player](https://tobi007-del.github.io/tmg-media-player/src/beta/index.html)
+
 ---
 
 ## 🚧 Work In Progress
 
 I am currently completely re-architecting the web video experience from the ground up. 
 
-The next generation of **TMG Media Player** is actively in development. We are stripping away the bloated frameworks and building a zero-dependency, hardware-accelerated, highly customizable video engine powered by the experimental [S.I.A. Data DOM Architecture](https://github.com/Tobi007-del/t007-tools/tree/main/packages/sia-reactor).
+The next generation of **TMG Media Player** is actively in development. We are stripping away the bloated frameworks and building a zero-dependency, hardware-accelerated, highly customizable video engine powered by the experimental [S.I.A. Data DOM Architecture](https://github.com/Tobi007-del/sia-reactor).
 
 ### What's cooking in the lab?
 - 🌊 Physics-driven gesture controls

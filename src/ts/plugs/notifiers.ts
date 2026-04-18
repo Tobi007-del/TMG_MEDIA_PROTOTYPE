@@ -1,6 +1,6 @@
 import { BasePlug } from ".";
 import type { Controller } from "../core/controller";
-import type { REvent } from "../sia-reactor";
+import type { REvent } from "sia-reactor";
 import { createEl } from "../utils";
 
 export interface Notifiers {

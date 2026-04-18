@@ -10,7 +10,7 @@ type SafeClickEl = HTMLElement & {
 };
 
 // Element Factory
-export { type Dataset, type Style, createEl, assignEl } from "@t007/utils";
+export { createEl, assignEl } from "@t007/utils";
 
 export function getWindow(el?: any): (Window & typeof globalThis) | undefined {
   return (el instanceof Window ? el : el instanceof Document ? el?.defaultView : el?.ownerDocument?.defaultView) ?? undefined;

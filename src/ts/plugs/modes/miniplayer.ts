@@ -1,17 +1,17 @@
-import { BaseModule, OverlayPlug, SkeletonPlug } from "../";
-import type { REvent } from "../../sia-reactor";
+import { BasePin, ModesPlug, OverlayPlug, SkeletonPlug } from "../";
+import type { REvent } from "sia-reactor";
 import type { CtlrMedia } from "../../types/contract";
 import type { CtlrConfig } from "../../types/config";
-import type { ModesPlug } from "./";
 import { clamp, inDocView, inBoolArrOpt, setTimeout } from "../../utils";
 
-export type MiniplayerModeConfig = {
+export type ModesMiniplayer = {
   disabled: boolean;
   minWindowWidth: number;
 };
 
-export class MiniplayerModule extends BaseModule<MiniplayerModeConfig> {
-  public static readonly moduleName = "miniplayer";
+export class ModesMiniplayerPin extends BasePin<ModesPlug, ModesMiniplayer> {
+  public static readonly pinName: string = "miniplayer";
+  public static readonly plugName: string = "modes";
   protected lastMiniplayerPosX = 0;
   protected lastMiniplayerPosY = 0;
   protected lastMiniplayerPtrX = 0;
@@ -153,4 +153,4 @@ export class MiniplayerModule extends BaseModule<MiniplayerModeConfig> {
   }
 }
 
-export const MINIPLAYER_BUILD: Partial<MiniplayerModeConfig> = { disabled: false, minWindowWidth: 240 };
+export const MODES_MINIPLAYER_BUILD: Partial<ModesMiniplayer> = { disabled: false, minWindowWidth: 240 };

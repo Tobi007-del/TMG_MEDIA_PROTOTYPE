@@ -1,5 +1,5 @@
-import { BaseModule, KeysPlug, MediaPlug, OverlayPlug, SkeletonPlug } from "../";
-import type { REvent } from "../../sia-reactor";
+import { BasePin, ModesPlug, KeysPlug, MediaPlug, OverlayPlug, SkeletonPlug } from "../";
+import type { REvent } from "sia-reactor";
 import type { CtlrMedia } from "../../types/contract";
 import type { CtlrConfig } from "../../types/config";
 import { handleDOMMutation } from "../../tools/runtime";
@@ -12,13 +12,14 @@ export interface FloatingPlayerConfig {
   disallowReturnToOpener: boolean;
   preferInitialWindowPlacement: boolean;
 }
-export type PictureInPictureModuleConfig = {
+export type ModesPictureInPicture = {
   disabled: boolean;
   floatingPlayer: FloatingPlayerConfig;
 };
 
-export class PictureInPictureModule extends BaseModule<PictureInPictureModuleConfig> {
-  public static readonly moduleName = "pictureInPicture";
+export class ModesPictureInPicturePin extends BasePin<ModesPlug, ModesPictureInPicture> {
+  public static readonly pinName: string = "pictureInPicture";
+  public static readonly plugName: string = "modes";
   public inFloatingPlayer = false; // a quick notice flag for external deps
   public floatingWindow: (Window & typeof globalThis) | null = null;
   public whitelist: string[] = [];
@@ -115,7 +116,7 @@ export class PictureInPictureModule extends BaseModule<PictureInPictureModuleCon
   }
 }
 
-export const PICTURE_IN_PICTURE_BUILD: Partial<PictureInPictureModuleConfig> = {
+export const MODES_PICTURE_IN_PICTURE_BUILD: Partial<ModesPictureInPicture> = {
   disabled: false,
   floatingPlayer: { disabled: false, width: 500, height: 281, disallowReturnToOpener: false, preferInitialWindowPlacement: false },
 };

@@ -24,10 +24,14 @@ export abstract class BasePlug<Config = any, State = any> extends Controllable<C
   public wire?(): void {}
 }
 
-export abstract class BaseModule<Config = any, State = any> extends Controllable<Config, State> {
-  public static readonly moduleName: string;
+export abstract class BasePin<Plug extends BasePlug = BasePlug, Config = any, State = any> extends Controllable<Config, State> {
+  public static readonly pinName: string;
+  public static readonly plugName: string;
   public get name() {
-    return (this.constructor as typeof BaseModule).moduleName;
+    return (this.constructor as typeof BasePin).pinName;
+  }
+  protected get plug(): Plug {
+    return this.ctlr.plug<Plug>((this.constructor as typeof BasePin).plugName)!; // `!`: only plug will instantiate after all
   }
 
   protected onSetup(): void {

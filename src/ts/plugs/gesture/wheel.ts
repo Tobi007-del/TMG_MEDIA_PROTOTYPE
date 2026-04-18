@@ -1,7 +1,7 @@
 import { clamp, setTimeout } from "../../utils";
-import { BaseModule, ControlPanelPlug, VolumePlug, type GesturePlug, type FastPlayPlug } from "../";
+import { BasePin, VolumePlug, type GesturePlug, type FastPlayPlug } from "../";
 
-export interface WheelConfig {
+export interface GestureWheel {
   volume: { normal: boolean; slider: boolean };
   brightness: { normal: boolean; slider: boolean };
   timeline: { normal: boolean; slider: boolean };
@@ -10,8 +10,9 @@ export interface WheelConfig {
   yRatio: number;
 }
 
-export class WheelModule extends BaseModule<WheelConfig> {
-  public static readonly moduleName: string = "wheel gesture";
+export class GestureWheelPin extends BasePin<GesturePlug, GestureWheel> {
+  public static readonly pinName: string = "wheel";
+  public static readonly plugName: string = "gesture";
   protected timeoutId: number | null = null;
   protected zone: { x: "left" | "right"; y: "top" | "bottom" } | null = null;
   protected xCheck = false;
@@ -100,7 +101,7 @@ export class WheelModule extends BaseModule<WheelConfig> {
   }
 }
 
-export const WHEEL_BUILD: Partial<WheelConfig> = {
+export const GESTURE_WHEEL_BUILD: Partial<GestureWheel> = {
   volume: { normal: true, slider: true },
   brightness: { normal: true, slider: true },
   timeline: { normal: true, slider: true },

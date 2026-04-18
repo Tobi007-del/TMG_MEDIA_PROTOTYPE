@@ -1,15 +1,16 @@
-import { BaseModule } from "../";
-import type { REvent } from "../../sia-reactor";
+import { BasePin, ModesPlug } from "../";
+import type { REvent } from "sia-reactor";
 import type { CtlrMedia } from "../../types/contract";
 import type { CtlrConfig } from "../../types/config";
 import { IS_MOBILE } from "../../utils";
 
-export type TheaterConfig = {
+export type ModesTheater = {
   disabled: boolean;
 };
 
-export class TheaterModule extends BaseModule<TheaterConfig> {
-  public static readonly moduleName = "theater";
+export class ModesTheaterPin extends BasePin<ModesPlug, ModesTheater> {
+  public static readonly pinName: string = "theater";
+  public static readonly plugName: string = "modes";
 
   public wire(): void {
     // Ctlr Config Listeners
@@ -34,4 +35,4 @@ export class TheaterModule extends BaseModule<TheaterConfig> {
   }
 }
 
-export const THEATER_BUILD: Partial<TheaterConfig> = { disabled: !IS_MOBILE };
+export const MODES_THEATER_BUILD: Partial<ModesTheater> = { disabled: !IS_MOBILE };

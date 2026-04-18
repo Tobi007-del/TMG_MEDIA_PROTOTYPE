@@ -1,6 +1,6 @@
 import { BaseComponent, ComponentState } from "./";
 import type { Controller } from "../core/controller";
-import { type REvent, reactive, type Reactive } from "../sia-reactor";
+import { type REvent, reactive, type Reactive } from "sia-reactor";
 import type { AptRange } from "../types/generics";
 import { createEl, clamp, setTimeout, stepNum } from "../utils";
 

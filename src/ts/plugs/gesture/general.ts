@@ -1,15 +1,16 @@
+import { BasePin, GesturePlug, OverlayPlug, ControlPanelPlug } from "../";
 import { setTimeout, addSafeClicks, IS_MOBILE } from "../../utils";
-import { OverlayPlug, ControlPanelPlug, BaseModule } from "../";
 import { Timeline } from "../../components";
 import type { TimePlug } from "../time";
 
-export interface GeneralConfig {
+export interface GestureGeneral {
   click: string;
   dblClick: string;
 }
 
-export class GeneralModule extends BaseModule<GeneralConfig> {
-  public static readonly moduleName: string = "general gesture";
+export class GestureGeneralPin extends BasePin<GesturePlug, GestureGeneral> {
+  public static readonly pinName: string = "general";
+  public static readonly plugName: string = "gesture";
   protected focusSubjectId = "";
   protected skipPersistPosition: "left" | "right" | null = null;
 
@@ -107,7 +108,7 @@ export class GeneralModule extends BaseModule<GeneralConfig> {
   }
 }
 
-export const GENERAL_BUILD: Partial<GeneralConfig> = {
+export const GESTURE_GENERAL_BUILD: Partial<GestureGeneral> = {
   click: IS_MOBILE ? "" : "togglePlay",
-  dblClick: IS_MOBILE ? "togglePlay" : "toggleFullscreenMode",
+  dblClick: IS_MOBILE ? "togglePlay" : "toggleModesFullscreenPin",
 };
