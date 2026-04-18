@@ -396,7 +396,7 @@
     }
   }
 
-  // node_modules/sia-reactor/dist/chunk-3UHI7CNE.js
+  // node_modules/sia-reactor/dist/chunk-2EIKOZAD.js
   var ReactorEvent = class _ReactorEvent {
     /** No active propagation phase. */
     static NONE = 0;
@@ -714,28 +714,37 @@
     }
     mediate(path, payload, type, cords) {
       let terminated = false, value = payload.target.value;
-      const isGet = type === "get", isSet = type === "set", mediators = isGet ? this.getters : isSet ? this.setters : this.deleters;
-      for (let i = !isGet ? 0 : cords.length - 1, len = !isGet ? cords.length : -1; i !== len; i += !isGet ? 1 : -1) {
-        const cord = cords[i], response = isGet ? cord.cb(value, payload) : isSet ? cord.cb(value, terminated, payload) : cord.cb(terminated, payload);
+      const isGet = type === "get", isSet = type === "set", mediators = isGet ? this.getters : isSet ? this.setters : this.deleters, scords = cords.slice();
+      for (let slen = scords.length, i = !isGet ? 0 : slen - 1, len = !isGet ? slen : -1; i !== len; i += !isGet ? 1 : -1) {
+        const cord = scords[i], response = isGet ? cord.cb(value, payload) : isSet ? cord.cb(value, terminated, payload) : cord.cb(terminated, payload);
         if (isGet || !(terminated ||= payload.terminated = response === TERMINATOR)) value = response;
-        if (cord.once) cords.splice((len--, i--), 1), !cords.length && mediators.delete(path);
+        if (cord.once) {
+          const idx = cords.indexOf(cord);
+          if (idx !== -1) cords.splice(idx, 1), !cords.length && mediators.delete(path);
+        }
       }
       return value;
     }
     notify(path, payload) {
       if (this.watchers) {
-        const wildcords = this.watchers.get("*"), cords = this.watchers.get(path);
+        const wildcords = this.watchers.get("*"), wildscords = wildcords?.slice(), cords = this.watchers.get(path), scords = cords?.slice();
         if (cords)
-          for (let i = 0, len = cords.length; i < len; i++) {
-            const cord = cords[i];
+          for (let i = 0, len = scords.length; i < len; i++) {
+            const cord = scords[i];
             cord.cb(payload.target.value, payload);
-            if (cord.once) cords.splice((len--, i--), 1), !cords.length && this.watchers.delete(path);
+            if (cord.once) {
+              const idx = cords.indexOf(cord);
+              if (idx !== -1) cords.splice(idx, 1), !cords.length && this.watchers.delete(path);
+            }
           }
         if (wildcords)
-          for (let i = 0, len = wildcords.length; i < len; i++) {
-            const wildcord = wildcords[i];
+          for (let i = 0, len = wildscords.length; i < len; i++) {
+            const wildcord = wildscords[i];
             wildcord.cb(payload.target.value, payload);
-            if (wildcord.once) wildcords.splice((len--, i--), 1), !wildcords.length && this.watchers.delete("*");
+            if (wildcord.once) {
+              const idx = wildcords.indexOf(wildcord);
+              if (idx !== -1) wildcords.splice(idx, 1), !wildcords.length && this.watchers.delete("*");
+            }
           }
       }
       this.listeners && this.schedule(path, payload);
@@ -773,8 +782,9 @@
       if (!cords) return;
       e.type = path !== e.target.path ? "update" : e.staticType;
       e.currentTarget = { path, value, oldValue: e.type !== "update" ? e.target.oldValue : void 0, key: e.type !== "update" ? path : path.slice(path.lastIndexOf(".") + 1) || "", hadKey: e.type !== "update" ? e.target.hadKey : true, object };
-      for (let i = 0, len = cords.length, tDepth; i < len; i++) {
-        const cord = cords[i];
+      const scords = cords.slice();
+      for (let i = 0, len = scords.length, tDepth; i < len; i++) {
+        const cord = scords[i];
         if (e.immediatePropagationStopped) break;
         if (cord.capture !== isCapture) continue;
         if (cord.depth !== void 0) {
@@ -782,7 +792,10 @@
           if (tDepth > cord.lDepth + cord.depth) continue;
         }
         cord.cb(e);
-        if (cord.once) cords.splice((len--, i--), 1), !cords.length && this.listeners.delete(path);
+        if (cord.once) {
+          const idx = cords.indexOf(cord);
+          if (idx !== -1) cords.splice(idx, 1), !cords.length && this.listeners.delete(path);
+        }
       }
     }
     /**
@@ -879,7 +892,7 @@
       if (!cords) return void 0;
       for (let i = 0, len = cords.length; i < len; i++) {
         const cord = cords[i];
-        if (Object.is(cord.cb, cb)) return cord.sclup(), cords.splice((len--, i--), 1), !cords.length && store.delete(path), true;
+        if (Object.is(cord.cb, cb)) return cord.sclup(), cords.splice(i, 1), !cords.length && store.delete(path), true;
       }
       return false;
     }
@@ -1033,10 +1046,10 @@
     off(path, callback, options) {
       const cords = this.listeners?.get(path);
       if (!cords) return void 0;
-      const { capture } = parseEvtOpts2(options, EVT_OPTS.LISTENER);
+      const { capture = false } = parseEvtOpts2(options, EVT_OPTS.LISTENER);
       for (let i = 0, len = cords.length; i < len; i++) {
         const cord = cords[i];
-        if (Object.is(cord.cb, callback) && cord.capture === capture) return cord.sclup(), cords.splice((len--, i--), 1), !cords.length && this.listeners.delete(path), true;
+        if (Object.is(cord.cb, callback) && cord.capture === capture) return cord.sclup(), cords.splice(i, 1), !cords.length && this.listeners.delete(path), true;
       }
       return false;
     }
@@ -1097,7 +1110,20 @@
     return target[RAW] || target;
   }
 
-  // node_modules/sia-reactor/dist/chunk-5A44QFT6.js
+  // node_modules/sia-reactor/dist/chunk-IBAPWB27.js
+  function setTimeout3(handler, timeout, ...args) {
+    const sig = args[0] instanceof AbortSignal ? args.shift() : void 0;
+    if (sig?.aborted) return -1;
+    const win = args[0] instanceof Window ? args.shift() : window;
+    if (!sig) return win.setTimeout(handler, timeout, ...args);
+    const id = win.setTimeout(() => (sig.removeEventListener("abort", kill), "string" === typeof handler ? new Function(handler) : handler(...args)), timeout), kill = () => win.clearTimeout(id);
+    return sig.addEventListener("abort", kill, { once: true }), id;
+  }
+  function clamp2(min = 0, val, max = Infinity) {
+    return Math.min(Math.max(val, min), max);
+  }
+
+  // node_modules/sia-reactor/dist/chunk-RVYL3OLW.js
   function stringifyKeyEvent2(e) {
     const parts = [];
     if (e.ctrlKey) parts.push("ctrl");
@@ -1166,7 +1192,7 @@
     }
   }
 
-  // node_modules/sia-reactor/dist/chunk-P37ADJMM.js
+  // node_modules/sia-reactor/dist/chunk-3OT72G7R.js
   function onAllMethods2(owner, callback, skipOwn = true, nested = false) {
     let proto = owner;
     while (proto && proto !== Object.prototype) {
@@ -1193,20 +1219,8 @@
       }
     });
   }
-  function setTimeout3(handler, timeout, ...args) {
-    const sig = args[0] instanceof AbortSignal ? args.shift() : void 0;
-    if (sig?.aborted) return -1;
-    const win = args[0] instanceof Window ? args.shift() : window;
-    if (!sig) return win.setTimeout(handler, timeout, ...args);
-    const id = win.setTimeout(() => (sig.removeEventListener("abort", kill), "string" === typeof handler ? new Function(handler) : handler(...args)), timeout), kill = () => win.clearTimeout(id);
-    return sig.addEventListener("abort", kill, { once: true }), id;
-  }
-  function clamp2(min = 0, val, max = Infinity) {
-    return Math.min(Math.max(val, min), max);
-  }
 
-  // node_modules/sia-reactor/dist/modules.js
-  var wpArr = ["*"];
+  // node_modules/sia-reactor/dist/chunk-NG3WWQV4.js
   var BaseReactorModule = class {
     static moduleName;
     get name() {
@@ -1245,6 +1259,10 @@
     }
     onAttach(_rtr, _rid) {
     }
+    attachPaths(rtr, rid) {
+      const paths = this.getPaths(this.config.whitelist, rid);
+      for (let i = 0, len = paths.length; i < len; i++) !this.config.disabled ? rtr.on(paths[i], this.handlePath, { signal: this.signal }) : rtr.off(paths[i], this.handlePath);
+    }
     /**
      * Entry point called to initialize module wiring, calls `.attach(target, id)` first, `Reactor.use()` calls this internally.
      * Should run as last in `.attach()` chain or after all desired reactors if using multiple; so wiring is done safely after.
@@ -1261,16 +1279,25 @@
       this.ac.abort();
       this.onDestroy?.();
     }
-    /**
-     * Wraps a function with module-scoped error logging.
-     * Use this when creating functions dynamically (for example, before attaching an anonymous listener on the fly).
-     * @example
-     * window.addEventListener("resize", this.guard(() => this.syncLayout(true)), { signal: this.signal });
-     */
-    guard = (fn) => {
-      return guardMethod2(fn, (e) => this.rtrs.values().next().value?.log(`[Reactor "${this.name}" Module] Error: ${e}`));
-    };
-    // `()=>{}`: needs to be bounded even before initialization
+    handleWhitelist({ value: paths, oldValue: prevs }) {
+      for (const [rid, rtr] of this.rtrs) {
+        const prevPaths = this.getPaths(prevs, rid), newPaths = this.getPaths(paths, rid);
+        for (let i = 0, len = prevPaths.length; i < len; i++) rtr.off(prevPaths[i], this.handlePath);
+        for (let i = 0, len = newPaths.length; i < len; i++) !this.config.disabled && rtr.on(newPaths[i], this.handlePath, { signal: this.signal });
+      }
+    }
+    handlePath(e, rid = this.rids.get(e.reactor)) {
+      if (this.config.blacklist) {
+        const paths = this.getPaths(this.config.blacklist, rid);
+        for (let i = 0, len = paths.length; i < len; i++) {
+          const path = paths[i];
+          if (e.path === path || e.path.startsWith(path + ".")) return;
+        }
+      }
+      this.onPath(e, rid);
+    }
+    onPath(_e, _rid) {
+    }
     /**
      * Path resolution utility for modules, provides automatic reactor id resolution for multi-reactor setups.
      * @param paths Paths to filter by, supports same formats as `ModulePaths`, will be resolved with the module's reactor id if applicable.
@@ -1281,7 +1308,20 @@
       const rid = "object" === typeof target ? this.rids.get(target) : target;
       return (paths && (Array.isArray(paths) ? paths : paths[String(rid)])) ?? wpArr;
     }
+    /**
+     * Wraps a function with module-scoped error logging, every instance methods is already auto-wrapped with this.
+     * Use this when creating functions dynamically (for example, before attaching an anonymous listener on the fly).
+     * @example
+     * window.addEventListener("resize", this.guard(() => this.syncLayout(true)), { signal: this.signal });
+     */
+    guard = (fn) => {
+      return guardMethod2(fn, (e) => this.rtrs.values().next().value?.log(`[Reactor "${this.name}" Module] Error: ${e}`));
+    };
+    // `()=>{}`: needs to be bounded even before initialization
   };
+  var wpArr = ["*"];
+
+  // node_modules/sia-reactor/dist/modules.js
   var TimeTravelModule = class extends BaseReactorModule {
     static moduleName = "timeTravel";
     lastTimestamp = 0;
@@ -1301,17 +1341,11 @@
     onAttach(rtr, rid) {
       rtr.config.referenceTracking = rtr.config.smartCloning = rtr.config.eventTimeStamps = true;
       if (!this.state.history.length || !this.state.initialState[rid]) this.state.initialState[rid] = rtr.snapshot();
-      for (const p of this.getPaths(this.config.whitelist, rid)) rtr.on(p, this.record, { signal: this.signal });
+      this.attachPaths(rtr, rid);
     }
-    handleWhitelist({ value: paths, oldValue: prevs }) {
-      for (const [rid, rtr] of this.rtrs) {
-        for (const p of this.getPaths(prevs, rid)) rtr.off(p, this.record);
-        for (const p of this.getPaths(paths, rid)) rtr.off(p, this.record), rtr.on(p, this.record, { signal: this.signal });
-      }
-    }
+    onPath = this.record;
     /** Chronicling the lifecycle of the system, Captures the essence of every mutation wave that bubbles up. */
     record(e, rid = this.rids.get(e.reactor)) {
-      if (this.getPaths(this.config.blacklist, rid).includes(e.path)) return;
       if (!this.state.paused) return;
       if (this.state.currentFrame < this.state.history.length) fanout2(this.state, "history", this.state.history.slice(0, this.state.currentFrame), { atomic: true });
       if (this.state.history.length >= this.config.maxHistoryLength) fanout2(this.state, "history", this.state.history.slice(1), { atomic: true });
@@ -1394,7 +1428,7 @@
   };
   var TIME_TRAVEL_MODULE_BUILD = { maxPlaybackDelay: 2e3 };
 
-  // node_modules/sia-reactor/dist/chunk-MWC3R7QL.js
+  // node_modules/sia-reactor/dist/chunk-3LIKXZ7X.js
   var Autotracker = class {
     proxy;
     deps = /* @__PURE__ */ new Map();
@@ -1535,14 +1569,6 @@
       CTX.autotracker = prev;
     }
   }
-  function effect(callback, options) {
-    const atrkr = new Autotracker();
-    let destroyed = false;
-    (function execute() {
-      if (!destroyed) withTracker(atrkr, () => callback()), atrkr.callback(execute, options);
-    })();
-    return () => (destroyed = true, atrkr.destroy());
-  }
   var keys = {
     overrides: ["Ctrl+z", "Cmd+z", "Ctrl+y", "Cmd+y", "Ctrl+Shift+z", "Cmd+Shift+z", "Home", "End", ",", ".", "ArrowLeft", "ArrowRight", "Space", "Alt+Space", "Escape", "Delete", "e", "i", "c"],
     shortcuts: { undo: ["Ctrl+z", "Cmd+z"], redo: ["Ctrl+y", "Cmd+y", "Ctrl+Shift+z", "Cmd+Shift+z"], genesis: "Home", ending: "End", prevFrame: ",", nextFrame: ".", skipBwd: "ArrowLeft", skipFwd: "ArrowRight", playPause: "Space", rewind: "Alt+Space", closeOverlay: "Escape", clrHistory: "Delete", export: "e", import: "i", clear: "c" }
@@ -1564,9 +1590,11 @@
       this.time = time;
       this.config = reactive({ title: `Time Travel Overlay ${this.index = ++_TimeTravelOverlay.count}`, ...build });
       this.state.open = !!this.config.startOpen;
-      const s = this.time.state, host = createEl2("div", { className: "tt-overlay-host" }), toggle = createEl2("button", { className: "tt-overlay-toggle", type: "button", onclick: () => this.state.open = !this.state.open }), panel = createEl2("aside", { className: "tt-overlay", ariaLabel: "time travel overlay" }), title = createEl2("div", { className: "title" }), frame = createEl2("span", { className: "muted" }), clrHistory = createEl2("button", { textContent: `Clear History${formatKeyForDisplay2(keys.shortcuts.clrHistory)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.clrHistory, false), onclick: () => (this.time.clear(), this.state.import = "") }), undo = createEl2("button", { textContent: `Undo${formatKeyForDisplay2(keys.shortcuts.undo[0])}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.undo, false), onclick: this.time.undo }), redo = createEl2("button", { textContent: `Redo${formatKeyForDisplay2(keys.shortcuts.redo[0])}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.redo, false), onclick: this.time.redo }), genesis = createEl2("button", { textContent: `Genesis${formatKeyForDisplay2(keys.shortcuts.genesis)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.genesis, false), onclick: () => this.time.jumpTo(0) }), playPause = createEl2("button", { onclick: () => this.time[s.paused ? "play" : "pause"](), ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.playPause, false) }), rewind = createEl2("button", { textContent: `Rewind${formatKeyForDisplay2(keys.shortcuts.rewind)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.rewind, false), onclick: this.time.rewind }), range = createEl2("input", { type: "range", min: "0", max: "0", value: "0", title: "time travel frame", ariaLabel: "time travel frame", oninput: () => this.time.jumpTo(Number(range.value)) }), exp = createEl2("button", { textContent: `Export${formatKeyForDisplay2(keys.shortcuts.export)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.export, false), onclick: () => this.state.import = this.time.export(null, 2) }), imp = createEl2("button", { textContent: `Import${formatKeyForDisplay2(keys.shortcuts.import)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.import, false), onclick: () => this.state.import.trim().length && this.time.import(this.state.import) }), clr = createEl2("button", { textContent: `Clear${formatKeyForDisplay2(keys.shortcuts.clear)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.clear, false), onclick: () => this.state.import = "" }), payload = createEl2("textarea", { className: "tt-io", readOnly: true, placeholder: "current payload json", title: "current payload" }), io = createEl2("textarea", { className: "tt-io", placeholder: "timeline payload json", oninput: () => this.state.import = io.value }), foot = createEl2("p", { className: "tt-footnote", textContent: "Want this in your app? " }), link = createEl2("a", { target: "_blank", rel: "noreferrer noopener", textContent: "sia-reactor", href: "https://www.npmjs.com/package/sia-reactor" }), box = createEl2("div", { className: "tt-status-box" }), status = createEl2("div", { className: "tt-status-row" }), row1 = createEl2("div", { className: "tt-row" }), row2 = createEl2("div", { className: "tt-row" }), row3 = createEl2("div", { className: "tt-row" });
+      let wlLive = false, blLive = false;
+      const s = this.time.state, host = createEl2("div", { className: "tt-overlay-host" }), toggle = createEl2("button", { className: "tt-overlay-toggle", type: "button", onclick: () => this.state.open = !this.state.open }), panel = createEl2("aside", { className: "tt-overlay", ariaLabel: "time travel overlay" }), title = createEl2("div", { className: "title" }), frame = createEl2("span", { className: "muted" }), clrHistory = createEl2("button", { textContent: `Clear History${formatKeyForDisplay2(keys.shortcuts.clrHistory)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.clrHistory, false), onclick: () => (this.time.clear(), this.state.import = "") }), undo = createEl2("button", { textContent: `Undo${formatKeyForDisplay2(keys.shortcuts.undo[0])}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.undo, false), onclick: this.time.undo }), redo = createEl2("button", { textContent: `Redo${formatKeyForDisplay2(keys.shortcuts.redo[0])}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.redo, false), onclick: this.time.redo }), genesis = createEl2("button", { textContent: `Genesis${formatKeyForDisplay2(keys.shortcuts.genesis)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.genesis, false), onclick: () => this.time.jumpTo(0) }), playPause = createEl2("button", { onclick: () => this.time[s.paused ? "play" : "pause"](), ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.playPause, false) }), rewind = createEl2("button", { textContent: `Rewind${formatKeyForDisplay2(keys.shortcuts.rewind)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.rewind, false), onclick: this.time.rewind }), range = createEl2("input", { type: "range", min: "0", max: "0", value: "0", title: "time travel frame", ariaLabel: "time travel frame", oninput: () => this.time.jumpTo(Number(range.value)) }), exp = createEl2("button", { textContent: `Export${formatKeyForDisplay2(keys.shortcuts.export)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.export, false), onclick: () => this.state.import = this.time.export(null, 2) }), imp = createEl2("button", { textContent: `Import${formatKeyForDisplay2(keys.shortcuts.import)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.import, false), onclick: () => this.state.import.trim().length && this.time.import(this.state.import) }), clr = createEl2("button", { textContent: `Clear${formatKeyForDisplay2(keys.shortcuts.clear)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.clear, false), onclick: () => this.state.import = "" }), payload = createEl2("textarea", { className: "tt-io", readOnly: true, placeholder: "current payload json", title: "Current History Entry" }), io = createEl2("textarea", { className: "tt-io", placeholder: "timeline payload json", title: "Time History", oninput: () => this.state.import = io.value }), foot = createEl2("p", { className: "tt-footnote", textContent: "Want this in your app? " }), link = createEl2("a", { target: "_blank", rel: "noreferrer noopener", textContent: "sia-reactor", href: "https://www.npmjs.com/package/sia-reactor" }), box = createEl2("div", { className: "tt-status-box" }), status = createEl2("div", { className: "tt-status-row" }), filters = createEl2("div", { className: "tt-status-row" }), filterBox = createEl2("div", { className: "tt-status-box" }), whitelistLabel = createEl2("span", { className: "muted", textContent: "Whitelist:" }), blacklistLabel = createEl2("span", { className: "muted", textContent: "Blacklist:" }), whitelist = createEl2("input", { className: "tt-filter-input tt-io", placeholder: 'a.b, c.d or {"0":["a.b"]}', title: "Whitelist paths", onfocus: () => wlLive = true, onblur: () => (wlLive = false, whitelist.value = formatPaths(this.time.config.whitelist, "*")), oninput: (_, parsed = parsePaths(whitelist.value)) => parsed !== null && (this.time.config.whitelist = parsed) }), blacklist = createEl2("input", { className: "tt-filter-input tt-io", placeholder: 'a.b, c.d or {"0":["a.b"]}', title: "Blacklist paths", onfocus: () => blLive = true, onblur: () => (blLive = false, blacklist.value = formatPaths(this.time.config.blacklist, "")), oninput: (_, parsed = parsePaths(blacklist.value, true)) => parsed !== null && (this.time.config.blacklist = parsed) }), filterRow1 = createEl2("div", { className: "tt-filter-row" }), filterRow2 = createEl2("div", { className: "tt-filter-row" }), row1 = createEl2("div", { className: "tt-row" }), row2 = createEl2("div", { className: "tt-row" }), row3 = createEl2("div", { className: "tt-row" });
       status.append((box.append(frame), box), clrHistory);
-      panel.append(title, status, (row1.append(undo, redo, genesis), row1), (row2.append(playPause, rewind), row2), payload, range, (row3.append(exp, imp, clr), row3), io, (foot.appendChild(link), foot));
+      filters.append((filterBox.append((filterRow1.append(whitelistLabel, whitelist), filterRow1), (filterRow2.append(blacklistLabel, blacklist), filterRow2)), filterBox));
+      panel.append(title, status, (row1.append(undo, redo, genesis), row1), (row2.append(playPause, rewind), row2), payload, range, filters, (row3.append(exp, imp, clr), row3), io, (foot.appendChild(link), foot));
       host.append(toggle, panel);
       this.els = { host, toggle, panel, title, frame, clrHistory, undo, redo, genesis, playPause, rewind, range, exp, imp, clr, payload, io };
       this.keyup = (e) => {
@@ -1596,7 +1624,8 @@
         effect(() => {
           clr.disabled = imp.disabled = !this.state.import.trim().length;
           io.value !== this.state.import && (io.value = this.state.import);
-        })
+        }),
+        effect(() => (!wlLive && (whitelist.value = formatPaths(this.time.config.whitelist, "*")), !blLive && (blacklist.value = formatPaths(this.time.config.blacklist, ""))))
       ];
       this.clups.push(...sync);
     }
@@ -1617,6 +1646,33 @@
     if (layer.parentElement !== host) host.appendChild(layer);
     const dock = getDirChild(layer, "tt-overlay-dock") || createEl2("div", { className: "tt-overlay-dock" });
     return dock.parentElement !== layer && layer.appendChild(dock), dock;
+  }
+  function formatPaths(paths, emptyText) {
+    return !paths ? emptyText : Array.isArray(paths) ? paths.length ? paths.join(", ") : emptyText : "object" === typeof paths ? JSON.stringify(paths) : String(paths);
+  }
+  function parsePaths(raw, allowEmpty = false) {
+    const text = raw.trim();
+    if (!text) return allowEmpty ? void 0 : wpArr;
+    if (text[0] === "{")
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed && "object" === typeof parsed) return parsed;
+      } catch {
+        return null;
+      }
+    const list = text.split(",").map((p) => p.trim()).filter(Boolean);
+    return list.length ? list : allowEmpty ? void 0 : wpArr;
+  }
+  function effect(callback, options = NIL2) {
+    const atrkr = new Autotracker();
+    let destroyed = false;
+    const cleanup = () => (destroyed = true, atrkr.destroy());
+    (function execute() {
+      if (destroyed) return;
+      withTracker(atrkr, callback);
+      options.once ? cleanup() : atrkr.callback(execute, options);
+    })();
+    return cleanup;
   }
 
   // src/beta/beta.js
@@ -4362,6 +4418,7 @@
     getAny: getAny2,
     bindAllMethods,
     reactive,
+    TERMINATOR,
     volatile,
     safeNum: (number, fallback = 0) => tmg.isValidNum(number) ? number : fallback,
     parseIfPercent: (percent, amount, autocap = 0.25) => {

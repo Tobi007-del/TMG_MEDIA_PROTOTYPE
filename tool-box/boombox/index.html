@@ -147,7 +147,8 @@
     </div>
     <script defer>
       window.addEventListener("load", () => {
-        const fileInput = field({
+        const bbInst = window.NinoBoombox,
+        fileInput = field({
           type: "file",
           label: "Load Your Own Audio File",
           helperText: { info: "Make the experience yours! For best results, use a stereo audio file" },
@@ -158,13 +159,12 @@
         fileInput.addEventListener("change", (e) => {
           const file = e.target.files[0];
           if (!file.type.startsWith("audio/")) return Toast.warn("Only audio files are supported!");
-          const bbInst = window.NinoBoombox;
           bbInst.media.pause();
           URL.revokeObjectURL(bbInst.media.src);
           bbInst.media.src = URL.createObjectURL(file);
           bbInst.media.play();
         });
-        const options = [
+          const options = [
             { option: "Tastey Orange", value: "#e26e02" },
             { option: "Pure White", value: "#ffffff" },
             { option: "Light Blue", value: "#3198f5" },
@@ -175,18 +175,18 @@
             { option: "Custom Hue", value: "custom" },
           ],
           colors = options.slice(0, -1).map((opt) => opt.value),
-          colorField = field({ type: "select", label: "Pick Your Own Color", value: "#e26e02", helperText: { info: "Play around with the colors too, might just brighten your mood :)" }, options }),
-          cColorField = field({ type: "color", value: "#e26e02" }),
+          defs = { color: bbInst.store.ui.color.toLowerCase() },
+          colorField = field({ type: "select", label: "Pick Your Own Color", value: colors.includes(defs.color) ? defs.color : "custom", helperText: { info: "Play around with the colors too, might just brighten your mood :)" }, options }),
+          cColorField = field({ type: "color", value: /^#([0-9a-f]{6})$/i.test(defs.color) ? defs.color : "#e26e02" }),
           wrapper = document.createElement("div"),
           onColorChange = ({ target: { value: val } }) => {
             if (val === "custom") return cColorField.inputEl.click();
-            document.documentElement.style.setProperty("--brand", (window[`TTO`].config.color = val));
-            cColorField.inputEl.value = val;
-            colorField.inputEl.value = colors.includes(val) ? val : "custom";
+            bbInst.store.ui.color = val.toLowerCase();
           };
         wrapper.classList.add("dual-field-wrapper");
         wrapper.append(colorField, cColorField);
         fileInput.insertAdjacentElement("afterend", wrapper);
+        bbInst.store.on("ui.color", ({ target: { value: v = defs.color } }) => ((v = v.toLowerCase()),(cColorField.inputEl.value = v), (colorField.inputEl.value = colors.includes(v) ? v : "custom")), { immediate: true });
         colorField.inputEl.addEventListener("input", onColorChange);
         cColorField.inputEl.addEventListener("input", onColorChange);
       });

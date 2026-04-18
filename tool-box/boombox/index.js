@@ -1,10 +1,12 @@
-const bbState = {
+const bbStore = {
+  ui: { color: "#e26e02" },
   audio: {
+    intent: { paused: true },
+    state: { paused: true },
     volume: { min: 0, value: 50, max: 300, muted: false }, // Range: 0 to 100 (or 200 if boost is on); dummy though
     pan: 0, // -1 (Left), 0 (Center), 1 (Right)
     boost: false, // true = allows volume > 100
     moveMode: "3d", // "2d" (Translate X/Y) or "3d" (Rotate X/Y)
-    paused: true, // true = media is paused; dummy though
     vibe: 0.35, // 0 - 100 representing analyser perceived loudness
     vibeDisabled: false, // Toggle for the viber
   }, // the volume and muted will not be treated seriously as they are already implemented in main environment
@@ -21,12 +23,12 @@ class Boombox {
     return this.context?.currentTime ?? 0;
   }
   get bbOverflow() {
-    return this.bbSens.overflow * this.state.transform.z; // Since OffsetWidth doesn't change with transform, we have to account for it
+    return this.bbSens.overflow * this.store.transform.z; // Since OffsetWidth doesn't  with transform, we have to account for it
   }
   constructor() {
     tmg.bindAllMethods(this);
-    this.state = window.bbState = tmg.reactive(structuredClone(bbState));
-    this.state.use((window[`TTM`] = new tmg.TimeTravelModule({ blacklist: ["audio.vibe"] })));
+    this.store = window.bbStore = tmg.reactive(structuredClone(bbStore));
+    this.store.use((window[`TTM`] = new tmg.TimeTravelModule({ blacklist: ["audio.vibe", "audio.state"] })));
     window[`TTO`] = new tmg.TimeTravelOverlay(window[`TTM`], { title: `TMG Boombox Time` });
     this.media = new Audio("/tmg-media-player/assets/media/Subway-Surfers-Theme-Sound-Effect.mp3");
     this.media.loop = true;
@@ -49,38 +51,39 @@ class Boombox {
   }
   wire() {
     // State Listeners: using watchers for forwarded intents so it doesn't take two microtasks, listeners otherwise
-    this.state.watch("audio.volume.value", this.onVolumeChange, { immediate: true });
-    this.state.on("audio.volume.value", this.handleVolumeChange, { immediate: true });
-    this.state.on("audio.volume.min", this.handleMinChange, { immediate: true });
-    this.state.on("audio.volume.max", this.handleMaxChange, { immediate: true });
-    this.state.watch("audio.volume.muted", this.onMuted, { immediate: true });
-    this.state.on("audio.volume.muted", this.handleMutedChange, { immediate: true });
-    this.state.on("audio.pan", this.handlePanChange, { immediate: true });
-    this.state.watch("audio.paused", this.onPaused, { immediate: true });
-    this.state.on("audio.paused", this.handlePausedChange, { immediate: true });
-    this.state.on("audio.boost", this.handleBoostChange, { immediate: true });
-    this.state.on("audio.moveMode", this.handleMoveModeChange, { immediate: true });
-    this.state.on("audio.vibe", this.handleVibeChange, { immediate: true });
-    this.state.on("audio.vibeDisabled", this.handleVibeDisabledChange, { immediate: true });
-    this.state.on("transform", this.handleTransformChange, { immediate: true });
-    this.state.set("transform.x", this.setTransformX); // UI Guard: prevents out of bounds behaviour with respect to overflow
-    this.state.set("transform.y", this.setTransformY); // UI Guard: ---------------------------------------------------------
-    this.state.set("transform.z", (v) => tmg.clamp(0.1, v, 2)); // UI Guard: We clamp it at 0.1 so it can never pass through the listener's head.
+    this.store.on("audio.intent.paused", this.handlePausedIntent, { immediate: true });
+    this.store.on("audio.state.paused", this.handlePausedState, { immediate: true });
+    this.store.watch("audio.volume.value", this.onVolume, { immediate: true });
+    this.store.on("audio.volume.value", this.handleVolume, { immediate: true });
+    this.store.on("audio.volume.min", this.handleMin, { immediate: true });
+    this.store.on("audio.volume.max", this.handleMax, { immediate: true });
+    this.store.watch("audio.volume.muted", this.onMuted, { immediate: true });
+    this.store.on("audio.volume.muted", this.handleMuted, { immediate: true });
+    this.store.on("audio.pan", this.handlePan, { immediate: true });
+    this.store.on("audio.boost", this.handleBoost, { immediate: true });
+    this.store.on("audio.moveMode", this.handleMoveMode, { immediate: true });
+    this.store.on("audio.vibe", this.handleVibe, { immediate: true });
+    this.store.on("audio.vibeDisabled", this.handleVibeDisabled, { immediate: true });
+    this.store.on("ui.color", this.handleColor, { immediate: true });
+    this.store.on("transform", this.handleTransform, { immediate: true });
+    this.store.set("transform.x", this.setTransformX); // UI Guard: prevents out of bounds behaviour with respect to overflow
+    this.store.set("transform.y", this.setTransformY); // UI Guard: ---------------------------------------------------------
+    this.store.set("transform.z", (v) => tmg.clamp(0.1, v, 2)); // UI Guard: We clamp it at 0.1 so it can never pass through the listener's head.
     // DOM Listeners
-    this.media.addEventListener("play", () => this.state.audio.paused && (this.state.audio.paused = false)); // dummy cuz real system handles this elsewhere, S.I.A solved state sync wars after all
-    this.media.addEventListener("pause", () => !this.state.audio.paused && (this.state.audio.paused = true)); // dummy
+    this.media.addEventListener("play", () => (this.store.audio.state.paused = false)); // dummy cuz real system handles this elsewhere, S.I.A solved state sync wars after all
+    this.media.addEventListener("pause", () => (this.store.audio.state.paused = true)); // dummy
     document.addEventListener("click", this.setupAudio, { once: true, capture: true });
     this.bbEl.addEventListener("pointerdown", this.handlePointerDown);
     this.bbEl.addEventListener("wheel", this.handleWheel, { passive: false });
     this.bbEl.addEventListener("auxclick", (e) => e.preventDefault()); // Prevent middle-click auto-scroll
     this.bbEl.addEventListener("mousedown", this.handleAuxDown);
     this.bbEl.addEventListener("mouseup", this.handleAuxUp);
-    [this.stereoLeftBtn, this.stereoRightBtn, this.stereoCenterBtn].forEach((btn) => btn.addEventListener("click", () => (this.state.audio.pan = Number(btn.dataset.pan))));
-    this.volumeSlider.addEventListener("input", (e) => (this.state.audio.volume.value = this.lastVolume = Number(e.target.value)));
-    this.muteBtn.addEventListener("click", () => (this.state.audio.volume.muted = !this.state.audio.volume.muted));
-    this.boostBtn.addEventListener("click", () => (this.state.audio.boost = !this.state.audio.boost));
-    this.moveModeBtn.addEventListener("click", () => (this.state.audio.moveMode = this.state.audio.moveMode === "2d" ? "3d" : "2d"));
-    this.playBtn.addEventListener("click", () => (this.state.audio.paused = !this.state.audio.paused));
+    [this.stereoLeftBtn, this.stereoRightBtn, this.stereoCenterBtn].forEach((btn) => btn.addEventListener("click", () => (this.store.audio.pan = Number(btn.dataset.pan))));
+    this.volumeSlider.addEventListener("input", (e) => (this.store.audio.volume.value = this.lastVolume = Number(e.target.value)));
+    this.muteBtn.addEventListener("click", () => (this.store.audio.volume.muted = !this.store.audio.volume.muted));
+    this.boostBtn.addEventListener("click", () => (this.store.audio.boost = !this.store.audio.boost));
+    this.moveModeBtn.addEventListener("click", () => (this.store.audio.moveMode = this.store.audio.moveMode === "2d" ? "3d" : "2d"));
+    this.playBtn.addEventListener("click", () => (this.store.audio.intent.paused = !this.store.audio.intent.paused));
     this.resetBtn?.addEventListener("click", this.resetPos);
   }
   setupAudio() {
@@ -109,9 +112,9 @@ class Boombox {
     this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
     this.wireAudioGraph();
     this.mediaSetup = true; // Applying initials now
-    this.state.audio.pan = this.state.audio.pan;
-    this.state.audio.volume.value = this.state.audio.volume.value;
-    this.state.transform = this.state.transform;
+    this.store.audio.pan = this.store.audio.pan;
+    this.store.audio.volume.value = this.store.audio.volume.value;
+    this.store.transform = this.store.transform;
   }
   wireAudioGraph() {
     // Lock the listener at the center of the universe
@@ -143,63 +146,68 @@ class Boombox {
     // We connect back to TVP's limiter so we don't blow out the user's speakers
     this.analyser.connect(tmg._limiter);
   }
-  handlePanChange({ value }) {
-    this.stereoPanner?.pan.setTargetAtTime(Number(value), this.ctime, 0.02);
-    [this.stereoLeftBtn, this.stereoRightBtn, this.stereoCenterBtn].forEach((btn) => btn.classList.toggle("activated", btn.dataset.pan == value));
+  handleColor({ value: color }) {
+    const val = color.toLowerCase();
+    document.documentElement.style.setProperty("--brand", val);
+    window[`TTO`]?.config && (window[`TTO`].config.color = val);
   }
-  onVolumeChange(value) {
+  handlePausedIntent({ value: paused }) {
+    !paused ? this.media.play().catch((e) => (Toast.error(`Failed to play audio`), console.error("Failed to play audio:", e))) : this.media.pause(); // dummy
+    // this.ctlr.media.intent.paused = paused; // real
+  }
+  handlePausedState({ value: paused }) {
+    this.bbEl.classList.toggle("paused", paused);
+    this.playBtn.classList.toggle("activated", !paused);
+  }
+  onVolume(value) {
     this.gainer?.gain.setTargetAtTime((value / 100) * 2, this.ctime, 0.02); // dummy: doubling for dat anroid feel btw, real one does it too
-    this.state.audio.volume.muted = value === 0;
-    // this.ctl.media.intent.volume = value; // real
+    this.store.audio.volume.muted = value === 0;
+    // this.ctlr.media.intent.volume = value; // real
   }
-  handleVolumeChange({ value }) {
+  handleVolume({ value }) {
     this.volumeText.textContent = `${(this.volumeSlider.value = value)}%`;
   }
-  handleMinChange({ value }) {
-    if (value >= this.state.audio.volume.value) this.state.audio.volume.value = value;
+  handleMin({ value }) {
+    if (value >= this.store.audio.volume.value) this.store.audio.volume.value = value;
     this.volumeSlider.min = value;
   }
-  handleMaxChange({ value }) {
-    if (value <= this.state.audio.volume.value) this.state.audio.volume.value = value;
+  handleMax({ value }) {
+    if (value <= this.store.audio.volume.value) this.store.audio.volume.value = value;
     this.volumeSlider.max = value;
   }
   onMuted(muted, { target: { oldValue } }) {
     if (muted) {
-      this.lastVolume = this.state.audio.volume.value;
-      this.state.audio.volume.value = 0;
-    } else if (tmg.isValidNum(this.lastVolume)) this.state.audio.volume.value = this.lastVolume; // dummy
-    // this.ctl.media.intent.muted = muted; // real
+      this.lastVolume = this.store.audio.volume.value;
+      this.store.audio.volume.value = 0;
+    } else if (tmg.isValidNum(this.lastVolume)) this.store.audio.volume.value = this.lastVolume; // dummy
+    // this.ctlr.media.intent.muted = muted; // real
   }
-  handleMutedChange({ value: muted }) {
+  handleMuted({ value: muted }) {
     this.muteBtn.classList.toggle("activated", muted);
   }
-  handleBoostChange({ value: boost }) {
+  handlePan({ value }) {
+    this.stereoPanner?.pan.setTargetAtTime(Number(value), this.ctime, 0.02);
+    [this.stereoLeftBtn, this.stereoRightBtn, this.stereoCenterBtn].forEach((btn) => btn.classList.toggle("activated", btn.dataset.pan == value));
+  }
+  handleBoost({ value: boost }) {
     if (!boost) {
-      this.lastMax = this.state.audio.volume.max;
-      this.state.audio.volume.max = tmg.clamp(this.state.audio.volume.min, this.state.audio.volume.max, boost ? Infinity : 100);
-    } else if (tmg.isValidNum(this.lastMax)) this.state.audio.volume.max = this.lastMax; // dummy
+      this.lastMax = this.store.audio.volume.max;
+      this.store.audio.volume.max = tmg.clamp(this.store.audio.volume.min, this.store.audio.volume.max, boost ? Infinity : 100);
+    } else if (tmg.isValidNum(this.lastMax)) this.store.audio.volume.max = this.lastMax; // dummy
     // no real yet but likely same
     this.boostBtn.classList.toggle("activated", boost);
   }
-  handleMoveModeChange({ value: moveMode }) {
+  handleMoveMode({ value: moveMode }) {
     this.moveModeBtn.classList.toggle("activated", moveMode === "3d");
   }
-  onPaused(paused) {
-    !paused ? this.media.play().catch((e) => (Toast.error(`Failed to play audio`), console.error("Failed to play audio:", e))) : this.media.pause(); // dummy
-    // this.ctl.media.intent.paused = paused; // real
-  }
-  handlePausedChange({ value: paused }) {
-    this.bbEl.classList.toggle("paused", paused);
-    this.playBtn.classList.toggle("activated", !paused);
-  }
-  handleVibeChange({ value: vibe }) {
+  handleVibe({ value: vibe }) {
     this.bbEl.style.setProperty("--bb-vibe", vibe * 0.007); // most natural plus 7's my fav
   }
-  handleVibeDisabledChange({ value: disabled }) {
+  handleVibeDisabled({ value: disabled }) {
     !disabled ? this.RAFLoop("vibing", this.startVibing) : this.cancelRAFLoop("vibing");
   }
-  handleTransformChange() {
-    const { x, y, z, rotateX, rotateY } = this.state.transform,
+  handleTransform() {
+    const { x, y, z, rotateX, rotateY } = this.store.transform,
       // --- POSITION MATH ---
       // WebAudio space is much smaller than screen pixels.
       // We map your CSS % to an n-unit grid. CSS Y is down (+), WebAudio Y is up (+), so we invert Y.
@@ -230,7 +238,7 @@ class Boombox {
   setTransformX(v) {
     if (!this.bbEl) return v;
     const { bounds: b = this.boundsEl.getBoundingClientRect(), rect: r = this.bbEl.getBoundingClientRect() } = this.eS,
-      growth = (r.width * this.state.transform.z - r.width) / 2,
+      growth = (r.width * this.store.transform.z - r.width) / 2,
       limLeft = Math.max(0, ((r.left - b.left - growth) / r.width) * 100) + this.bbOverflow,
       limRight = Math.max(0, ((b.right - r.right - growth) / r.width) * 100) + this.bbOverflow;
     return tmg.clamp(-limLeft, v, limRight);
@@ -238,7 +246,7 @@ class Boombox {
   setTransformY(v) {
     if (!this.bbEl) return v;
     const { bounds: b = this.boundsEl.getBoundingClientRect(), rect: r = this.bbEl.getBoundingClientRect() } = this.eS,
-      growth = (r.height * this.state.transform.z - r.height) / 2,
+      growth = (r.height * this.store.transform.z - r.height) / 2,
       limitUp = Math.max(0, ((r.top - b.top - growth) / r.height) * 100) + this.bbOverflow,
       limitDown = Math.max(0, ((b.bottom - r.bottom - growth) / r.height) * 100) + this.bbOverflow;
     return tmg.clamp(-limitUp, v, limitDown);
@@ -246,7 +254,7 @@ class Boombox {
   resetPos(e) {
     this.bbBody.style.transition = "transform 0.8s cubic-bezier(0.1, 0, 0, 1)"; // Adds a snnapy transition for the reset
     this.bbBody.ontransitionend = () => this.bbBody.style.removeProperty("transition");
-    Object.assign(this.state.transform, bbState.transform); // Smoothly reset the state to the defaults
+    Object.assign(this.store.transform, bbStore.transform); // Smoothly reset the state to the defaults
     this.eS = { lastX: 0, lastY: 0, isZSliding: false, auxDown: false }; // Reset the event store to prevent jumps
   }
   startVibing() {
@@ -263,7 +271,7 @@ class Boombox {
       // gets crushed down to 12.5%. But a heavy kick drum hit of 100% (1.0) stays at 100%.
       vibeIntensity = normalized * normalized * normalized * 100; // This creates a sharp, physical "snap" instead of a muddy wobble.
     // Mutate the state
-    this.state.audio.vibe = vibeIntensity;
+    this.store.audio.vibe = vibeIntensity;
   }
   handlePointerDown(e) {
     if (e.target.closest("button, input, .tmg-bbfm-master")) return;
@@ -293,12 +301,12 @@ class Boombox {
         const ptr = Array.from(this.bbPtrs.values())[0],
           deltaX = ptr.clientX - this.eS.lastX,
           deltaY = ptr.clientY - this.eS.lastY;
-        if (this.state.audio.moveMode === "2d") {
-          this.state.transform.x += (deltaX / this.bbEl.offsetWidth) * 100 * this.bbSens.translate;
-          this.state.transform.y += (deltaY / this.bbEl.offsetHeight) * 100 * this.bbSens.translate;
+        if (this.store.audio.moveMode === "2d") {
+          this.store.transform.x += (deltaX / this.bbEl.offsetWidth) * 100 * this.bbSens.translate;
+          this.store.transform.y += (deltaY / this.bbEl.offsetHeight) * 100 * this.bbSens.translate;
         } else {
-          this.state.transform.rotateY += deltaX * this.bbSens.rotate;
-          this.state.transform.rotateX -= deltaY * this.bbSens.rotate;
+          this.store.transform.rotateY += deltaX * this.bbSens.rotate;
+          this.store.transform.rotateX -= deltaY * this.bbSens.rotate;
         }
         this.eS.lastX = ptr.clientX;
         this.eS.lastY = ptr.clientY;
@@ -308,7 +316,7 @@ class Boombox {
           currentMidY = (pts[0].clientY + pts[1].clientY) / 2,
           deltaY = currentMidY - this.eS.lastY;
         // Push up = move away (smaller Z). Pull down = bring closer (larger Z).
-        this.state.transform.z = this.state.transform.z + (deltaY / this.bbEl.offsetHeight) * this.bbSens.zoom;
+        this.store.transform.z = this.store.transform.z + (deltaY / this.bbEl.offsetHeight) * this.bbSens.zoom;
         this.eS.lastY = currentMidY;
       }
     });
@@ -328,15 +336,15 @@ class Boombox {
     const dY = e.shiftKey ? 0 : e.deltaY,
       dX = e.shiftKey ? e.deltaY : e.deltaX;
     if (this.eS.auxDown) {
-      this.state.transform.z = this.state.transform.z + (dY / this.bbEl.offsetHeight) * (this.bbSens.zoom * 0.1);
+      this.store.transform.z = this.store.transform.z + (dY / this.bbEl.offsetHeight) * (this.bbSens.zoom * 0.1);
       return;
     }
-    if (this.state.audio.moveMode === "2d") {
-      this.state.transform.x -= (dX / this.bbEl.offsetWidth) * 100 * this.bbSens.translate;
-      this.state.transform.y -= (dY / this.bbEl.offsetHeight) * 100 * this.bbSens.translate;
+    if (this.store.audio.moveMode === "2d") {
+      this.store.transform.x -= (dX / this.bbEl.offsetWidth) * 100 * this.bbSens.translate;
+      this.store.transform.y -= (dY / this.bbEl.offsetHeight) * 100 * this.bbSens.translate;
     } else {
-      this.state.transform.rotateY -= dX * (this.bbSens.rotate * 0.1);
-      this.state.transform.rotateX += dY * (this.bbSens.rotate * 0.1);
+      this.store.transform.rotateY -= dX * (this.bbSens.rotate * 0.1);
+      this.store.transform.rotateX += dY * (this.bbSens.rotate * 0.1);
     }
   }
   handleAuxDown(e) {

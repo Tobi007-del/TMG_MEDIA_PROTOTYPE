@@ -2871,6 +2871,7 @@ var tmg = {
   getAny: getAny,
   bindAllMethods: bindAllMethods,
   reactive: reactive,
+  TERMINATOR: TERMINATOR,
   volatile: volatile,
   safeNum: (number, fallback = 0) => (tmg.isValidNum(number) ? number : fallback),
   parseIfPercent: (percent, amount, autocap = 0.25) => {
