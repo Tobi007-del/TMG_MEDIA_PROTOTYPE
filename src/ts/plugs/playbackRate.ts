@@ -12,31 +12,31 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
 
   public wire(): void {
     // Ctlr Config Getters
-    this.ctlr.config.get("settings.playbackRate.value", () => this.media.state.playbackRate, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
+    this.ctlr.config.get("settings.playbackRate.value", () => this.media.state.playbackRate, { signal: this.signal, lazy: true }); // #VIRTUAL: reliable return value
     // ---- Media Setters
     this.media.set("intent.playbackRate", (value) => clamp(this.config.min, value!, this.config.max), { signal: this.signal });
     // ---- Config Watchers
-    this.ctlr.config.watch("settings.playbackRate.value", this.forwardRate, { signal: this.signal, immediate: "auto" });
+    this.ctlr.config.watch("settings.playbackRate.value", this.forwardPlaybackRate, { signal: this.signal, immediate: "auto" });
     // ---- Media Listeners
     this.media.on("state.playbackRate", this.handlePlaybackRateState, { signal: this.signal });
     // ---- Config --------
-    this.ctlr.config.on("settings.playbackRate.min", this.handleMinChange, { signal: this.signal });
-    this.ctlr.config.on("settings.playbackRate.max", this.handleMaxChange, { signal: this.signal });
+    this.ctlr.config.on("settings.playbackRate.min", this.handleMin, { signal: this.signal });
+    this.ctlr.config.on("settings.playbackRate.max", this.handleMax, { signal: this.signal });
     // Post Wiring
     const keys = this.ctlr.plug<KeysPlug>("keys");
     keys?.register("playbackRateUp", this.handleKeyRateUp, { phase: "keydown" });
     keys?.register("playbackRateDown", this.handleKeyRateDown, { phase: "keydown" });
   }
 
-  protected forwardRate(value?: number): void {
+  protected forwardPlaybackRate(value?: number): void {
     this.media.intent.playbackRate = value!;
   }
 
-  protected handleMinChange({ value: min }: REvent<CtlrConfig, "settings.playbackRate.min">): void {
+  protected handleMin({ value: min }: REvent<CtlrConfig, "settings.playbackRate.min">): void {
     if (this.config.value! < min) this.config.value = min;
   }
 
-  protected handleMaxChange({ value: max }: REvent<CtlrConfig, "settings.playbackRate.max">): void {
+  protected handleMax({ value: max }: REvent<CtlrConfig, "settings.playbackRate.max">): void {
     if (this.config.value! > max) this.config.value = max;
   }
 
@@ -49,7 +49,6 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
   protected handleKeyRateUp(_: KeyboardEvent, mod: KeyMod): void {
     this.changeRate(this.ctlr.plug<KeysPlug>("keys")!.getModded("playbackRate", mod, this.config.skip));
   }
-
   protected handleKeyRateDown(_: KeyboardEvent, mod: KeyMod): void {
     this.changeRate(-this.ctlr.plug<KeysPlug>("keys")!.getModded("playbackRate", mod, this.config.skip));
   }

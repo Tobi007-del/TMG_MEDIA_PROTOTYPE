@@ -30,7 +30,7 @@ export class PlaylistPlug extends BasePlug<Playlist> {
     this.ctlr.config.watch("playlist", (value) => (this.config = value), { signal: this.signal }); // #COMPUTED: config can lose reference
     this.ctlr.config.watch("settings.time.start", (v) => this.ctlr.config.playlist && (this.config![this.currentIndex].settings.time.start = v), { signal: this.signal, immediate: "auto" });
     // ----------- Listeners
-    this.ctlr.config.on("playlist", this.handlePlaylistChange, { signal: this.signal, immediate: true, depth: 1 });
+    this.ctlr.config.on("playlist", this.handle, { signal: this.signal, immediate: true, depth: 1 });
     // Post Wiring
     const keys = this.ctlr.plug<KeysPlug>("keys");
     keys?.register("prev", this.previousVideo, { phase: "keydown" });
@@ -39,7 +39,7 @@ export class PlaylistPlug extends BasePlug<Playlist> {
     // JS: return (this.nextVideo(), this.notify("videonext"));
   }
 
-  protected handlePlaylistChange({ currentTarget: { value: list }, root }: REvent<CtlrConfig, "playlist", 1>): void {
+  protected handle({ currentTarget: { value: list }, root }: REvent<CtlrConfig, "playlist", 1>): void {
     if (this.media.status.readyState < 1) return;
     const v = list?.find((v) => (v.media.id && v.media.id === root.media.id) || isSameURL(v.src, root.src));
     this.currentIndex = (v && list?.indexOf(v)) ?? 0;

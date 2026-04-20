@@ -42,9 +42,9 @@ export class VolumePlug extends BasePlug<Volume, VolumeState> {
     this.shouldMute = this.shouldSetLastVolume = this.media.element?.muted ?? false;
     this.config.value = this.shouldMute ? 0 : this.state.aptVolume;
     // Event Listeners
-    this.media.element.addEventListener("volumechange", this.handleNativeVolumeChange, { signal: this.signal });
+    this.media.element.addEventListener("volumechange", this.handleVolumeChange, { signal: this.signal });
     // Ctlr Config Getters
-    this.ctlr.config.get("settings.volume.value", (value) => (this.gainNode ? Math.round(((this.gainNode.gain?.value ?? 2) / 2) * 100) : value), true);  // VIRTUAL: reliable return value
+    this.ctlr.config.get("settings.volume.value", (value) => (this.gainNode ? Math.round(((this.gainNode.gain?.value ?? 2) / 2) * 100) : value), true); // #VIRTUAL: reliable return value
     // ----------- Setters
     this.ctlr.config.set("settings.volume.value", (value) => clamp(this.config.min, value, this.config.max), { signal: this.signal });
     // ----------- Watchers
@@ -188,11 +188,9 @@ export class VolumePlug extends BasePlug<Volume, VolumeState> {
     this.toggleMute("auto");
     // JS: this.config.wonce("settings.volume.value", (v) => (!v ? this.notify("volumemuted") : this.notify("volumeup")));
   }
-
   protected handleKeyVolumeUp(_: KeyboardEvent, mod: KeyMod): void {
     this.changeVolume(this.ctlr.plug<KeysPlug>("keys")!.getModded("volume", mod, this.config.skip));
   }
-
   protected handleKeyVolumeDown(_: KeyboardEvent, mod: KeyMod): void {
     this.changeVolume(-this.ctlr.plug<KeysPlug>("keys")!.getModded("volume", mod, this.config.skip));
   }
@@ -203,7 +201,7 @@ export class VolumePlug extends BasePlug<Volume, VolumeState> {
     if (volume > 5) this.sliderAptVolume = volume;
   }
 
-  protected handleNativeVolumeChange(): void {
+  protected handleVolumeChange(): void {
     this.media.element.volume = 1; // there are always edge cases even in advanced systems
     if (this.config.muted !== this.media.element.muted) this.toggleMute();
   }

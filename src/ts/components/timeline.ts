@@ -73,10 +73,10 @@ export class Timeline extends RangeSlider<TimelineConfig> {
   public override wire(): void {
     super.wire();
     // State Listeners
-    this.state.on("scrubbing", this.handleScrubbingChange, { signal: this.signal });
+    this.state.on("scrubbing", this.handleScrubbing, { signal: this.signal });
     // Config --------
     this.config.on("previewValue", this.updatePreviewTime, { signal: this.signal });
-    this.config.on("previews", this.handlePreviewChange, { signal: this.signal });
+    this.config.on("previews", this.handlePreviews, { signal: this.signal });
     // Ctlr Config Watchers
     this.ctlr.config.watch("settings.time.previews", (value) => (this.config.previews = value!), { signal: this.signal, immediate: true });
     this.ctlr.config.watch("settings.time.seekSync", (value) => (this.config.scrub.sync = value!), { signal: this.signal, immediate: true });
@@ -132,7 +132,7 @@ export class Timeline extends RangeSlider<TimelineConfig> {
     if (!this.state.scrubbing) this.config.value = safeNum(this.media.state.currentTime / duration) * 100;
   }
 
-  protected handleScrubbingChange({ value }: REvent<RangeState, "scrubbing">): void {
+  protected handleScrubbing({ value }: REvent<RangeState, "scrubbing">): void {
     if (!value) {
       this.media.intent.paused = this.wasPaused;
       cancelAnimationFrame(this.scrubbingId);
@@ -149,7 +149,7 @@ export class Timeline extends RangeSlider<TimelineConfig> {
     this.ctlr.videoContainer.classList.toggle("tmg-video-scrubbing", value);
     if (!value) this.stopPreview();
   }
-  protected handlePreviewChange({ target }: REvent<TimelineConfig, "previews">): void {
+  protected handlePreviews({ target }: REvent<TimelineConfig, "previews">): void {
     const value = target.value === true ? {} : target.value;
     if (!value) return void (this.ctlr.videoContainer.dataset.previewType = "none");
     const manual = value.address && (value.spf || (value.cols && value.rows)),

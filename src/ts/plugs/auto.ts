@@ -21,44 +21,44 @@ export class AutoPlug extends BasePlug<Auto> {
 
   public wire(): void {
     // Ctlr Config Getters
-    this.ctlr.config.get("settings.auto.play", () => this.media.state.autoplay, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
+    this.ctlr.config.get("settings.auto.play", () => this.media.state.autoplay, { signal: this.signal, lazy: true }); // #VIRTUAL: reliable return value
     // ----------- Watchers
     this.ctlr.config.watch("settings.auto.play", this.forwardAutoPlay, { signal: this.signal, immediate: "auto" });
     // ---- Media Listeners
-    this.media.on("state.currentTime", this.handleTimeUpdate, { signal: this.signal, immediate: true });
+    this.media.on("state.currentTime", this.handleCurrentTimeState, { signal: this.signal, immediate: true });
     // ---- State ---------
-    this.ctlr.state.on("mediaParentIntersecting", this.handleIntersectionChange, { signal: this.signal });
+    this.ctlr.state.on("mediaParentIntersecting", this.handleMediaParentIntersecting, { signal: this.signal });
     // ---- Config --------
-    this.ctlr.config.on("settings.auto.next.preview.usePoster", this.handlePreviewUsePoster, { signal: this.signal });
-    this.ctlr.config.on("settings.auto.next.preview.tease", this.handlePreviewTease, { signal: this.signal });
-    this.ctlr.config.on("settings.auto.next.preview.time", this.handlePreviewTime, { signal: this.signal });
+    this.ctlr.config.on("settings.auto.next.preview.usePoster", this.handleNextPreviewUsePoster, { signal: this.signal });
+    this.ctlr.config.on("settings.auto.next.preview.tease", this.handleNextPreviewTease, { signal: this.signal });
+    this.ctlr.config.on("settings.auto.next.preview.time", this.handleNextPreviewTime, { signal: this.signal });
   }
 
   protected forwardAutoPlay(value?: boolean | AptAutoplayOption): void {
     this.media.intent.autoplay = isStr(value) ? false : !!value;
   }
 
-  protected handleTimeUpdate({ value: curr }: REvent<CtlrMedia, "state.currentTime">): void {
+  protected handleCurrentTimeState({ value: curr }: REvent<CtlrMedia, "state.currentTime">): void {
     if (this.media.status.readyState && curr && this.ctlr.state.readyState > 1 && Math.floor((this.ctlr.settings.time.end ?? this.media.status.duration) - curr) <= this.config.next.value) this.autonextVideo();
   }
 
-  protected handleIntersectionChange(): void {
+  protected handleMediaParentIntersecting(): void {
     (this.mediaAptAutoplay(this.config.pause, false), this.mediaAptAutoplay());
   }
 
-  protected handlePreviewUsePoster({ target: { value, object } }: REvent<CtlrConfig, "settings.auto.next.preview.usePoster">): void {
+  protected handleNextPreviewUsePoster({ target: { value, object } }: REvent<CtlrConfig, "settings.auto.next.preview.usePoster">): void {
     if (!this.nextVideoPreview || (value && this.nextVideoPreview.poster)) return;
     if (object.tease) this.ctlr.settings.auto.next.preview.tease = true;
     else this.nextVideoPreview.currentTime = object.time;
   }
 
-  protected handlePreviewTease({ target: { value, object } }: REvent<CtlrConfig, "settings.auto.next.preview.tease">): void {
+  protected handleNextPreviewTease({ target: { value, object } }: REvent<CtlrConfig, "settings.auto.next.preview.tease">): void {
     if (!this.nextVideoPreview) return;
     this.nextVideoPreview.ontimeupdate = () => this.nextVideoPreview && Number(this.nextVideoPreview.currentTime) >= object.time && this.nextVideoPreview.pause();
     if (value && (!object.usePoster || !this.nextVideoPreview.poster)) this.nextVideoPreview.play();
   }
 
-  protected handlePreviewTime({ target: { value, object } }: REvent<CtlrConfig, "settings.auto.next.preview.time">): void {
+  protected handleNextPreviewTime({ target: { value, object } }: REvent<CtlrConfig, "settings.auto.next.preview.time">): void {
     if (!this.nextVideoPreview || (object.usePoster && this.nextVideoPreview.poster)) return;
     this.nextVideoPreview.currentTime = Number(value);
   }

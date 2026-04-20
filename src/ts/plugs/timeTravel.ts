@@ -18,10 +18,10 @@ export class TimeTravelPlug extends BasePlug<TimeTravel> {
 
   public wire() {
     // Ctlr Config Listeners
-    this.ctlr.config.on("settings.timeTravel", this.handleTimeTravelChange, { signal: this.signal, immediate: false, depth: 1 });
+    this.ctlr.config.on("settings.timeTravel", this.handle, { signal: this.signal, immediate: false, depth: 1 });
   }
 
-  protected handleTimeTravelChange(e: REvent<CtlrConfig, "settings.timeTravel", 1>) {
+  protected handle(e: REvent<CtlrConfig, "settings.timeTravel", 1>) {
     e.type === "update" ? (this.module.config[e.target.key] = e.value as any) : Object.assign(this.module.config, e.value); // plugin's config is non-volatile
   }
 }

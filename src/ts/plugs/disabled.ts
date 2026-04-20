@@ -19,10 +19,10 @@ export class DisabledPlug extends BasePlug<Disabled, DisabledState> {
     // ---- Media Listeners
     this.media.on("state.paused", ({ value }) => !value && this.media.status.loadedMetadata && this.reactivate(), { signal: this.signal });
     // ---- Config --------
-    this.ctlr.config.on("disabled", this.handleDisabled, { immediate: true, signal: this.signal });
+    this.ctlr.config.on("disabled", this.handle, { immediate: true, signal: this.signal });
   }
 
-  protected handleDisabled({ value }: REvent<CtlrConfig, "disabled">): void {
+  protected handle({ value }: REvent<CtlrConfig, "disabled">): void {
     if (value) {
       // JS: this.leaveSettingsView();
       this.ctlr.cancelAllLoops();

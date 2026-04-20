@@ -71,13 +71,13 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
     this.config.on("label", ({ value }) => (this.container.ariaLabel = value!), { signal: this.signal, immediate: true });
     this.config.on("min", ({ value }) => (this.container.ariaValueMin = String(value!)), { signal: this.signal, immediate: true });
     this.config.on("max", ({ value }) => (this.container.ariaValueMax = String(value!)), { signal: this.signal, immediate: true });
-    this.config.on("value", this.handleValueChange, { signal: this.signal, immediate: true });
+    this.config.on("value", this.handleValue, { signal: this.signal, immediate: true });
   }
   protected seek(value: number): void {
     this.config.value = value;
   }
 
-  protected handleValueChange({ value }: REvent<RangeConfig, "value">): void {
+  protected handleValue({ value }: REvent<RangeConfig, "value">): void {
     const pos = this.getValueAsPos();
     (this.updateThumbPosition(pos), this.updateValueBar(pos));
     if (!this.state.scrubbing) this.container.ariaValueNow = String(value);

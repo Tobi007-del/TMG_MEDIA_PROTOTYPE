@@ -2,7 +2,7 @@ import { BasePlug, type FastPlayPlug, type GesturePlug, type ModesPlug, type Ove
 import type { KeyShortcutAction, ModdedKeyShortcutAction } from "../types/generics";
 import type { DeepPartial } from "sia-reactor";
 import { keysBlocks, keysWhitelist } from "../consts/generics";
-import { formatKeyShortcutsForDisplay, isArr, keyEventAllowed, keysSettings } from "../utils";
+import { formatKeyShortcutsForDisplay, isArr, keyEventAllowed as allowed, keysSettings } from "../utils";
 
 export type KeyPhase = "keydown" | "keyup";
 export type KeyMod = "" | "ctrl" | "alt" | "shift";
@@ -62,17 +62,13 @@ export class KeysPlug extends BasePlug<Keys> {
     this.setKeyEventListeners(this.shouldListen() ? "add" : "remove");
   }
 
-  protected handleKeyDown(e: KeyboardEvent): void {
-    const action = keyEventAllowed(e, this.ctlr.settings.keys),
-      mod = this.getMod(e);
+  protected handleKeyDown(e: KeyboardEvent, action = allowed(e, this.ctlr.settings.keys), mod = this.getMod(e)): void {
     if (action === false) return;
     action && this.ctlr.plug<OverlayPlug>("overlay")?.show();
     this.ctlr.throttle("keyDown", () => this.config._handlers.keydown[action]?.fn(e, mod), 30);
   }
 
-  protected handleKeyUp(e: KeyboardEvent, zen = false): void {
-    const action = keyEventAllowed(e, this.ctlr.settings.keys),
-      mod = this.getMod(e);
+  protected handleKeyUp(e: KeyboardEvent, zen = false, action = allowed(e, this.ctlr.settings.keys), mod = this.getMod(e)): void {
     if (action === false) return;
     action && this.ctlr.plug<OverlayPlug>("overlay")?.show();
     const hook = this.config._handlers.keyup[action];
@@ -88,8 +84,7 @@ export class KeysPlug extends BasePlug<Keys> {
     this.playTriggerCounter === 2 && this.ctlr.settings.fastPlay.key && this.ctlr.plug<FastPlayPlug>("fastPlay")?.fastPlay(e.shiftKey ? "backwards" : "forwards");
   }
 
-  protected handlePlayTriggerUp(e: KeyboardEvent): void {
-    const action = keyEventAllowed(e, this.ctlr.settings.keys);
+  protected handlePlayTriggerUp(e: KeyboardEvent, action = allowed(e, this.ctlr.settings.keys)): void {
     action && this.ctlr.plug<OverlayPlug>("overlay")?.show();
     if (action !== false && [" ", "playpause"].includes(action)) {
       e.stopImmediatePropagation();
@@ -141,16 +136,11 @@ export class KeysPlug extends BasePlug<Keys> {
     const floating = this.ctlr.plug<ModesPlug>("modes")?.pip?.floatingWindow;
     return floating ? [floating, window] : [window];
   }
-
   protected getMod(e: KeyboardEvent): KeyMod {
     return this.config.mods.disabled ? "" : e.ctrlKey ? "ctrl" : e.altKey ? "alt" : e.shiftKey ? "shift" : "";
   }
   public getModded(action: ModdedKeyShortcutAction, mod: KeyMod, fallback: number): number {
     return mod ? (this.config.mods[action]?.[mod] ?? fallback) : fallback;
-  }
-
-  public fetchKeyShortcutsForDisplay(): Record<string, string> {
-    return formatKeyShortcutsForDisplay(this.config.shortcuts as any);
   }
 }
 

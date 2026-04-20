@@ -31,7 +31,7 @@ export class BrightnessPlug extends BasePlug<Brightness, BrightnessState> {
     this.shouldDark = this.shouldSetLastBrightness = this.config.dark ?? false;
     this.config.value = this.shouldDark ? 0 : this.state.aptBrightness;
     // Ctlr Config Getters
-    this.ctlr.config.get("settings.brightness.value", () => Number(this.ctlr.settings.css.brightness ?? 100), { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
+    this.ctlr.config.get("settings.brightness.value", () => Number(this.ctlr.settings.css.brightness ?? 100), { signal: this.signal, lazy: true }); // #VIRTUAL: reliable return value
     // ----------- Setters
     this.ctlr.config.set("settings.brightness.value", (value) => clamp(this.shouldDark ? 0 : this.config.min, value!, this.config.max), { signal: this.signal });
     // ----------- Watchers
@@ -161,11 +161,9 @@ export class BrightnessPlug extends BasePlug<Brightness, BrightnessState> {
     this.toggleDark("auto");
     // JS: this.config.wonce("settings.brightness.value", (v) => (!v ? this.notify("brightnessdark") : this.notify("brightnessup")));
   }
-
   protected handleKeyBrightnessUp(_: KeyboardEvent, mod: KeyMod): void {
     this.changeBrightness(this.ctlr.plug<KeysPlug>("keys")!.getModded("brightness", mod, this.config.skip));
   }
-
   protected handleKeyBrightnessDown(_: KeyboardEvent, mod: KeyMod): void {
     this.changeBrightness(-this.ctlr.plug<KeysPlug>("keys")!.getModded("brightness", mod, this.config.skip));
   }

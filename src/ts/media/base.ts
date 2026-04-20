@@ -54,7 +54,7 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
     // Variables Assignments
     (this.element as any).tmgPlayer = this.config.element.tmgPlayer; // ref is maintained if element was replaced in mount
     // Ctlr Media Listeners
-    this.media.on("intent", this.handleIntentChange, { signal: this.signal });
+    this.media.on("intent", this.handleIntent, { signal: this.signal });
     this.wireSrc();
     this.wireCurrentTime();
     this.wireDuration();
@@ -70,13 +70,13 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
   protected abstract wireEnded(): void;
   // --- THE EXTENSIONS ---
   protected wireFeatures() {
-    this.features.on("*", this.handleFeaturesChange, { signal: this.signal, immediate: true });
+    this.features.on("*", this.handleFeatures, { signal: this.signal, immediate: true });
   }
   // --- Miscellaneous ---
-  protected handleFeaturesChange({ type, target: t }: REvent<MediaFeatures, "*">) {
+  protected handleFeatures({ type, target: t }: REvent<MediaFeatures, "*">) {
     type === "update" ? this.wireFeature(t.key) : type === "init" && (Object.keys(t.value) as (keyof MediaFeatures)[]).forEach(this.wireFeature);
   }
-  protected handleIntentChange(e: REvent<CtlrMedia, "intent">) {
+  protected handleIntent(e: REvent<CtlrMedia, "intent">) {
     e.type === "update" && !this.features[e.target.key as keyof MediaFeatures] && e.value && e.stopImmediatePropagation();
   }
   protected wireFeature(feature: keyof MediaFeatures): void {

@@ -11,10 +11,10 @@ export class ErrorMessagesPlug extends BasePlug<ErrorMessages> {
 
   public wire(): void {
     // Ctlr Media Listeners
-    this.media.on("status.error", this.handleError, { signal: this.signal, immediate: true });
+    this.media.on("status.error", this.handleErrorStatus, { signal: this.signal, immediate: true });
   }
 
-  protected handleError({ value }: REvent<CtlrMedia, "status.error">): void {
+  protected handleErrorStatus({ value }: REvent<CtlrMedia, "status.error">): void {
     if (!value) return;
     const code = value.code as ErrorCode | undefined,
       mssg = this.config[code ?? 5] || value.message || "An unknown error occurred with the video :(";

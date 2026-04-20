@@ -18,10 +18,10 @@ export class PersistPlug extends BasePlug<Persist> {
 
   public wire() {
     // Ctlr Config Listeners
-    this.ctlr.config.on("settings.persist", this.handlePersistChange, { signal: this.signal, immediate: false, depth: 1 });
+    this.ctlr.config.on("settings.persist", this.handle, { signal: this.signal, immediate: false, depth: 1 });
   }
 
-  protected handlePersistChange(e: REvent<CtlrConfig, "settings.persist", 1>) {
+  protected handle(e: REvent<CtlrConfig, "settings.persist", 1>) {
     e.type === "update" ? (this.module.config[e.target.key] = e.value as never) : Object.assign(this.module.config, e.value); // module's config is non-volatile
   }
 }

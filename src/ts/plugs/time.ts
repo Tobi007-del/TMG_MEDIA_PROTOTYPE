@@ -41,7 +41,7 @@ export class TimePlug extends BasePlug<CTime, TimeState> {
     // State Listeners
     this.state.on("guardedPaths", this.handleGuardedPathsState, { signal: this.signal, immediate: true });
     // Ctlr Config Getters
-    this.ctlr.config.get("settings.time.value", () => this.media.state.currentTime, { signal: this.signal, lazy: true }); // VIRTUAL: reliable return value
+    this.ctlr.config.get("settings.time.value", () => this.media.state.currentTime, { signal: this.signal, lazy: true }); // #VIRTUAL: reliable return value
     // ---- Media Setters
     this.media.set("intent.currentTime", () => clamp(this.config.min, this.config.value!, this.config.max), { signal: this.signal });
     // ---- Config Watchers

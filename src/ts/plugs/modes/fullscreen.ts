@@ -21,14 +21,14 @@ export class ModesFullscreenPin extends BasePin<ModesPlug, ModesFullscreen> {
     this.ctlr.state.watch("docInFullscreen", this.handleDocInFullscreen, { signal: this.signal });
     this.ctlr.state.watch("screenOrientation", this.handleScreenOrientation, { signal: this.signal });
     // ---- Config Listeners
-    this.ctlr.config.on("settings.modes.fullscreen.disabled", this.handleDisabledConfig, { signal: this.signal });
+    this.ctlr.config.on("settings.modes.fullscreen.disabled", this.handleDisabled, { signal: this.signal });
     // ---- Media --------
     this.media.on("intent.fullscreen", this.handleFullscreenIntent, { capture: true, signal: this.signal });
     // Post Wiring
     this.media.tech.features.fullscreen = !this.config.disabled;
   }
 
-  protected handleDisabledConfig({ value }: REvent<CtlrConfig, "settings.modes.fullscreen.disabled">): void {
+  protected handleDisabled({ value }: REvent<CtlrConfig, "settings.modes.fullscreen.disabled">): void {
     this.media.tech.features.fullscreen = !value;
     if (value && this.ctlr.isUIActive("fullscreen")) this.media.intent.fullscreen = false;
   }

@@ -44,7 +44,7 @@ export class MediaPlug extends BasePlug<Media> {
     this.ctlr.config.on("media.links.artist", this.handleMediaLink, { immediate: true, signal: this.signal });
     this.ctlr.config.on("media.links.profile", this.handleMediaLink, { immediate: true, signal: this.signal });
     this.ctlr.config.on("media.artwork", this.handleArtwork, { immediate: true, signal: this.signal });
-    this.ctlr.config.on("media", this.handleMedia, { immediate: true, signal: this.signal });
+    this.ctlr.config.on("media", this.handle, { immediate: true, signal: this.signal });
   }
 
   protected forwardTitle(value: string): void {
@@ -66,7 +66,7 @@ export class MediaPlug extends BasePlug<Media> {
     this.media.intent.poster = value?.[0]?.src || "";
   }
 
-  protected handleMedia(): void {
+  protected handle(): void {
     if (!this.media.state.paused) this.syncSession();
   }
 

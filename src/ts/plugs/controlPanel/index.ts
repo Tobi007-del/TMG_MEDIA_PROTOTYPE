@@ -85,9 +85,9 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     this.ctlr.config.set("settings.controlPanel.bottom", (value) => parsePanelBottomObj(value), { immediate: true });
     // ----------- Listeners
     (["settings.controlPanel.title", "settings.controlPanel.artist", "settings.controlPanel.profile"] as const).forEach((e) => this.ctlr.config.on(e, this.handleMetaLayout, { signal: this.signal, immediate: true }));
-    this.ctlr.config.on("settings.controlPanel.top", this.handleTopLayout, { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.controlPanel.center", this.handleCenterLayout, { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.controlPanel.bottom", this.handleBottomLayout, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.top", this.handleTop, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.center", this.handleCenter, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.controlPanel.bottom", this.handleBottom, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.buffer", ({ value }) => (this.ctlr.videoContainer.dataset.buffer = String(value)), { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.timeline.thumbIndicator", ({ value }) => (this.ctlr.videoContainer.dataset.thumbIndicator = String(value)), { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.timeline.seek", this.handleTimelineSeek, { signal: this.signal, immediate: true });
@@ -101,19 +101,19 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     // value !== true && (meta[key][key === "profile" ? "src" : "textContent"] = meta[key].dataset["video" + capitalize(key)] = value || "");
   }
 
-  protected handleTopLayout({ value }: REvent<CtlrConfig, "settings.controlPanel.top">): void {
+  protected handleTop({ value }: REvent<CtlrConfig, "settings.controlPanel.top">): void {
     if (!value || isBool(value)) return;
     const { left, center, right } = this.getSplitControls(value);
     this.fillSWrapper(this.topW, [(this.cZoneWs.top.left = this.getZoneW(left, this.zoneWs.top.left)), (this.cZoneWs.top.center = this.getZoneW(center, this.zoneWs.top.center)), (this.cZoneWs.top.right = this.getZoneW(right, this.zoneWs.top.right))]);
     (this.fillZone(this.cZoneWs.top.left, left), this.fillZone(this.cZoneWs.top.center, center), this.fillZone(this.cZoneWs.top.right, right));
   }
 
-  protected handleCenterLayout({ value }: REvent<CtlrConfig, "settings.controlPanel.center">): void {
+  protected handleCenter({ value }: REvent<CtlrConfig, "settings.controlPanel.center">): void {
     if (!value || isBool(value)) return;
     this.fillZone(this.cZoneWs.center, value);
   }
 
-  protected handleBottomLayout({ value }: REvent<CtlrConfig, "settings.controlPanel.bottom">): void {
+  protected handleBottom({ value }: REvent<CtlrConfig, "settings.controlPanel.bottom">): void {
     if (!value || isBool(value)) return;
     ([1, 2, 3] as Row[]).forEach((i) => {
       const { left, center, right } = this.getSplitControls((value as ControlPanelBottomTuple)[i]);

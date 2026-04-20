@@ -27,6 +27,7 @@ class Boombox {
   }
   constructor() {
     tmg.bindAllMethods(this);
+    tmg.loadResource(`https://cdn.jsdelivr.net/npm/sia-reactor/dist/styles/time-travel-overlay.min.css`);
     this.store = window.bbStore = tmg.reactive(structuredClone(bbStore));
     this.store.use((window[`TTM`] = new tmg.TimeTravelModule({ blacklist: ["audio.vibe", "audio.state"] })));
     window[`TTO`] = new tmg.TimeTravelOverlay(window[`TTM`], { title: `TMG Boombox Time` });
@@ -147,9 +148,7 @@ class Boombox {
     this.analyser.connect(tmg._limiter);
   }
   handleColor({ value: color }) {
-    const val = color.toLowerCase();
-    document.documentElement.style.setProperty("--brand", val);
-    window[`TTO`]?.config && (window[`TTO`].config.color = val);
+    document.documentElement.style.setProperty("--brand", (window[`TTO`].config.color = color.toLowerCase()));
   }
   handlePausedIntent({ value: paused }) {
     !paused ? this.media.play().catch((e) => (Toast.error(`Failed to play audio`), console.error("Failed to play audio:", e))) : this.media.pause(); // dummy

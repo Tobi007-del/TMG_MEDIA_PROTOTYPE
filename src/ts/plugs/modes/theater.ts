@@ -14,14 +14,14 @@ export class ModesTheaterPin extends BasePin<ModesPlug, ModesTheater> {
 
   public wire(): void {
     // Ctlr Config Listeners
-    this.ctlr.config.on("settings.modes.theater.disabled", this.handleDisabledConfig, { signal: this.signal });
+    this.ctlr.config.on("settings.modes.theater.disabled", this.handleDisabled, { signal: this.signal });
     // ---- Media --------
     this.media.on("intent.theater", this.handleTheaterIntent, { capture: true, signal: this.signal });
     // Post Wiring
     this.media.tech.features.theater = !this.config.disabled;
   }
 
-  protected handleDisabledConfig({ value }: REvent<CtlrConfig, "settings.modes.theater.disabled">): void {
+  protected handleDisabled({ value }: REvent<CtlrConfig, "settings.modes.theater.disabled">): void {
     this.media.tech.features.theater = !value;
     if (value && this.ctlr.isUIActive("theater")) this.media.intent.theater = false;
   }

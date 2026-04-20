@@ -26,11 +26,11 @@ export class ModesMiniplayerPin extends BasePin<ModesPlug, ModesMiniplayer> {
     this.ctlr.state.watch("dimensions.window.width", this.handleWindowWidth, { signal: this.signal });
     // ---- Media  Listeners
     this.media.on("intent.miniplayer", this.handleMiniplayerIntent, { capture: true, signal: this.signal });
-    this.media.on("state.paused", this.handlePaused, { signal: this.signal, immediate: true });
+    this.media.on("state.paused", this.handlePausedState, { signal: this.signal, immediate: true });
     // ---- State --------
     this.ctlr.state.on("mediaParentIntersecting", this.handleMediaParentIntersecting, { signal: this.signal });
     // ---- Config --------
-    this.ctlr.config.on("settings.modes.miniplayer.disabled", this.handleDisabledConfig, { signal: this.signal });
+    this.ctlr.config.on("settings.modes.miniplayer.disabled", this.handleDisabled, { signal: this.signal });
     // Post Wiring
     this.media.tech.features.miniplayer = !this.config.disabled;
   }
@@ -43,12 +43,12 @@ export class ModesMiniplayerPin extends BasePin<ModesPlug, ModesMiniplayer> {
     if (this.ctlr.state.readyState > 2) this.media.intent.miniplayer = "auto";
   }
 
-  protected handleDisabledConfig({ value }: REvent<CtlrConfig, "settings.modes.miniplayer.disabled">): void {
+  protected handleDisabled({ value }: REvent<CtlrConfig, "settings.modes.miniplayer.disabled">): void {
     this.media.tech.features.miniplayer = !value;
     if (value) this.media.intent.miniplayer = false;
   }
 
-  protected handlePaused({ value }: REvent<CtlrMedia, "state.paused">): void {
+  protected handlePausedState({ value }: REvent<CtlrMedia, "state.paused">): void {
     if (!value) this.media.intent.miniplayer = "auto";
   }
 

@@ -14,14 +14,14 @@ export class ToastsPlug extends BasePlug<Toasts> {
   public wire(): void {
     // Ctlr Config Listeners
     this.ctlr.config.on("settings.toasts.disabled", this.handleDisabled, { signal: this.signal });
-    this.ctlr.config.on("settings.toasts", this.handleToasts, { signal: this.signal });
+    this.ctlr.config.on("settings.toasts", this.handle, { signal: this.signal });
   }
 
   protected handleDisabled({ value }: REvent<CtlrConfig, "settings.toasts.disabled">): void {
     value && t007?.toast?.dismissAll(this.ctlr.id);
   }
 
-  protected handleToasts({ type, target: { path, key, value } }: REvent<CtlrConfig, "settings.toasts">): void {
+  protected handle({ type, target: { path, key, value } }: REvent<CtlrConfig, "settings.toasts">): void {
     if (type !== "update" || path?.match(/disabled/) || !t007?.toast) return;
     t007.toast.doForAll("update", { [key]: value }, this.ctlr.id);
   }

@@ -37,15 +37,14 @@ export class LockedPlug extends BasePlug<Locked, LockedState> {
     // Event Listeners
     this.ctlr.videoContainer.addEventListener("click", this.handleScreenClick, { signal: this.signal });
     // Ctlr Config Listeners
-    this.ctlr.config.on("settings.locked.disabled", this.handleLockChange, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.locked.disabled", this.handleDisabled, { signal: this.signal, immediate: true });
   }
 
   protected handleScreenClick(): void {
-    if (this.config.disabled) return;
-    this.state.visible ? this?.removeOverlay() : this?.showOverlay();
+    if (!this.config.disabled) this.state.visible ? this?.removeOverlay() : this?.showOverlay();
   }
 
-  protected async handleLockChange({ value }: REvent<CtlrConfig, "settings.locked.disabled">): Promise<void> {
+  protected async handleDisabled({ value }: REvent<CtlrConfig, "settings.locked.disabled">): Promise<void> {
     if (!value) {
       // JS: this.ctlr.leaveSettingsView?.();
       setTimeout(this.showOverlay, 0, this.signal);

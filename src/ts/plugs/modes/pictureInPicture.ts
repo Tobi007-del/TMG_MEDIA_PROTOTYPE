@@ -27,7 +27,7 @@ export class ModesPictureInPicturePin extends BasePin<ModesPlug, ModesPictureInP
 
   public wire(): void {
     // Ctlr Config Listeners
-    this.ctlr.config.on("settings.modes.pictureInPicture.disabled", this.handleDisabledConfig, { signal: this.signal });
+    this.ctlr.config.on("settings.modes.pictureInPicture.disabled", this.handleDisabled, { signal: this.signal });
     // ---- Media --------
     this.media.on("intent.pictureInPicture", this.handlePictureInPictureIntent, { capture: true, signal: this.signal });
     // ---- State --------
@@ -36,7 +36,7 @@ export class ModesPictureInPicturePin extends BasePin<ModesPlug, ModesPictureInP
     this.media.tech.features.pictureInPicture = !this.config.disabled;
   }
 
-  protected handleDisabledConfig({ value }: REvent<CtlrConfig, "settings.modes.pictureInPicture.disabled">): void {
+  protected handleDisabled({ value }: REvent<CtlrConfig, "settings.modes.pictureInPicture.disabled">): void {
     this.media.tech.features.pictureInPicture = !value;
     if (value && (this.ctlr.isUIActive("pictureInPicture") || this.ctlr.isUIActive("floatingPlayer"))) this.media.intent.pictureInPicture = false;
   }

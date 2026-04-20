@@ -74,14 +74,14 @@ export class CaptionsPlug extends BasePlug<Captions> {
     // JS: return this.media.status.textTracks[this.media.state.currentTextTrack] && this.notify("captions");
     keys?.register("captionsFontSizeUp", (_, mod) => this.changeFontSize(keys.getModded("captionsFontSize", mod, this.config.font.size.skip)), { phase: "keydown" });
     keys?.register("captionsFontSizeDown", (_, mod) => this.changeFontSize(-keys.getModded("captionsFontSize", mod, this.config.font.size.skip)), { phase: "keydown" });
-    keys?.register("captionsFontFamily", this.rotateFontFamily, { phase: "keydown" });
-    keys?.register("captionsFontWeight", this.rotateFontWeight, { phase: "keydown" });
-    keys?.register("captionsFontVariant", this.rotateFontVariant, { phase: "keydown" });
-    keys?.register("captionsFontOpacity", this.rotateFontOpacity, { phase: "keydown" });
-    keys?.register("captionsBackgroundOpacity", this.rotateBackgroundOpacity, { phase: "keydown" });
-    keys?.register("captionsWindowOpacity", this.rotateWindowOpacity, { phase: "keydown" });
-    keys?.register("captionsCharacterEdgeStyle", this.rotateCharacterEdgeStyle, { phase: "keydown" });
-    keys?.register("captionsTextAlignment", this.rotateTextAlignment, { phase: "keydown" });
+    keys?.register("captionsFontFamily", () => this.rotateProp(parseUIObj(this.config).font.family.values, "captions.font.family.value", false), { phase: "keydown" });
+    keys?.register("captionsFontWeight", () => this.rotateProp(parseUIObj(this.config).font.weight.values, "captions.font.weight.value", false), { phase: "keydown" });
+    keys?.register("captionsFontVariant", () => this.rotateProp(parseUIObj(this.config).font.variant.values, "captions.font.variant.value", false), { phase: "keydown" });
+    keys?.register("captionsFontOpacity", () => this.rotateProp(parseUIObj(this.config).font.opacity.values, "captions.font.opacity.value"), { phase: "keydown" });
+    keys?.register("captionsBackgroundOpacity", () => this.rotateProp(parseUIObj(this.config).background.opacity.values, "captions.background.opacity.value"), { phase: "keydown" });
+    keys?.register("captionsWindowOpacity", () => this.rotateProp(parseUIObj(this.config).window.opacity.values, "captions.window.opacity.value"), { phase: "keydown" });
+    keys?.register("captionsCharacterEdgeStyle", () => this.rotateProp(parseUIObj(this.config).characterEdgeStyle.values, "captions.characterEdgeStyle.value", false), { phase: "keydown" });
+    keys?.register("captionsTextAlignment", () => this.rotateProp(parseUIObj(this.config).textAlignment.values, "captions.textAlignment.value", false), { phase: "keydown" });
   }
 
   protected handleDisabledConfig({ value }: REvent<CtlrConfig, "settings.captions.disabled">): void {
@@ -138,31 +138,6 @@ export class CaptionsPlug extends BasePlug<Captions> {
     const curr = this.ctlr.settings.css[camelize(prop.replace(".value", ""), /\./)];
     setAny(this.ctlr.settings, prop, rotate(numeric ? Number(curr) : String(curr), steps));
     this.view && this.ctlr.config.stall(this.view.preview);
-  }
-
-  public rotateFontFamily(): void {
-    this.rotateProp(parseUIObj(this.config).font.family.values, "captions.font.family.value", false);
-  }
-  public rotateFontWeight(): void {
-    this.rotateProp(parseUIObj(this.config).font.weight.values, "captions.font.weight.value", false);
-  }
-  public rotateFontVariant(): void {
-    this.rotateProp(parseUIObj(this.config).font.variant.values, "captions.font.variant.value", false);
-  }
-  public rotateFontOpacity(): void {
-    this.rotateProp(parseUIObj(this.config).font.opacity.values, "captions.font.opacity.value");
-  }
-  public rotateBackgroundOpacity(): void {
-    this.rotateProp(parseUIObj(this.config).background.opacity.values, "captions.background.opacity.value");
-  }
-  public rotateWindowOpacity(): void {
-    this.rotateProp(parseUIObj(this.config).window.opacity.values, "captions.window.opacity.value");
-  }
-  public rotateCharacterEdgeStyle(): void {
-    this.rotateProp(parseUIObj(this.config).characterEdgeStyle.values, "captions.characterEdgeStyle.value", false);
-  }
-  public rotateTextAlignment(): void {
-    this.rotateProp(parseUIObj(this.config).textAlignment.values, "captions.textAlignment.value", false);
   }
 
   protected onDestroy(): void {
