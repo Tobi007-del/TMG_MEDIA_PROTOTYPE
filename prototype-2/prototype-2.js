@@ -24,6 +24,8 @@ class T_M_G_Video_Controller {
     this.skipDuration = this.textTrackIndex = this.playTriggerCounter = 0;
     this.lastCueText = "";
     this.isMediaMobile = tmg.queryMediaMobile();
+    this.adContainer = document.getElementById("ad-container");
+    this.adTag = this.video.getAttribute("ad-tag");
     this.pfps = 30; // pseudo fps: just for frame stepping
     this.pframeDelay = Math.round(1000 / this.pfps);
     this.currentPlaylistIndex = this.playlist ? 0 : null;
@@ -41,14 +43,91 @@ class T_M_G_Video_Controller {
     setTimeout(() => (this.mutatingDOM = false));
     this.initSettingsManager();
     this.initPlayer();
+    this.initHls();
+    this.initAds();
+    this.initAmbiance();
     this.fire("tmgready", { loaded: true });
+  }
+
+  initAmbiance() {
+    this.ambianceCanvas = document.getElementById("ambiance-canvas");
+    this.ambianceCtx = this.ambianceCanvas.getContext("2d");
+    this.ambianceCallbackId = this.video.requestVideoFrameCallback(this.updateAmbiance.bind(this));
+  }
+
+  updateAmbiance() {
+    this.ambianceCtx.drawImage(this.video, 0, 0, this.ambianceCanvas.width, this.ambianceCanvas.height);
+    this.ambianceCallbackId = this.video.requestVideoFrameCallback(this.updateAmbiance.bind(this));
+  }
+
+  initAds() {
+    if (!this.adTag) {
+      return;
+    }
+    // The current implementation already supports VMAP and VAST.
+    // This change specifically addresses VPAID 2 for interactive ads.
+    this.adDisplayContainer = new google.ima.AdDisplayContainer(this.adContainer, this.video);
+    this.adsLoader = new google.ima.AdsLoader(this.adDisplayContainer);
+    this.adsLoader.getSettings().setVpaidMode(google.ima.ImaSdkSettings.VpaidMode.ENABLED);
+    this.adsLoader.addEventListener(
+      google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
+      (e) => {
+        this.adsManager = e.getAdsManager(this.video);
+        this.adsManager.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, (adErrorEvent) => {
+          console.error(adErrorEvent.getError());
+        });
+        this.adsManager.init(this.video.clientWidth, this.video.clientHeight, google.ima.ViewMode.NORMAL);
+        this.adsManager.start();
+      },
+      false
+    );
+    const adsRequest = new google.ima.AdsRequest();
+    adsRequest.adTagUrl = this.adTag;
+    this.adsLoader.requestAds(adsRequest);
+  }
+
+  initHls() {
+    if (this.video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Native HLS support
+      return;
+    } else if (Hls.isSupported()) {
+      const hlsConfig = {
+        // DRM configuration placeholder
+        // widevine: {
+        //   licenseUrl: "YOUR_WIDEVINE_LICENSE_URL",
+        // },
+        // playready: {
+        //   licenseUrl: "YOUR_PLAYREADY_LICENSE_URL",
+        // },
+        // fairplay: {
+        //   licenseUrl: "YOUR_FAIRPLAY_LICENSE_URL",
+        //   certificateUrl: "YOUR_FAIRPLAY_CERTIFICATE_URL",
+        // },
+      };
+      this.hls = new Hls(hlsConfig);
+      this.hls.attachMedia(this.video);
+      this.hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+        this.initSettingsManager();
+      });
+    }
+  }
+
+  destroyHls() {
+    if (this.hls) {
+      this.hls.destroy();
+      this.hls = null;
+    }
   }
   get src() {
     return this.video.src;
   }
   set src(value) {
-    tmg.removeSources(this.video);
-    this.video.src = value;
+    if (this.hls) {
+      this.hls.loadSource(value);
+    } else {
+      tmg.removeSources(this.video);
+      this.video.src = value;
+    }
   }
   get sources() {
     return tmg.getSources(this.video);
@@ -162,7 +241,9 @@ class T_M_G_Video_Controller {
     setTimeout(() => (this.mutatingDOM = false));
   }
   _destroy() {
+    this.destroyHls();
     this.video.cancelVideoFrameCallback?.(this.frameCallbackId);
+    this.video.cancelVideoFrameCallback?.(this.ambianceCallbackId);
     this.cancelAudio();
     this.cancelAllLoops();
     this.leaveSettingsView();
@@ -212,7 +293,128 @@ class T_M_G_Video_Controller {
       },
     });
   }
-  initSettingsManager() {}
+  _createSettingsUI() {
+    this.settings.ui = {
+      playbackRate: {
+        title: "Playback speed",
+        options: {
+          ...Object.fromEntries(
+            Array.from({ length: (this.settings.playbackRate.max - this.settings.playbackRate.min) / this.settings.playbackRate.skip + 1 }, (_, i) => this.settings.playbackRate.min + i * this.settings.playbackRate.skip).map((rate) => [
+              rate,
+              {
+                display: rate === 1 ? "Normal" : `${rate}x`,
+                value: rate,
+                action: () => (this.playbackRate = rate),
+              },
+            ])
+          ),
+        },
+        active: () => this.playbackRate,
+      },
+      ...(this.hls && this.hls.levels.length > 1
+        ? {
+            quality: {
+              title: "Quality",
+              options: {
+                ...Object.fromEntries(
+                  this.hls.levels.map((level, i) => [
+                    i,
+                    {
+                      display: `${level.height}p`,
+                      value: i,
+                      action: () => (this.hls.currentLevel = i),
+                    },
+                  ])
+                ),
+                auto: {
+                  display: "Auto",
+                  value: -1,
+                  action: () => (this.hls.currentLevel = -1),
+                },
+              },
+              active: () => this.hls.currentLevel,
+            },
+          }
+        : {}),
+    };
+  }
+
+  _createMenuItem(id, title, value, subMenu, mainMenu, settingsBottomPanel) {
+    const item = tmg.createEl(
+      "div",
+      {
+        className: "T_M_G-video-settings-menu-item",
+        innerHTML: `
+          <span class="T_M_G-video-settings-menu-item-title">${title}</span>
+          <span class="T_M_G-video-settings-menu-item-value">${value}</span>
+        `,
+      },
+      { "data-setting-id": id }
+    );
+    item.addEventListener("click", () => {
+      settingsBottomPanel.appendChild(subMenu);
+      mainMenu.classList.add("T_M_G-video-settings-menu-hidden");
+      subMenu.classList.remove("T_M_G-video-settings-menu-hidden");
+    });
+    return item;
+  }
+
+  _createSubMenu(id, title, options, activeFn, mainMenu) {
+    const subMenu = tmg.createEl("div", { className: "T_M_G-video-settings-menu T_M_G-video-settings-sub-menu T_M_G-video-settings-menu-hidden" });
+    const header = tmg.createEl("div", {
+      className: "T_M_G-video-settings-menu-header",
+      innerHTML: `
+        <button type="button" class="T_M_G-video-settings-menu-back-btn">
+          <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"></path></svg>
+          <span>${title}</span>
+        </button>
+      `,
+    });
+    header.querySelector("button").addEventListener("click", () => {
+      mainMenu.classList.remove("T_M_G-video-settings-menu-hidden");
+      subMenu.classList.add("T_M_G-video-settings-menu-hidden");
+      setTimeout(() => subMenu.remove(), tmg.parseCSSTime(this.settings.css.motionTransitionTime));
+    });
+    subMenu.appendChild(header);
+
+    Object.entries(options).forEach(([key, option]) => {
+      const optionItem = tmg.createEl("div", {
+        className: "T_M_G-video-settings-menu-item T_M_G-video-settings-option-item",
+        innerHTML: `
+          <span class="T_M_G-video-settings-option-checkmark">${activeFn() == option.value ? "✔" : ""}</span>
+          <span class="T_M_G-video-settings-option-display">${option.display}</span>
+        `,
+      });
+      optionItem.addEventListener("click", () => {
+        option.action();
+        subMenu.querySelectorAll(".T_M_G-video-settings-option-checkmark").forEach((el) => (el.textContent = ""));
+        optionItem.querySelector(".T_M_G-video-settings-option-checkmark").textContent = "✔";
+        mainMenu.querySelector(`[data-setting-id="${id}"] .T_M_G-video-settings-menu-item-value`).textContent = option.display;
+        header.querySelector("button").click();
+      });
+      subMenu.appendChild(optionItem);
+    });
+    return subMenu;
+  }
+
+  initSettingsManager() {
+    this._createSettingsUI();
+
+    const settingsBottomPanel = this.queryDOM(".T_M_G-video-settings-bottom-panel");
+    settingsBottomPanel.innerHTML = "";
+    const mainMenu = tmg.createEl("div", { className: "T_M_G-video-settings-menu T_M_G-video-settings-main-menu" });
+    settingsBottomPanel.appendChild(mainMenu);
+
+    Object.entries(this.settings.ui).forEach(([id, setting]) => {
+      const activeOptionKey = Object.keys(setting.options).find((key) => setting.options[key].value == setting.active()) || Object.keys(setting.options)[0];
+      const activeOption = setting.options[activeOptionKey];
+      if (!activeOption) return;
+
+      const subMenu = this._createSubMenu(id, setting.title, setting.options, setting.active, mainMenu);
+      const menuItem = this._createMenuItem(id, setting.title, activeOption.display, subMenu, mainMenu, settingsBottomPanel);
+      mainMenu.appendChild(menuItem);
+    });
+  }
   getPlayerHTML() {
     const { ui } = this.settings.status,
       keyShortcuts = this.fetchKeyShortcutsForDisplay();
@@ -822,6 +1024,9 @@ class T_M_G_Video_Controller {
         </button>   
       `
         : null,
+      chromecast: `
+          <google-cast-launcher class="T_M_G-video-chromecast-btn" data-draggable-control="${ui.draggable}" data-control-id="chromecast"></google-cast-launcher>
+        `
     };
   }
   buildContainers() {
@@ -864,10 +1069,10 @@ class T_M_G_Video_Controller {
                 <svg viewBox="0 0 25 25" class="T_M_G-video-settings-close-btn-icon">
                   <path transform="translate(0, 4)" d="M1.307,5.988 L6.616,1.343 C7.027,0.933 7.507,0.864 7.918,1.275 L7.918,4.407 C8.014,4.406 8.098,4.406 8.147,4.406 C13.163,4.406 16.885,7.969 16.885,12.816 C16.885,14.504 16.111,13.889 15.788,13.3 C14.266,10.52 11.591,8.623 8.107,8.623 C8.066,8.623 7.996,8.624 7.917,8.624 L7.917,11.689 C7.506,12.099 6.976,12.05 6.615,11.757 L1.306,7.474 C0.897,7.064 0.897,6.399 1.307,5.988 L1.307,5.988 Z"></path>
                 </svg>
-                <span>Close Settings</span>
+                <span>Settings</span>
               </button>                     
             </div>
-            <div class="T_M_G-video-settings-bottom-panel">No Settings Available Yet!</div>
+            <div class="T_M_G-video-settings-bottom-panel"></div>
           </div>
         </div>         
       </div>
@@ -997,6 +1202,7 @@ class T_M_G_Video_Controller {
       pictureInPictureBtn: ui.pictureInPicture ? this.queryDOM(".T_M_G-video-picture-in-picture-btn") : null,
       theaterBtn: ui.theater ? this.queryDOM(".T_M_G-video-theater-btn") : null,
       fullScreenBtn: ui.fullScreen ? this.queryDOM(".T_M_G-video-full-screen-btn") : null,
+      chromecastBtn: this.queryDOM(".T_M_G-video-chromecast-btn"),
       svgs: this.videoContainer.getElementsByTagName("svg"),
       draggableControls: ui.draggable ? this.queryDOM("[data-draggable-control]", false, true) : null,
       draggableControlContainers: ui.draggable ? this.queryDOM(".T_M_G-video-side-controls-wrapper", false, true) : null,
@@ -1010,11 +1216,66 @@ class T_M_G_Video_Controller {
     this.setInitialStates();
     this.setVideoEventListeners();
     this.setControlsEventListeners();
+    this.initializeCastApi();
+    this.checkDomainWhitelisting();
     this[`toggle${tmg.capitalize(this.initialMode)}Mode`]?.();
     if (!this.video.currentSrc) this._handleLoadedError();
     this.initialState && this.video.paused ? this.addInitialState() : this.initControls();
     if (this.disabled) this.disable();
     this.initialized = true;
+  }
+
+  checkDomainWhitelisting() {
+    // This is a client-side deterrent and not a secure solution.
+    // For robust protection, domain whitelisting should be implemented on the server-side.
+    const allowedDomains = this.settings.allowedDomains;
+    const currentHostname = window.location.hostname;
+    if (allowedDomains && !allowedDomains.includes(currentHostname)) {
+      this.deactivate("This video is not authorized to be played on this domain.");
+    }
+  }
+
+  initializeCastApi() {
+    const castContext = cast.framework.CastContext.getInstance();
+    castContext.setOptions({
+      receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+      autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+    });
+
+    this.castSession = castContext.getCurrentSession();
+    castContext.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED, (event) => {
+      this.log("Cast session state changed", event.sessionState);
+      if (event.sessionState === "SESSION_STARTED" || event.sessionState === "SESSION_RESUMED") {
+        this.castSession = event.session;
+        this.loadRemoteMedia();
+      } else if (event.sessionState === "SESSION_ENDED") {
+        this.castSession = null;
+      }
+    });
+  }
+
+  toggleChromecast() {
+    if (this.castSession) {
+      this.castSession.endSession(true);
+    } else {
+      cast.framework.CastContext.getInstance().requestSession();
+    }
+  }
+
+  loadRemoteMedia() {
+    if (!this.castSession) {
+      return;
+    }
+    const mediaInfo = new chrome.cast.media.MediaInfo(this.video.currentSrc, this.video.currentType);
+    const request = new chrome.cast.media.LoadRequest(mediaInfo);
+    this.castSession.loadMedia(request).then(
+      () => {
+        this.log("Remote media loaded");
+      },
+      (errorCode) => {
+        this.log("Remote media loading failed", "error", errorCode);
+      }
+    );
   }
   addInitialState() {
     if (!this.initialState) return;
@@ -1207,6 +1468,7 @@ class T_M_G_Video_Controller {
     this.DOM.objectFitBtn?.addEventListener("click", this.rotateObjectFit);
     this.DOM.theaterBtn?.addEventListener("click", this.toggleTheaterMode);
     this.DOM.fullScreenBtn?.addEventListener("click", this.toggleFullScreenMode);
+    this.DOM.chromecastBtn?.addEventListener("click", this.toggleChromecast);
     this.DOM.pictureInPictureBtn?.addEventListener("click", this.togglePictureInPictureMode);
     this.DOM.pictureInPictureIconWrapper?.addEventListener("click", this.togglePictureInPictureMode);
     this.DOM.settingsBtn?.addEventListener("click", this.toggleSettingsView);
@@ -1642,6 +1904,7 @@ class T_M_G_Video_Controller {
     if (this.DOM.objectFitNotifierContent) this.DOM.objectFitNotifierContent.textContent = nextFit.name;
     this.syncThumbnailDimensions();
   }
+
   isUIActive(mode) {
     switch (mode) {
       case "miniPlayer":
@@ -3282,7 +3545,7 @@ class T_M_G_Media_Player {
 
 class T_M_G {
   static DEFAULT_VIDEO_BUILD = {};
-  static ALLOWED_CONTROLS = ["capture", "fullScreenOrientation", "fullScreenLock", "prev", "playPause", "next", "brightness", "volume", "timeAndDuration", "spacer", "playbackRate", "captions", "settings", "objectFit", "pictureInPicture", "theater", "fullScreen"];
+  static ALLOWED_CONTROLS = ["capture", "fullScreenOrientation", "fullScreenLock", "prev", "playPause", "next", "brightness", "volume", "timeAndDuration", "spacer", "playbackRate", "captions", "settings", "objectFit", "pictureInPicture", "theater", "chromecast", "fullScreen"];
   static NOTIFIER_EVENTS = ["videoplay", "videopause", "videoprev", "videonext", "playbackrateup", "playbackratedown", "volumeup", "volumedown", "volumemuted", "brightnessup", "brightnessdown", "brightnessdark", "objectfitcontain", "objectfitcover", "objectfitfill", "captions", "capture", "theater", "fullScreen", "fwd", "bwd"];
   static WHITE_LISTED_KEYS = [" ", "Enter", "Escape", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => k.toLowerCase());
   static _resourceCache = {};
@@ -3928,6 +4191,9 @@ if (typeof window !== "undefined") {
     initialState: true,
     debug: true,
     settings: {
+      security: {
+        allowedDomains: ["localhost", "127.0.0.1"],
+      },
       allowOverride: true,
       auto: { next: 20 },
       beta: {
@@ -4088,7 +4354,7 @@ if (typeof window !== "undefined") {
         title: true,
         artist: true,
         top: ["capture", "fullscreenlock", "fullscreenorientation"],
-        bottom: [[], ["prev", "playpause", "next", "brightness", "volume", "timeandduration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "fullscreen"]],
+        bottom: [[], ["prev", "playpause", "next", "brightness", "volume", "timeandduration", "spacer", "captions", "settings", "objectfit", "pictureinpicture", "theater", "chromecast", "fullscreen"]],
       },
       errorMessages: { 1: "The video playback was aborted :(", 2: "The video failed due to a network error :(", 3: "The video could not be decoded :(", 4: "The video source is not supported :(" },
       fastPlay: { playbackRate: 2, key: true, pointer: { type: "all", threshold: 800, inset: 20 }, reset: true },
