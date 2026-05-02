@@ -16,7 +16,7 @@ export class ModesFullscreenPin extends BasePin<ModesPlug, ModesFullscreen> {
   public static readonly plugName: string = "modes";
   public inFullscreen = false; // a quick notice flag for external deps
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr State Watchers
     this.ctlr.state.watch("docInFullscreen", this.handleDocInFullscreen, { signal: this.signal });
     this.ctlr.state.watch("screenOrientation", this.handleScreenOrientation, { signal: this.signal });
@@ -77,7 +77,7 @@ export class ModesFullscreenPin extends BasePin<ModesPlug, ModesFullscreen> {
     if (orientation.angle === deg || orientation.angle === 360 - deg) this.media.intent.fullscreen = !this.inFullscreen;
   }
 
-  protected async changeScreenOrientation(option: boolean | OrientationOption = true): Promise<void> {
+  public async changeScreenOrientation(option: boolean | OrientationOption = true): Promise<void> {
     const orientation = screen.orientation as any;
     if (option === false) return void orientation?.unlock?.();
     await orientation?.lock?.(option === "auto" ? (this.media.status.videoHeight > this.media.status.videoWidth ? "portrait" : "landscape") : option === true ? (orientation.angle === 0 ? "landscape" : "portrait") : (option as OrientationOption));

@@ -33,17 +33,20 @@
 }
 .tmg-video-container :is(*:focus-visible, #o#o#o#o#o) {
   outline: var(--tmg-video-focus-visible-outline);
-  outline-offset: calc(var(--tmg-video-current-unit) / 7.5);
+  outline-offset: calc(var(--tmg-video-current-unit) / 13);
   transition: none;
+}
+.tmg-video-controls-container :is(*:focus-visible, #o#o#o#o#o) {
+  outline-offset: calc(var(--tmg-video-current-unit) / 7.5);
 }
 .tmg-video-container :is(:is(.tmg-video-profile-link, .tmg-video-title, .tmg-video-artist, .tmg-video-big-controls-wrapper > *, .tmg-video-next-preview-wrapper > button):focus-visible, #o#o#o#o#o) {
   outline-offset: 0px;
 }
-.tmg-video-container :is(:is(.tmg-video-timeline-container):focus-visible, #o#o#o#o#o) {
-  outline-offset: 1px;
-}
 .tmg-video-container :is(.tmg-video-vb-slider:focus-visible, #o#o#o#o#o) {
   outline-offset: calc(var(--tmg-video-current-unit) / 4.5);
+}
+.tmg-video-container :is(:is(.tmg-video-timeline-container):focus-visible, #o#o#o#o#o) {
+  outline-offset: 1px;
 }
 .tmg-video-side-controls-wrapper-cover,
 .tmg-video-meta-wrapper-cover > * {

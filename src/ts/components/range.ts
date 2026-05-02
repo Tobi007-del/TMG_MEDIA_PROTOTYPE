@@ -45,7 +45,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
     super(ctlr, reactive({ ...defaults, ...config }) as unknown as Reactive<Config>, { scrubbing: false, shouldCancelScrub: false, stallCancelScrub: false } as State);
   }
 
-  public create(): HTMLElement {
+  public override create(): HTMLElement {
     // Variables Assignments
     this.container = createEl("div", { className: "tmg-video-range-container", tabIndex: 0, role: "slider" });
     this.barsWrapper = createEl("div", { className: "tmg-video-bars-wrapper" });
@@ -58,7 +58,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
     return (this.element = this.container);
   }
 
-  public wire(): void {
+  public override wire(): void {
     // Event Listeners
     this.container.addEventListener("pointerdown", this.handlePointerDown, { signal: this.signal });
     this.container.addEventListener("keydown", this.handleKeyDown, { signal: this.signal });
@@ -79,7 +79,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
 
   protected handleValue({ value }: REvent<RangeConfig, "value">): void {
     const pos = this.getValueAsPos();
-    (this.updateThumbPosition(pos), this.updateValueBar(pos));
+    (this.syncThumbPos(pos), this.syncBarPos(pos));
     if (!this.state.scrubbing) this.container.ariaValueNow = String(value);
   }
 
@@ -130,7 +130,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
           value = this.getPosAsValue(pos);
         this.config.previewValue = value;
         if (this.state.scrubbing) {
-          if (!this.config.scrub.sync) this.updateThumbPosition(pos);
+          if (!this.config.scrub.sync) this.syncThumbPos(pos);
           else this.seek(value);
           Math.abs(pos - this.lastThumbPos) < this.config.scrub.cancel.delta / dimension ? this.cancelScrubbing() : this.allowScrubbing();
         }
@@ -161,11 +161,11 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
     }
   };
 
-  protected updateThumbPosition(pos: number): void {
+  protected syncThumbPos(pos: number): void {
     this.thumbIndicator.style.cssText = `${this.isVertical ? "inset-block-end" : "inset-inline-start"}: ${pos * 100}%`;
     // this.thumbIndicator.style.transform = this.isVertical ? `translateY(-${pos * 100}%)` : `translateX(${pos * 100}%)`;
   }
-  protected updateValueBar(pos: number): void {
+  protected syncBarPos(pos: number): void {
     this.valueBar.style.cssText = `${this.isVertical ? "block-size" : "inline-size"}: ${pos * 100}%`;
     // this.valueBar.style.transform = this.isVertical ? `scaleY(${pos * 100})` : `scaleX(${pos * 100}%)`;
   }

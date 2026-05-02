@@ -9,16 +9,21 @@ export type ErrorMessages = Record<ErrorCode, string>;
 export class ErrorMessagesPlug extends BasePlug<ErrorMessages> {
   public static readonly plugName: string = "errorMessages";
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr Media Listeners
     this.media.on("status.error", this.handleErrorStatus, { signal: this.signal, immediate: true });
   }
 
-  protected handleErrorStatus({ value }: REvent<CtlrMedia, "status.error">): void {
-    if (!value) return;
-    const code = value.code as ErrorCode | undefined,
-      mssg = this.config[code ?? 5] || value.message || "An unknown error occurred with the video :(";
-    this.ctlr.plug<DisabledPlug>("disabled")?.deactivate(mssg);
+  protected async handleErrorStatus({ value }: REvent<CtlrMedia, "status.error">): Promise<void> {
+    if (!value) return this.ctlr.plug<DisabledPlug>("disabled")?.reactivate(); // In case it was a transient error that got resolved, we can try reactivating the UI
+    const mssg = this.config[(value.code as ErrorCode) ?? 5] || value.message || "An unknown error occurred with the video :(";
+    if (this.ctlr.state.readyState < 3) return this.ctlr.plug<DisabledPlug>("disabled")?.deactivate(mssg);
+    if (t007.dialog?.isActive(`${this.ctlr.id}-error-dialog`)) return; // Prevent spamming dialogs\
+    const res = await t007.confirm(mssg, { id: `${this.ctlr.id}-error-dialog`, rootElement: this.ctlr.videoContainer, confirmText: "Try Again", cancelText: "Dismiss" });
+    if (res === true) {
+      const time = this.media.state.currentTime;
+      this.media.element.load(), (this.media.element.currentTime = time), (this.media.intent.paused = false);
+    } else if (res !== "recovered") this.ctlr.plug<DisabledPlug>("disabled")?.deactivate(mssg);
   }
 }
 

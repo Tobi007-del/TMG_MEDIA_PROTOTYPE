@@ -20,7 +20,7 @@ export interface CtlrState {
 }
 
 // --- GLOBAL STATE ---
-const w = "undefined" !== typeof window ? window : undefined;
+export const win = "undefined" !== typeof window ? window : undefined;
 const flagMutationSet = new WeakSet<HTMLElement>(); // weak set for true magic
 let flagMutationId: number | undefined;
 // --- EXPORTS ---
@@ -32,9 +32,9 @@ export const STATE_BUILD: CtlrState = {
   audioContextReady: !!AUDIO_CONTEXT,
   mediaIntersecting: true,
   mediaParentIntersecting: true,
-  dimensions: { container: { width: 0, height: 0, tier: "x" }, pseudoContainer: { width: 0, height: 0, tier: "x" }, window: { width: w?.innerWidth!, height: w?.innerHeight! } },
-  screenOrientation: w?.screen.orientation!,
-  docVisibilityState: w?.document.visibilityState!,
+  dimensions: { container: { width: 0, height: 0, tier: "x" }, pseudoContainer: { width: 0, height: 0, tier: "x" }, window: { width: win?.innerWidth!, height: win?.innerHeight! } },
+  screenOrientation: win?.screen.orientation!,
+  docVisibilityState: win?.document.visibilityState!,
   docInFullscreen: queryFullscreen(),
 };
 export const Controllers: Controller[] = [];
@@ -44,7 +44,7 @@ export function handleVidMutation(mutations: MutationRecord[]) {
     if (mutation.type !== "attributes") continue;
     const target = mutation.target as HTMLMediaElement;
     if (mutation.attributeName === "tmgcontrols") !flagMutationSet.has(target) && (target.tmgcontrols = target.hasAttribute("tmgcontrols"));
-    else if (mutation.attributeName?.startsWith("tmg")) target.hasAttribute(mutation.attributeName) && target.tmgPlayer?.fetchCustomOptions();
+    else if (mutation.attributeName?.startsWith("tmg")) target.hasAttribute(mutation.attributeName) && target.tmgPlayer?.fetchOptions();
     else if (mutation.attributeName === "controls") target.hasAttribute("tmgcontrols") && target.removeAttribute("controls");
   }
 }
@@ -108,7 +108,7 @@ export function unmountMedia() {
 
 export function startAudioManager() {
   if (!AUDIO_CONTEXT && IS_DOC_TRANSIENT) {
-    AUDIO_CONTEXT = new (w!.AudioContext || (w as any).webkitAudioContext)() as AudioContext;
+    AUDIO_CONTEXT = new (win!.AudioContext || (win as any).webkitAudioContext)() as AudioContext;
     const L = (AUDIO_LIMITER = AUDIO_CONTEXT!.createDynamicsCompressor());
     ((L.threshold.value = -1.0), (L.knee.value = 0.0), (L.ratio.value = 20), (L.attack.value = 0.001), (L.release.value = 0.05));
     Controllers.forEach((c) => c.state && (c.state.audioContextReady = true));
@@ -134,7 +134,7 @@ export function init() {
     medium.tmgcontrols = medium.hasAttribute("tmgcontrols");
   });
   observeMutation(document.documentElement, handleDOMMutation, { childList: true, subtree: true });
-  w!.addEventListener("resize", () => Controllers.forEach((c) => c.state && (c.state.dimensions.window = { width: w!.innerWidth, height: w!.innerHeight })));
+  win!.addEventListener("resize", () => Controllers.forEach((c) => c.state && (c.state.dimensions.window = { width: win!.innerWidth, height: win!.innerHeight })));
   screen.orientation.addEventListener("change", (e) => Controllers.forEach((c) => c.state && (c.state.screenOrientation = e?.target as ScreenOrientation)));
   document.addEventListener("visibilitychange", () => Controllers.forEach((c) => c.state && (c.state.docVisibilityState = document.visibilityState)));
   ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "msfullscreenchange"].forEach((e) => document.addEventListener(e, () => Controllers.forEach((c) => (c.state.docInFullscreen = queryFullscreen()))));

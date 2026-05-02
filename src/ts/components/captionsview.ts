@@ -2,30 +2,10 @@ import { BaseComponent, ComponentState } from ".";
 import { DeepPartial } from "sia-reactor";
 import { capitalize, clamp, createEl, formatVttLine, isDef, isObj, isStr, parseIfPercent, parseVttText, safeNum, setTimeout } from "../utils";
 
-export type CaptionsViewConfig = undefined;
-
-export type CueLike = (TextTrackCue | { text: string }) &
-  DeepPartial<{
-    id: string;
-    text: string;
-    align: string;
-    region: {
-      width: number;
-      lines: number;
-      viewportAnchorX: number;
-      viewportAnchorY: number;
-      scroll: string;
-    };
-    position: number | "auto";
-    positionAlign: string;
-    line: number | string;
-    lineAlign: string;
-    snapToLines: boolean;
-    size: number;
-    vertical: "" | "lr" | "rl";
-  }>;
-
+export type CueLike = (TextTrackCue | { text: string }) & DeepPartial<{ id: string; text: string; align: string; region: { width: number; lines: number; viewportAnchorX: number; viewportAnchorY: number; scroll: string }; position: number | "auto"; positionAlign: string; line: number | string; lineAlign: string; snapToLines: boolean; size: number; vertical: "" | "lr" | "rl" }>;
 type KaraokeNode = { el: HTMLElement; time: number };
+
+export type CaptionsViewConfig = undefined;
 
 export class CaptionsView extends BaseComponent<CaptionsViewConfig, ComponentState, HTMLDivElement> {
   public static readonly componentName: string = "captions";
@@ -42,16 +22,16 @@ export class CaptionsView extends BaseComponent<CaptionsViewConfig, ComponentSta
   protected lastPtrX = 0;
   protected lastPtrY = 0;
 
-  public create(): HTMLDivElement {
+  public override create(): HTMLDivElement {
     return (this.element = createEl("div", { className: "tmg-video-captions-container" }, { part: "region" }));
   }
 
-  public mount(): void {
+  public override mount(): void {
     // DOM Injection
     this.ctlr.DOM.controlsContainer!.prepend(this.element);
   }
 
-  public wire(): void {
+  public override wire(): void {
     //Variables Assignment
     this.isMain = this.element === this.ctlr.DOM.captionsContainer;
     // Event Listeners

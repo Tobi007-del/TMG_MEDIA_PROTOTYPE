@@ -5,7 +5,8 @@ import { type REvent, type DeepPartial } from "sia-reactor";
 import { controls, bigControls } from "../../consts/generics";
 import { BaseComponent, Timeline } from "../../components";
 import { ComponentRegistry } from "../../core/registry";
-import { isBool, createEl, parsePanelBottomObj, initScrollAssist, observeResize, removeScrollAssist, IS_MOBILE } from "../../utils";
+import { isBool, createEl, parsePanelBottomObj, observeResize, IS_MOBILE } from "../../utils";
+import { initScrollAssist, removeScrollAssist } from "@t007/utils/hooks/vanilla";
 
 export * from "./draggable";
 
@@ -43,12 +44,12 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   public zonesArr!: HTMLElement[];
   protected topW!: HTMLElement;
   protected bottomW!: HTMLElement;
-  protected scrollAssistEls: HTMLElement[] = [];
-  public getControl<T extends BaseComponent = BaseComponent>(name: string): T | undefined {
+  protected scrollers: HTMLElement[] = [];
+  public getCtrl<T extends BaseComponent = BaseComponent>(name: string): T | undefined {
     return this.controls.get(name) as T | undefined;
   }
-  public getControlEl<T extends HTMLElement = HTMLElement>(name: string): T | undefined {
-    return this.getControl(name)?.element as T | undefined;
+  public getCtrlEl<T extends HTMLElement = HTMLElement>(name: string): T | undefined {
+    return this.getCtrl(name)?.element as T | undefined;
   }
 
   constructor(ctlr: Controller, config: ControlPanel) {
@@ -56,7 +57,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     this.draggable = new ControlPanelDraggablePin(this.ctlr, this.config.draggable).setup();
   }
 
-  public mount(): void {
+  public override mount(): void {
     // Variables Assignment
     const buffer = ComponentRegistry.init("buffer", this.ctlr);
     this.topW = createEl("div", { className: "tmg-video-top-controls-wrapper tmg-video-apt-controls-wrapper" }, { dropZone: "", dragId: "wrapper" });
@@ -80,7 +81,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     this.ctlr.DOM.controlsContainer?.append(this.topW, this.zoneWs.center.zone, this.bottomW);
   }
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr Config Setters
     this.ctlr.config.set("settings.controlPanel.bottom", (value) => parsePanelBottomObj(value), { immediate: true });
     // ----------- Listeners
@@ -97,7 +98,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   }
 
   protected handleMetaLayout({ target: { key, value } }: REvent<CtlrConfig, "settings.controlPanel.title" | "settings.controlPanel.artist" | "settings.controlPanel.profile">): void {
-    // const meta = this.getControl<Meta>("meta");
+    // const meta = this.getCtrl<Meta>("meta");
     // value !== true && (meta[key][key === "profile" ? "src" : "textContent"] = meta[key].dataset["video" + capitalize(key)] = value || "");
   }
 
@@ -123,7 +124,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   }
 
   protected handleTimelineSeek({ currentTarget: { value } }: REvent<CtlrConfig, "settings.controlPanel.timeline.seek">): void {
-    const timeline = this.getControl<Timeline>("timeline");
+    const timeline = this.getCtrl<Timeline>("timeline");
     if (timeline) timeline.config.scrub.relative = value!.relative;
     if (timeline) timeline.config.scrub.cancel = value!.cancel;
   }
@@ -142,7 +143,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   }
 
   protected getZoneW(ids: SControl[], fallback: ZoneW): ZoneSlot {
-    return ids.length === 1 ? (ids.includes("meta") ? (this.getControlEl("meta") ?? fallback) : ids.includes("timeline") ? (this.getControlEl("timeline") ?? fallback) : fallback) : fallback;
+    return ids.length === 1 ? (ids.includes("meta") ? (this.getCtrlEl("meta") ?? fallback) : ids.includes("timeline") ? (this.getCtrlEl("timeline") ?? fallback) : fallback) : fallback;
   }
 
   protected fillSWrapper(wrapper: HTMLElement, zoneWs: ZoneSlot[]): void {
@@ -158,12 +159,12 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   }
 
   protected initScrollAndResize(): void {
-    // const meta = this.getControl<Meta>("meta");
-    // if (meta) this.scrollAssistEls.push((initScrollAssist(meta.title, { pxPerSecond: 60 }), meta.title));
-    // if (meta) this.scrollAssistEls.push((initScrollAssist(meta.artist, { pxPerSecond: 30 }), meta.artist));
+    // const meta = this.getCtrl<Meta>("meta");
+    // if (meta) this.scrollers.push((initScrollAssist(meta.title, { pxPerSecond: 60, assistClassName: "tmg-video-controls-scroll-assist" }), meta.title));
+    // if (meta) this.scrollers.push((initScrollAssist(meta.artist, { pxPerSecond: 30, assistClassName: "tmg-video-controls-scroll-assist" }), meta.artist));
     this.zonesArr.forEach((zone) => {
       this.handleControlsView(zone);
-      this.scrollAssistEls.push((initScrollAssist(zone, { pxPerSecond: 60 }), zone));
+      this.scrollers.push((initScrollAssist(zone, { pxPerSecond: 60, assistClassName: "tmg-video-controls-scroll-assist" }), zone));
       observeResize(zone, () => this.handleControlsView(zone), this.signal);
       zone.addEventListener("scroll", this.handleDirtyScroll, { passive: true, signal: this.signal });
     });
@@ -194,9 +195,9 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     el.dataset.resetScrolled = String(el.scrollLeft === (el.dataset.scroller === "reverse" ? el.scrollWidth - el.clientWidth : 0));
   }
 
-  protected onDestroy(): void {
+  protected override onDestroy(): void {
     this.draggable?.destroy();
-    this.scrollAssistEls.forEach(removeScrollAssist);
+    this.scrollers.forEach(removeScrollAssist);
     (this.controls.forEach((instance) => instance.destroy()), this.controls.clear());
   }
 }

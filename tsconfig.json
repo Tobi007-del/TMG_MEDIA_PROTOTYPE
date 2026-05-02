@@ -11,6 +11,6 @@
     "forceConsistentCasingInFileNames": true,
     "preserveSymlinks": true
   },
-  "include": ["src/ts/**/*.ts", "src/index.ts", "src/api.ts"],
+  "include": ["src/ts/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

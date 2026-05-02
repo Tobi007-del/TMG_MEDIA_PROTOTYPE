@@ -41,15 +41,15 @@
   "devDependencies": {
     "esbuild": "^0.27.2",
     "esbuild-sass-plugin": "^3.6.0",
-    "sass": "^1.94.1",
+    "sass": "^1.98.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
   },
   "dependencies": {
-    "@t007/dialog": "^0.0.19",
-    "@t007/input": "^0.0.20",
-    "@t007/toast": "^0.0.20",
-    "@t007/utils": "^0.0.22",
-    "sia-reactor": "^0.0.28"
+    "@t007/dialog": "^0.0.26",
+    "@t007/input": "^0.0.27",
+    "@t007/toast": "^0.0.27",
+    "@t007/utils": "^0.0.29",
+    "sia-reactor": "^0.0.31"
   }
 }

@@ -1,6 +1,19 @@
 "use strict";
 (() => {
-  // node_modules/@t007/utils/node_modules/sia-reactor/dist/chunk-5A44QFT6.js
+  // ../sia-reactor/dist/chunk-IBAPWB27.js
+  function setTimeout2(handler, timeout, ...args) {
+    const sig = args[0] instanceof AbortSignal ? args.shift() : void 0;
+    if (sig?.aborted) return -1;
+    const win = args[0] instanceof Window ? args.shift() : window;
+    if (!sig) return win.setTimeout(handler, timeout, ...args);
+    const id = win.setTimeout(() => (sig.removeEventListener("abort", kill), "string" === typeof handler ? new Function(handler) : handler(...args)), timeout), kill = () => win.clearTimeout(id);
+    return sig.addEventListener("abort", kill, { once: true }), id;
+  }
+  function clamp(min = 0, val, max = Infinity) {
+    return Math.min(Math.max(val, min), max);
+  }
+
+  // ../sia-reactor/dist/chunk-RI45W4O6.js
   function createEl(tag, props, dataset, styles, el = tag ? document?.createElement(tag) : null) {
     return assignEl(el, props, dataset, styles), el;
   }
@@ -16,8 +29,68 @@
       for (const k of Object.keys(styles)) if (styles[k] !== void 0) el.style[k] = styles[k];
     }
   }
+  function getActiveEl(root) {
+    const activeEl = (root ?? document).activeElement;
+    return !activeEl ? null : activeEl.shadowRoot ? getActiveEl(activeEl.shadowRoot) : activeEl;
+  }
+  function parseKeyCombo(combo) {
+    const parts = cleanKeyCombo(combo).toLowerCase().split("+");
+    return { ctrlKey: parts.includes("ctrl"), shiftKey: parts.includes("shift"), altKey: parts.includes("alt"), metaKey: parts.includes("meta") || parts.includes("cmd"), key: parts.find((p) => !["ctrl", "shift", "alt", "meta", "cmd"].includes(p)) || "" };
+  }
+  function stringifyKeyEvent(e) {
+    const parts = [];
+    if (e.ctrlKey) parts.push("ctrl");
+    if (e.altKey) parts.push("alt");
+    if (e.shiftKey) parts.push("shift");
+    if (e.metaKey) parts.push("meta");
+    parts.push(e.key?.toLowerCase() ?? "");
+    return parts.join("+");
+  }
+  function cleanKeyCombo(combo) {
+    const clean = (combo2) => {
+      const m = ["ctrl", "alt", "shift", "meta"], alias = { cmd: "meta", space: " " };
+      if (combo2 === " " || combo2 === "+") return combo2;
+      combo2 = combo2.replace(/\+\s*\+$/, "+plus");
+      const p = combo2.toLowerCase().split("+").filter((k) => k !== "").map((k) => alias[k] || (k === "plus" ? "+" : k.trim() || " "));
+      return [...p.filter((k) => m.includes(k)).sort((a, b) => m.indexOf(a) - m.indexOf(b)), ...p.filter((k) => !m.includes(k)) || ""].join("+");
+    };
+    return Array.isArray(combo) ? combo.map(clean) : clean(combo);
+  }
+  function matchKeys(required, actual, strict = false) {
+    actual = cleanKeyCombo(actual);
+    const match = (required2, actual2) => {
+      required2 = cleanKeyCombo(required2);
+      if (strict) return required2 === actual2;
+      const reqKeys = required2.split("+"), actKeys = actual2.split("+");
+      return reqKeys.every((k) => actKeys.includes(k));
+    };
+    return Array.isArray(required) ? required.some((req) => match(req, actual)) : match(required, actual);
+  }
+  function getTermsForKey(combo, settings) {
+    const terms = { override: false, block: false, whitelisted: false, action: null }, { overrides = [], shortcuts = {}, blocks = [], strictMatches: s = false, whitelist = [] } = settings || {};
+    combo = cleanKeyCombo(combo);
+    if (matchKeys(overrides, combo, s)) terms.override = true;
+    if (matchKeys(blocks, combo, s)) terms.block = true;
+    if (matchKeys(whitelist, combo)) terms.whitelisted = true;
+    terms.action = Object.keys(shortcuts).find((key) => matchKeys(shortcuts[key], combo, s)) || null;
+    return terms;
+  }
+  function keyEventAllowed(e, settings) {
+    if (settings.disabled || (e.key === " " || e.key === "Enter") && getActiveEl(e.target?.ownerDocument)?.matches("button,input,textarea,[contenteditable='true']")) return false;
+    const combo = stringifyKeyEvent(e), { override, block, action, whitelisted } = getTermsForKey(combo, settings);
+    if (block) return false;
+    if (override) e.preventDefault();
+    if (action) return action;
+    if (whitelisted) return e.key.toLowerCase();
+    return false;
+  }
+  var formatKeyForDisplay = (combo) => ` ${(Array.isArray(combo) ? combo : [combo]).map((c) => `(${cleanKeyCombo(c).replace(" ", "space")})`).join(" or ")}`;
+  function parseForARIAKS(s, formatted = true) {
+    const m = { ctrl: "Control", cmd: "Meta", space: "Space", plus: "+" };
+    return (formatted && !Array.isArray(s) ? s : formatKeyForDisplay(s)).toLowerCase().replace(/[()]/g, "").replace(/\bor\b/g, " ").replace(/\w+/g, (k) => m[k] || k).replace(/\s+/g, " ").trim();
+  }
 
-  // node_modules/@t007/utils/node_modules/sia-reactor/dist/chunk-P37ADJMM.js
+  // ../sia-reactor/dist/chunk-3OT72G7R.js
   function onAllMethods(owner, callback, skipOwn = true, nested = false) {
     let proto = owner;
     while (proto && proto !== Object.prototype) {
@@ -34,172 +107,23 @@
       owner2[method] = owner2[method].bind(owner2);
     });
   }
-  function clamp(min = 0, val, max = Infinity) {
-    return Math.min(Math.max(val, min), max);
-  }
-
-  // node_modules/@t007/utils/node_modules/sia-reactor/dist/chunk-EZ4VRGYI.js
-  var RTR_BATCH = "undefined" !== typeof window ? ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window) : "undefined" !== typeof process && process.nextTick ? process.nextTick : setTimeout;
-  var RTR_LOG = console.log.bind(console, "[S.I.A Reactor]");
-  var NIL = Object.freeze({});
-  function isObj(obj, arraycheck = true) {
-    return "object" === typeof obj && obj !== null && (arraycheck ? !Array.isArray(obj) : true);
-  }
-
-  // node_modules/@t007/utils/dist/index.js
-  var VIRTUAL_RESOURCE = /* @__PURE__ */ Symbol.for("T007_VIRTUAL_RESOURCE");
-  function loadResource(req, type = "style", { module, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, attempts = 3, retryKey = false } = {}, w = window) {
-    w.t007 ??= {}, w.t007._resourceCache ??= {};
-    if (req === VIRTUAL_RESOURCE || isSym(req)) return Promise.resolve();
-    const src = req;
-    if (w.t007._resourceCache[src]) return w.t007._resourceCache[src];
-    const existing = type === "script" ? Array.prototype.find.call(w.document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.find.call(w.document.styleSheets, (s) => isSameURL(s.href, src)) : null;
-    if (existing) return w.t007._resourceCache[src] = Promise.resolve(existing);
-    w.t007._resourceCache[src] = new Promise((resolve, reject) => {
-      (function tryLoad(remaining, el) {
-        const onerror = () => {
-          el?.remove?.();
-          if (remaining > 1) {
-            setTimeout(tryLoad, 1e3, remaining - 1);
-            console.warn(`Retrying ${type} load (${attempts - remaining + 1}): ${src}...`);
-          } else {
-            delete w.t007._resourceCache[src];
-            reject(new Error(`${type} load failed after ${attempts} attempts: ${src}`));
-          }
-        };
-        const url = retryKey && remaining < attempts ? `${src}${src.includes("?") ? "&" : "?"}_${retryKey}=${Date.now()}` : src;
-        if (type === "script") w.document.body.append(el = createEl("script", { src: url, type: module ? "module" : "text/javascript", crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || "");
-        else if (type === "style") w.document.head.append(el = createEl("link", { rel: "stylesheet", href: url, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || "");
-        else reject(new Error(`Unsupported resource type: ${type}`));
-      })(attempts);
+  function guardAllMethods(owner, guardFn = guardMethod, bound = true) {
+    onAllMethods(owner, (method, owner2) => {
+      owner2[method] = guardFn(bound ? owner2[method].bind(owner2) : owner2[method]);
     });
-    return w.t007._resourceCache[src];
   }
-  function isDef(val) {
-    return "undefined" !== typeof val;
-  }
-  function isSym(val) {
-    return "symbol" === typeof val;
-  }
-  function isStr(val) {
-    return "string" === typeof val;
-  }
-  function isArr(obj) {
-    return Array.isArray(obj);
-  }
-  function isIter(obj) {
-    return obj != null && "function" === typeof obj[Symbol.iterator];
-  }
-  function uid(prefix = "") {
-    return prefix + Date.now().toString(36) + "_" + performance.now().toString(36).replace(".", "") + "_" + Math.random().toString(36).slice(2);
-  }
-  function isSameURL(src1, src2) {
-    if (!isStr(src1) || !isStr(src2) || !src1 || !src2) return false;
-    try {
-      const u1 = new URL(src1, window.location.href), u2 = new URL(src2, window.location.href);
-      return decodeURIComponent(u1.origin + u1.pathname) === decodeURIComponent(u2.origin + u2.pathname);
-    } catch {
-      return src1.replace(/\\/g, "/").split("?")[0].trim() === src2.replace(/\\/g, "/").split("?")[0].trim();
-    }
-  }
-  function initVScrollerator({ baseSpeed = 3, maxSpeed = 10, stepDelay = 2e3, baseRate = 16, lineHeight = 80, margin = 80, car = window } = {}) {
-    let linesPerSec = baseSpeed, accelId = null, lastTime = null;
-    const drive = (clientY, brake = false, offsetY = 0) => {
-      if (car !== window) clientY -= offsetY;
-      const now = performance.now(), speed = linesPerSec * lineHeight * ((lastTime ? now - lastTime : baseRate) / 1e3);
-      if (!brake && (clientY < margin || clientY > (car.innerHeight ?? car.offsetHeight) - margin)) {
-        accelId === null ? accelId = setTimeout(() => linesPerSec += 1, stepDelay) : linesPerSec > baseSpeed && (linesPerSec = Math.min(linesPerSec + 1, maxSpeed));
-        car.scrollBy?.(0, clientY < margin ? -speed : speed);
-      } else reset();
-      return lastTime = !brake ? now : null, speed;
-    };
-    const reset = () => (accelId && clearTimeout(accelId), accelId = null, linesPerSec = baseSpeed, lastTime = null);
-    return { drive, reset };
-  }
-  function initScrollAssist(el, { pxPerSecond = 80, assistClassName = "tmg-video-controls-scroll-assist", vertical = true, horizontal = true } = {}) {
-    t007._scrollers ??= /* @__PURE__ */ new WeakMap();
-    t007._scroller_r_observer ??= new ResizeObserver((entries) => entries.forEach(({ target }) => t007._scrollers.get(target)?.update()));
-    t007._scroller_m_observer ??= new MutationObserver((entries) => {
-      const els = /* @__PURE__ */ new Set();
-      for (const entry of entries) {
-        let node = entry.target instanceof Element ? entry.target : null;
-        while (node && !t007._scrollers.has(node)) node = node.parentElement;
-        if (node) els.add(node);
-      }
-      for (const el2 of els) t007._scrollers.get(el2)?.update();
-    });
-    const parent = el?.parentElement;
-    if (!parent || t007._scrollers.has(el)) return;
-    const assist = {};
-    let scrollId = null, last = performance.now(), assistWidth = 20, assistHeight = 20;
-    const update = () => {
-      const hasInteractive = !!parent.querySelector('button, a[href], input, select, textarea, [contenteditable="true"], [tabindex]:not([tabindex="-1"])');
-      if (horizontal) {
-        const w = assist.left?.offsetWidth || assistWidth, check = hasInteractive ? el.clientWidth < w * 2 : false;
-        assist.left.style.display = check ? "none" : el.scrollLeft > 0 ? "block" : "none";
-        assist.right.style.display = check ? "none" : el.scrollLeft + el.clientWidth < el.scrollWidth - 1 ? "block" : "none";
-        assistWidth = w;
-      }
-      if (vertical) {
-        const h = assist.up?.offsetHeight || assistHeight, check = hasInteractive ? el.clientHeight < h * 2 : false;
-        assist.up.style.display = check ? "none" : el.scrollTop > 0 ? "block" : "none";
-        assist.down.style.display = check ? "none" : el.scrollTop + el.clientHeight < el.scrollHeight - 1 ? "block" : "none";
-        assistHeight = h;
-      }
-    };
-    const scroll = (dir) => {
-      const frame = () => {
-        const now = performance.now(), dt = now - last;
-        last = now;
-        const d = pxPerSecond * dt / 1e3;
-        if (dir === "left") el.scrollLeft = Math.max(0, el.scrollLeft - d);
-        if (dir === "right") el.scrollLeft = Math.min(el.scrollWidth - el.clientWidth, el.scrollLeft + d);
-        if (dir === "up") el.scrollTop = Math.max(0, el.scrollTop - d);
-        if (dir === "down") el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + d);
-        scrollId = requestAnimationFrame(frame);
-      };
-      last = performance.now();
-      frame();
-    };
-    const stop = () => (cancelAnimationFrame(scrollId ?? 0), scrollId = null);
-    const addAssist = (dir) => {
-      const div = createEl("div", { className: assistClassName }, { scrollDirection: dir }, { display: "none" });
-      if (!div) return;
-      ["pointerenter", "dragenter"].forEach((evt) => div.addEventListener(evt, () => scroll(dir)));
-      ["pointerleave", "pointerup", "pointercancel", "dragleave", "dragend"].forEach((evt) => div.addEventListener(evt, stop));
-      dir === "left" || dir === "up" ? parent.insertBefore(div, el) : parent.append(div);
-      assist[dir] = div;
-    };
-    if (horizontal) ["left", "right"].forEach(addAssist);
-    if (vertical) ["up", "down"].forEach(addAssist);
-    el.addEventListener("scroll", update);
-    t007._scroller_r_observer.observe(el);
-    t007._scroller_m_observer.observe(el, { childList: true, subtree: true, characterData: true });
-    t007._scrollers.set(el, {
-      update,
-      destroy() {
-        stop();
-        el.removeEventListener("scroll", update);
-        t007._scroller_r_observer.unobserve(el);
-        t007._scrollers.delete(el);
-        Object.values(assist).forEach((a) => a.remove());
+  function guardMethod(fn, onError = (e) => console.error(e)) {
+    return ((...args) => {
+      try {
+        const result = fn(...args);
+        return result instanceof Promise ? result.catch((e) => onError(e)) : result;
+      } catch (e) {
+        onError(e);
       }
     });
-    return update(), t007._scrollers.get(el);
-  }
-  var removeScrollAssist = (el) => t007._scrollers.get(el)?.destroy();
-  if ("undefined" !== typeof window) {
-    window.t007 ??= {};
-    t007.VIRTUAL_RESOURCE = VIRTUAL_RESOURCE;
-    window.T007_TOAST_JS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/toast@latest`;
-    window.T007_INPUT_JS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/input@latest`;
-    window.T007_DIALOG_JS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/dialog@latest`;
-    window.T007_TOAST_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/toast@latest/dist/index.min.css`;
-    window.T007_INPUT_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/input@latest/dist/index.min.css`;
-    window.T007_DIALOG_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/dialog@latest/dist/index.min.css`;
   }
 
-  // node_modules/sia-reactor/dist/chunk-EZ4VRGYI.js
+  // ../sia-reactor/dist/chunk-EZ4VRGYI.js
   var CTX = {
     /** Flag indicating whether the application is running in development mode. */
     isDevEnv: "undefined" !== typeof process ? true : true,
@@ -215,49 +139,49 @@
   var TERMINATOR = /* @__PURE__ */ Symbol.for("S.I.A_TERMINATOR");
   var VERSION = /* @__PURE__ */ Symbol.for("S.I.A_VERSION");
   var SSVERSION = /* @__PURE__ */ Symbol.for("S.I.A_SNAPSHOT_VERSION");
-  var RTR_BATCH2 = "undefined" !== typeof window ? ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window) : "undefined" !== typeof process && process.nextTick ? process.nextTick : setTimeout;
-  var RTR_LOG2 = console.log.bind(console, "[S.I.A Reactor]");
+  var RTR_BATCH = "undefined" !== typeof window ? ("undefined" !== typeof queueMicrotask ? queueMicrotask : setTimeout).bind(window) : "undefined" !== typeof process && process.nextTick ? process.nextTick : setTimeout;
+  var RTR_LOG = console.log.bind(console, "[S.I.A Reactor]");
   var EVT_OPTS = { LISTENER: ["capture", "depth", "once", "signal", "immediate"], MEDIATOR: ["lazy", "signal", "immediate"] };
-  var NIL2 = Object.freeze({});
+  var NIL = Object.freeze({});
   var NOOP = () => {
   };
-  var arrRegex2 = /^([^\[\]]+)\[(\d+)\]$/;
-  function isObj2(obj, arraycheck = true) {
+  var arrRegex = /^([^\[\]]+)\[(\d+)\]$/;
+  function isObj(obj, arraycheck = true) {
     return "object" === typeof obj && obj !== null && (arraycheck ? !Array.isArray(obj) : true);
   }
-  function isPOJO2(obj, config = NIL2, typecheck = true) {
-    return (typecheck ? isObj2(obj, false) : true) && (config.crossRealms ? Object.prototype.toString.call(obj) === "[object Object]" : obj.constructor === Object);
+  function isPOJO(obj, config = NIL, typecheck = true) {
+    return (typecheck ? isObj(obj, false) : true) && (config.crossRealms ? Object.prototype.toString.call(obj) === "[object Object]" : obj.constructor === Object);
   }
-  function canHandle2(obj, config = NIL2, typecheck = true) {
-    if (typecheck && !isObj2(obj, false) || obj[INERTIA]) return false;
-    if (Array.isArray(obj) || !config.preserveContext && isPOJO2(obj, config, false)) return true;
+  function canHandle(obj, config = NIL, typecheck = true) {
+    if (typecheck && !isObj(obj, false) || obj[INERTIA]) return false;
+    if (Array.isArray(obj) || !config.preserveContext && isPOJO(obj, config, false)) return true;
     if (config.preserveContext) return !(obj instanceof String) && !(obj instanceof Number) && !(obj instanceof Function) && !(obj instanceof Date) && !(obj instanceof Error) && !(obj instanceof RegExp) && !(obj instanceof Promise) && !(obj instanceof Map) && !(obj instanceof WeakMap) && !(obj instanceof Set) && !(obj instanceof WeakSet) && !(obj instanceof EventTarget);
     return false;
   }
-  function getAny2(source, key, separator = ".", keyFunc) {
+  function getAny(source, key, separator = ".", keyFunc) {
     if (key === "*") return source;
     if (!key.includes(separator)) return source[keyFunc ? keyFunc(key) : key];
     const keys2 = key.split(separator);
     let currObj = source;
     for (let i = 0, len = keys2.length; i < len; i++) {
-      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRegex2);
+      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRegex);
       if (match) {
         const [, key3, iStr] = match;
         if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return void 0;
         currObj = currObj[key3][Number(iStr)];
       } else {
-        if (!isObj2(currObj) || !(key2 in currObj)) return void 0;
+        if (!isObj(currObj) || !(key2 in currObj)) return void 0;
         currObj = currObj[key2];
       }
     }
     return currObj;
   }
-  function setAny2(target, key, value, separator = ".", keyFunc) {
+  function setAny(target, key, value, separator = ".", keyFunc) {
     if (key === "*") return Object.assign(target, value);
     if (!key.includes(separator)) return void (target[keyFunc ? keyFunc(key) : key] = value);
     const keys2 = key.split(separator);
     for (let currObj = target, i = 0, len = keys2.length; i < len; i++) {
-      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRegex2);
+      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRegex);
       if (match) {
         const [, key3, iStr] = match;
         if (!Array.isArray(currObj[key3])) currObj[key3] = [];
@@ -269,7 +193,7 @@
       }
     }
   }
-  function deleteAny2(target, key, separator = ".", keyFunc) {
+  function deleteAny(target, key, separator = ".", keyFunc) {
     if (key === "*") {
       const keys22 = Object.keys(target);
       for (let i = 0, len = keys22.length; i < len; i++) delete target[keys22[i]];
@@ -278,54 +202,54 @@
     if (!key.includes(separator)) return void delete target[keyFunc ? keyFunc(key) : key];
     const keys2 = key.split(separator);
     for (let currObj = target, i = 0, len = keys2.length; i < len; i++) {
-      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRegex2);
+      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRegex);
       if (match) {
         const [, key3, iStr] = match;
         if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return;
         if (i === len - 1) delete currObj[key3][Number(iStr)];
         else currObj = currObj[key3][Number(iStr)];
       } else {
-        if (!isObj2(currObj) || !(key2 in currObj)) return;
+        if (!isObj(currObj) || !(key2 in currObj)) return;
         if (i === len - 1) delete currObj[key2];
         else currObj = currObj[key2];
       }
     }
   }
-  function inAny2(source, key, separator = ".", keyFunc) {
+  function inAny(source, key, separator = ".", keyFunc) {
     if (key === "*") return true;
     if (!key.includes(separator)) return key in source;
     const keys2 = key.split(separator);
     for (let currObj = source, i = 0, len = keys2.length; i < len; i++) {
-      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRegex2);
+      const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRegex);
       if (match) {
         const [, key3, iStr] = match;
         if (!Array.isArray(currObj[key3]) || !(key3 in currObj)) return false;
         if (i === len - 1) return true;
         currObj = currObj[key3][Number(iStr)];
       } else {
-        if (!isObj2(currObj) || !(key2 in currObj)) return false;
+        if (!isObj(currObj) || !(key2 in currObj)) return false;
         if (i === len - 1) return true;
         currObj = currObj[key2];
       }
     }
     return true;
   }
-  function parseAnyObj2(obj, separator = ".", keyFunc = (p) => p, seen = /* @__PURE__ */ new WeakSet()) {
-    if (!isObj2(obj) || seen.has(obj)) return obj;
+  function parseAnyObj(obj, separator = ".", keyFunc = (p) => p, seen = /* @__PURE__ */ new WeakSet()) {
+    if (!isObj(obj) || seen.has(obj)) return obj;
     seen.add(obj);
     const result = {}, keys2 = Object.keys(obj);
     for (let i = 0, len = keys2.length; i < len; i++) {
       const key = keys2[i], val = obj[key];
-      key === "*" || key.includes(separator) ? setAny2(result, key, parseAnyObj2(val, separator, keyFunc, seen), separator, keyFunc) : result[key] = isObj2(val) ? parseAnyObj2(val, separator, keyFunc, seen) : val;
+      key === "*" || key.includes(separator) ? setAny(result, key, parseAnyObj(val, separator, keyFunc, seen), separator, keyFunc) : result[key] = isObj(val) ? parseAnyObj(val, separator, keyFunc, seen) : val;
     }
     return result;
   }
-  function parseEvtOpts2(options, opts, boolOpt = opts[0], result = {}) {
+  function parseEvtOpts(options, opts, boolOpt = opts[0], result = {}) {
     return Object.assign(result, "boolean" === typeof options ? { [boolOpt]: options } : options), result;
   }
-  function fanout2(a, b, c, d) {
-    const isEvPd = !!a?.target, isPath = !isEvPd && "string" === typeof b, [state2, path, olds, news, opts, type] = isEvPd ? [a.root, a.currentTarget.path, a.currentTarget.oldValue, a.currentTarget.value, b || NIL2, a.type] : isPath ? [a, b, getAny2(a, b), c, d || NIL2, void 0] : [void 0, void 0, a, b, c || NIL2, void 0], target = isEvPd ? getAny2(a.root, a.currentTarget.path) : isPath ? getAny2(state2, path) : olds;
-    if (isEvPd && type !== "set" && type !== "delete" || !target || !canHandle2(news, opts)) return;
+  function fanout(a, b, c, d) {
+    const isEvPd = !!a?.target, isPath = !isEvPd && "string" === typeof b, [state2, path, olds, news, opts, type] = isEvPd ? [a.root, a.currentTarget.path, a.currentTarget.oldValue, a.currentTarget.value, b || NIL, a.type] : isPath ? [a, b, getAny(a, b), c, d || NIL, void 0] : [void 0, void 0, a, b, c || NIL, void 0], target = isEvPd ? getAny(a.root, a.currentTarget.path) : isPath ? getAny(state2, path) : olds;
+    if (isEvPd && type !== "set" && type !== "delete" || !target || !canHandle(news, opts)) return;
     const prev = CTX.isCascading;
     CTX.isCascading = isEvPd;
     try {
@@ -334,28 +258,28 @@
           const key = keys2[i], val = obj[key];
           try {
             if ((opts.atomic ?? true) && Array.isArray(val)) target2[key] = val, target2[key].length = target2[key].length;
-            else depth > 1 && canHandle2(val, opts) ? walk(target2[key] ||= {}, val, depth - 1) : target2[key] = val;
+            else depth > 1 && canHandle(val, opts) ? walk(target2[key] ||= {}, val, depth - 1) : target2[key] = val;
           } catch (e) {
             if (e instanceof RangeError) throw e;
           }
         }
       };
-      if ((opts.atomic ?? true) && Array.isArray(news) && isPath) setAny2(state2, path, news), getAny2(state2, path).length = news.length;
-      else walk(target, opts.merge ? mergeObjs2(olds, news, opts) : news, opts.depth === true ? Infinity : opts.depth);
+      if ((opts.atomic ?? true) && Array.isArray(news) && isPath) setAny(state2, path, news), getAny(state2, path).length = news.length;
+      else walk(target, opts.merge ? mergeObjs(olds, news, opts) : news, opts.depth === true ? Infinity : opts.depth);
     } finally {
       CTX.isCascading = prev;
     }
   }
-  function mergeObjs2(o1, o2, config, pojocheck = true) {
-    if (pojocheck && (!isPOJO2(o1 || NIL2, config) || !isPOJO2(o2 || NIL2, config))) return o2;
+  function mergeObjs(o1, o2, config, pojocheck = true) {
+    if (pojocheck && (!isPOJO(o1 || NIL, config) || !isPOJO(o2 || NIL, config))) return o2;
     const merged = { ...o1 ||= {}, ...o2 ||= {} }, keys2 = Object.keys(merged);
     for (let i = 0, len = keys2.length; i < len; i++) {
       const key = keys2[i], o1C = o1[key], o2C = o2[key];
-      if (isPOJO2(o1C, config) && isPOJO2(o2C, config)) merged[key] = mergeObjs2(o1C, o2C, config, false);
+      if (isPOJO(o1C, config) && isPOJO(o2C, config)) merged[key] = mergeObjs(o1C, o2C, config, false);
     }
     return merged;
   }
-  function getTrailRecords2(obj, path, reverse = false) {
+  function getTrailRecords(obj, path, reverse = false) {
     const parts = path.split("."), chain = [["*", obj, obj]];
     for (let acc = "", currObj = obj, i = 0, len = parts.length; i < len; i++) {
       const part = parts[i];
@@ -363,25 +287,25 @@
     }
     return reverse ? chain.reverse() : chain;
   }
-  function deepClone2(obj, config = NIL2, seen = /* @__PURE__ */ new WeakMap()) {
+  function deepClone(obj, config = NIL, seen = /* @__PURE__ */ new WeakMap()) {
     if (!obj || "object" !== typeof obj) return obj;
     const cloned = seen.get(obj);
     if (cloned) return cloned;
-    if (!canHandle2(obj, config, false)) return obj;
+    if (!canHandle(obj, config, false)) return obj;
     const clone = config.preserveContext ? Object.create(Object.getPrototypeOf(obj)) : Array.isArray(obj) ? [] : {};
     seen.set(obj, clone);
     const keys2 = config.preserveContext ? Reflect.ownKeys(obj) : Object.keys(obj);
     for (let i = 0, len = keys2.length; i < len; i++) {
       const key = keys2[i];
       try {
-        clone[key] = deepClone2(obj[key], config, seen);
+        clone[key] = deepClone(obj[key], config, seen);
       } catch (e) {
         if (e instanceof RangeError) throw e;
       }
     }
     return clone;
   }
-  function nuke2(target) {
+  function nuke(target) {
     let proto = target;
     while (proto && proto !== Object.prototype) {
       const keys2 = Object.getOwnPropertyNames(proto);
@@ -396,7 +320,7 @@
     }
   }
 
-  // node_modules/sia-reactor/dist/chunk-2EIKOZAD.js
+  // ../sia-reactor/dist/chunk-AKQSBLBX.js
   var ReactorEvent = class _ReactorEvent {
     /** No active propagation phase. */
     static NONE = 0;
@@ -498,8 +422,8 @@
     /**
      * Marks a rejectable event as rejected.
      * @param reason Optional rejection reason or identity.
-     * @example e.resolve("html5Tech"); // identity
-     * @example e.resolve("User is not logged in"); // reason
+     * @example e.reject("html5Tech"); // identity
+     * @example e.reject("User is not logged in"); // reason
      */
     reject(reason) {
       if (!this.rejectable) return this.reactor.log(`[ReactorEvent] Ignored \`reject()\` call on a non-rejectable ${this.staticType} at "${this.path}"`);
@@ -511,7 +435,7 @@
      * @returns Composed path values in bubbling order.
      */
     composedPath() {
-      return getTrailRecords2(this.root, this.path, true).map((r) => r[2]);
+      return getTrailRecords(this.root, this.path, true).map((r) => r[2]);
     }
   };
   var Reactor = class {
@@ -549,7 +473,7 @@
      */
     constructor(target = {}, build) {
       this[INERTIA] = true;
-      this.config = { crossRealms: false, smartCloning: false, eventBubbling: true, lineageTracing: false, preserveContext: false, equalityFunction: Object.is, batchingFunction: RTR_BATCH2, ...build };
+      this.config = { crossRealms: false, smartCloning: false, eventBubbling: true, lineageTracing: false, preserveContext: false, equalityFunction: Object.is, batchingFunction: RTR_BATCH, ...build };
       this.core = this.proxied(target);
       if (build) this.canLog = !!build.debug;
     }
@@ -559,7 +483,7 @@
       if (this.config.referenceTracking && parent && key && !this.link(target, parent, key, false)) return target;
       const cached = this.proxyCache.get(target);
       if (cached) return cached;
-      if (!canHandle2(target, this.config, false)) return target;
+      if (!canHandle(target, this.config, false)) return target;
       rejectable ||= target[REJECTABLE];
       indiffable ||= target[INDIFFABLE];
       const proxy = new Proxy(target, {
@@ -691,13 +615,13 @@
     }
     // won't be called without `.config.referenceTracking` so internal guard avoided
     link(target, parent, key, typecheck = true, es) {
-      if (!canHandle2(target, this.config, typecheck)) return false;
+      if (!canHandle(target, this.config, typecheck)) return false;
       es = (this.lineage ??= /* @__PURE__ */ new WeakMap()).get(target) ?? (this.lineage.set(target, es = []), es);
       for (let i = 0, len = es.length; i < len; i += 2) if (Object.is(es[i], parent) && es[i + 1] === key) return true;
       return es.push(parent, key), true;
     }
     unlink(target, parent, key) {
-      if (!canHandle2(target, this.config)) return;
+      if (!canHandle(target, this.config)) return;
       const es = (this.lineage ??= /* @__PURE__ */ new WeakMap()).get(target);
       if (es) {
         for (let i = 0, len = es.length; i < len; i += 2) if (Object.is(es[i], parent) && es[i + 1] === key) return void es.splice(i, 2);
@@ -761,7 +685,7 @@
       if (this.queue?.size) for (const task of this.queue) task(), this.queue.delete(task);
     }
     wave(path, payload) {
-      const e = new ReactorEvent(payload, this), chain = getTrailRecords2(this.core, path);
+      const e = new ReactorEvent(payload, this), chain = getTrailRecords(this.core, path);
       e.eventPhase = ReactorEvent.CAPTURING_PHASE;
       for (let i = 0; i <= chain.length - 2; i++) {
         if (e.propagationStopped) break;
@@ -840,7 +764,7 @@
       return depth;
     }
     getContext(path) {
-      const last = path.lastIndexOf("."), value = getAny2(this.core, path), object = last === -1 ? this.core : getAny2(this.core, path.slice(0, last));
+      const last = path.lastIndexOf("."), value = getAny(this.core, path), object = last === -1 ? this.core : getAny(this.core, path.slice(0, last));
       return { path, value, key: path.slice(last + 1) || "", hadKey: true, object };
     }
     bindSignal(cord, sig) {
@@ -851,7 +775,7 @@
       if (!target || "object" !== typeof target) return target;
       const obj = target[RAW] || target, cloned = seen.get(obj);
       if (cloned) return cloned;
-      if (!canHandle2(obj, this.config, false)) return obj;
+      if (!canHandle(obj, this.config, false)) return obj;
       const version = obj[VERSION] || 0, cached = !raw && this.config.smartCloning && (this.snapCache ??= /* @__PURE__ */ new WeakMap()).get(obj);
       if (cached && obj[SSVERSION] === version) return cached;
       const clone = !raw ? this.config.preserveContext ? Object.create(Object.getPrototypeOf(obj)) : Array.isArray(obj) ? [] : {} : obj;
@@ -868,8 +792,8 @@
       if (!raw && this.config.smartCloning) this.snapCache.set(obj, clone), obj[SSVERSION] = version;
       return clone;
     }
-    syncAdd(key, path, cb, opts, onImmediate = NOOP) {
-      const { lazy = false, once = false, signal, immediate = false } = parseEvtOpts2(opts, EVT_OPTS.MEDIATOR), store = this[`${key}${key.endsWith("t") ? "t" : ""}ers`] ??= /* @__PURE__ */ new Map();
+    addSync(key, path, cb, opts, onImmediate = NOOP) {
+      const { lazy = false, once = false, signal, immediate = false } = parseEvtOpts(opts, EVT_OPTS.MEDIATOR), store = this[`${key}${key.endsWith("t") ? "t" : ""}ers`] ??= /* @__PURE__ */ new Map();
       let cords = store.get(path), cord;
       if (cords)
         for (let i = 0, len = cords.length; i < len; i++) {
@@ -887,7 +811,7 @@
       lazy ? this.stall(task) : task();
       return this.bindSignal(cord, signal);
     }
-    syncDrop(store, path, cb) {
+    dropSync(store, path, cb) {
       const cords = store?.get(path);
       if (!cords) return void 0;
       for (let i = 0, len = cords.length; i < len; i++) {
@@ -906,11 +830,11 @@
      * const cleanup = rtr.get("user.name", (value) => String(value).trim());
      */
     get(path, callback, options) {
-      return this.syncAdd("get", path, callback, options, (imm) => (imm !== "auto" || inAny2(this.core, path)) && getAny2(this.core, path));
+      return this.addSync("get", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && getAny(this.core, path));
     }
     /** Registers a get mediator for a path that only triggers once. */
     gonce(path, callback, options) {
-      return this.get(path, callback, { ...parseEvtOpts2(options, EVT_OPTS.MEDIATOR), once: true });
+      return this.get(path, callback, { ...parseEvtOpts(options, EVT_OPTS.MEDIATOR), once: true });
     }
     /**
      * Removes a get mediator for a path.
@@ -919,7 +843,7 @@
      * @returns `undefined` when the path has no records, `false` when records exist but callback is not found, `true` when removed.
      */
     noget(path, callback) {
-      return this.syncDrop(this.getters, path, callback);
+      return this.dropSync(this.getters, path, callback);
     }
     /**
      * Registers a set mediator for a path.
@@ -931,11 +855,11 @@
      * rtr.set("user.name", (value) => String(value).trim());
      */
     set(path, callback, options) {
-      return this.syncAdd("set", path, callback, options, (imm) => (imm !== "auto" || inAny2(this.core, path)) && setAny2(this.core, path, getAny2(this.core, path)));
+      return this.addSync("set", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && setAny(this.core, path, getAny(this.core, path)));
     }
     /** Registers a set mediator for a path that only triggers once. */
     sonce(path, callback, options) {
-      return this.set(path, callback, Object.assign(parseEvtOpts2(options, EVT_OPTS.MEDIATOR), { once: true }));
+      return this.set(path, callback, Object.assign(parseEvtOpts(options, EVT_OPTS.MEDIATOR), { once: true }));
     }
     /**
      * Removes a set mediator for a path.
@@ -944,7 +868,7 @@
      * @returns `undefined` when the path has no records, `false` when records exist but callback is not found, `true` when removed.
      */
     noset(path, callback) {
-      return this.syncDrop(this.setters, path, callback);
+      return this.dropSync(this.setters, path, callback);
     }
     /**
      * Registers a delete mediator for a path.
@@ -956,11 +880,11 @@
      * rtr.delete("cache.temp", () => TERMINATOR);
      */
     delete(path, callback, options) {
-      return this.syncAdd("delete", path, callback, options, (imm) => (imm !== "auto" || inAny2(this.core, path)) && deleteAny2(this.core, path));
+      return this.addSync("delete", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && deleteAny(this.core, path));
     }
     /** Registers a delete mediator for a path that only triggers once. */
     donce(path, callback, options) {
-      return this.delete(path, callback, Object.assign(parseEvtOpts2(options, EVT_OPTS.MEDIATOR), { once: true }));
+      return this.delete(path, callback, Object.assign(parseEvtOpts(options, EVT_OPTS.MEDIATOR), { once: true }));
     }
     /**
      * Removes a delete mediator for a path.
@@ -969,7 +893,7 @@
      * @returns `undefined` when the path has no records, `false` when records exist but callback is not found, `true` when removed.
      */
     nodelete(path, callback) {
-      return this.syncDrop(this.deleters, path, callback);
+      return this.dropSync(this.deleters, path, callback);
     }
     /**
      * Registers a watcher for a path.
@@ -982,11 +906,11 @@
      * const cleanup = rtr.watch("user.name", (value) => console.log(value));
      */
     watch(path, callback, options) {
-      return this.syncAdd("watch", path, callback, options, (imm) => imm !== "auto" && inAny2(this.core, path) && ((target) => callback(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false }))(this.getContext(path)));
+      return this.addSync("watch", path, callback, options, (imm) => imm !== "auto" && inAny(this.core, path) && ((target) => callback(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false }))(this.getContext(path)));
     }
     /** Registers a watcher for a path that only triggers once. */
     wonce(path, callback, options) {
-      return this.watch(path, callback, Object.assign(parseEvtOpts2(options, EVT_OPTS.MEDIATOR), { once: true }));
+      return this.watch(path, callback, Object.assign(parseEvtOpts(options, EVT_OPTS.MEDIATOR), { once: true }));
     }
     /**
      * Removes a watcher for a path.
@@ -995,7 +919,7 @@
      * @returns `undefined` when the path has no records, `false` when records exist but callback is not found, `true` when removed.
      */
     nowatch(path, callback) {
-      return this.syncDrop(this.watchers, path, callback);
+      return this.dropSync(this.watchers, path, callback);
     }
     /**
      * Registers an event listener for a path.
@@ -1009,7 +933,7 @@
      */
     on(path, callback, options) {
       this.listeners ??= /* @__PURE__ */ new Map();
-      const { capture = false, once = false, signal, immediate = false, depth } = parseEvtOpts2(options, EVT_OPTS.LISTENER);
+      const { capture = false, once = false, signal, immediate = false, depth } = parseEvtOpts(options, EVT_OPTS.LISTENER);
       let cords = this.listeners.get(path), cord;
       if (cords)
         for (let i = 0, len = cords.length; i < len; i++) {
@@ -1021,7 +945,7 @@
         }
       if (cord) return cord.clup;
       cord = { cb: callback, capture, depth, once, clup: () => this.off(path, callback, options), lDepth: depth !== void 0 ? this.getDepth(path) : depth };
-      if (immediate && (immediate !== "auto" || inAny2(this.core, path))) {
+      if (immediate && (immediate !== "auto" || inAny(this.core, path))) {
         const target = this.getContext(path);
         callback(new ReactorEvent({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, this));
       }
@@ -1030,7 +954,7 @@
     }
     /** Registers an event listener for a path that only triggers once. */
     once(path, callback, options) {
-      return this.on(path, callback, Object.assign(parseEvtOpts2(options, EVT_OPTS.LISTENER), { once: true }));
+      return this.on(path, callback, Object.assign(parseEvtOpts(options, EVT_OPTS.LISTENER), { once: true }));
     }
     /**
      * Removes an event listener for a path.
@@ -1046,7 +970,7 @@
     off(path, callback, options) {
       const cords = this.listeners?.get(path);
       if (!cords) return void 0;
-      const { capture = false } = parseEvtOpts2(options, EVT_OPTS.LISTENER);
+      const { capture = false } = parseEvtOpts(options, EVT_OPTS.LISTENER);
       for (let i = 0, len = cords.length; i < len; i++) {
         const cord = cords[i];
         if (Object.is(cord.cb, callback) && cord.capture === capture) return cord.sclup(), cords.splice(i, 1), !cords.length && this.listeners.delete(path), true;
@@ -1072,13 +996,13 @@
     }
     destroy() {
       if (this.modules) for (const mdle of this.modules) mdle.destroy();
-      this.reset(), nuke2(this);
+      this.reset(), nuke(this);
     }
     get canLog() {
       return this.log !== NOOP;
     }
     set canLog(value) {
-      this.log = value ? RTR_LOG2 : NOOP;
+      this.log = value ? RTR_LOG : NOOP;
     }
     get canLineageTrace() {
       return this.config.lineageTracing && this.config.referenceTracking;
@@ -1088,7 +1012,7 @@
     }
   };
   var methods = ["tick", "stall", "nostall", "get", "gonce", "noget", "set", "sonce", "noset", "delete", "donce", "nodelete", "watch", "wonce", "nowatch", "on", "once", "off", "snapshot", "use", "reset", "destroy"];
-  function reactive(target, build, preferences = NIL2) {
+  function reactive(target, build, preferences = NIL) {
     if ("__Reactor__" in target) return target;
     const descriptors = {}, rtr = getReactor(target, true, build), locks = { enumerable: false, configurable: true, writable: false }, hasAffix = !!(preferences.prefix || preferences.suffix);
     for (let i = 0, len = methods.length; i < len; i++) {
@@ -1106,121 +1030,186 @@
   function getReactor(target, create = false, build) {
     return (target instanceof Reactor ? target : target.__Reactor__) || (create ? new Reactor(target, build) : void 0);
   }
-  function getRaw(target = NIL2) {
+  function getRaw(target = NIL) {
     return target[RAW] || target;
   }
 
-  // node_modules/sia-reactor/dist/chunk-IBAPWB27.js
-  function setTimeout3(handler, timeout, ...args) {
-    const sig = args[0] instanceof AbortSignal ? args.shift() : void 0;
-    if (sig?.aborted) return -1;
-    const win = args[0] instanceof Window ? args.shift() : window;
-    if (!sig) return win.setTimeout(handler, timeout, ...args);
-    const id = win.setTimeout(() => (sig.removeEventListener("abort", kill), "string" === typeof handler ? new Function(handler) : handler(...args)), timeout), kill = () => win.clearTimeout(id);
-    return sig.addEventListener("abort", kill, { once: true }), id;
-  }
-  function clamp2(min = 0, val, max = Infinity) {
-    return Math.min(Math.max(val, min), max);
-  }
-
-  // node_modules/sia-reactor/dist/chunk-RVYL3OLW.js
-  function stringifyKeyEvent2(e) {
-    const parts = [];
-    if (e.ctrlKey) parts.push("ctrl");
-    if (e.altKey) parts.push("alt");
-    if (e.shiftKey) parts.push("shift");
-    if (e.metaKey) parts.push("meta");
-    parts.push(e.key?.toLowerCase() ?? "");
-    return parts.join("+");
-  }
-  function cleanKeyCombo2(combo) {
-    const clean = (combo2) => {
-      const m = ["ctrl", "alt", "shift", "meta"], alias = { cmd: "meta", space: " " };
-      if (combo2 === " " || combo2 === "+") return combo2;
-      combo2 = combo2.replace(/\+\s*\+$/, "+plus");
-      const p = combo2.toLowerCase().split("+").filter((k) => k !== "").map((k) => alias[k] || (k === "plus" ? "+" : k.trim() || " "));
-      return [...p.filter((k) => m.includes(k)).sort((a, b) => m.indexOf(a) - m.indexOf(b)), ...p.filter((k) => !m.includes(k)) || ""].join("+");
-    };
-    return Array.isArray(combo) ? combo.map(clean) : clean(combo);
-  }
-  function matchKeys2(required, actual, strict = false) {
-    actual = cleanKeyCombo2(actual);
-    const match = (required2, actual2) => {
-      required2 = cleanKeyCombo2(required2);
-      if (strict) return required2 === actual2;
-      const reqKeys = required2.split("+"), actKeys = actual2.split("+");
-      return reqKeys.every((k) => actKeys.includes(k));
-    };
-    return Array.isArray(required) ? required.some((req) => match(req, actual)) : match(required, actual);
-  }
-  function getTermsForKey2(combo, settings) {
-    const terms = { override: false, block: false, whitelisted: false, action: null }, { overrides = [], shortcuts = {}, blocks = [], strictMatches: s = false, whitelist = [] } = settings || {};
-    combo = cleanKeyCombo2(combo);
-    if (matchKeys2(overrides, combo, s)) terms.override = true;
-    if (matchKeys2(blocks, combo, s)) terms.block = true;
-    if (matchKeys2(whitelist, combo)) terms.whitelisted = true;
-    terms.action = Object.keys(shortcuts).find((key) => matchKeys2(shortcuts[key], combo, s)) || null;
-    return terms;
-  }
-  function keyEventAllowed2(e, settings) {
-    if (settings.disabled || (e.key === " " || e.key === "Enter") && (e.target?.ownerDocument || document).activeElement?.tagName === "BUTTON" || (e.target?.ownerDocument || document).activeElement?.matches("input,textarea,[contenteditable='true']")) return false;
-    const combo = stringifyKeyEvent2(e), { override, block, action, whitelisted } = getTermsForKey2(combo, settings);
-    if (block) return false;
-    if (override) e.preventDefault();
-    if (action) return action;
-    if (whitelisted) return e.key.toLowerCase();
-    return false;
-  }
-  var formatKeyForDisplay2 = (combo) => ` ${(Array.isArray(combo) ? combo : [combo]).map((c) => `(${cleanKeyCombo2(c).replace(" ", "space")})`).join(" or ")}`;
-  function parseForARIAKS2(s, formatted = true) {
-    const m = { ctrl: "Control", cmd: "Meta", space: "Space", plus: "+" };
-    return (formatted && !Array.isArray(s) ? s : formatKeyForDisplay2(s)).toLowerCase().replace(/[()]/g, "").replace(/\bor\b/g, " ").replace(/\w+/g, (k) => m[k] || k).replace(/\s+/g, " ").trim();
-  }
-  function createEl2(tag, props, dataset, styles, el = tag ? document?.createElement(tag) : null) {
-    return assignEl2(el, props, dataset, styles), el;
-  }
-  function assignEl2(el, props, dataset, styles) {
-    if (!el) return;
-    if (props) {
-      for (const k of Object.keys(props)) if (props[k] !== void 0) el[k] = props[k];
-    }
-    if (dataset) {
-      for (const k of Object.keys(dataset)) if (dataset[k] !== void 0) el.dataset[k] = String(dataset[k]);
-    }
-    if (styles) {
-      for (const k of Object.keys(styles)) if (styles[k] !== void 0) el.style[k] = styles[k];
-    }
-  }
-
-  // node_modules/sia-reactor/dist/chunk-3OT72G7R.js
-  function onAllMethods2(owner, callback, skipOwn = true, nested = false) {
-    let proto = owner;
-    while (proto && proto !== Object.prototype) {
-      for (const method of Object.getOwnPropertyNames(proto)) {
-        if (method === "constructor") continue;
-        if (nested && skipOwn && Object.prototype.hasOwnProperty.call(owner, method)) continue;
-        if ("function" === typeof Object.getOwnPropertyDescriptor(proto, method)?.value) callback(method, owner);
-      }
-      proto = Object.getPrototypeOf(proto), nested = true;
-    }
-  }
-  function guardAllMethods2(owner, guardFn = guardMethod2, bound = true) {
-    onAllMethods2(owner, (method, owner2) => {
-      owner2[method] = guardFn(bound ? owner2[method].bind(owner2) : owner2[method]);
+  // ../t007-tools/packages/utils/dist/chunk-N5KX6IW4.js
+  var INTERACTIVE_SELECTOR = ":is(button,[href],input:not([type='hidden']),select,textarea,details>summary,[contenteditable='true'],iframe,audio[controls],video[controls],[tabindex]):not([disabled],[tabindex='-1'],[data-focus-guard],[inert],[inert] *)";
+  var isInteractive = (target) => target instanceof HTMLElement && target.matches(INTERACTIVE_SELECTOR);
+  var VIRTUAL_RESOURCE = /* @__PURE__ */ Symbol.for("T007_VIRTUAL_RESOURCE");
+  function loadResource(req, type = "style", { module, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, attempts = 3, retryKey = false } = {}, w = window) {
+    w.t007 ??= {}, w.t007._resourceCache ??= {};
+    if (req === VIRTUAL_RESOURCE || isSym(req)) return Promise.resolve();
+    const src = req;
+    if (w.t007._resourceCache[src]) return w.t007._resourceCache[src];
+    const existing = type === "script" ? Array.prototype.find.call(w.document.scripts, (s) => isSameURL(s.src, src)) : type === "style" ? Array.prototype.find.call(w.document.styleSheets, (s) => isSameURL(s.href, src)) : null;
+    if (existing) return w.t007._resourceCache[src] = Promise.resolve(existing);
+    w.t007._resourceCache[src] = new Promise((resolve, reject) => {
+      (function tryLoad(remaining, el) {
+        const onerror = () => {
+          el?.remove?.();
+          if (remaining > 1) {
+            setTimeout(tryLoad, 1e3, remaining - 1);
+            console.warn(`Retrying ${type} load (${attempts - remaining + 1}): ${src}...`);
+          } else {
+            delete w.t007._resourceCache[src];
+            reject(new Error(`${type} load failed after ${attempts} attempts: ${src}`));
+          }
+        };
+        const url = retryKey && remaining < attempts ? `${src}${src.includes("?") ? "&" : "?"}_${retryKey}=${Date.now()}` : src;
+        if (type === "script") w.document.body.append(el = createEl("script", { src: url, type: module ? "module" : "text/javascript", crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || "");
+        else if (type === "style") w.document.head.append(el = createEl("link", { rel: "stylesheet", href: url, media, crossOrigin, integrity, referrerPolicy, nonce, fetchPriority, onload: () => resolve(el), onerror }) || "");
+        else reject(new Error(`Unsupported resource type: ${type}`));
+      })(attempts);
     });
+    return w.t007._resourceCache[src];
   }
-  function guardMethod2(fn, onError = (e) => console.error(e)) {
-    return ((...args) => {
-      try {
-        const result = fn(...args);
-        return result instanceof Promise ? result.catch((e) => onError(e)) : result;
-      } catch (e) {
-        onError(e);
-      }
-    });
+  function isDef(val) {
+    return "undefined" !== typeof val;
+  }
+  function isSym(val) {
+    return "symbol" === typeof val;
+  }
+  function isStr(val) {
+    return "string" === typeof val;
+  }
+  function isArr(obj) {
+    return Array.isArray(obj);
+  }
+  function isIter(obj) {
+    return obj != null && "function" === typeof obj[Symbol.iterator];
+  }
+  function uid(prefix = "") {
+    return prefix + Date.now().toString(36) + "_" + performance.now().toString(36).replace(".", "") + "_" + Math.random().toString(36).slice(2);
+  }
+  function remToPx(rem, el = document.documentElement) {
+    return rem * parseFloat(getComputedStyle(el).fontSize);
+  }
+  function parseCSSTime(time) {
+    return time?.endsWith?.("ms") ? parseFloat(time) : parseFloat(time) * 1e3;
+  }
+  function parseCSSSize(size, el) {
+    return size?.endsWith?.("px") ? parseFloat(size) : remToPx(parseFloat(size), el);
+  }
+  function isSameURL(src1, src2) {
+    if (!isStr(src1) || !isStr(src2) || !src1 || !src2) return false;
+    try {
+      const u1 = new URL(src1, window.location.href), u2 = new URL(src2, window.location.href);
+      return decodeURIComponent(u1.origin + u1.pathname) === decodeURIComponent(u2.origin + u2.pathname);
+    } catch {
+      return src1.replace(/\\/g, "/").split("?")[0].trim() === src2.replace(/\\/g, "/").split("?")[0].trim();
+    }
+  }
+  var mockAsync = (timeout = 250) => new Promise((resolve) => setTimeout(resolve, timeout));
+  function formatSize(bytes, decimals = 3, base = 1e3) {
+    if (bytes < base) return `${bytes} byte${bytes == 1 ? "" : "s"}`;
+    const units = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"], exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(base)), units.length - 1);
+    return `${(bytes / Math.pow(base, exponent)).toFixed(decimals).replace(/\.0+$/, "")} ${units[exponent]}`;
+  }
+  if ("undefined" !== typeof window) {
+    (window.t007 ??= {}).VIRTUAL_RESOURCE = VIRTUAL_RESOURCE;
+    window.T007_TOAST_JS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/toast@latest`;
+    window.T007_INPUT_JS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/input@latest`;
+    window.T007_DIALOG_JS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/dialog@latest`;
+    window.T007_TOAST_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/toast@latest/dist/index.min.css`;
+    window.T007_INPUT_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/input@latest/dist/index.min.css`;
+    window.T007_DIALOG_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/dialog@latest/dist/index.min.css`;
   }
 
-  // node_modules/sia-reactor/dist/chunk-NG3WWQV4.js
+  // ../t007-tools/packages/utils/dist/chunk-NLR4ANGT.js
+  function rippleHandler(e, { target, forceCenter = false, wrapperClassName = "t007-ripple-wrapper", className = "t007-ripple", holdClassName = "t007-ripple-hold", fadeClassName = "t007-ripple-fade" } = NIL) {
+    const el = target || e.currentTarget;
+    if (!el || e.target !== e.currentTarget && isInteractive(e.target) || el.hasAttribute("disabled") || e.pointerType === "mouse" && e.button !== 0) return;
+    e.stopPropagation?.();
+    const { offsetWidth: rW, offsetHeight: rH } = el, { width: w, height: h, left: l, top: t } = el.getBoundingClientRect(), size = Math.max(rW, rH), x = forceCenter ? rW / 2 - size / 2 : (e.clientX - l) * rW / w - size / 2, y = forceCenter ? rH / 2 - size / 2 : (e.clientY - t) * rH / h - size / 2, wrapper = createEl("span", { className: wrapperClassName }), ripple = createEl("span", { className: className + " " + holdClassName }, {}, { cssText: `width:${size}px;height:${size}px;left:${x}px;top:${y}px;` });
+    let canRelease = false;
+    ripple.addEventListener("animationend", () => canRelease = true, { once: true });
+    el.append(wrapper.appendChild(ripple).parentElement);
+    const release = () => {
+      if (!canRelease) return ripple.addEventListener("animationend", release, { once: true });
+      ripple.classList.replace(holdClassName, fadeClassName);
+      ripple.addEventListener("animationend", () => setTimeout(() => wrapper.remove()));
+      for (const evt of ["pointerup", "pointercancel"]) (el.ownerDocument?.defaultView || window).removeEventListener(evt, release);
+    };
+    for (const evt of ["pointerup", "pointercancel"]) (el.ownerDocument?.defaultView || window).addEventListener(evt, release);
+  }
+  var H_NAV_KEYS = ["ArrowRight", "ArrowLeft", "Home", "End"];
+  var V_NAV_KEYS = ["ArrowUp", "ArrowDown", "PageDown", "PageUp"];
+  var NAV_KEYS = [...H_NAV_KEYS, ...V_NAV_KEYS];
+
+  // ../t007-tools/packages/utils/dist/hooks/vanilla.js
+  function initScrollAssist(el, { pxPerSecond = 80, assistClassName = "t007-scroll-assist", vertical = true, horizontal = true } = NIL) {
+    const parent = el?.parentElement, existing = (t007._scrollers ??= /* @__PURE__ */ new WeakMap()).get(el);
+    if (!parent || existing) return existing ? existing : void 0;
+    t007._scrollers_r_observer ??= new ResizeObserver((entries) => {
+      for (const { target } of entries) t007._scrollers.get(target)?.update();
+    });
+    t007._scrollers_m_observer ??= new MutationObserver((entries) => {
+      const els = /* @__PURE__ */ new Set();
+      for (const entry of entries) {
+        let node = entry.target instanceof Element ? entry.target : null;
+        while (node && !t007._scrollers.has(node)) node = node.parentElement;
+        if (node) els.add(node);
+      }
+      for (const el2 of els) t007._scrollers.get(el2)?.update();
+    });
+    const assist = {};
+    let scrollId = null, last = performance.now(), assistWidth = 20, assistHeight = 20;
+    const update = () => {
+      const hasInteractive = !!parent.querySelector(INTERACTIVE_SELECTOR);
+      if (horizontal) {
+        const w = assist.left?.offsetWidth || assistWidth, check = hasInteractive ? el.clientWidth < w * 2 : false;
+        assist.left.style.display = check ? "none" : el.scrollLeft > 0 ? "block" : "none";
+        assist.right.style.display = check ? "none" : el.scrollLeft + el.clientWidth < el.scrollWidth - 1 ? "block" : "none";
+        assistWidth = w;
+      }
+      if (vertical) {
+        const h = assist.up?.offsetHeight || assistHeight, check = hasInteractive ? el.clientHeight < h * 2 : false;
+        assist.up.style.display = check ? "none" : el.scrollTop > 0 ? "block" : "none";
+        assist.down.style.display = check ? "none" : el.scrollTop + el.clientHeight < el.scrollHeight - 1 ? "block" : "none";
+        assistHeight = h;
+      }
+    };
+    const scroll = (dir) => {
+      const frame = () => {
+        const now = performance.now(), dt = now - last;
+        last = now;
+        const d = pxPerSecond * dt / 1e3;
+        if (dir === "left") el.scrollLeft = Math.max(0, el.scrollLeft - d);
+        if (dir === "right") el.scrollLeft = Math.min(el.scrollWidth - el.clientWidth, el.scrollLeft + d);
+        if (dir === "up") el.scrollTop = Math.max(0, el.scrollTop - d);
+        if (dir === "down") el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + d);
+        scrollId = requestAnimationFrame(frame);
+      };
+      last = performance.now();
+      frame();
+    };
+    const stop = () => (cancelAnimationFrame(scrollId ?? 0), scrollId = null);
+    const addAssist = (dir) => {
+      const div = createEl("div", { className: assistClassName }, { scrollDirection: dir }, { display: "none" });
+      if (!div) return;
+      for (const evt of ["pointerenter", "dragenter"]) div.addEventListener(evt, () => scroll(dir));
+      for (const evt of ["pointerleave", "pointerup", "pointercancel", "dragleave", "dragend"]) div.addEventListener(evt, stop);
+      dir === "left" || dir === "up" ? parent.insertBefore(div, el) : parent.append(div);
+      assist[dir] = div;
+    };
+    if (horizontal) for (const dir of ["left", "right"]) addAssist(dir);
+    if (vertical) for (const dir of ["up", "down"]) addAssist(dir);
+    const handle = {
+      update,
+      destroy() {
+        stop(), el.removeEventListener("scroll", update);
+        t007._scrollers_r_observer.unobserve(el), t007._scrollers.delete(el);
+        for (const a of Object.values(assist)) a.remove();
+      }
+    };
+    update(), el.addEventListener("scroll", update);
+    t007._scrollers_r_observer.observe(el), t007._scrollers_m_observer.observe(el, { childList: true, subtree: true, characterData: true });
+    return t007._scrollers.set(el, handle), handle;
+  }
+
+  // ../sia-reactor/dist/chunk-GD7HZBXA.js
   var BaseReactorModule = class {
     static moduleName;
     get name() {
@@ -1237,9 +1226,9 @@
     /** The reactive state object for the module, watch to see exposed lifecycle changes. */
     state;
     constructor(config, rtr, state2) {
-      guardAllMethods2(this, this.guard);
-      this.config = isObj2(config) ? reactive(config) : config;
-      this.state = isObj2(state2) ? reactive(state2) : state2;
+      guardAllMethods(this, this.guard);
+      this.config = isObj(config) ? reactive(config) : config;
+      this.state = isObj(state2) ? reactive(state2) : state2;
       rtr && this.attach(rtr);
     }
     /**
@@ -1315,13 +1304,13 @@
      * window.addEventListener("resize", this.guard(() => this.syncLayout(true)), { signal: this.signal });
      */
     guard = (fn) => {
-      return guardMethod2(fn, (e) => this.rtrs.values().next().value?.log(`[Reactor "${this.name}" Module] Error: ${e}`));
+      return guardMethod(fn, (e) => this.rtrs.values().next().value?.log(`[Reactor "${this.name}" Module] Error: ${e}`));
     };
     // `()=>{}`: needs to be bounded even before initialization
   };
   var wpArr = ["*"];
 
-  // node_modules/sia-reactor/dist/modules.js
+  // ../sia-reactor/dist/modules.js
   var TimeTravelModule = class extends BaseReactorModule {
     static moduleName = "timeTravel";
     lastTimestamp = 0;
@@ -1334,7 +1323,7 @@
     // ===========================================================================
     wire() {
       this.lastTimestamp = performance.now();
-      this.state.set("currentFrame", (v = 0) => clamp2(0, v, this.state.history.length), { signal: this.signal, immediate: true });
+      this.state.set("currentFrame", (v = 0) => clamp(0, v, this.state.history.length), { signal: this.signal, immediate: true });
       this.config.on("whitelist", this.handleWhitelist, { signal: this.signal, immediate: true });
       !this.state.paused && this.play();
     }
@@ -1347,8 +1336,8 @@
     /** Chronicling the lifecycle of the system, Captures the essence of every mutation wave that bubbles up. */
     record(e, rid = this.rids.get(e.reactor)) {
       if (!this.state.paused) return;
-      if (this.state.currentFrame < this.state.history.length) fanout2(this.state, "history", this.state.history.slice(0, this.state.currentFrame), { atomic: true });
-      if (this.state.history.length >= this.config.maxHistoryLength) fanout2(this.state, "history", this.state.history.slice(1), { atomic: true });
+      if (this.state.currentFrame < this.state.history.length) fanout(this.state, "history", this.state.history.slice(0, this.state.currentFrame), { atomic: true });
+      if (this.state.history.length >= this.config.maxHistoryLength) fanout(this.state, "history", this.state.history.slice(1), { atomic: true });
       const en = { path: e.target.path, value: e.reactor.snapshot(false, e.target.value), oldValue: e.reactor.snapshot(false, e.target.oldValue), type: e.staticType, deltat: e.timestamp - this.lastTimestamp, rid };
       e.rejected && (en.rejected = e.rejected), !e.target.hadKey && (en.hadKey = false), this.state.history.push(en);
       this.state.currentFrame = this.state.history.length;
@@ -1368,13 +1357,13 @@
     /** Instant state reconstruction (Teleport). Glides through deltas natively. */
     jumpTo(index = 0, keepShield = false) {
       this.state.paused = false;
-      const target = clamp2(0, index, this.state.history.length), forward = target > this.state.currentFrame;
+      const target = clamp(0, index, this.state.history.length), forward = target > this.state.currentFrame;
       while (this.state.currentFrame !== target) {
         const e = this.state.history[forward ? this.state.currentFrame : this.state.currentFrame - 1];
         if (!e) break;
         const rtr = this.rtrs.get(e.rid) || this.rtrs.values().next().value;
-        if (forward) e.type === "delete" ? deleteAny2(rtr.core, e.path) : setAny2(rtr.core, e.path, deepClone2(e.value, rtr.config));
-        else e.hadKey === false ? deleteAny2(rtr.core, e.path) : setAny2(rtr.core, e.path, deepClone2(e.oldValue, rtr.config));
+        if (forward) e.type === "delete" ? deleteAny(rtr.core, e.path) : setAny(rtr.core, e.path, deepClone(e.value, rtr.config));
+        else e.hadKey === false ? deleteAny(rtr.core, e.path) : setAny(rtr.core, e.path, deepClone(e.oldValue, rtr.config));
         forward ? this.state.currentFrame++ : this.state.currentFrame--;
         if (e.rejected) rtr.log(`[Reactor ${this.name} Module] ${forward ? "Replaying" : "Reversing"} REJECTED intent at "${e.path}"`);
       }
@@ -1399,7 +1388,7 @@
       while ((forward ? this.state.currentFrame < this.state.history.length : this.state.currentFrame > 0) && !this.state.paused) {
         const idx = forward ? this.state.currentFrame : this.state.currentFrame - 1, e = this.state.history[forward ? idx + 1 : idx - 1];
         this.jumpTo(this.state.currentFrame + (forward ? 1 : -1), true);
-        if (e?.deltat > 0) await new Promise((res) => this.playbackTimeoutId = setTimeout3(() => res(0), Math.min(e.deltat, this.config.maxPlaybackDelay), this.signal));
+        if (e?.deltat > 0) await new Promise((res) => this.playbackTimeoutId = setTimeout2(() => res(0), Math.min(e.deltat, this.config.maxPlaybackDelay), this.signal));
       }
       this.state.paused = true;
     }
@@ -1418,17 +1407,18 @@
     }
     /** Imports a session from a JSON string, allowing you to replay or analyze past states. */
     import(json, reviver) {
-      setAny2(this.state, "*", JSON.parse(json, reviver));
+      setAny(this.state, "*", JSON.parse(json, reviver));
       this.lastTimestamp = performance.now();
       const resume = !this.state.paused, target = this.state.currentFrame;
       this.state.paused = false;
-      for (const [rid, rtr] of this.rtrs) setAny2(rtr.core, "*", deepClone2(this.state.initialState[rid], rtr.config)), rtr.tick();
+      for (const [rid, rtr] of this.rtrs) fanout(rtr.core, "*", deepClone(this.state.initialState[rid], rtr.config));
+      for (const rtr of this.rtrs.values()) rtr.tick();
       this.state.currentFrame = 0, this.jumpTo(target), resume && this.play();
     }
   };
   var TIME_TRAVEL_MODULE_BUILD = { maxPlaybackDelay: 2e3 };
 
-  // node_modules/sia-reactor/dist/chunk-3LIKXZ7X.js
+  // ../sia-reactor/dist/chunk-XNYVGOKB.js
   var Autotracker = class {
     proxy;
     deps = /* @__PURE__ */ new Map();
@@ -1459,7 +1449,7 @@
       if (!this.rtr || !obj || "object" !== typeof obj) return obj;
       const cached = this.proxyCache.get(obj);
       if (cached) return cached;
-      if (!canHandle2(obj, this.rtr.config, false)) return obj;
+      if (!canHandle(obj, this.rtr.config, false)) return obj;
       const proxy = new Proxy(obj, {
         // Minimal Proxy Handler
         get: (object, key, receiver) => {
@@ -1541,7 +1531,7 @@
      * state.user.name;
      * CTX.autotracker = prev;
      */
-    callback(cb, options = NIL2) {
+    callback(cb, options = NIL) {
       this.cleanup();
       const method = options.sync ? "watch" : "on";
       for (const [rtr, paths] of this.deps) {
@@ -1557,7 +1547,7 @@
       this.clups.length = 0;
     }
     destroy() {
-      this.deps.clear(), this.cleanup(), nuke2(this);
+      this.deps.clear(), this.cleanup(), nuke(this);
     }
   };
   function withTracker(tracker, run, rtr) {
@@ -1591,14 +1581,14 @@
       this.config = reactive({ title: `Time Travel Overlay ${this.index = ++_TimeTravelOverlay.count}`, ...build });
       this.state.open = !!this.config.startOpen;
       let wlLive = false, blLive = false;
-      const s = this.time.state, host = createEl2("div", { className: "tt-overlay-host" }), toggle = createEl2("button", { className: "tt-overlay-toggle", type: "button", onclick: () => this.state.open = !this.state.open }), panel = createEl2("aside", { className: "tt-overlay", ariaLabel: "time travel overlay" }), title = createEl2("div", { className: "title" }), frame = createEl2("span", { className: "muted" }), clrHistory = createEl2("button", { textContent: `Clear History${formatKeyForDisplay2(keys.shortcuts.clrHistory)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.clrHistory, false), onclick: () => (this.time.clear(), this.state.import = "") }), undo = createEl2("button", { textContent: `Undo${formatKeyForDisplay2(keys.shortcuts.undo[0])}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.undo, false), onclick: this.time.undo }), redo = createEl2("button", { textContent: `Redo${formatKeyForDisplay2(keys.shortcuts.redo[0])}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.redo, false), onclick: this.time.redo }), genesis = createEl2("button", { textContent: `Genesis${formatKeyForDisplay2(keys.shortcuts.genesis)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.genesis, false), onclick: () => this.time.jumpTo(0) }), playPause = createEl2("button", { onclick: () => this.time[s.paused ? "play" : "pause"](), ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.playPause, false) }), rewind = createEl2("button", { textContent: `Rewind${formatKeyForDisplay2(keys.shortcuts.rewind)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.rewind, false), onclick: this.time.rewind }), range = createEl2("input", { type: "range", min: "0", max: "0", value: "0", title: "time travel frame", ariaLabel: "time travel frame", oninput: () => this.time.jumpTo(Number(range.value)) }), exp = createEl2("button", { textContent: `Export${formatKeyForDisplay2(keys.shortcuts.export)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.export, false), onclick: () => this.state.import = this.time.export(null, 2) }), imp = createEl2("button", { textContent: `Import${formatKeyForDisplay2(keys.shortcuts.import)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.import, false), onclick: () => this.state.import.trim().length && this.time.import(this.state.import) }), clr = createEl2("button", { textContent: `Clear${formatKeyForDisplay2(keys.shortcuts.clear)}`, ariaKeyShortcuts: parseForARIAKS2(keys.shortcuts.clear, false), onclick: () => this.state.import = "" }), payload = createEl2("textarea", { className: "tt-io", readOnly: true, placeholder: "current payload json", title: "Current History Entry" }), io = createEl2("textarea", { className: "tt-io", placeholder: "timeline payload json", title: "Time History", oninput: () => this.state.import = io.value }), foot = createEl2("p", { className: "tt-footnote", textContent: "Want this in your app? " }), link = createEl2("a", { target: "_blank", rel: "noreferrer noopener", textContent: "sia-reactor", href: "https://www.npmjs.com/package/sia-reactor" }), box = createEl2("div", { className: "tt-status-box" }), status = createEl2("div", { className: "tt-status-row" }), filters = createEl2("div", { className: "tt-status-row" }), filterBox = createEl2("div", { className: "tt-status-box" }), whitelistLabel = createEl2("span", { className: "muted", textContent: "Whitelist:" }), blacklistLabel = createEl2("span", { className: "muted", textContent: "Blacklist:" }), whitelist = createEl2("input", { className: "tt-filter-input tt-io", placeholder: 'a.b, c.d or {"0":["a.b"]}', title: "Whitelist paths", onfocus: () => wlLive = true, onblur: () => (wlLive = false, whitelist.value = formatPaths(this.time.config.whitelist, "*")), oninput: (_, parsed = parsePaths(whitelist.value)) => parsed !== null && (this.time.config.whitelist = parsed) }), blacklist = createEl2("input", { className: "tt-filter-input tt-io", placeholder: 'a.b, c.d or {"0":["a.b"]}', title: "Blacklist paths", onfocus: () => blLive = true, onblur: () => (blLive = false, blacklist.value = formatPaths(this.time.config.blacklist, "")), oninput: (_, parsed = parsePaths(blacklist.value, true)) => parsed !== null && (this.time.config.blacklist = parsed) }), filterRow1 = createEl2("div", { className: "tt-filter-row" }), filterRow2 = createEl2("div", { className: "tt-filter-row" }), row1 = createEl2("div", { className: "tt-row" }), row2 = createEl2("div", { className: "tt-row" }), row3 = createEl2("div", { className: "tt-row" });
+      const s = this.time.state, host = createEl("div", { className: "tt-overlay-host" }), toggle = createEl("button", { className: "tt-overlay-toggle", type: "button", onclick: () => this.state.open = !this.state.open }), panel = createEl("aside", { className: "tt-overlay", ariaLabel: "time travel overlay" }), title = createEl("div", { className: "title" }), frame = createEl("span", { className: "muted" }), clrHistory = createEl("button", { textContent: `Clear History${formatKeyForDisplay(keys.shortcuts.clrHistory)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.clrHistory, false), onclick: () => (this.time.clear(), this.state.import = "") }), undo = createEl("button", { textContent: `Undo${formatKeyForDisplay(keys.shortcuts.undo[0])}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.undo, false), onclick: this.time.undo }), redo = createEl("button", { textContent: `Redo${formatKeyForDisplay(keys.shortcuts.redo[0])}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.redo, false), onclick: this.time.redo }), genesis = createEl("button", { textContent: `Genesis${formatKeyForDisplay(keys.shortcuts.genesis)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.genesis, false), onclick: () => this.time.jumpTo(0) }), playPause = createEl("button", { onclick: () => this.time[s.paused ? "play" : "pause"](), ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.playPause, false) }), rewind = createEl("button", { textContent: `Rewind${formatKeyForDisplay(keys.shortcuts.rewind)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.rewind, false), onclick: this.time.rewind }), range = createEl("input", { type: "range", min: "0", max: "0", value: "0", title: "time travel frame", ariaLabel: "time travel frame", oninput: () => this.time.jumpTo(Number(range.value)) }), exp = createEl("button", { textContent: `Export${formatKeyForDisplay(keys.shortcuts.export)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.export, false), onclick: () => this.state.import = this.time.export(null, 2) }), imp = createEl("button", { textContent: `Import${formatKeyForDisplay(keys.shortcuts.import)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.import, false), onclick: () => this.state.import.trim().length && this.time.import(this.state.import) }), clr = createEl("button", { textContent: `Clear${formatKeyForDisplay(keys.shortcuts.clear)}`, ariaKeyShortcuts: parseForARIAKS(keys.shortcuts.clear, false), onclick: () => this.state.import = "" }), payload = createEl("textarea", { className: "tt-io", readOnly: true, placeholder: "current payload json", title: "Current History Entry" }), io = createEl("textarea", { className: "tt-io", placeholder: "timeline payload json", title: "Time History", oninput: () => this.state.import = io.value }), foot = createEl("p", { className: "tt-footnote", textContent: "Want this in your app? " }), link = createEl("a", { target: "_blank", rel: "noreferrer noopener", textContent: "sia-reactor", href: "https://www.npmjs.com/package/sia-reactor" }), box = createEl("div", { className: "tt-status-box" }), status = createEl("div", { className: "tt-status-row" }), filters = createEl("div", { className: "tt-status-row" }), filterBox = createEl("div", { className: "tt-status-box" }), whitelistLabel = createEl("span", { className: "muted", textContent: "Whitelist:" }), blacklistLabel = createEl("span", { className: "muted", textContent: "Blacklist:" }), whitelist = createEl("input", { className: "tt-filter-input tt-io", placeholder: 'a.b, c.d or {"0":["a.b"]}', title: "Whitelist paths", onfocus: () => wlLive = true, onblur: () => (wlLive = false, whitelist.value = formatPaths(this.time.config.whitelist, "*")), oninput: (_, parsed = parsePaths(whitelist.value)) => parsed !== null && (this.time.config.whitelist = parsed) }), blacklist = createEl("input", { className: "tt-filter-input tt-io", placeholder: 'a.b, c.d or {"0":["a.b"]}', title: "Blacklist paths", onfocus: () => blLive = true, onblur: () => (blLive = false, blacklist.value = formatPaths(this.time.config.blacklist, "")), oninput: (_, parsed = parsePaths(blacklist.value, true)) => parsed !== null && (this.time.config.blacklist = parsed) }), filterRow1 = createEl("div", { className: "tt-filter-row" }), filterRow2 = createEl("div", { className: "tt-filter-row" }), row1 = createEl("div", { className: "tt-row" }), row2 = createEl("div", { className: "tt-row" }), row3 = createEl("div", { className: "tt-row" });
       status.append((box.append(frame), box), clrHistory);
       filters.append((filterBox.append((filterRow1.append(whitelistLabel, whitelist), filterRow1), (filterRow2.append(blacklistLabel, blacklist), filterRow2)), filterBox));
       panel.append(title, status, (row1.append(undo, redo, genesis), row1), (row2.append(playPause, rewind), row2), payload, range, filters, (row3.append(exp, imp, clr), row3), io, (foot.appendChild(link), foot));
       host.append(toggle, panel);
       this.els = { host, toggle, panel, title, frame, clrHistory, undo, redo, genesis, playPause, rewind, range, exp, imp, clr, payload, io };
       this.keyup = (e) => {
-        const a = this.state.open && (this.config.devOnly ? CTX.isDevEnv : true) && keyEventAllowed2(e, keys);
+        const a = this.state.open && (this.config.devOnly ? CTX.isDevEnv : true) && keyEventAllowed(e, keys);
         a === "undo" ? this.time.undo() : a === "redo" ? this.time.redo() : a === "genesis" ? this.time.jumpTo(0) : a === "ending" ? this.time.jumpTo(s.history.length) : a === "prevFrame" ? this.time.step(1, false) : a === "nextFrame" ? this.time.step(1, true) : a === "skipBwd" ? this.time.step(5, false) : a === "skipFwd" ? this.time.step(5, true) : a === "rewind" ? this.time.rewind() : a === "playPause" ? this.time[s.paused ? "play" : "pause"]() : a === "clrHistory" ? this.time.clear() : a === "closeOverlay" ? this.state.open = false : a === "export" ? this.state.import = this.time.export() : a === "import" ? this.state.import.trim().length && this.time.import(this.state.import) : a === "clear" && (this.state.import = "");
       };
       window.addEventListener("keydown", this.keyup);
@@ -1610,7 +1600,7 @@
           if (host.parentNode !== dock) dock.appendChild(host);
         }),
         effect(() => toggle.textContent = `${(panel.hidden = !this.state.open) ? "Show" : "Hide"} ${title.textContent = this.config.title ?? ""}`),
-        effect(() => playPause.textContent = `${s.paused ? "Play" : "Pause"}${formatKeyForDisplay2(keys.shortcuts.playPause)}`),
+        effect(() => playPause.textContent = `${s.paused ? "Play" : "Pause"}${formatKeyForDisplay(keys.shortcuts.playPause)}`),
         effect(() => {
           frame.textContent = `Frame: ${s.currentFrame} / ${s.history.length}`;
           range.disabled = clrHistory.disabled = !s.history.length;
@@ -1633,18 +1623,15 @@
       for (const clup of this.clups) clup();
       this.keyup && window.removeEventListener("keydown", this.keyup);
       this.els.host.remove();
-      nuke2(this), --_TimeTravelOverlay.count;
+      nuke(this), --_TimeTravelOverlay.count;
     }
   };
-  function getDirChild(parent, className) {
-    for (const child of parent.children) if (child instanceof HTMLElement && child.classList.contains(className)) return child;
-  }
   function getDock(container) {
     const host = container && container !== document.documentElement ? container : document.body;
     if (host !== document.body && getComputedStyle(host).position === "static") host.style.position = "relative";
-    const layer = getDirChild(host, "tt-overlay-layer") || createEl2("div", { className: "tt-overlay-layer" }, void 0, { position: host === document.body ? "fixed" : "absolute" });
+    const layer = host.querySelector(":scope > .tt-overlay-layer") || createEl("div", { className: "tt-overlay-layer" }, void 0, { position: host === document.body ? "fixed" : "absolute" });
     if (layer.parentElement !== host) host.appendChild(layer);
-    const dock = getDirChild(layer, "tt-overlay-dock") || createEl2("div", { className: "tt-overlay-dock" });
+    const dock = layer.querySelector(":scope > .tt-overlay-dock") || createEl("div", { className: "tt-overlay-dock" });
     return dock.parentElement !== layer && layer.appendChild(dock), dock;
   }
   function formatPaths(paths, emptyText) {
@@ -1663,7 +1650,7 @@
     const list = text.split(",").map((p) => p.trim()).filter(Boolean);
     return list.length ? list : allowEmpty ? void 0 : wpArr;
   }
-  function effect(callback, options = NIL2) {
+  function effect(callback, options = NIL) {
     const atrkr = new Autotracker();
     let destroyed = false;
     const cleanup = () => (destroyed = true, atrkr.destroy());
@@ -1955,7 +1942,10 @@
                   <path transform="translate(0, 4)" d="M1.307,5.988 L6.616,1.343 C7.027,0.933 7.507,0.864 7.918,1.275 L7.918,4.407 C8.014,4.406 8.098,4.406 8.147,4.406 C13.163,4.406 16.885,7.969 16.885,12.816 C16.885,14.504 16.111,13.889 15.788,13.3 C14.266,10.52 11.591,8.623 8.107,8.623 C8.066,8.623 7.996,8.624 7.917,8.624 L7.917,11.689 C7.506,12.099 6.976,12.05 6.615,11.757 L1.306,7.474 C0.897,7.064 0.897,6.399 1.307,5.988 L1.307,5.988 Z"></path>
                 </svg>
                 <span>Close Settings</span>
-              </button>                     
+              </button> 
+              <button type="button" class="tmg-video-settings-tips-btn">
+                <span>\u{1F4A1} Did You Know?</span>
+              </button>                    
             </div>
             <div class="tmg-video-settings-bottom-panel"><p>No Settings Available Yet!</p></div>
           </div>
@@ -1979,6 +1969,49 @@
       `
       );
       this.queryDOM(".tmg-video-container-content").prepend(this.video);
+    }
+    getTipsHTML() {
+      return `
+    <div style="text-align: left; font-family: inherit; color: inherit;">
+      <div style="text-align: center; margin-bottom: 25px;">
+        <h2 style="margin: 0 0 10px 0; letter-spacing: -0.5px;">\u{1F3AC} Welcome to TVP</h2>
+        <p style="margin: 0; opacity: 0.9; line-height: 1.5;">
+          You aren't just watching a video; you're sitting in the cockpit of the most advanced, performance-first media engine on the web. We are thrilled to have you here. 
+          <br><strong>Here is your official flight manual to unlock its full power:</strong>
+        </p>
+      </div>
+      <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid currentColor; padding-bottom: 5px; opacity: 0.85;">\u{1F39B}\uFE0F The Smart Canvas (Touch & Mouse)</h3>
+      <ul style="padding-left: 20px; line-height: 1.6; margin-bottom: 25px;">
+        <li><strong>Hyper-Speed on Demand:</strong> Click and hold the right side of the video screen or the play key (<strong>Spacebar</strong>) to fast-forward, left side or <strong>Alt</strong> + play key rewinds.</li>
+        <li><strong>Smart Scrubbing:</strong> Don't hunt for the tiny progress bar. Just swipe horizontally across the middle of the screen to scrub smoothly through time.</li>
+        <li><strong>Invisible Sliders:</strong> Swipe vertically on the <em>right edge</em> for Volume, and the <em>left edge</em> for Brightness.</li>
+        <li><strong>Precision Taps:</strong> Double-tap the edges to skip forward or backward. Double tap the center to toggle Fullscreen (or Play/Pause on mobile).</li>
+      </ul>
+      <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid currentColor; padding-bottom: 5px; opacity: 0.85;">\u{1F3D7}\uFE0F Total UI Control</h3>
+      <ul style="padding-left: 20px; line-height: 1.6; margin-bottom: 25px;">
+        <li><strong>Build Your Own Player:</strong> Don't like our layout? <strong>Click and drag</strong> almost any button on the bottom control bar to physically rearrange the interface exactly how you want it.</li>
+        <li><strong>Draggable Subtitles:</strong> Subtitles blocking a crucial part of the scene? Just grab the text box and drag it anywhere else on the screen.</li>
+        <li><strong>The Chameleon Engine:</strong> Head to settings and set your Brand/Theme colors to "Video Derived". TVP will actively analyze the video frames and extract dominant colors to paint the UI dynamically.</li>
+      </ul>
+      <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid currentColor; padding-bottom: 5px; opacity: 0.85;">\u2328\uFE0F Keyboard Ninja Status</h3>
+      <ul style="padding-left: 20px; line-height: 1.6; margin-bottom: 25px;">
+        <li><strong>The Holy Trinity (J, K, L):</strong> Skip backward, Play/Pause, and Skip forward like a pro editor.</li>
+        <li><strong>Time Travel (0 - 9):</strong> Hit any number key to instantly jump to that percentage of the video (e.g., hitting '5' jumps to the exact middle).</li>
+        <li><strong>Frame-by-Frame:</strong> Paused the video? Use <strong>,</strong> (comma) and <strong>.</strong> (period) to step backward or forward one single frame at a time.</li>
+        <li><strong>Warp Speed:</strong> Use <strong>&gt;</strong> and <strong>&lt;</strong> to crank the playback speed up or down.</li>
+      </ul>
+      <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid currentColor; padding-bottom: 5px; opacity: 0.85;">\u{1F52C} Advanced Window Tech</h3>
+      <ul style="padding-left: 20px; line-height: 1.6; margin-bottom: 20px;">
+        <li><strong>The Snapshot Engine:</strong> Click the Camera icon to download a high-res screenshot of the exact frame. <em>(Easter Egg: Hold <strong>Alt</strong> while clicking to capture it in pure Black & White!)</em></li>
+        <li><strong>Floating Miniplayer:</strong> Start playing a video and just scroll down the page. TVP will automatically detach into a draggable miniplayer so you never miss a second.</li>
+        <li><strong>Custom Picture-in-Picture:</strong> We bypassed standard browser limits to give you a floating player that actually keeps all your custom UI controls intact.</li>
+      </ul>
+      <div style="text-align: center; margin-top: 30px; padding: 15px; border-radius: 8px; background: rgba(128, 128, 128, 0.1);">
+        <p style="margin: 0 0 10px 0;"><strong>Enjoy the engine.</strong> We're still in active development, but we're already miles ahead. Welcome to the bleeding edge.</p>
+        <p style="margin: 0; opacity: 0.8;">\u{1F9EA} <strong>Beta Tester?</strong> Check the bottom of the page to find the hidden button to travel through linear time, or <a href="mailto:tobioketade007@gmail.com" style="color: inherit; text-decoration: underline;">drop me an email</a> to collaborate!</p>
+        </div>
+      </div>
+    `;
     }
     getPlayerElements() {
       const k = this.fetchKeyShortcutsForDisplay();
@@ -2245,7 +2278,8 @@
         svgs: this.videoContainer.getElementsByTagName("svg"),
         draggableControls: this.queryDOM("[data-draggable-control]", false, true),
         dropZones: [...this.queryDOM("[data-drop-zone][data-drag-id]", false, true), ...this.zonesArr],
-        settingsCloseBtn: this.settings ? this.queryDOM(".tmg-video-settings-close-btn") : null
+        settingsCloseBtn: this.queryDOM(".tmg-video-settings-close-btn"),
+        settingsTipsBtn: this.queryDOM(".tmg-video-settings-tips-btn")
       };
     }
     initPlayer() {
@@ -2301,7 +2335,7 @@
         fullscreenorientation: () => !this.isUIActive("fullscreen") && this.setControlState(this.DOM.fullscreenOrientationBtn, { hidden: true }),
         captions: () => this.setControlState(this.DOM.captionsBtn, { disabled: !this.video.textTracks[this.textTrackIndex] }),
         playbackrate: () => this.DOM.playbackRateBtn && (this.DOM.playbackRateBtn.textContent = `${this.settings.playbackRate.value}x`),
-        pictureinpicture: () => this.setControlState(this.DOM.pictureInPictureBtn, { hidden: !this.settings.modes.pictureInPicture }),
+        pictureinpicture: () => this.setControlState(this.DOM.pictureInPictureBtn, { hidden: this.settings.modes.pictureInPicture.disabled }),
         theater: () => this.setControlState(this.DOM.theaterBtn, { hidden: !this.settings.modes.theater }),
         fullscreen: () => this.setControlState(this.DOM.fullscreenBtn, { hidden: this.settings.modes.fullscreen.disabled }),
         playlist: () => {
@@ -2420,6 +2454,7 @@
     }
     setSettingsViewEventListeners() {
       this.DOM.settingsCloseBtn?.addEventListener("click", this.leaveSettingsView);
+      this.DOM.settingsTipsBtn?.addEventListener("click", this.showTipsDialog);
     }
     toggleSettingsView = async () => await (!this.isUIActive("settings") ? this.enterSettingsView : this.leaveSettingsView)();
     async enterSettingsView() {
@@ -2450,23 +2485,27 @@
           return this.leaveSettingsView();
       }
     }
+    async showTipsDialog() {
+      await this.leaveSettingsView();
+      t007.alert(this.getTipsHTML(), { id: `${this.id}-tips-dialog`, rootElement: this.DOM.videoContainerContent, confirmText: "Got it!" });
+    }
     observeResize() {
       this._handleMediaParentResize();
-      tmg.initScrollAssist(this.DOM.videoTitle, { pxPerSecond: 60 });
-      tmg.initScrollAssist(this.DOM.videoArtist, { pxPerSecond: 30 });
+      initScrollAssist(this.DOM.videoTitle, { pxPerSecond: 60, assistClassName: "tmg-video-controls-scroll-assist" });
+      initScrollAssist(this.DOM.videoArtist, { pxPerSecond: 30, assistClassName: "tmg-video-controls-scroll-assist" });
       this.zonesArr.forEach((el) => {
         this._handleControlsView(el);
-        tmg.initScrollAssist(el, { pxPerSecond: 60 });
+        initScrollAssist(el, { pxPerSecond: 60, assistClassName: "tmg-video-controls-scroll-assist" });
         el && tmg.resizeObserver.observe(el);
         el?.addEventListener("scroll", this._handleDirtyScroll, { passive: true });
       });
       [this.videoContainer, this.pseudoVideoContainer].forEach((el) => tmg.resizeObserver.observe(el));
     }
     unobserveResize() {
-      tmg.removeScrollAssist(this.DOM.videoTitle);
-      tmg.removeScrollAssist(this.DOM.videoArtist);
+      initScrollAssist(this.DOM.videoTitle, { pxPerSecond: 60, assistClassName: "tmg-video-controls-scroll-assist" });
+      initScrollAssist(this.DOM.videoArtist, { pxPerSecond: 30, assistClassName: "tmg-video-controls-scroll-assist" });
       this.zonesArr.forEach((el) => {
-        tmg.removeScrollAssist(el);
+        initScrollAssist(el, { pxPerSecond: 60, assistClassName: "tmg-video-controls-scroll-assist" });
         el && tmg.resizeObserver.unobserve(el);
       });
       [this.videoContainer, this.pseudoVideoContainer].forEach((el) => tmg.resizeObserver.unobserve(el));
@@ -2552,6 +2591,7 @@
       this.videoContainer.classList.add("tmg-video-inactive");
     }
     reactivate() {
+      t007.dialog?.dismiss(`${this.id}-error-dialog`, "recovered");
       if (!this.videoContainer.classList.contains("tmg-video-inactive") || !this.loaded) return;
       this.removeUIMessage();
       this.videoContainer.classList.remove("tmg-video-inactive");
@@ -2704,10 +2744,16 @@
     }
     showUIMessage = (message) => message && this.DOM.videoContainerContent.setAttribute("data-message", message);
     removeUIMessage = () => this.DOM.videoContainerContent.removeAttribute("data-message");
-    _handleLoadedError(error) {
-      this.loaded = false;
-      this.settings.css.currentBufferedPosition = 0;
-      this.deactivate(this.settings.errorMessages?.[this.video.error?.code ?? (error && 5)] || typeof error === "string" && error || error?.message || this.video.error?.message || error && "An unknown error occurred with the video :(");
+    async _handleLoadedError(error) {
+      this.loaded = false, this.settings.css.currentBufferedPosition = 0;
+      const mssg = this.settings.errorMessages?.[this.video.error?.code ?? (error && 5)] || typeof error === "string" && error || error?.message || this.video.error?.message || error && "An unknown error occurred with the video :(";
+      if (this.readyState < 3) return this.deactivate(mssg);
+      if (t007.dialog?.isActive?.(`${this.id}-error-dialog`)) return;
+      const res = await t007.confirm(mssg, { id: `${this.id}-error-dialog`, rootElement: this.DOM.videoContainerContent, confirmText: "Try Again", cancelText: "Dismiss" });
+      if (res === true) {
+        const time = this.currentTime;
+        this.video.load(), this.video.currentTime = time, this.togglePlay(true);
+      } else if (res !== "recovered") this.deactivate(mssg);
     }
     _handleLoadStart() {
       this.loaded = false;
@@ -2750,7 +2796,7 @@
       this.canAutoMovePlaylist = true;
     }
     applyPlaylistItem(v, reset = true) {
-      fanout2(this.config.media, tmg.deepClone(v.media), { merge: true, depth: 2 });
+      fanout(this.config.media, tmg.deepClone(v.media), { merge: true, depth: 2 });
       ["min", "max", "start", "end", "previews"].forEach((prop) => this.settings.time[prop] = v.settings.time[prop]);
       this.config.tracks = tmg.deepClone(v.tracks ?? []);
       if (reset) this.config.src = v.src || "";
@@ -2784,7 +2830,7 @@
       nVP?.toggleAttribute("poster", v.media?.artwork?.[0]?.src);
       v.sources?.length && tmg.addSources(v.sources, nVP);
       ["loadedmetadata", "loaded", "durationchange"].forEach((e) => nVP?.addEventListener(e, ({ target: p }) => p.nextElementSibling.textContent = this.toTimeText(p.duration)));
-      fanout2(this.settings.toasts.nextVideoPreview, this.settings.toasts.nextVideoPreview);
+      fanout(this.settings.toasts.nextVideoPreview, this.settings.toasts.nextVideoPreview);
       nVP?.previousElementSibling?.addEventListener("click", () => (cleanUp(true), this.nextVideo()), true);
     }
     _handlePlay() {
@@ -2972,7 +3018,7 @@
     _handleTimeUpdateLoop(optimize = true, vc = this.video.currentTime, s = this.settings) {
       if (optimize && !this.isIntersecting) return;
       if (!this.isScrubbing) s.css.currentPlayedPosition = s.css.currentThumbPosition = tmg.safeNum(vc / tmg.safeNum(this.video.duration, 60));
-      if (!s.captions.disabled) this._handleCaptionsKaraoke();
+      if (!s.captions.visible) this._handleCaptionsKaraoke();
     }
     toggleTimeMode() {
       this.settings.time.mode = this.settings.time.mode !== "elapsed" ? "elapsed" : "remaining";
@@ -3036,14 +3082,14 @@
       this.config.watch("settings.playbackRate.value", (value, { target: { object } }) => this.video.playbackRate = this.video.defaultPlaybackRate = tmg.clamp(object.min, value, object.max));
       this.config.watch("settings.playbackRate.min", (min, { target: { object } }) => object.value < min && (object.value = min));
       this.config.watch("settings.playbackRate.max", (max, { target: { object } }) => object.value > max && (object.value = max));
-      fanout2(this.settings.playbackRate, { value: this.video.playbackRate, ...this.settings.playbackRate });
+      fanout(this.settings.playbackRate, { value: this.video.playbackRate, ...this.settings.playbackRate });
       this.config.get("settings.playbackRate.value", () => this.video.playbackRate, true);
     }
     rotatePlaybackRate(dir = "forwards") {
       const rate = this.settings.playbackRate.value, { min, max, skip } = this.settings.playbackRate, steps = Array.from({ length: Math.floor((max - min) / skip) + 1 }, (_, i2) => min + i2 * skip), i = steps.reduce((cIdx, s, idx) => Math.abs(s - rate) < Math.abs(steps[cIdx] - rate) ? idx : cIdx, 0);
       this.settings.playbackRate.value = steps[dir === "backwards" ? (i - 1 + steps.length) % steps.length : (i + 1) % steps.length];
     }
-    changePlaybackRate(value) {
+    setPlaybackRate(value) {
       const sign = value >= 0 ? "+" : "-";
       value = Math.abs(value);
       const rate = this.settings.playbackRate.value;
@@ -3111,7 +3157,7 @@
         if (track.mode === "showing" || track.default) this.textTrackIndex = i;
         track.mode = "hidden";
       });
-      this.videoContainer.classList.toggle("tmg-video-captions", this.video.textTracks.length && !this.settings.captions.disabled);
+      this.videoContainer.classList.toggle("tmg-video-captions", this.video.textTracks.length && !this.settings.captions.visible);
       this.videoContainer.dataset.trackKind = this.video.textTracks[this.textTrackIndex]?.kind || "captions";
       this.setControlsState("captions");
       this._handleCueChange(this.video.textTracks[this.textTrackIndex]?.activeCues?.[0]);
@@ -3123,7 +3169,7 @@
       this.settings.css.captionsCharacterEdgeStyle = this.settings.captions.characterEdgeStyle.value;
       this.settings.css.captionsTextAlignment = this.settings.captions.textAlignment.value;
       this.settings.css.currentCaptionsX, this.settings.css.currentCaptionsY;
-      this.config.on("settings.captions.disabled", ({ value }) => {
+      this.config.on("settings.captions.visible", ({ value }) => {
         this.settings.css.currentCaptionsX = this.CSSCache.currentCaptionsX, this.settings.css.currentCaptionsY = this.CSSCache.currentCaptionsY;
         if (!this.video.textTracks[this.textTrackIndex]) return;
         !value ? this.videoContainer.classList.add("tmg-video-captions") : this.videoContainer.classList.remove("tmg-video-captions", "tmg-video-captions-preview");
@@ -3136,7 +3182,7 @@
     }
     toggleCaptions = () => {
       if (!this.video.textTracks[this.textTrackIndex]) return this.previewCaptions("No captions available for this video");
-      this.settings.captions.disabled = !this.settings.captions.disabled;
+      this.settings.captions.visible = !this.settings.captions.visible;
     };
     previewCaptions(preview = `${tmg.capitalize(this.videoContainer.dataset.trackKind)} look like this`, flush = this.DOM.captionsContainer.textContent.replace(/\s/g, "") === this.lastCaptionsPreview?.replace(/\s/g, "")) {
       const shouldPreview = flush || !this.isUIActive("captions") || !this.DOM.captionsContainer.textContent;
@@ -3209,7 +3255,7 @@
         el.toggleAttribute("data-past", isPast), el.toggleAttribute("data-future", !isPast);
       }
     }
-    changeCaptionsFontSize(value) {
+    setCaptionsFontSize(value) {
       const sign = value >= 0 ? "+" : "-";
       value = Math.abs(value);
       const size = Number(this.settings.css.captionsFontSize);
@@ -3278,11 +3324,11 @@
       this.config.on("settings.volume.value", ({ value }) => {
         const v = tmg.clamp(this.shouldMute ? 0 : this.settings.volume.min, value, this.settings.volume.max);
         if (this._tmgGainNode) this._tmgGainNode.gain.setTargetAtTime(v / 100 * 2, tmg.AUDIO_CONTEXT.currentTime, 0.02);
-        this.video.muted = this.video.defaultMuted = this.settings.volume.muted = v === 0;
+        if (v > 0) this.video.muted = this.video.defaultMuted = this.settings.volume.muted = false;
         this._handleVolumeChange(v);
       });
       this.config.on("settings.volume.muted", ({ oldValue, value: muted }) => {
-        if (oldValue === muted) return;
+        if (oldValue === muted && !!this.settings.volume.value) return;
         if (muted) {
           if (this.settings.volume.value) this.lastVolume = this.settings.volume.value, this.shouldSetLastVolume = true;
           this.shouldMute = true;
@@ -3301,13 +3347,35 @@
         this.settings.css.volumeSliderPercent = Math.round(100 / max * 100);
         this.settings.css.maxVolumeRatio = max / 100;
       });
-      fanout2(this.settings.volume, { ...this.settings.volume, value: this.shouldMute ? 0 : this.lastVolume });
+      fanout(this.settings.volume, { ...this.settings.volume, value: this.shouldMute ? 0 : this.lastVolume });
       this.config.get("settings.volume.value", (value) => this._tmgGainNode ? Math.round((this._tmgGainNode.gain?.value ?? 2) / 2 * 100) : value, true);
     }
     toggleMute = (option) => {
       if (option === "auto" && this.shouldSetLastVolume && !this.lastVolume) this.lastVolume = this.settings.volume.skip;
-      this.settings.volume.muted = !this.settings.volume.muted;
+      this.settings.volume.muted = !(this.settings.volume.muted || !this.settings.volume.value);
     };
+    setVolume(value) {
+      const sign = value >= 0 ? "+" : "-";
+      value = Math.abs(value);
+      let volume = this.shouldSetLastVolume ? this.lastVolume : this.settings.volume.value;
+      switch (sign) {
+        case "-":
+          if (volume > this.settings.volume.min) volume -= volume % value ? volume % value : value;
+          if (volume === 0) {
+            this.notify("volumemuted");
+            break;
+          }
+          this.notify("volumedown");
+          break;
+        default:
+          if (volume < this.settings.volume.max) volume += volume % value ? value - volume % value : value;
+          this.notify("volumeup");
+      }
+      if (this.shouldSetLastVolume) {
+        this.DOM.volumeNotifierContent.textContent = volume + "%";
+        this.lastVolume = volume;
+      } else this.settings.volume.value = volume;
+    }
     _handleVolumeSliderInput({ target: { value: volume } }, delay = true) {
       this.shouldMute = this.shouldSetLastVolume = false, this.settings.volume.value = volume;
       if (volume > 5) this.sliderAptVolume = volume;
@@ -3340,28 +3408,6 @@
     }
     _handleNativeVolumeChange = () => (this.video.volume = 1, this.settings.volume.muted !== this.video.muted && this.toggleMute());
     // tough choice, took over; browser :)
-    changeVolume(value) {
-      const sign = value >= 0 ? "+" : "-";
-      value = Math.abs(value);
-      let volume = this.shouldSetLastVolume ? this.lastVolume : this.settings.volume.value;
-      switch (sign) {
-        case "-":
-          if (volume > this.settings.volume.min) volume -= volume % value ? volume % value : value;
-          if (volume === 0) {
-            this.notify("volumemuted");
-            break;
-          }
-          this.notify("volumedown");
-          break;
-        default:
-          if (volume < this.settings.volume.max) volume += volume % value ? value - volume % value : value;
-          this.notify("volumeup");
-      }
-      if (this.shouldSetLastVolume) {
-        this.DOM.volumeNotifierContent.textContent = volume + "%";
-        this.lastVolume = volume;
-      } else this.settings.volume.value = volume;
-    }
     _handleVolumeContainerMouseMove = () => (this.overVolume = this.DOM.volumeSlider?.matches(":hover"), this.startVolumeActive());
     _handleVolumeContainerMouseLeave = () => (this.overVolume = false, this.stopVolumeActive());
     startVolumeActive = () => (this.DOM.volumeSlider?.classList.add("tmg-video-control-active"), this.delayVolumeActive());
@@ -3378,13 +3424,13 @@
     plugBrightnessSettings() {
       this.lastBrightness = tmg.clamp(this.settings.brightness.min, this.settings.brightness.value ?? this.settings.css.brightness ?? 100, this.settings.brightness.max);
       this.config.on("settings.brightness.value", ({ value }) => {
-        const v = tmg.clamp(this.shouldDark ? 0 : this.settings.brightness.min, value, this.settings.brightness.max);
-        this.settings.css.brightness = v;
-        this.settings.brightness.dark = v === 0;
-        this._handleBrightnessChange(v);
+        const b = tmg.clamp(this.shouldDark ? 0 : this.settings.brightness.min, value, this.settings.brightness.max);
+        this.settings.css.brightness = b;
+        if (b > 0) this.settings.brightness.dark = false;
+        this._handleBrightnessChange(b);
       });
       this.config.on("settings.brightness.dark", ({ oldValue, value: dark }) => {
-        if (oldValue === dark) return;
+        if (oldValue === dark && !!this.settings.brightness.value) return;
         if (dark) {
           if (this.settings.brightness.value) this.lastBrightness = this.settings.brightness.value, this.shouldSetLastBrightness = true;
           this.shouldDark = true;
@@ -3403,12 +3449,12 @@
         this.settings.css.brightnessSliderPercent = Math.round(100 / max * 100);
         this.settings.css.maxBrightnessRatio = max / 100;
       });
-      fanout2(this.settings.brightness, { ...this.settings.brightness, value: this.lastBrightness });
+      fanout(this.settings.brightness, { ...this.settings.brightness, value: this.lastBrightness });
       this.config.get("settings.brightness.value", () => Number(this.settings.css.brightness ?? 100), true);
     }
     toggleDark = (option) => {
       if (option === "auto" && this.shouldSetLastBrightness && !this.lastBrightness) this.lastBrightness = this.settings.brightness.skip;
-      this.settings.brightness.dark = !this.settings.brightness.dark;
+      this.settings.brightness.dark = !(this.settings.brightness.dark || !this.settings.brightness.value);
     };
     _handleBrightnessSliderInput({ target: { value: brightness } }, delay = true) {
       this.shouldDark = this.shouldSetLastBrightness = false, this.settings.brightness.value = brightness;
@@ -3440,7 +3486,7 @@
         }
       } else this.settings.css.currentBrightnessSliderPosition = bPercent;
     }
-    changeBrightness(value) {
+    setBrightness(value) {
       const sign = value >= 0 ? "+" : "-";
       value = Math.abs(value);
       let brightness = this.shouldSetLastBrightness ? this.lastBrightness : this.settings.brightness.value;
@@ -3487,7 +3533,7 @@
     plugModesSettings() {
       this.config.on("settings.modes.fullscreen.disabled", ({ value }) => value && this.isUIActive("fullscreen") && this.toggleFullscreenMode());
       this.config.on("settings.modes.theater", ({ value }) => !value && this.isUIActive("theater") && this.toggleTheaterMode());
-      this.config.on("settings.modes.pictureInPicture", ({ value }) => !value && (this.isUIActive("pictureInPicture") || this.isUIActive("floatingPlayer")) && this.togglePictureInPictureMode());
+      this.config.on("settings.modes.pictureInPicture.disabled", ({ value }) => value && (this.isUIActive("pictureInPicture") || this.isUIActive("floatingPlayer")) && this.togglePictureInPictureMode());
       this.config.on("settings.modes.miniplayer.disabled", ({ value }) => value && this.toggleMiniplayerMode(false));
     }
     toggleTheaterMode = () => {
@@ -3669,7 +3715,7 @@
       if (this.skipPersist && detail == 2) return;
       this.activateSkipPersist(pos);
       pos === "right" ? this.skip(this.settings.time.skip) : this.skip(-this.settings.time.skip);
-      tmg.rippleHandler(e, this.currentSkipNotifier);
+      rippleHandler(e, { target: this.currentSkipNotifier, wrapperClassName: "tmg-video-ripple-container", className: "tmg-video-ripple", holdClassName: "tmg-video-ripple-hold", fadeClassName: "tmg-video-ripple-fade" });
     }
     activateSkipPersist(pos) {
       if (this.skipPersist) return;
@@ -3878,8 +3924,8 @@
       return terms;
     }
     keyEventAllowed(e) {
-      if (this.settings.keys.disabled || (e.key === " " || e.key === "Enter") && e.currentTarget.document.activeElement?.tagName === "BUTTON" || e.currentTarget.document.activeElement?.matches("input,textarea,[contenteditable='true']")) return false;
-      const combo = tmg.stringifyKeyCombo(e), { override, block, action, allowed } = this.getTermsForKey(combo);
+      if (this.settings.keys.disabled || (e.key === " " || e.key === "Enter") && getActiveEl(e.target?.ownerDocument)?.matches("button,input,textarea,[contenteditable='true']")) return false;
+      const combo = tmg.stringifyKeyEvent(e), { override, block, action, allowed } = this.getTermsForKey(combo);
       if (block) return false;
       if (override) e.preventDefault();
       if (action) return action;
@@ -3918,21 +3964,21 @@
             case "objectFit":
               return this.rotateObjectFit();
             case "volumeUp":
-              return this.changeVolume(this.settings.keys.mods.volume[mod] ?? this.settings.volume.skip);
+              return this.setVolume(this.settings.keys.mods.volume[mod] ?? this.settings.volume.skip);
             case "volumeDown":
-              return this.changeVolume(-(this.settings.keys.mods.volume[mod] ?? this.settings.volume.skip));
+              return this.setVolume(-(this.settings.keys.mods.volume[mod] ?? this.settings.volume.skip));
             case "brightnessUp":
-              return this.changeBrightness(this.settings.keys.mods.brightness[mod] ?? this.settings.brightness.skip);
+              return this.setBrightness(this.settings.keys.mods.brightness[mod] ?? this.settings.brightness.skip);
             case "brightnessDown":
-              return this.changeBrightness(-(this.settings.keys.mods.brightness[mod] ?? this.settings.brightness.skip));
+              return this.setBrightness(-(this.settings.keys.mods.brightness[mod] ?? this.settings.brightness.skip));
             case "playbackRateUp":
-              return this.changePlaybackRate(this.settings.keys.mods.playbackRate[mod] ?? this.settings.playbackRate.skip);
+              return this.setPlaybackRate(this.settings.keys.mods.playbackRate[mod] ?? this.settings.playbackRate.skip);
             case "playbackRateDown":
-              return this.changePlaybackRate(-(this.settings.keys.mods.playbackRate[mod] ?? this.settings.playbackRate.skip));
+              return this.setPlaybackRate(-(this.settings.keys.mods.playbackRate[mod] ?? this.settings.playbackRate.skip));
             case "captionsFontSizeUp":
-              return this.changeCaptionsFontSize(this.settings.keys.mods.captionsFontSize[mod] ?? this.settings.captions.font.size.skip);
+              return this.setCaptionsFontSize(this.settings.keys.mods.captionsFontSize[mod] ?? this.settings.captions.font.size.skip);
             case "captionsFontSizeDown":
-              return this.changeCaptionsFontSize(-(this.settings.keys.mods.captionsFontSize[mod] ?? this.settings.captions.font.size.skip));
+              return this.setCaptionsFontSize(-(this.settings.keys.mods.captionsFontSize[mod] ?? this.settings.captions.font.size.skip));
             case "captionsFontWeight":
             case "captionsFontVariant":
             case "captionsFontFamily":
@@ -3947,9 +3993,9 @@
               (this.isUIActive("pictureInPicture") || this.isUIActive("floatingPlayer")) && this.togglePictureInPictureMode();
               break;
             case "arrowup":
-              return this.changeVolume(this.settings.keys.mods.volume[mod] ?? 5);
+              return this.setVolume(this.settings.keys.mods.volume[mod] ?? 5);
             case "arrowdown":
-              return this.changeVolume(-(this.settings.keys.mods.volume[mod] ?? 5));
+              return this.setVolume(-(this.settings.keys.mods.volume[mod] ?? 5));
             case "arrowleft":
               this.deactivateSkipPersist();
               return this.skip(-(this.settings.keys.mods.skip[mod] ?? 5)), this.notify("bwd");
@@ -4140,8 +4186,8 @@
       this.#medium.muted = s.volume.muted ??= this.#medium.muted;
       this.#medium.loop = s.time.loop ??= this.#medium.loop;
       this.#medium.volume = 1;
-      Object.entries(s.modes).forEach(([k, v]) => s.modes[k] = v && (tmg[`supports${tmg.capitalize(k)}`]?.() ?? true) ? v : false);
-      await Promise.all([tmg.loadResource(TMG_VIDEO_CSS_SRC), tmg.loadResource(T007_TOAST_JS_SRC, "script", { module: true }), tmg.loadResource(T007_INPUT_JS_SRC, "script")]);
+      Object.entries(s.modes).forEach(([k, v]) => tmg.isObj(s.modes[k]) && (s.modes[k].disabled = !v.disabled && (tmg[`supports${tmg.capitalize(k)}`]?.() ?? true) ? false : true));
+      await Promise.all([tmg.loadResource(TMG_VIDEO_CSS_SRC), tmg.loadResource(T007_TOAST_JS_SRC, "script"), tmg.loadResource(T007_INPUT_JS_SRC, "script")]);
       console.time(`TMG Controller ${tmg.Controllers.indexOf(this.build.id) + 1} INIT`);
       tmg.Controllers[tmg.Controllers.indexOf(this.build.id)] = this.Controller = new tmg.Controller(this.#medium, this.#build);
       console.timeEnd(`TMG Controller ${tmg.Controllers.indexOf(this.Controller) + 1} INIT`);
@@ -4391,7 +4437,7 @@
     },
     uid: (prefix = "tmg-") => uid(prefix),
     clamp,
-    remToPx: (val) => parseFloat(getComputedStyle(document.documentElement).fontSize * val),
+    remToPx,
     isDef,
     isIter,
     isObj,
@@ -4415,8 +4461,8 @@
       })();
       tmg.setAny(target, path, parsedValue, "--", (p) => tmg.camelize(p));
     },
-    setAny: setAny2,
-    getAny: getAny2,
+    setAny,
+    getAny,
     bindAllMethods,
     reactive,
     TERMINATOR,
@@ -4426,8 +4472,8 @@
       const val = percent?.endsWith?.("%") ? tmg.safeNum(parseFloat(percent) / 100 * amount) : percent;
       return val && amount && autocap && amount <= val ? amount * autocap : val;
     },
-    parseCSSTime: (time) => time?.endsWith?.("ms") ? parseFloat(time) : parseFloat(time) * 1e3,
-    parseCSSUnit: (val) => val?.endsWith?.("px") ? parseFloat(val) : tmg.remToPx(parseFloat(val)),
+    parseCSSTime,
+    parseCSSSize,
     parseUIObj(obj) {
       const result = {};
       for (const key of Object.keys(obj)) {
@@ -4440,14 +4486,14 @@
       }
       return result;
     },
-    parseAnyObj: parseAnyObj2,
+    parseAnyObj,
     parsePanelBottomObj(obj = [], arr = false) {
       if (!tmg.isObj(obj) && !tmg.isArr(obj)) return false;
       const [third = [], second = [], first = []] = tmg.isObj(obj) ? Object.values(obj).reverse() : tmg.isArr(obj[0]) ? obj.toReversed() : [obj];
       return !arr ? { 1: first, 2: second, 3: third } : [...third, ...second, ...first];
     },
-    mergeObjs: mergeObjs2,
-    deepClone: deepClone2,
+    mergeObjs,
+    deepClone,
     formatMediaTime({ time, format = "digital", elapsed = true, showMs = false, casing = "normal" } = {}) {
       const long = format.endsWith("long"), sx = (n = 0) => n == 1 ? "" : "s", cs = (str) => casing === "upper" ? str.toUpperCase() : casing === "title" ? tmg.capitalize(str) : str.toLowerCase(), wrd = (n = 0) => ({ h: cs(long ? ` hour${sx(n)} ` : "h"), m: cs(long ? ` minute${sx(n)} ` : "m"), s: cs(long ? ` second${sx(n)} ` : "s"), ms: cs(long ? ` millisecond${sx(n)} ` : "ms") }), pad = (v, n = 2, f) => long && !f ? v : String(v).padStart(n, "number" === typeof +n ? "0" : "-");
       if (!this.isValidNum(time)) return format !== "digital" ? `-${wrd().h}${pad("-")}${wrd().m}${!elapsed ? "left" : ""}`.trim() : !elapsed ? "--:--" : "-:--";
@@ -4459,17 +4505,13 @@
       const base = h ? `${h}${wrd(h).h}${pad(m)}${wrd(m).m}${pad(s)}${wrd(s).s}` : `${m}${wrd(m).m}${pad(s)}${wrd(s).s}`, msPart = showMs && ms ? `${pad(ms, 3)}${wrd(ms).ms}` : "";
       return `${base}${msPart}${!long ? " " : ""}${!elapsed ? "left" : ""}`.trim();
     },
-    formatSize(size, decimals = 3, base = 1e3) {
-      if (size < base) return `${size} byte${size == 1 ? "" : "s"}`;
-      const units = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"], exponent = Math.min(Math.floor(Math.log(size) / Math.log(base)), units.length - 1);
-      return `${(size / Math.pow(base, exponent)).toFixed(decimals).replace(/\.0+$/, "")} ${units[exponent]}`;
-    },
+    formatSize,
     capitalize: (word = "") => word.replace(/^(\s*)([a-z])/i, (_, s, l) => s + l.toUpperCase()),
     // supports leading spaces like it should
     camelize: (str = "", { source } = /[\s_-]+/, { preserveInnerCase: pIC = true, upperFirst: uF = false } = {}) => (pIC ? str : str.toLowerCase()).replace(new RegExp(`${source}(\\w)`, "g"), (_, c) => c.toUpperCase()).replace(/^\w/, (c) => c[uF ? "toUpperCase" : "toLowerCase"]()),
     // '\\w' to preserve \
     uncamelize: (str = "", separator = " ") => str.replace(/([a-z])([A-Z])/g, `$1${separator}$2`).toLowerCase(),
-    mockAsync: (timeout = 250) => new Promise((resolve) => setTimeout(resolve, timeout)),
+    mockAsync,
     addSafeClicks(el, onClick, onDblClick, options) {
       el && tmg.removeSafeClicks(el);
       el?.addEventListener("click", el._clickHandler = (e) => (clearTimeout(el._clickTimeoutId), el._clickTimeoutId = setTimeout(() => onClick?.(e), 300)), options);
@@ -4493,11 +4535,9 @@
           const i = tmg.createEl("img", { src, crossOrigin: "anonymous", onload: () => res(i), onerror: () => rej(new Error(`Image load error: ${src}`)) });
         });
       if (src?.canvas) src = src.canvas;
-      const c = document.createElement("canvas"), x = c.getContext("2d"), s = Math.min(64, src.width, src.height);
-      c.width = c.height = s;
-      src?.width && src?.height && x.drawImage(src, 0, 0, s, s);
-      const d = src && x.getImageData(0, 0, s, s).data, ct = {}, pt = {};
-      for (let i = 0; i < d?.length; i += 4) {
+      const s = Math.min(64, src.width, src.height), c = tmg.createEl("canvas", { width: s, height: s }), x = c.getContext("2d");
+      const d = src?.width && src?.height ? (x.drawImage(src, 0, 0, s, s), x.getImageData(0, 0, s, s).data) : null, ct = {}, pt = {};
+      for (let i = 0; i < +d?.length; i += 4) {
         if (d[i + 3] < 128) continue;
         const r2 = d[i] & 240, g2 = d[i + 1] & 240, b2 = d[i + 2] & 240;
         const k = r2 << 16 | g2 << 8 | b2;
@@ -4571,57 +4611,11 @@
         return { ...parseObjectPosition(objectPosition, bbox, { width, height }), width, height };
       }
     },
-    rippleHandler(e, target, forceCenter = false) {
-      const el = target || e.currentTarget;
-      if (e.target !== e.currentTarget && e.target?.matches("button,[href],input,label,select,textarea,[tabindex]:not([tabindex='-1'])") || el?.hasAttribute("disabled") || e.pointerType === "mouse" && e.button !== 0) return;
-      e.stopPropagation?.();
-      const { offsetWidth: rW, offsetHeight: rH } = el, { width: w, height: h, left: l, top: t } = el.getBoundingClientRect(), size = Math.max(rW, rH), x = forceCenter ? rW / 2 - size / 2 : (e.clientX - l) * (rW / w) - size / 2, y = forceCenter ? rH / 2 - size / 2 : (e.clientY - t) * (rH / h) - size / 2, wrapper = tmg.createEl("span", { className: "tmg-video-ripple-container" }), ripple = tmg.createEl("span", { className: "tmg-video-ripple tmg-video-ripple-hold" }, {}, { cssText: `width:${size}px;height:${size}px;left:${x}px;top:${y}px;` });
-      let canRelease = false;
-      ripple.addEventListener("animationend", () => canRelease = true, { once: true });
-      el.append(wrapper.appendChild(ripple).parentElement);
-      const release = () => {
-        if (!canRelease) return ripple.addEventListener("animationend", release, { once: true });
-        ripple.classList.replace("tmg-video-ripple-hold", "tmg-video-ripple-fade");
-        ripple.addEventListener("animationend", () => setTimeout(() => wrapper.remove()));
-        ["pointerup", "pointercancel"].forEach((e2) => tmg.getWindow(el)?.removeEventListener(e2, release));
-      };
-      ["pointerup", "pointercancel"].forEach((e2) => tmg.getWindow(el)?.addEventListener(e2, release));
-    },
-    initVScrollerator,
-    initScrollAssist,
-    removeScrollAssist,
-    parseKeyCombo(combo) {
-      const parts = combo.toLowerCase().split("+");
-      return { ctrlKey: parts.includes("ctrl"), shiftKey: parts.includes("shift"), altKey: parts.includes("alt"), metaKey: parts.includes("meta") || parts.includes("cmd"), key: parts.find((p) => !["ctrl", "shift", "alt", "meta", "cmd"].includes(p)) || "" };
-    },
-    stringifyKeyCombo(e) {
-      const parts = [];
-      if (e.ctrlKey) parts.push("ctrl");
-      if (e.altKey) parts.push("alt");
-      if (e.shiftKey) parts.push("shift");
-      if (e.metaKey) parts.push("meta");
-      parts.push(e.key?.toLowerCase());
-      return parts.join("+");
-    },
-    cleanKeyCombo(combo) {
-      const clean = (combo2) => {
-        const m = ["ctrl", "alt", "shift", "meta"], alias = { cmd: "meta" };
-        if (combo2 === " " || combo2 === "+") return combo2;
-        combo2 = combo2.replace(/\+\s*\+$/, "+plus");
-        const p = combo2.toLowerCase().split("+").filter((k) => k !== "").map((k) => alias[k] || (k === "plus" ? "+" : k.trim() || " "));
-        return [...p.filter((k) => m.includes(k)).sort((a, b) => m.indexOf(a) - m.indexOf(b)), ...p.filter((k) => !m.includes(k)) || ""].join("+");
-      };
-      return tmg.isArr(combo) ? combo.map(clean) : clean(combo);
-    },
-    matchKeys(required, actual, strict = false) {
-      const match = (required2, actual2) => {
-        if (strict) return required2 === actual2;
-        const reqKeys = required2.split("+"), actKeys = actual2.split("+");
-        return reqKeys.every((k) => actKeys.includes(k));
-      };
-      return tmg.isArr(required) ? required.some((req) => match(req, actual)) : match(required, actual);
-    },
-    formatKeyForDisplay: (combo) => ` ${(tmg.isArr(combo) ? combo : [combo]).map((c) => `(${c})`).join(" or ")}`,
+    parseKeyCombo,
+    stringifyKeyEvent,
+    cleanKeyCombo,
+    matchKeys,
+    formatKeyForDisplay,
     AsyncQueue: class AsyncQueue {
       constructor() {
         this.jobs = [], this.running = false;
@@ -4667,7 +4661,7 @@
         css: { syncWithMedia: {} },
         brightness: { min: 0, max: 150, value: 100, skip: 5 },
         captions: {
-          disabled: false,
+          visible: false,
           allowVideoOverride: true,
           font: {
             family: {
@@ -4886,7 +4880,9 @@
     window.T007_TOAST_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/toast@latest/dist/index.min.css`;
     window.T007_INPUT_JS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/input@latest`;
     window.T007_INPUT_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/input@latest/dist/index.min.css`;
-    tmg.loadResource(TMG_VIDEO_CSS_SRC), tmg.loadResource(T007_TOAST_JS_SRC, "script", { module: true }), tmg.loadResource(T007_INPUT_JS_SRC, "script");
+    window.T007_DIALOG_JS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/dialog@latest`;
+    window.T007_DIALOG_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/dialog@latest/dist/index.min.css`;
+    tmg.loadResource(TMG_VIDEO_CSS_SRC), tmg.loadResource(T007_TOAST_JS_SRC, "script"), tmg.loadResource(T007_INPUT_JS_SRC, "script"), tmg.loadResource(T007_DIALOG_JS_SRC, "script", { module: true });
     tmg.init();
     console.log("%cTMG Media Player Available", "color: darkturquoise");
   } else {

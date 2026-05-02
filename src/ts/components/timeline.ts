@@ -5,15 +5,7 @@ import type { CtlrMedia } from "../types/contract";
 import type { TimePlug } from "../plugs";
 import { isBool, createEl, clamp, safeNum, setTimeout, formatMediaTime, getRenderedBox, IS_MOBILE, requestAnimationFrame } from "../utils";
 
-export type PreviewConfig =
-  | boolean
-  | {
-      address?: string;
-      cols?: number;
-      rows?: number;
-      spf?: number;
-      type?: "sprite" | "image" | "canvas" | "none";
-    };
+export type PreviewConfig = boolean | { address?: string; cols?: number; rows?: number; spf?: number; type?: "sprite" | "image" | "canvas" | "none" };
 
 export interface TimelineConfig extends RangeConfig {
   previews: PreviewConfig;
@@ -62,7 +54,7 @@ export class Timeline extends RangeSlider<TimelineConfig> {
     return element;
   }
 
-  public mount(): void {
+  public override mount(): void {
     // Variables Assignments
     this.previewContext = this.previewCanvas.getContext("2d");
     this.thumbnailContext = this.thumbnailCanvas.getContext("2d");
@@ -75,14 +67,15 @@ export class Timeline extends RangeSlider<TimelineConfig> {
     // State Listeners
     this.state.on("scrubbing", this.handleScrubbing, { signal: this.signal });
     // Config --------
-    this.config.on("previewValue", this.updatePreviewTime, { signal: this.signal });
+    this.config.on("previewValue", this.syncPreviewTime, { signal: this.signal });
     this.config.on("previews", this.handlePreviews, { signal: this.signal });
     // Ctlr Config Watchers
     this.ctlr.config.watch("settings.time.previews", (value) => (this.config.previews = value!), { signal: this.signal, immediate: true });
     this.ctlr.config.watch("settings.time.seekSync", (value) => (this.config.scrub.sync = value!), { signal: this.signal, immediate: true });
     // ---- Media Listeners
     this.media.on("state.paused", this.handlePausedState, { signal: this.signal, immediate: true });
-    this.media.on("state.currentTime", this.handleCurrentTimeState, { signal: this.signal, immediate: true });
+    this.media.on("state.currentTime", this.handleCurrentTime, { signal: this.signal, immediate: true });
+    this.media.on("intent.currentTime", this.handleCurrentTime, { signal: this.signal }); // #APPRENTICE: S.I.A Interaction Folklore
     this.media.on("status.loadedMetadata", this.handleLoadedMetadataStatus, { signal: this.signal, immediate: true });
     this.media.on("status.buffered", this.handleBufferedStatus, { signal: this.signal, immediate: true });
     this.media.on("status.duration", this.handleDurationStatus, { signal: this.signal, immediate: true });
@@ -90,8 +83,8 @@ export class Timeline extends RangeSlider<TimelineConfig> {
     // ---- State ---------
     this.ctlr.state.on("dimensions.container", this.syncThumbnailSize, { signal: this.signal, immediate: true });
     // ---- Config --------
-    this.ctlr.config.on("settings.time.format", this.updatePreviewTime, { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.time.mode", this.updatePreviewTime, { signal: this.signal });
+    this.ctlr.config.on("settings.time.format", this.syncPreviewTime, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.time.mode", this.syncPreviewTime, { signal: this.signal });
     this.ctlr.config.on("settings.css.currentThumbnailWidth", ({ value }) => (this.thumbnailCanvas.width = Number(value)), { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.css.currentThumbnailHeight", ({ value }) => (this.thumbnailCanvas.height = Number(value)), { signal: this.signal, immediate: true });
   }
@@ -101,11 +94,11 @@ export class Timeline extends RangeSlider<TimelineConfig> {
   }
 
   protected handlePausedState({ value }: REvent<CtlrMedia, "state.paused">): void {
-    !value ? this.ctlr.RAFLoop("timelineUpdating", this.handleTimeUpdateLoop) : this.ctlr.cancelRAFLoop("timelineUpdating");
+    !value ? this.ctlr.RAFLoop("timelineUpdating", this.syncValue) : this.ctlr.cancelRAFLoop("timelineUpdating");
   }
-  protected handleCurrentTimeState({ target }: REvent<CtlrMedia, "state.currentTime">): void {
-    if (this.state.scrubbing) return;
-    if (this.media.state.paused) this.handleTimeUpdateLoop(false);
+  protected handleCurrentTime({ target, resolved }: REvent<CtlrMedia, "state.currentTime" | "intent.currentTime">): void {
+    if (this.state.scrubbing || !resolved) return;
+    if (this.media.state.paused) this.syncValue(false);
     this.container.ariaValueText = `${formatMediaTime({ time: target.value, format: "human-long" })} out of ${formatMediaTime({ time: this.media.status.duration, format: "human-long" })}`;
   }
   protected handleLoadedMetadataStatus(): void {
@@ -126,10 +119,9 @@ export class Timeline extends RangeSlider<TimelineConfig> {
   protected handleErrorStatus({ value }: REvent<CtlrMedia, "status.error">): void {
     if (value) this.bufferedBar.style.width = "0";
   }
-  protected handleTimeUpdateLoop(optimize = true): void {
-    if (optimize && !this.ctlr.state.mediaIntersecting) return;
-    const duration = safeNum(this.media.status.duration, 60);
-    if (!this.state.scrubbing) this.config.value = safeNum(this.media.state.currentTime / duration) * 100;
+  protected syncValue(auto = true): void {
+    if (auto && !this.ctlr.state.mediaIntersecting) return;
+    if (!this.state.scrubbing) this.config.value = safeNum(this.media.state.currentTime / safeNum(this.media.status.duration, 60)) * 100;
   }
 
   protected handleScrubbing({ value }: REvent<RangeState, "scrubbing">): void {
@@ -158,7 +150,7 @@ export class Timeline extends RangeSlider<TimelineConfig> {
     if (type === "sprite" && value.address) this.ctlr.settings.css.currentPreviewUrl = this.ctlr.settings.css.currentThumbnailUrl = `url(${value.address})`;
     else this.ctlr.settings.css.currentPreviewPosition = this.ctlr.settings.css.currentThumbnailPosition = "center";
     if (this.media.status.loadedMetadata) return;
-    (this.ctlr.setCanvasFallback(this.previewCanvas, this.previewContext!), this.ctlr.setCanvasFallback(this.thumbnailCanvas, this.thumbnailContext!));
+    this.ctlr.setCanvasFallback(this.previewCanvas, this.previewContext!), this.ctlr.setCanvasFallback(this.thumbnailCanvas, this.thumbnailContext!);
     this.ctlr.pseudoVideo.ontimeupdate = null;
   }
 
@@ -177,7 +169,6 @@ export class Timeline extends RangeSlider<TimelineConfig> {
       previewImgPos = clamp(previewImgMin, pos, 1 - previewImgMin);
     this.previewContainer.style.left = `${previewImgPos * 100}%`;
     this.previewBar.style.width = `${pos * 100}%`;
-
     const previewConfig = this.config.previews,
       type = this.ctlr.videoContainer.dataset.previewType;
     if (type === "sprite" && previewConfig && !isBool(previewConfig) && previewConfig.cols && previewConfig.rows) {
@@ -203,7 +194,7 @@ export class Timeline extends RangeSlider<TimelineConfig> {
     }
   }
 
-  protected updatePreviewTime(): void {
+  protected syncPreviewTime(): void {
     if (this.plug) this.previewContainer.dataset.previewTime = this.plug.toTimeText(this.config.previewValue, true);
   }
   protected syncCanvasPreviews(): void {

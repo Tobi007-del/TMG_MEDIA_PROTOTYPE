@@ -21,7 +21,7 @@ export class ModesMiniplayerPin extends BasePin<ModesPlug, ModesMiniplayer> {
   protected wildMiniplayerX = "";
   protected wildMiniplayerY = "";
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr State Watchers
     this.ctlr.state.watch("dimensions.window.width", this.handleWindowWidth, { signal: this.signal });
     // ---- Media  Listeners
@@ -145,7 +145,7 @@ export class ModesMiniplayerPin extends BasePin<ModesPlug, ModesMiniplayer> {
     ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach((type) => document.removeEventListener(type, this.handleDragEnd));
   }
 
-  protected onDestroy(): void {
+  protected override onDestroy(): void {
     document.removeEventListener("mousemove", this.handleDragging);
     document.removeEventListener("touchmove", this.handleDragging);
     ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach((type) => document.removeEventListener(type, this.handleDragEnd));

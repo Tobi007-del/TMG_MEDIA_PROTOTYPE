@@ -22,7 +22,7 @@ export class OverlayPlug extends BasePlug<Overlay, OverlayState> {
     super(ctlr, config, { visible: false });
   }
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr Media Listeners
     this.media.on("state.paused", ({ value }) => (value ? this.show() : this.delay()), { signal: this.signal, immediate: true });
     // ---- Config --------

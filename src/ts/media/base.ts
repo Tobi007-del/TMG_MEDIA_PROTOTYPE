@@ -33,12 +33,12 @@ export abstract class BaseTech<Config extends BaseTechConfig = BaseTechConfig, E
     this.features = reactive(features);
     this.wiredFeatures = {} as MediaFeatures;
   }
-  public onSetup() {
+  protected override onSetup() {
     this.mount();
     if (this.ctlr.state.readyState) this.wire();
     else this.ctlr.state.wonce("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup
   }
-  public onDestroy() {
+  protected override onDestroy() {
     this.unmount();
   }
 

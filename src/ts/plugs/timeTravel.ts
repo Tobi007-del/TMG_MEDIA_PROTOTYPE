@@ -9,14 +9,14 @@ export class TimeTravelPlug extends BasePlug<TimeTravel> {
   public static readonly plugName: string = "timeTravel";
   public module!: TimeTravelModule<any>;
 
-  public mount() {
+  public override mount() {
     // Variables Assignment
     this.module = new TimeTravelModule(this.config);
     // Utility Injection
     this.media.use(this.module);
   }
 
-  public wire() {
+  public override wire() {
     // Ctlr Config Listeners
     this.ctlr.config.on("settings.timeTravel", this.handle, { signal: this.signal, immediate: false, depth: 1 });
   }

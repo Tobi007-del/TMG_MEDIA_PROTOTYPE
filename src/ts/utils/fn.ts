@@ -3,22 +3,18 @@ import {  uid } from ".";
 import { limited as limitedOrig, LimitedOptions, LimitedHandle } from "@t007/utils";
 
 // ============ Timer Helpers ============
-
 export { setTimeout, setInterval, requestAnimationFrame } from "@t007/utils";
 
 // ============ Async Helpers ============
-
 export { mockAsync, breath, deepBreath } from "@t007/utils";
 
 // ============ Limited Call Helpers ============
-
 export const limited = <T extends (...args: any[]) => any>(fn: T, opts: LimitedOptions | string = {}): LimitedHandle<T> => limitedOrig(FN_KEY, fn, opts);
 
 export const oncePerSession = <T extends (...args: any[]) => any>(fn: T) => limited(fn);
 export const onceEver = <T extends (...args: any[]) => any>(fn: T, key = uid()) => limited(fn, key);
 
 // ============ Deprecation Helpers ============
-
 /**
  * Log a deprecation warning (once per session)
  * @param message - Deprecation warning message
@@ -38,5 +34,4 @@ export function deprecateForMajor(major: number, oldName: string, newName?: stri
 }
 
 // ============ Generic Helpers ============
-
 export { bindCleanupToSignal } from "@t007/utils";

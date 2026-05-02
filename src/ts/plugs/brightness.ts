@@ -16,19 +16,19 @@ export interface BrightnessState {
 
 export class BrightnessPlug extends BasePlug<Brightness, BrightnessState> {
   public static readonly plugName: string = "brightness";
-  protected sliderAptBrightness = 100;
   protected shouldDark = false;
-  protected shouldSetLastBrightness = false;
+  protected sliderAptBrightness = 100;
+  protected shouldSetApttBrightness = false;
 
   constructor(ctlr: Controller, config: Brightness) {
     super(ctlr, config, { aptBrightness: 100 });
   }
 
-  public wire(): void {
+  public override wire(): void {
     // Variables Assignment
     const configBrightness = this.config.value ?? this.ctlr.settings.css.brightness ?? 100;
     this.state.aptBrightness = clamp(this.config.min, configBrightness, this.config.max);
-    this.shouldDark = this.shouldSetLastBrightness = this.config.dark ?? false;
+    this.shouldDark = this.shouldSetApttBrightness = this.config.dark ?? false;
     this.config.value = this.shouldDark ? 0 : this.state.aptBrightness;
     // Ctlr Config Getters
     this.ctlr.config.get("settings.brightness.value", () => Number(this.ctlr.settings.css.brightness ?? 100), { signal: this.signal, lazy: true }); // #VIRTUAL: reliable return value
@@ -52,10 +52,6 @@ export class BrightnessPlug extends BasePlug<Brightness, BrightnessState> {
     keys?.register("brightnessDown", this.handleKeyBrightnessDown, { phase: "keydown" });
   }
 
-  protected getBrightnessStep(mod: KeyMod, fallback = this.config.skip): number {
-    return this.ctlr.plug<KeysPlug>("keys")?.getModded("brightness", mod, fallback) ?? fallback;
-  }
-
   protected forwardBrightness(value: number): void {
     this.media.intent.brightness = value;
   }
@@ -72,6 +68,7 @@ export class BrightnessPlug extends BasePlug<Brightness, BrightnessState> {
 
   protected handleDarkIntent(e: REvent<CtlrMedia, "intent.dark">): void {
     if (e.resolved) return;
+    if (e.oldValue === e.value && !!this.config.value) return e.resolve(this.name);
     this.setDarkState(e.value);
     this.media.state.dark = e.value;
     e.resolve(this.name);
@@ -118,33 +115,33 @@ export class BrightnessPlug extends BasePlug<Brightness, BrightnessState> {
   protected setBrightnessState(value: number): void {
     const b = clamp(this.shouldDark ? 0 : this.config.min, value, this.config.max);
     this.ctlr.settings.css.brightness = b;
-    this.config.dark = b === 0;
+    if (b > 0) this.config.dark = false; // youtube courtesy
   }
 
   protected setDarkState(dark: boolean): void {
     if (dark) {
       if (this.config.value) {
         this.state.aptBrightness = this.config.value;
-        this.shouldSetLastBrightness = true;
+        this.shouldSetApttBrightness = true;
       }
       this.shouldDark = true;
       if (this.config.value) this.config.value = 0;
     } else {
-      const restore = this.shouldSetLastBrightness ? this.state.aptBrightness : this.config.value;
+      const restore = this.shouldSetApttBrightness ? this.state.aptBrightness : this.config.value;
       this.config.value = restore ? restore : this.sliderAptBrightness;
-      this.shouldDark = this.shouldSetLastBrightness = false;
+      this.shouldDark = this.shouldSetApttBrightness = false;
     }
   }
 
   public toggleDark(option?: "auto"): void {
-    if (option === "auto" && this.shouldSetLastBrightness && !this.state.aptBrightness) this.state.aptBrightness = this.config.skip;
-    this.config.dark = !this.config.dark;
+    if (option === "auto" && this.shouldSetApttBrightness && !this.state.aptBrightness) this.state.aptBrightness = this.config.skip;
+    this.config.dark = !(this.config.dark || !this.config.value);
   }
 
-  public changeBrightness(value: number): void {
+  public setAptValue(value: number): void {
     const sign = value >= 0 ? "+" : "-";
     value = Math.abs(value);
-    let brightness = this.shouldSetLastBrightness ? this.state.aptBrightness : this.config.value;
+    let brightness = this.shouldSetApttBrightness ? this.state.aptBrightness : this.config.value;
     if (sign === "-") {
       if (brightness > this.config.min) brightness -= brightness % value ? brightness % value : value;
       // JS: if (brightness === 0) { this.notify("brightnessdark"); break; }
@@ -153,8 +150,8 @@ export class BrightnessPlug extends BasePlug<Brightness, BrightnessState> {
       if (brightness < this.config.max) brightness += brightness % value ? value - (brightness % value) : value;
       // JS: this.notify("brightnessup");
     }
-    // JS: if (this.shouldSetLastBrightness) this.DOM.brightnessNotifierContent.textContent = brightness + "%";
-    this.shouldSetLastBrightness ? (this.state.aptBrightness = brightness) : (this.config.value = brightness);
+    // JS: if (this.shouldSetApttBrightness) this.DOM.brightnessNotifierContent.textContent = brightness + "%";
+    this.shouldSetApttBrightness ? (this.state.aptBrightness = brightness) : (this.config.value = brightness);
   }
 
   protected handleKeyDark(): void {
@@ -162,14 +159,14 @@ export class BrightnessPlug extends BasePlug<Brightness, BrightnessState> {
     // JS: this.config.wonce("settings.brightness.value", (v) => (!v ? this.notify("brightnessdark") : this.notify("brightnessup")));
   }
   protected handleKeyBrightnessUp(_: KeyboardEvent, mod: KeyMod): void {
-    this.changeBrightness(this.ctlr.plug<KeysPlug>("keys")!.getModded("brightness", mod, this.config.skip));
+    this.setAptValue(this.ctlr.plug<KeysPlug>("keys")!.getModded("brightness", mod, this.config.skip));
   }
   protected handleKeyBrightnessDown(_: KeyboardEvent, mod: KeyMod): void {
-    this.changeBrightness(-this.ctlr.plug<KeysPlug>("keys")!.getModded("brightness", mod, this.config.skip));
+    this.setAptValue(-this.ctlr.plug<KeysPlug>("keys")!.getModded("brightness", mod, this.config.skip));
   }
 
   public handleSliderInput(brightness: number): void {
-    this.shouldDark = this.shouldSetLastBrightness = false;
+    this.shouldDark = this.shouldSetApttBrightness = false;
     this.config.value = brightness;
     if (brightness > 5) this.sliderAptBrightness = brightness;
   }

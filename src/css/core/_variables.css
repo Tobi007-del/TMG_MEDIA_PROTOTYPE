@@ -111,7 +111,6 @@
   --tmg-video-error-color: rgba(255, 0, 0, 0.75);
   --tmg-video-background: black;
   --tmg-video-disabled-background: rgb(55, 55, 55);
-  --tmg-video-ripple-color: rgb(from var(--tmg-video-theme-color) r g b / 0.3);
   --tmg-video-curtain-color: rgb(from var(--tmg-video-theme-inverse-color) r g b / 0.5);
   --tmg-video-seek-thumb-background: var(--tmg-video-brand-color);
   --tmg-video-base-seek-bar-background: hsl(from var(--tmg-video-theme-color) h s l / 0.25);
@@ -129,7 +128,6 @@
   --tmg-video-no-preview-background: var(--tmg-video-brand-complement-color);
   --tmg-video-no-preview-pointer-color: var(--tmg-video-brand-complement-color);
   --tmg-video-dbc-backdrop-color: var(--tmg-video-brand-complement-color);
-  --tmg-video-scroll-assist-color: rgb(from var(--tmg-video-curtain-color) r g b/1);
 }
 :root,
 .tmg-media-container {
@@ -187,6 +185,13 @@
   --tmg-video-settings-border-color: hsl(from var(--tmg-video-theme-inverse-accent-color) h s l / 0.75);
 }
 /* overrides for lib variables */
+.tmg-video-container {
+  --t007-ripple-color: rgb(from var(--tmg-video-theme-color) r g b / 0.3);
+  --t007-scroll-assist-color: rgb(from var(--tmg-video-curtain-color) r g b/1);
+  --t007-scroll-assist-min-width: calc(var(--tmg-video-current-unit) * 1.05);
+  --t007-scroll-assist-height: var(--tmg-video-current-unit);
+  --t007-scroll-assist-inline-offset: calc(var(--tmg-video-current-unit) * -0.25);
+}
 .tmg-video-container .t007-toast {
   --t007-toast-type-color: var(--tmg-video-theme-inverse-color);
   --t007-toast-background: rgb(from var(--tmg-video-theme-color) r g b / 0.4);
@@ -232,6 +237,16 @@
 }
 .tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) .t007-input-field {
   --t007-input-font-size: calc(var(--tmg-video-current-unit) / 1.6);
+}
+.tmg-video-container .t007-dialog {
+  --t007-dialog-unit: calc(var(--tmg-video-current-unit) / 1.8);
+  --t007-dialog-border: 0.8px solid rgb(from var(--tmg-video-theme-color) r g b / 0.25);
+  --t007-dialog-background: rgb(from var(--tmg-video-theme-inverse-color) calc(r + 20) calc(g + 20) calc(b + 20) / 0.75);
+  --t007-dialog-box-shadow: 2px 2px 6px rgb(from var(--tmg-video-theme-inverse-color) r g b / 0.5), -2px -2px 6px rgb(from var(--tmg-video-theme-inverse-color) r g b / 0.5);
+  --t007-dialog-message-color: var(--tmg-video-theme-color);
+  --t007-dialog-confirm-button-color: rgb(from var(--tmg-video-theme-color) calc(r - 100) calc(g - 100) calc(b - 100));
+  --t007-dialog-cancel-button-color: var(--tmg-video-brand-color);
+  --t007-dialog-entry-duration: var(--tmg-video-switch-transition-time);
 }
 /* computed variables */
 .tmg-media-container {

@@ -11,14 +11,14 @@ export interface Toasts extends ToastOptions {
 export class ToastsPlug extends BasePlug<Toasts> {
   public static readonly plugName: string = "toasts";
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr Config Listeners
     this.ctlr.config.on("settings.toasts.disabled", this.handleDisabled, { signal: this.signal });
     this.ctlr.config.on("settings.toasts", this.handle, { signal: this.signal });
   }
 
   protected handleDisabled({ value }: REvent<CtlrConfig, "settings.toasts.disabled">): void {
-    value && t007?.toast?.dismissAll(this.ctlr.id);
+    value && t007?.toast.dismissAll(this.ctlr.id);
   }
 
   protected handle({ type, target: { path, key, value } }: REvent<CtlrConfig, "settings.toasts">): void {

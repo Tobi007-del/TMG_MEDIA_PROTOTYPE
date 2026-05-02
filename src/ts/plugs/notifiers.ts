@@ -17,18 +17,18 @@ export class NotifiersPlug extends BasePlug<Notifiers, NotifiersState> {
 
   constructor(ctlr: Controller, config: Notifiers) {
     super(ctlr, config, {
-      events: ["videoplay", "videopause", "videoprev", "videonext", "playbackrateup", "playbackratedown", "volumeup", "volumedown", "volumemuted", "brightnessup", "brightnessdown", "brightnessdark", "objectfitcontain", "objectfitcover", "objectfitfill", "captions", "capture", "theater", "fullscreen", "fwd", "bwd"],
+      events: ["videoplay", "videopause", "videoprev", "videonext", "playbackrateup", "playbackratedown", "volumeup", "volumedown", "volumemuted", "brightnessup", "brightnessdown", "brightnessdark", "objectfitcontain", "objectfitcover", "objectfitfill", "captions", "capture", "theater", "fullscreen", "fwd", "bwd"], // DEFAULT: config privilege
     });
   }
 
-  public mount(): void {
+  public override mount(): void {
     // Variables Assignment
     this.ctlr.DOM.notifiersContainer = this.container = createEl("div", { className: "tmg-video-notifiers-container" }, { notify: "" });
     // DOM Injection
     this.ctlr.DOM.controlsContainer?.prepend(this.container);
   }
 
-  public wire(): void {
+  public override wire(): void {
     // Event Listeners
     Array.prototype.forEach.call(this.container.children, (node: Element) => node.addEventListener("animationend", this.handleAnimationEnd, { signal: this.signal }));
     // State Listeners
@@ -58,7 +58,7 @@ export class NotifiersPlug extends BasePlug<Notifiers, NotifiersState> {
     if (!this.config.disabled) this.ctlr.fire(key, null, this.container);
   }
 
-  protected onDestroy(): void {
+  protected override onDestroy(): void {
     this.resetNotify("", true);
   }
 }

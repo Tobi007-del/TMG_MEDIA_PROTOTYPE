@@ -10,7 +10,7 @@ export type ObjectFit = (typeof objectFits)[number];
 export class ObjectFitPlug extends BasePlug<ObjectFit> {
   public static readonly plugName: string = "objectFit";
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr Config Getters
     this.ctlr.config.get("settings.objectFit", () => this.ctlr.settings.css.objectFit, { signal: this.signal, lazy: true }); // #VIRTUAL: reliable return value
     // ----------- Watchers
@@ -39,8 +39,8 @@ export class ObjectFitPlug extends BasePlug<ObjectFit> {
     this.ctlr.settings.css.bgSafeObjectFit = fit === "fill" ? "contain" : fit;
   }
 
-  public rotateObjectFit(dir: "forwards" | "backwards" = "forwards"): void {
-    this.media.intent.objectFit = rotate<MediaState["objectFit"]>(this.media.state.objectFit, objectFits, dir);
+  public rotateObjectFit(): void {
+    this.media.intent.objectFit = rotate(this.media.state.objectFit, objectFits);
     // JS: this.DOM.objectFitNotifierContent.textContent = nextFit[1];
     // JS: this.ctlr.plug<NotifiersPlug>("notifiers")?.notify(`objectfit${this.media.intent.objectFit}`);
   }

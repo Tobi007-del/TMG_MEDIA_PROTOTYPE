@@ -26,7 +26,7 @@ export class GestureTouchPin extends BasePin<GesturePlug, GestureTouch> {
   protected sliderTimeoutId = -1;
   protected nextTime = 0;
 
-  public wire() {
+  public override wire() {
     // Event Listeners
     this.ctlr.DOM.controlsContainer?.addEventListener("touchstart", this.handleStart, { capture: true, signal: this.signal });
   }

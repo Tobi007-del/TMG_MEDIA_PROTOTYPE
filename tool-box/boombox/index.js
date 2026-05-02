@@ -151,7 +151,7 @@ class Boombox {
     document.documentElement.style.setProperty("--brand", (window[`TTO`].config.color = color.toLowerCase()));
   }
   handlePausedIntent({ value: paused }) {
-    !paused ? this.media.play().catch((e) => (Toast.error(`Failed to play audio`), console.error("Failed to play audio:", e))) : this.media.pause(); // dummy
+    !paused ? this.media.play().catch((e) => (t007.toast.error(`Failed to play audio: ${e?.message || 'Something went wrong'}`), console.error("Failed to play audio:", e))) : this.media.pause(); // dummy
     // this.ctlr.media.intent.paused = paused; // real
   }
   handlePausedState({ value: paused }) {
@@ -246,9 +246,9 @@ class Boombox {
     if (!this.bbEl) return v;
     const { bounds: b = this.boundsEl.getBoundingClientRect(), rect: r = this.bbEl.getBoundingClientRect() } = this.eS,
       growth = (r.height * this.store.transform.z - r.height) / 2,
-      limitUp = Math.max(0, ((r.top - b.top - growth) / r.height) * 100) + this.bbOverflow,
-      limitDown = Math.max(0, ((b.bottom - r.bottom - growth) / r.height) * 100) + this.bbOverflow;
-    return tmg.clamp(-limitUp, v, limitDown);
+      limUp = Math.max(0, ((r.top - b.top - growth) / r.height) * 100) + this.bbOverflow,
+      limDown = Math.max(0, ((b.bottom - r.bottom - growth) / r.height) * 100) + this.bbOverflow;
+    return tmg.clamp(-limUp, v, limDown);
   }
   resetPos(e) {
     this.bbBody.style.transition = "transform 0.8s cubic-bezier(0.1, 0, 0, 1)"; // Adds a snnapy transition for the reset

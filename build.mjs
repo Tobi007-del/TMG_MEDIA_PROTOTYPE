@@ -6,7 +6,7 @@ const isProd = process.env.NODE_ENV === "production" || process.argv.includes("-
 console.log(`Building in ${isProd ? "production" : "development"} mode...`);
 
 const base = {
-  entryPoints: ["src/index.ts"],
+  entryPoints: ["src/ts/index.ts"],
   bundle: true,
   minify: isProd,
   target: ["es2020"],
@@ -35,7 +35,7 @@ console.log("ESM build complete.");
 
 try {
   console.log("Generating types...");
-  execSync("npx dts-bundle-generator -o dist/index.d.ts src/index.ts");
+  execSync("npx dts-bundle-generator -o dist/index.d.ts src/ts/index.ts");
   console.log("Type generation complete.");
 } catch (e) {
   console.error("Type generation failed.");

@@ -1,7 +1,8 @@
+import { REvent } from "sia-reactor";
 import { Controllable } from "../core/controllable";
-import { IconRegistry } from "../core/registry";
 import { Controller } from "../core/controller";
 import { parseForARIAKS } from "../utils";
+import { MediaFeatures } from "../types/contract";
 
 export interface ComponentConstructor<T extends BaseComponent = BaseComponent> {
   new (ctlr: Controller, config?: any, state?: any): T;
@@ -30,12 +31,12 @@ export abstract class BaseComponent<Config = any, State extends ComponentState =
   constructor(ctlr: Controller, config: Config, state?: State) {
     super(ctlr, config, { disabled: false, hidden: false, ...state } as State);
   }
-  protected onSetup(): void {
+  protected override onSetup(): void {
     this.mount?.();
     if (this.ctlr.state.readyState) this.wire?.();
     else this.wire && this.ctlr.state.once("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup
   }
-  protected onDestroy(): void {
+  protected override onDestroy(): void {
     this.unmount();
   }
 
@@ -58,14 +59,14 @@ export abstract class BaseComponent<Config = any, State extends ComponentState =
   public enable(): void {
     this.el.classList.toggle("tmg-video-control-disabled", (this.state.disabled = false));
   }
-
-  protected getIcon(name: string): string {
-    return IconRegistry.get(name);
+  protected gate(e: REvent<MediaFeatures, keyof MediaFeatures>): void {
+    (e.oldValue ?? this.state.hidden) === this.state.hidden && (e.value ? this.hide() : this.show());
   }
-  protected setBtnARIA(doubleKeyAction?: string): void {
+
+  protected setBtnARIA(dblAction?: string): void {
     this.el.setAttribute("aria-label", this.state.label);
     this.el.setAttribute("aria-keyshortcuts", parseForARIAKS(this.state.cmd));
-    if (doubleKeyAction) this.el.setAttribute("aria-description", `Double-press for ${doubleKeyAction}`);
+    if (dblAction) this.el.setAttribute("aria-description", `Double-press to ${dblAction}`);
     else if (this.el.hasAttribute("aria-description")) this.el.removeAttribute("aria-description");
   }
 }

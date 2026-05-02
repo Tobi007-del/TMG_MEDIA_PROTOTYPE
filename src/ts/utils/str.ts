@@ -23,5 +23,8 @@ export function luid(key = LUID_KEY, prefix = "tmg_local_"): string {
   return (!id && localStorage.setItem(key, (id = uid(prefix))), id || "");
 }
 
+// Parsers
+export { remToPx, pxToRem, parseCSSTime, parseCSSSize } from "@t007/utils";
+
 // Checkers
 export { isSameURL } from "@t007/utils";

@@ -6,7 +6,7 @@
 [![Ecosystem](https://img.shields.io/badge/Powered_By-S.I.A_Reactor-blue.svg)](https://github.com/Tobi007-del/sia-reactor)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[Live Demo](https://tmg-video-player.vercel.app) | [Prototype 1](https://tobi007-del.github.io/tmg-media-player/prototype-1/index.html) | [Prototype 2](https://tobi007-del.github.io/tmg-media-player/prototype-2/index.html) | [Beta Player](https://tobi007-del.github.io/tmg-media-player/src/beta/index.html)
+[Live Demo](https://tmg-video-player.vercel.app) | [Main Entry](https://tobi007-del.github.io/tmg-media-player/index.html) | [Prototype 1](https://tobi007-del.github.io/tmg-media-player/prototype-1/index.html) | [Prototype 2](https://tobi007-del.github.io/tmg-media-player/prototype-2/index.html) | [Beta Player](https://tobi007-del.github.io/tmg-media-player/src/beta/index.html)
 
 ---
 
@@ -21,7 +21,8 @@ The next generation of **TMG Media Player** is actively in development. We are s
 - ⚡ 60FPS microtask-batched rendering
 - 🧠 Deeply decoupled UI components (via `@t007` tools)
 - 🚀 Unprecedented execution speed and memory management
-
+- 🔊 Boombox is a future integration concept, planned after a settings UI system is designed.
+- 
 **The paradigm is shifting. Watch this space.**
 
 ---

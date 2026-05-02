@@ -30,7 +30,7 @@ export class ModesPlug extends BasePlug<Modes> {
     if (this.ctlr.config.initialMode) this.media.intent[this.ctlr.config.initialMode] = true; // one-time courtesy, use for theater mode maybe
   }
 
-  public wire(): void {
+  public override wire(): void {
     // Utility Injection
     this.fullscreen.wire();
     this.theater.wire();

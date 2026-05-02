@@ -1,13 +1,6 @@
-import { bindCleanupToSignal as bindClupToSig } from "./fn";
-
-// Types
-type Direction = "x" | "y";
-type Position = "before" | "after" | "at";
-type SafeClickEl = HTMLElement & {
-  _clickHandler?: (e: MouseEvent) => void;
-  _dblClickHandler?: (e: MouseEvent) => void;
-  _clickTimeoutId?: ReturnType<typeof setTimeout>;
-};
+import { NOOP } from "sia-reactor";
+import { win } from "../tools/runtime";
+import { bindCleanupToSignal as bindSig } from "./fn";
 
 // Element Factory
 export { createEl, assignEl } from "@t007/utils";
@@ -27,7 +20,7 @@ export function inDocView(el: Element, axis: "x" | "y" = "y"): boolean {
   return axis === "x" ? inY : axis === "y" ? inX : inY && inX;
 }
 
-export function getElSiblingAt(p: number, dir: Direction, els: HTMLElement[] | NodeListOf<HTMLElement>, pos: Position = "after"): Element | undefined {
+export function getElSiblingAt(p: number, dir: "x" | "y", els: HTMLElement[] | NodeListOf<HTMLElement>, pos: "before" | "after" | "at" = "after"): Element | undefined {
   return (
     els.length &&
     (
@@ -77,12 +70,17 @@ export function exitFullscreen(el: Element): Promise<void> {
 }
 
 // Safe Click Handling
-export function addSafeClicks(el: SafeClickEl | null | undefined, onClick?: (e: MouseEvent) => void | null, onDblClick?: (e: MouseEvent) => void | null, options?: boolean | AddEventListenerOptions): void {
+type SafeClickEl = HTMLElement & {
+  _clickHandler?: (e: MouseEvent) => void;
+  _dblClickHandler?: (e: MouseEvent) => void;
+  _clickTimeoutId?: ReturnType<typeof setTimeout>;
+};
+export function addSafeClicks(el?: SafeClickEl | null, onClick: (e: MouseEvent) => any = NOOP, onDblClick: (e: MouseEvent) => any = NOOP, options?: boolean | AddEventListenerOptions): void {
   el && removeSafeClicks(el);
-  el?.addEventListener("click", (el._clickHandler = (e: MouseEvent) => (clearTimeout(el._clickTimeoutId), (el._clickTimeoutId = setTimeout(() => onClick?.(e), 300)))), options);
-  el?.addEventListener("dblclick", (el._dblClickHandler = (e: MouseEvent) => (clearTimeout(el._clickTimeoutId), onDblClick?.(e))), options);
+  el?.addEventListener("click", (el._clickHandler = (e: MouseEvent) => (clearTimeout(el._clickTimeoutId), (el._clickTimeoutId = setTimeout(() => onClick(e), 300)))), options);
+  el?.addEventListener("dblclick", (el._dblClickHandler = (e: MouseEvent) => (clearTimeout(el._clickTimeoutId), onDblClick(e))), options);
 }
-export function removeSafeClicks(el: SafeClickEl | null | undefined): void {
+export function removeSafeClicks(el?: SafeClickEl | null): void {
   el?.removeEventListener("click", el._clickHandler as EventListener);
   el?.removeEventListener("dblclick", el._dblClickHandler as EventListener);
 }
@@ -90,28 +88,28 @@ export function removeSafeClicks(el: SafeClickEl | null | undefined): void {
 // DOM Observers
 declare global {
   interface Element {
-    _tmgResizeCbs?: Set<(entry: ResizeObserverEntry) => void>;
-    _tmgIntersectCbs?: Set<(entry: IntersectionObserverEntry) => void>;
-    _tmgMutationCbs?: Set<(mutations: MutationRecord[]) => void>;
+    _resizeCbs?: Set<(entry: ResizeObserverEntry) => void>;
+    _intersectCbs?: Set<(entry: IntersectionObserverEntry) => void>;
+    _mutationCbs?: Set<(mutations: MutationRecord[]) => void>;
   }
 }
 
-export const intersectionObserver = "undefined" !== typeof window
+export const intersectionObserver = win
   ? new IntersectionObserver(
       (entries) => {
-        for (const entry of entries) entry.target._tmgIntersectCbs?.forEach((cb) => cb(entry));
+        for (const entry of entries) entry.target._intersectCbs?.forEach((cb) => cb(entry));
       },
       { root: null, rootMargin: "0px", threshold: 0.3 }
     )
   : null;
 
-export const resizeObserver = "undefined" !== typeof window
+export const resizeObserver = win
   ? new ResizeObserver((entries) => {
-      for (const entry of entries) entry.target._tmgResizeCbs?.forEach((cb) => cb(entry));
+      for (const entry of entries) entry.target._resizeCbs?.forEach((cb) => cb(entry));
     })
   : null;
 
-export const mutationObserver = "undefined" !== typeof window
+export const mutationObserver = win
   ? new MutationObserver((mutations) => {
       // Dispatch to specific targets if they are being observed directly
       // Note: MutationObserver works differently; this handles the 'root' observer callbacks
@@ -122,28 +120,28 @@ export const mutationObserver = "undefined" !== typeof window
       // but for "utils" style, we can use a Map logic or just basic callback sets.
       // Current implementation assumes the caller handles the mutation list.
       const target = mutations[0].target as Element; // Batch usually targets one observer
-      target._tmgMutationCbs?.forEach((cb) => cb(mutations));
+      target._mutationCbs?.forEach((cb) => cb(mutations));
     })
   : null;
 
 // --- PUBLIC API ---
 export function observeResize(el: Element, cb: (entry: ResizeObserverEntry) => void, sig?: AbortSignal) {
-  (el._tmgResizeCbs ?? (el._tmgResizeCbs = new Set())).add(cb);
+  (el._resizeCbs ?? (el._resizeCbs = new Set())).add(cb);
   resizeObserver?.observe(el);
-  return bindClupToSig(() => (el._tmgResizeCbs?.delete(cb), !el._tmgResizeCbs?.size && resizeObserver?.unobserve(el)), sig);
+  return bindSig(() => (el._resizeCbs?.delete(cb), !el._resizeCbs?.size && resizeObserver?.unobserve(el)), sig);
 }
 
 export function observeIntersection(el: Element, cb: (entry: IntersectionObserverEntry) => void, sig?: AbortSignal) {
-  (el._tmgIntersectCbs ?? (el._tmgIntersectCbs = new Set())).add(cb);
+  (el._intersectCbs ?? (el._intersectCbs = new Set())).add(cb);
   intersectionObserver?.observe(el);
-  return bindClupToSig(() => (el._tmgIntersectCbs?.delete(cb), !el._tmgIntersectCbs?.size && intersectionObserver?.unobserve(el)), sig);
+  return bindSig(() => (el._intersectCbs?.delete(cb), !el._intersectCbs?.size && intersectionObserver?.unobserve(el)), sig);
 }
 
 export function observeMutation(el: Element, cb: (mutations: MutationRecord[]) => void, options: MutationObserverInit, sig?: AbortSignal) {
-  (el._tmgMutationCbs ?? (el._tmgMutationCbs = new Set())).add(cb);
+  (el._mutationCbs ?? (el._mutationCbs = new Set())).add(cb);
   mutationObserver?.observe(el, options);
-  return bindClupToSig(() => {
-    el._tmgMutationCbs?.delete(cb);
+  return bindSig(() => {
+    el._mutationCbs?.delete(cb);
     // Note: MutationObserver.unobserve stops EVERYTHING on that observer.
     // If we share one observer, we can't unobserve just one element easily without disconnecting all.
     // For safety in this "util" pattern with a shared observer, we just leave it connected or use dedicated observers.

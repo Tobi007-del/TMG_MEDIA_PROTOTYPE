@@ -1,5 +1,8 @@
 import { Player } from "../tools/player";
 import * as TMGGlobal from "../../api";
+import * as _ from "@t007/toast";
+import * as __ from "@t007/input";
+import * as ___ from "@t007/dialog";
 
 declare global {
   interface HTMLMediaElement {

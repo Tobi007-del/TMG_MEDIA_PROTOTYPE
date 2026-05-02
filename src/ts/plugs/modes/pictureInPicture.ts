@@ -25,7 +25,7 @@ export class ModesPictureInPicturePin extends BasePin<ModesPlug, ModesPictureInP
   public whitelist: string[] = [];
   public blacklist: string[] = [];
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr Config Listeners
     this.ctlr.config.on("settings.modes.pictureInPicture.disabled", this.handleDisabled, { signal: this.signal });
     // ---- Media --------
@@ -49,7 +49,7 @@ export class ModesPictureInPicturePin extends BasePin<ModesPlug, ModesPictureInP
     if (!this.ctlr.isUIActive("pictureInPicture") && (window as any).documentPictureInPicture && !this.config.floatingPlayer.disabled) {
       !this.inFloatingPlayer ? this.initFloatingPlayer() : this.floatingWindow?.close();
       e.resolve(this.name);
-    } // tech will handle PIP toggle if not using floating player
+    } // tech will handle PiP toggle if not using floating player
   }
 
   protected async handlePictureInPictureState({ value }: REvent<CtlrMedia, "state.pictureInPicture">): Promise<void> {
@@ -96,7 +96,7 @@ export class ModesPictureInPicturePin extends BasePin<ModesPlug, ModesPictureInP
     this.signal.addEventListener("abort", observeMutation(this.floatingWindow!.document.documentElement, handleDOMMutation, { childList: true, subtree: true }), { once: true });
     this.floatingWindow!.addEventListener("resize", this.handleFloatingPlayerResize, { signal: this.signal });
     this.floatingWindow!.addEventListener("pagehide", this.handleFloatingPlayerClose, { signal: this.signal });
-    this.ctlr.plug<KeysPlug>("keys")?.setKeyEventListeners("add");
+    this.ctlr.plug<KeysPlug>("keys")?.setEventListeners("add");
     this.media.state.pictureInPicture = true;
   }
 

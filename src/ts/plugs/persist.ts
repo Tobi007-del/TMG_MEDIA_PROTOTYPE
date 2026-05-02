@@ -9,14 +9,14 @@ export class PersistPlug extends BasePlug<Persist> {
   public static readonly plugName: string = "persist";
   public module!: PersistModule<any>;
 
-  public mount() {
+  public override mount() {
     // Variables Assignment
     this.module = new PersistModule({ key: `TMG_${this.ctlr.id}_SETTINGS`, ...(this.config as Partial<Persist>) });
     // Utility Injection
     this.ctlr.config.use(this.module);
   }
 
-  public wire() {
+  public override wire() {
     // Ctlr Config Listeners
     this.ctlr.config.on("settings.persist", this.handle, { signal: this.signal, immediate: false, depth: 1 });
   }

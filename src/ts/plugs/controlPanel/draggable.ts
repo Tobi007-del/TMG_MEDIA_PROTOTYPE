@@ -12,7 +12,7 @@ export class ControlPanelDraggablePin extends BasePin<ControlPanelPlug, ControlP
   protected replaced: { target: HTMLElement; child: HTMLElement } | null = null;
   protected safeTimeoutId = -1;
 
-  public wire() {
+  public override wire() {
     // Ctlr Config Watchers
     this.ctlr.config.watch("settings.controlPanel.draggable", (value) => (this.config = value), { signal: this.signal }); // #COMPUTED: config can lose reference
     // ----------- Listeners
@@ -47,7 +47,7 @@ export class ControlPanelDraggablePin extends BasePin<ControlPanelPlug, ControlP
     return zoneW ? { coord: key + pos, zoneW: getAny(this.plug.zoneWs as any, (key + pos) as any) } : key + pos;
   }
 
-  protected syncControlPanelToUI(): void {
+  protected syncConfig(): void {
     const id = (el: HTMLElement) => el.dataset.controlId;
     const derive = (zoneW: ZoneSlot, center = false) => [center ? "spacer" : "", ...(zoneW instanceof HTMLElement ? [id(zoneW)] : Array.from(zoneW.zone.children as HTMLCollectionOf<HTMLElement>, id)), center && (zoneW instanceof HTMLElement ? true : zoneW.zone.children.length) ? "spacer" : ""].filter(Boolean) as SControl[]; // at least one spacer
     this.ctlr.settings.controlPanel.top = [...derive(this.plug.cZoneWs.top.left), ...derive(this.plug.cZoneWs.top.center, true), ...derive(this.plug.cZoneWs.top.right)];
@@ -87,7 +87,7 @@ export class ControlPanelDraggablePin extends BasePin<ControlPanelPlug, ControlP
     t.classList.remove("tmg-video-control-draggingEl");
     this.replaced = this.draggingEl = null;
     if (t.dataset.dragId === "wrapper" && t.parentElement?.dataset.dragId === "wrapper") setAny(this.plug.cZoneWs as any, this.getUIZoneWCoord(t) as any, t);
-    this.syncControlPanelToUI();
+    this.syncConfig();
   }
 
   protected handleDragEnter(e: DragEvent): void {

@@ -10,7 +10,7 @@ export interface PlaybackRate extends OptRange {}
 export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
   public static readonly plugName: string = "playbackRate";
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr Config Getters
     this.ctlr.config.get("settings.playbackRate.value", () => this.media.state.playbackRate, { signal: this.signal, lazy: true }); // #VIRTUAL: reliable return value
     // ---- Media Setters

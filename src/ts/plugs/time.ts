@@ -31,11 +31,11 @@ export class TimePlug extends BasePlug<CTime, TimeState> {
 
   constructor(ctlr: Controller, config: CTime) {
     super(ctlr, config, {
-      guardedPaths: ["lightState.preview.time", "settings.time.min", "settings.time.max", "settings.time.start", "settings.time.end", "settings.auto.next.preview.time"],
+      guardedPaths: ["lightState.preview.time", "settings.time.min", "settings.time.max", "settings.time.start", "settings.time.end", "settings.auto.next.preview.time"], // #DEFAULT: config privilege
     });
   }
 
-  public wire(): void {
+  public override wire(): void {
     // Variables Assignment
     this.pseudoStart = this.config.start ?? 0;
     // State Listeners
@@ -107,8 +107,8 @@ export class TimePlug extends BasePlug<CTime, TimeState> {
     const overlay = this.ctlr.plug<OverlayPlug>("overlay"),
       notifier = duration > 0 ? this.ctlr.queryDOM(".tmg-video-fwd-notifier") : this.ctlr.queryDOM(".tmg-video-bwd-notifier");
     duration = duration > 0 ? (this.media.status.duration - this.media.state.currentTime > duration ? duration : this.media.status.duration - this.media.state.currentTime) : duration < 0 ? (this.media.state.currentTime > Math.abs(duration) ? duration : -this.media.state.currentTime) : 0;
-    this.media.intent.currentTime = this.media.state.currentTime + duration;
-    this.ctlr.settings.css.currentPlayedPosition = this.ctlr.settings.css.currentThumbPosition = safeNum(this.media.intent.currentTime / this.media.status.duration);
+    this.media.intent.currentTime = this.media.state.currentTime + duration; // Apprentice Slider syncs, no CSS hack
+    // this.ctlr.settings.css.currentPlayedPosition = this.ctlr.settings.css.currentThumbPosition = safeNum(this.media.intent.currentTime / this.media.status.duration);
     const mdle = this.ctlr.plug<GesturePlug>("gesture")?.general;
     if (mdle?.state.skipPersist) {
       if (this.currentSkipNotifier && notifier !== this.currentSkipNotifier) {

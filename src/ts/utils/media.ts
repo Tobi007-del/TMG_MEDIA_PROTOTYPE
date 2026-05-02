@@ -4,7 +4,6 @@ import type { Source, Sources, Track, Tracks } from "../plugs";
 import { isStr, isNum, createEl, isIter, isSameURL, loadResource, queryFullscreenEl, queryPictureInPictureEl } from ".";
 
 // ============ Video Utilities ============
-
 // Types
 export type Dimensions = Record<"width" | "height", number>;
 
@@ -266,7 +265,6 @@ export function canVidAudioTracks(): boolean {
 }
 
 // ============ Caption/Subtitle Utilities ============
-
 export const stripTags = (text: string): string => text.replace(/<(\/)?([a-z0-9.:]+)([^>]*)>/gi, "");
 
 // SRT/VTT Conversion

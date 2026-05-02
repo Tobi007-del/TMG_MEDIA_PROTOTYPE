@@ -13,7 +13,7 @@ export interface LightState {
 export class LightStatePlug extends BasePlug<LightState> {
   public static readonly plugName: string = "lightState";
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr Config Setters
     this.ctlr.config.set("lightState.disabled", (value) => (this.ctlr.state.readyState > 1 ? TERMINATOR : value));
     // ----------- Listeners
@@ -71,7 +71,7 @@ export class LightStatePlug extends BasePlug<LightState> {
 
   protected stall(): void {
     this.ctlr.plug<OverlayPlug>("overlay")?.show();
-    const bigPlayBtn = this.ctlr.plug<ControlPanelPlug>("controlPanel")?.getControlEl("big-play-pause");
+    const bigPlayBtn = this.ctlr.plug<ControlPanelPlug>("controlPanel")?.getCtrlEl("bigplaypause");
     bigPlayBtn && this.ctlr.videoContainer.classList.add("tmg-video-stall");
     bigPlayBtn?.addEventListener("animationend", () => this.ctlr.videoContainer.classList.remove("tmg-video-stall"), { once: true, signal: this.signal });
   }

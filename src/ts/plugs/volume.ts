@@ -17,9 +17,9 @@ export interface VolumeState {
 
 export class VolumePlug extends BasePlug<Volume, VolumeState> {
   public static readonly plugName: string = "volume";
-  protected sliderAptVolume = 5;
   protected shouldMute = false;
-  protected shouldSetLastVolume = false;
+  protected sliderAptVolume = 5;
+  protected shouldSetAptVolume = false;
   protected audioSetup = false;
   protected gainNode?: GainNode;
 
@@ -30,16 +30,16 @@ export class VolumePlug extends BasePlug<Volume, VolumeState> {
   get ctime(): number {
     return AUDIO_CONTEXT?.currentTime ?? 0;
   }
-  public mount(): void {
+  public override mount(): void {
     if (this.ctlr.state.audioContextReady) this.setupAudio();
     else this.ctlr.state.once("audioContextReady", this.setupAudio, { signal: this.signal });
   }
 
-  public wire(): void {
+  public override wire(): void {
     // Variables Assignment
     const configVolume = this.config.value ?? this.media.state.volume;
     this.state.aptVolume = clamp(this.config.min, configVolume, this.config.max);
-    this.shouldMute = this.shouldSetLastVolume = this.media.element?.muted ?? false;
+    this.shouldMute = this.shouldSetAptVolume = this.media.element?.muted ?? false;
     this.config.value = this.shouldMute ? 0 : this.state.aptVolume;
     // Event Listeners
     this.media.element.addEventListener("volumechange", this.handleVolumeChange, { signal: this.signal });
@@ -83,7 +83,7 @@ export class VolumePlug extends BasePlug<Volume, VolumeState> {
   protected handleMutedIntent(e: REvent<CtlrMedia, "intent.muted">): void {
     if (e.resolved) return;
     if (this.media.element !== this.media.tech.element) return e.reject(this.name);
-    if (e.oldValue === e.value) return e.resolve(this.name);
+    if (e.oldValue === e.value && !!this.config.value) return e.resolve(this.name);
     this.setMutedState(e.value);
     this.media.state.muted = e.value;
     e.resolve(this.name);
@@ -130,33 +130,33 @@ export class VolumePlug extends BasePlug<Volume, VolumeState> {
   protected setVolumeState(value: number): void {
     const v = clamp(this.shouldMute ? 0 : this.config.min, value, this.config.max);
     if (this.gainNode) this.gainNode.gain.setTargetAtTime((v / 100) * 2, this.ctime, 0.05);
-    this.media.element.muted = this.media.element.defaultMuted = this.config.muted = v === 0;
+    if (v > 0) this.media.element.muted = this.media.element.defaultMuted = this.config.muted = false; // youtube courtesy
   }
 
   protected setMutedState(muted: boolean): void {
     if (muted) {
       if (this.config.value) {
         this.state.aptVolume = this.config.value;
-        this.shouldSetLastVolume = true;
+        this.shouldSetAptVolume = true;
       }
       this.shouldMute = true;
       if (this.config.value) this.media.intent.volume = 0;
     } else {
-      const restore = this.shouldSetLastVolume ? this.state.aptVolume : this.config.value;
+      const restore = this.shouldSetAptVolume ? this.state.aptVolume : this.config.value;
       this.media.intent.volume = restore ? restore : this.sliderAptVolume;
-      this.shouldMute = this.shouldSetLastVolume = false;
+      this.shouldMute = this.shouldSetAptVolume = false;
     }
   }
 
   public toggleMute(option?: "auto"): void {
-    if (option === "auto" && this.shouldSetLastVolume && !this.state.aptVolume) this.state.aptVolume = this.config.skip;
-    this.config.muted = !this.config.muted;
+    if (option === "auto" && this.shouldSetAptVolume && !this.state.aptVolume) this.state.aptVolume = this.config.skip;
+    this.config.muted = !(this.config.muted || !this.config.value);
   }
 
-  public changeVolume(value: number): void {
+  public setAptValue(value: number): void {
     const sign = value >= 0 ? "+" : "-";
     value = Math.abs(value);
-    let volume = this.shouldSetLastVolume ? this.state.aptVolume : this.config.value;
+    let volume = this.shouldSetAptVolume ? this.state.aptVolume : this.config.value;
     if (sign === "-") {
       if (volume > this.config.min) volume -= volume % value ? volume % value : value;
       // JS: if (volume === 0) { this.notify("volumemuted"); break; }
@@ -165,8 +165,8 @@ export class VolumePlug extends BasePlug<Volume, VolumeState> {
       if (volume < this.config.max) volume += volume % value ? value - (volume % value) : value;
       // JS: this.notify("volumeup");
     }
-    // JS: if (this.shouldSetLastVolume) this.DOM.volumeNotifierContent.textContent = volume + "%";
-    this.shouldSetLastVolume ? (this.state.aptVolume = volume) : (this.config.value = volume);
+    // JS: if (this.shouldSetAptVolume) this.DOM.volumeNotifierContent.textContent = volume + "%";
+    this.shouldSetAptVolume ? (this.state.aptVolume = volume) : (this.config.value = volume);
   }
 
   protected setupAudio(): void {
@@ -189,14 +189,14 @@ export class VolumePlug extends BasePlug<Volume, VolumeState> {
     // JS: this.config.wonce("settings.volume.value", (v) => (!v ? this.notify("volumemuted") : this.notify("volumeup")));
   }
   protected handleKeyVolumeUp(_: KeyboardEvent, mod: KeyMod): void {
-    this.changeVolume(this.ctlr.plug<KeysPlug>("keys")!.getModded("volume", mod, this.config.skip));
+    this.setAptValue(this.ctlr.plug<KeysPlug>("keys")!.getModded("volume", mod, this.config.skip));
   }
   protected handleKeyVolumeDown(_: KeyboardEvent, mod: KeyMod): void {
-    this.changeVolume(-this.ctlr.plug<KeysPlug>("keys")!.getModded("volume", mod, this.config.skip));
+    this.setAptValue(-this.ctlr.plug<KeysPlug>("keys")!.getModded("volume", mod, this.config.skip));
   }
 
   public handleSliderInput(volume: number): void {
-    this.shouldMute = this.shouldSetLastVolume = false;
+    this.shouldMute = this.shouldSetAptVolume = false;
     this.config.value = volume;
     if (volume > 5) this.sliderAptVolume = volume;
   }

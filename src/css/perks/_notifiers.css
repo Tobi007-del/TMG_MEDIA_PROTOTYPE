@@ -40,7 +40,7 @@
 [data-notify="capture"] .tmg-video-capture-notifier,
 [data-notify="captions"] .tmg-video-captions-notifier,
 [data-notify="theater"] .tmg-video-theater-notifier,
-[data-notify="fullScreen"] .tmg-video-fullscreen-notifier {
+[data-notify="fullscreen"] .tmg-video-fullscreen-notifier {
   animation-name: tmg-show, tmg-scale-up;
 }
 :is([data-notify="playbackrateup"], [data-notify="playbackratedown"]) .tmg-video-playback-rate-notifier-content,

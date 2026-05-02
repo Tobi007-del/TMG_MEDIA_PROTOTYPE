@@ -12,7 +12,7 @@ export class FramePlug extends BasePlug<Frame> {
   public exportCanvas: HTMLCanvasElement = createEl("canvas");
   public exportContext: CanvasRenderingContext2D = this.exportCanvas.getContext("2d", { willReadFrequently: true })!;
 
-  public wire(): void {
+  public override wire(): void {
     // Post Wiring
     const keys = this.ctlr.plug<KeysPlug>("keys");
     keys?.register("capture", (e) => this.captureFrame(e.altKey ? "monochrome" : ""), { phase: "keyup" });
@@ -20,7 +20,7 @@ export class FramePlug extends BasePlug<Frame> {
     keys?.register("stepBwd", () => this.moveFrame("backwards"), { phase: "keydown" });
   }
 
-  public async getFrame(display = "", time = this.media.state.currentTime, raw = false, min = 0, video = this.ctlr.pseudoVideo): Promise<{ canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } | { blob: Blob | false; url: string | false }> {
+  public async getFrame(display: any = "", time = this.media.state.currentTime, raw = false, min = 0, video = this.ctlr.pseudoVideo): Promise<{ canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } | { blob: Blob | false; url: string | false }> {
     if (video !== this.media.element) {
       await this.ctlr.state.frameReadyPromise; // wait for it to get set by last getter 5 lines below
       if (Math.abs(video.currentTime - time) > 0.01 || !video.readyState) {
@@ -39,7 +39,7 @@ export class FramePlug extends BasePlug<Frame> {
     return { blob: blob || false, url: blob ? URL.createObjectURL(blob) : false };
   }
 
-  public async captureFrame(display = "", time = this.media.state.currentTime): Promise<void> {
+  public async captureFrame(display: any = "", time = this.media.state.currentTime): Promise<void> {
     // JS: this.notify("capture");
     const toast = this.ctlr.plug<ToastsPlug>("toasts")?.toast,
       tTxt = formatMediaTime({ time, format: "human", showMs: true }),

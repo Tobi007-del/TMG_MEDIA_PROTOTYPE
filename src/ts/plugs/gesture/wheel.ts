@@ -22,7 +22,7 @@ export class GestureWheelPin extends BasePin<GesturePlug, GestureWheel> {
   protected deltaY = 0;
   protected nextTime = 0;
 
-  public wire() {
+  public override wire() {
     // Event Listeners
     this.ctlr.videoContainer.addEventListener("wheel", this.handleWheel, { passive: false, signal: this.signal });
   }

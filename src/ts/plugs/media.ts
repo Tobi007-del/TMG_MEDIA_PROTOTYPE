@@ -24,14 +24,14 @@ export class MediaPlug extends BasePlug<Media> {
   public static readonly plugName: string = "media";
   public static readonly isCore: boolean = true;
 
-  public mount(): void {
+  public override mount(): void {
     // Variables Assignment
     const videoProfile = this.ctlr.DOM.videoProfile as HTMLImageElement;
     // Post Mounting
     videoProfile && this.ctlr.setImgLoadState({ target: videoProfile });
   }
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr Config Watchers
     this.ctlr.config.watch("media.title", this.forwardTitle, { immediate: "auto", signal: this.signal });
     this.ctlr.config.watch("media.artist", this.forwardArtist, { immediate: "auto", signal: this.signal });
@@ -81,9 +81,9 @@ export class MediaPlug extends BasePlug<Media> {
     set("seekforward", timePlug ? () => timePlug.skip(this.ctlr.settings.time.skip) : null);
     const playlistPlug = this.ctlr.plug<PlaylistPlug>("playlist"),
       playlist = this.ctlr.config.playlist,
-      currentIndex = this.ctlr.plug<PlaylistPlug>("playlist")?.currentIndex ?? 0;
-    set("previoustrack", playlist && currentIndex > 0 && playlistPlug ? playlistPlug.previousVideo : null);
-    set("nexttrack", playlist && currentIndex < (playlist?.length ?? 0) - 1 && playlistPlug ? playlistPlug.nextVideo : null);
+      currentIndex = this.ctlr.plug<PlaylistPlug>("playlist")?.state.currentIndex ?? 0;
+    set("previoustrack", playlist && currentIndex > 0 && playlistPlug ? playlistPlug.previous : null);
+    set("nexttrack", playlist && currentIndex < (playlist?.length ?? 0) - 1 && playlistPlug ? playlistPlug.next : null);
   }
 
   public async autoGenerate(): Promise<void> {

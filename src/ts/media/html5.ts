@@ -38,25 +38,25 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   // WIRING (Connections Only)
   // ===========================================================================
   // --- Core Wiring ---
-  protected wireSrc() {
+  protected override wireSrc() {
     this.el.addEventListener("loadstart", this.setLoadStartState, this.eOpts.EL);
     this.config.on("intent.src", this.handleSrcIntent, this.eOpts.REACTOR);
   }
-  protected wireCurrentTime() {
+  protected override wireCurrentTime() {
     this.el.addEventListener("timeupdate", this.setTimeUpdateState, this.eOpts.EL);
     this.el.addEventListener("seeking", this.setSeekingState, this.eOpts.EL);
     this.el.addEventListener("seeked", this.setSeekedState, this.eOpts.EL);
     this.config.on("intent.currentTime", this.handleCurrentTimeIntent, this.eOpts.REACTOR);
   }
-  protected wireDuration() {
+  protected override wireDuration() {
     this.el.addEventListener("durationchange", this.setDurationChangeState, this.eOpts.EL);
   }
-  protected wirePaused() {
+  protected override wirePaused() {
     this.el.addEventListener("play", this.setPlayState, this.eOpts.EL);
     this.el.addEventListener("pause", this.setPauseState, this.eOpts.EL);
     this.config.on("intent.paused", this.handlePausedIntent, this.eOpts.REACTOR);
   }
-  protected wireEnded() {
+  protected override wireEnded() {
     this.el.addEventListener("ended", this.setEndedState, this.eOpts.EL);
   }
   // --- Features Wiring ---
@@ -155,7 +155,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   }
   protected wireDisablePictureInPicture() {
     this.bindAttr("disablePictureInPicture", true);
-    this.config.on("state.disablePictureInPicture", this.handlePiPState);
+    this.config.watch("state.disablePictureInPicture", this.forwardDisablePiPState);
   }
   // --- Lists Wiring ---
   protected wireSources() {
@@ -238,9 +238,8 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   }
   protected handlePausedIntent(e: REvent<CtlrMedia, "intent.paused">) {
     if (e.resolved) return;
-    const p = e.value ? this.el.pause() : this.el.play();
-    if (p?.then) p.then(() => e.resolve(HTML5Tech.techName)).catch((err: any) => e.reject(err.message));
-    else e.resolve(HTML5Tech.techName);
+    (e.value ? this.el.pause() : this.el.play())?.catch?.((err) => e.reject(err.message)); // eventual accuracy
+    e.resolve(HTML5Tech.techName);
   }
   // --- Feature States ---
   protected setVolumeChangeState() {
@@ -319,12 +318,12 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
   }
   protected handlePiPIntent(e: REvent<CtlrMedia, "intent.pictureInPicture">) {
     if (e.resolved) return;
-    e.value ? this.el.requestPictureInPicture() : document.exitPictureInPicture();
+    (e.value ? this.el.requestPictureInPicture() : document.exitPictureInPicture())?.catch((err) => e.reject(err.message)); // eventual accuracy;
     e.resolve(HTML5Tech.techName);
   }
   protected handleFullscreenIntent(e: REvent<CtlrMedia, "intent.fullscreen">) {
     if (e.resolved) return;
-    e.value ? enterFullscreen(this.el) : exitFullscreen(this.el);
+    (e.value ? enterFullscreen(this.el) : exitFullscreen(this.el))?.catch((err) => e.reject(err.message)); // eventual accuracy
     e.resolve(HTML5Tech.techName);
   }
   protected handleCurrentTrackIntent(e: REvent<CtlrMedia, `intent.current${TrackType}Track`>, type: TrackType) {
@@ -332,9 +331,8 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
     setCurrentTrack(this.el, type, e.value, false); // (el), (type), (idx), (no flush: `hidden` & !`disabled`)
     e.resolve(HTML5Tech.techName);
   }
-  protected handleAttributeIntent(e: REvent<CtlrMedia>, key: string, isBool: boolean) {
+  protected handleAttributeIntent(e: REvent<CtlrMedia>, key: string, isBool: boolean, attr = key.toLowerCase()) {
     if (e.resolved || (key === "poster" && isSameURL(e.value, this.config.state[key]))) return;
-    const attr = key.toLowerCase();
     isBool ? this.el.toggleAttribute(attr, Boolean(e.value)) : e.value ? this.el.setAttribute(attr, e.value) : this.el.removeAttribute(attr); // (this.el as any)[key] = isBool ? Boolean(e.value) : (e.value ?? ""); // Generic handler for simple attributes
     if (key === "playsInline") this.el.toggleAttribute("webkit-playsinline", Boolean(e.value));
     e.resolve(HTML5Tech.techName);
@@ -401,7 +399,7 @@ export class HTML5Tech extends BaseTech<BaseTechConfig, HTMLVideoElement> {
     this.el.defaultPlaybackRate = e.value;
   }
   // --- Other Handlers ---
-  protected handlePiPState(e: REvent<CtlrMedia, "state.disablePictureInPicture">) {
-    this.features.pictureInPicture = !e.value;
+  protected forwardDisablePiPState(v: boolean) {
+    this.features.pictureInPicture = !v;
   }
 }

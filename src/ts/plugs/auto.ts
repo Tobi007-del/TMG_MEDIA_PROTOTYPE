@@ -19,7 +19,7 @@ export class AutoPlug extends BasePlug<Auto> {
   protected nextVideoPreview: HTMLVideoElement | null = null;
   protected canAutoMovePlaylist = true;
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr Config Getters
     this.ctlr.config.get("settings.auto.play", () => this.media.state.autoplay, { signal: this.signal, lazy: true }); // #VIRTUAL: reliable return value
     // ----------- Watchers

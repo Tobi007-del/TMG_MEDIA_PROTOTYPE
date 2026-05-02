@@ -147,23 +147,17 @@
     <script defer>
       window.addEventListener("load", () => {
         const bbInst = window.NinoBoombox,
-        fileInput = field({
-          type: "file",
-          label: "Load Your Own Audio File",
-          helperText: { info: "Make the experience yours! For best results, use a stereo audio file" },
-          accept: "audio/*",
-          multiple: false,
-        });
+          fileInput = field({ type: "file", label: "Load Your Own Audio File", helperText: { info: "Make the experience yours! For best results, use a stereo audio file" }, accept: "audio/*", multiple: false });
         document.querySelector(".container > h2").insertAdjacentElement("afterend", fileInput);
         fileInput.addEventListener("change", (e) => {
           const file = e.target.files[0];
-          if (!file.type.startsWith("audio/")) return Toast.warn("Only audio files are supported!");
+          if (!file.type.startsWith("audio/")) return t007.toast.warn("Only audio files are supported!");
           bbInst.media.pause();
           URL.revokeObjectURL(bbInst.media.src);
           bbInst.media.src = URL.createObjectURL(file);
           bbInst.media.play();
         });
-          const options = [
+        const options = [
             { option: "Tastey Orange", value: "#e26e02" },
             { option: "Pure White", value: "#ffffff" },
             { option: "Light Blue", value: "#3198f5" },
@@ -185,7 +179,7 @@
         wrapper.classList.add("dual-field-wrapper");
         wrapper.append(colorField, cColorField);
         fileInput.insertAdjacentElement("afterend", wrapper);
-        bbInst.store.on("ui.color", ({ target: { value: v = defs.color } }) => ((v = v.toLowerCase()),(cColorField.inputEl.value = v), (colorField.inputEl.value = colors.includes(v) ? v : "custom")), { immediate: true });
+        bbInst.store.on("ui.color", ({ target: { value: v = defs.color } }) => ((v = v.toLowerCase()), (cColorField.inputEl.value = v), (colorField.inputEl.value = colors.includes(v) ? v : "custom")), { immediate: true });
         colorField.inputEl.addEventListener("input", onColorChange);
         cColorField.inputEl.addEventListener("input", onColorChange);
       });

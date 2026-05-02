@@ -14,7 +14,7 @@ export abstract class BasePlug<Config = any, State = any> extends Controllable<C
   }
   public static readonly isCore: boolean = false;
 
-  protected onSetup(): void {
+  protected override onSetup(): void {
     this.mount?.();
     if (this.ctlr.state.readyState) this.wire?.();
     else this.wire && this.ctlr.state.wonce("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup
@@ -34,7 +34,7 @@ export abstract class BasePin<Plug extends BasePlug = BasePlug, Config = any, St
     return this.ctlr.plug<Plug>((this.constructor as typeof BasePin).plugName)!; // `!`: only plug will instantiate after all
   }
 
-  protected onSetup(): void {
+  protected override onSetup(): void {
     this.mount?.();
     if (this.ctlr.state.readyState) this.wire?.();
     else this.wire && this.ctlr.state.wonce("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup

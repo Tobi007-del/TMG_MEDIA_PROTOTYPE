@@ -43,13 +43,12 @@ export class Player {
     if (isIter(medium)) return this.notice({ error: "An iterable argument cannot be attached to the TMG media player", tip: "Consider looping the iterable argument to instantiate a new 'tmg.Player' for each" });
     if (this.active) return medium;
     medium.tmgPlayer?.detach();
-    Controllers.push(this._build.id as any); // dummy for sync
+    Controllers.push(this._build.id as any); // dummy for liveness
     medium.tmgPlayer = this;
     this.medium = medium;
-    (await this.fetchCustomOptions(), await this.deployController());
+    (await this.fetchOptions(), await this.deployController());
     return (this.controller?.fire("tmgattached", this.controller.payload), medium);
   }
-
   public detach() {
     if (!this.active) return;
     const medium = this.controller?.destroy() ?? ({} as any);
@@ -60,7 +59,7 @@ export class Player {
     return ((medium.tmgPlayer = this.controller = this.medium = null), medium);
   }
 
-  public async fetchCustomOptions() {
+  public async fetchOptions() {
     if (!this.medium) return;
     if (this.medium.getAttribute("tmg")?.includes(".json")) {
       await fetch(this.medium.getAttribute("tmg")!)
@@ -85,8 +84,8 @@ export class Player {
     this.medium.controls = false;
     this.medium.tmgcontrols = this.active = true;
     this.medium.classList.add(`tmg-${this.medium.tagName.toLowerCase()}`, "tmg-media");
-    const modes: Record<string, boolean> = { fullScreen: supportsFullscreen(), pictureInPicture: supportsPictureInPicture() };
-    Object.keys(this._build.settings.modes).forEach((k) => ((this._build.settings.modes as any)[k] = (this._build.settings.modes as any)[k] && (modes[String(k)] ?? true) ? (this._build.settings.modes as any)[k] : false));
+    const modes: Record<string, boolean> = { fullscreen: supportsFullscreen(), pictureInPicture: supportsPictureInPicture() };
+    Object.keys(this._build.settings.modes).forEach((k) => ((this._build.settings.modes as any)[k].disabled = !(this._build.settings.modes as any)[k].disabled && (modes[String(k)] ?? true) ? false : true));
     await Promise.all([loadResource(window.TMG_VIDEO_CSS_SRC!), loadResource(window.T007_TOAST_JS_SRC!, "script", { module: true }), loadResource(window.T007_INPUT_JS_SRC!, "script")]);
     Controllers[Controllers.indexOf(this._build.id as any)] = this.controller = new Controller(this.medium, this._build);
   }

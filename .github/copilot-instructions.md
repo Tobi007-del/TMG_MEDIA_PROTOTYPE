@@ -75,16 +75,16 @@ Dash convention:
 - Trailing fill dashes (`---- State --------`) = same operation, next MSC tier - operation word not repeated
 
 ```ts
-public wire(): void {
+public override wire(): void {
   // Variables Assignment         <- plug refs, DOM refs, computed initial values
   // Event Listeners              <- native addEventListener
   // Plug Listeners               <- where applicable if plug has reactive state
   // [If this.config or this.state is reactive -- own listeners come BEFORE ctlr.*] - S->C
-  // State Getters           <- this.state.get()
-  // ------ Setters          <- (long dashes: still own config, next op)
+  // State Getters                <- this.state.get()
+  // ------ Setters               <- (long dashes: still own config, next op)
   // ------ Watchers
   // ------ Listeners
-  // Config Listeners          <- this.config.on()
+  // Config Listeners             <- this.config.on()
 
   // Ctlr Config Getters          <- ctlr.config.get()
   // ----------- Setters          <- (long dashes: still Ctlr Config, next op)
@@ -93,6 +93,7 @@ public wire(): void {
   // ---- State --------          <- (short dashes + fill: same op, next MSC tier - no repeat)
   // ---- Config -------          <- same
 
+  // Features Gating              <- tech.features.X hides or disables based on tech capabilities
   // Post Wiring                  <- final imperative calls (tech.features.X = true, etc.)
 }
 ```
@@ -109,7 +110,7 @@ Not every section is always present. Use only what the plug needs.
 ### mount() comment section order:
 
 ```ts
-public mount(): void {
+public override mount(): void {
   // Variables Assignment    <- createEl(), ComponentRegistry.init()
   // DOM Injection           <- append/prepend/insertAdjacentHTML, can apply to modules too
   // Utility Injection       <- rare but for subs like pins, modules. can apply to modules too
@@ -125,7 +126,7 @@ public mount(): void {
 - Instantiated in parent plug's **constructor** (not setup/mount/wire)
 - Parent plug's `wire()` controls deferred timing:
   ```ts
-  public wire() {
+  public override wire() {
     const wire = () => (this.pinA.wire(), this.pinB.wire());
     if (this.ctlr.state.readyState > 1) wire();
     else this.ctlr.state.once("readyState", wire, { signal: this.signal });

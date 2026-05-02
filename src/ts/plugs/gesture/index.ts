@@ -24,7 +24,7 @@ export class GesturePlug extends BasePlug<Gesture> {
     this.touch = new GestureTouchPin(this.ctlr, this.config.touch).setup();
   }
 
-  public wire() {
+  public override wire() {
     // Utility Injection
     const wire = () => (this.general.wire(), this.wheel.wire(), this.touch.wire());
     if (this.ctlr.state.readyState > 1) wire();

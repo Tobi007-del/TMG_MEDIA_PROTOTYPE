@@ -5,12 +5,13 @@
  * Copyright (c) Brightcove, Inc. and contributors
  */
 
+import { win } from "../tools/runtime";
+
 // Types
 type BrandEntry = { brand?: string; version?: string };
 
 // Environment guards
-const w = "undefined" !== typeof window ? window : undefined;
-const nav = w?.navigator;
+const nav = win?.navigator;
 const ua = nav?.userAgent || "";
 const uaData = (nav as Navigator & { userAgentData?: { platform?: string; brands?: BrandEntry[] } })?.userAgentData;
 
@@ -37,8 +38,8 @@ export let CHROMIUM_VERSION: Version = null;
 export let IE_VERSION: Version = null;
 
 // Capabilities
-export const IS_CHROMECAST_RECEIVER = Boolean((w as any)?.cast?.framework?.CastReceiverContext);
-export const TOUCH_ENABLED = Boolean(w && ("ontouchstart" in w || (nav as Navigator & { maxTouchPoints?: number })?.maxTouchPoints || ((w as any).DocumentTouch && w.document instanceof (w as any).DocumentTouch)));
+export const IS_CHROMECAST_RECEIVER = Boolean((win as any)?.cast?.framework?.CastReceiverContext);
+export const TOUCH_ENABLED = Boolean(win && ("ontouchstart" in win || (nav as Navigator & { maxTouchPoints?: number })?.maxTouchPoints || ((win as any).DocumentTouch && win.document instanceof (win as any).DocumentTouch)));
 
 // Helpers
 const pickVersion = (brands: BrandEntry[], needle: string): Version => brands.find((b) => b.brand === needle && b.version)?.version || null;
@@ -88,4 +89,4 @@ export const IS_MOBILE = Boolean(IS_ANDROID || IS_IPHONE || IS_IPOD || IS_IPAD);
 export const IS_SMART_TV = IS_TIZEN || IS_WEBOS;
 
 // Media Queries
-export const queryMediaMobile = (query = "(max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape)"): boolean => Boolean(w && "matchMedia" in w && w.matchMedia(query).matches);
+export const queryMediaMobile = (query = "(max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape)"): boolean => Boolean(win && "matchMedia" in win && win.matchMedia(query).matches);

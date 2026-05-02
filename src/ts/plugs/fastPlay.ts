@@ -30,7 +30,7 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
   protected speedTimeoutId: number | null = null;
   protected playTriggerCounter = 0;
 
-  public wire(): void {
+  public override wire(): void {
     const attachListeners = () => {
       // Event Listeners
       this.ctlr.DOM.controlsContainer?.addEventListener("pointerdown", this.handleSpeedPointerDown, { capture: true, signal: this.signal });
@@ -67,8 +67,8 @@ export class FastPlayPlug extends BasePlug<FastPlay, FastPlayState> {
 
   protected rewindVideo(): void {
     if (!this.media.state.paused) this.media.intent.paused = true;
-    this.media.intent.currentTime = this.media.state.currentTime - this.rewindPlaybackRate / this.ctlr.settings.frame.fps;
-    this.ctlr.settings.css.currentPlayedPosition = this.ctlr.settings.css.currentThumbPosition = this.media.state.currentTime / this.media.status.duration;
+    this.media.intent.currentTime = this.media.state.currentTime - this.rewindPlaybackRate / this.ctlr.settings.frame.fps; // Apprentice Slider syncs, no CSS hack
+    // this.ctlr.settings.css.currentPlayedPosition = this.ctlr.settings.css.currentThumbPosition = this.media.state.currentTime / this.media.status.duration;
     // JS: this.DOM.playbackRateNotifier?.setAttribute("data-current-time", this.ctlr.plug<TimePlug>("time")?.toTimeText(this.media.state.currentTime, true) ?? "0:00");
   }
 

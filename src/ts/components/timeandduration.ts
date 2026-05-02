@@ -4,7 +4,7 @@ import type { TimePlug } from "../plugs";
 
 export type TimeAndDurationConfig = undefined;
 
-export class TimeAndDuration extends BaseComponent<TimeAndDurationConfig, ComponentState, HTMLButtonElement> {
+export class TimeAndDurationButton extends BaseComponent<TimeAndDurationConfig, ComponentState, HTMLButtonElement> {
   public static readonly componentName: string = "timeandduration";
   public static readonly isControl: boolean = true;
   protected time!: HTMLElement;
@@ -14,7 +14,7 @@ export class TimeAndDuration extends BaseComponent<TimeAndDurationConfig, Compon
     return this.ctlr.plug<TimePlug>("time");
   }
 
-  public create() {
+  public override create() {
     // Variables Assignments
     this.element = createEl("button", { className: "tmg-video-time-and-duration" }, { draggableControl: "", controlId: this.name });
     this.time = createEl("span", { className: "tmg-video-current-time" });
@@ -25,32 +25,39 @@ export class TimeAndDuration extends BaseComponent<TimeAndDurationConfig, Compon
     return this.element;
   }
 
-  public wire(): void {
+  public override wire(): void {
     // Event Listeners
-    this.plug && addSafeClicks(this.element, this.plug.toggleMode, this.plug.rotateFormat, { signal: this.signal });
+    addSafeClicks(this.element, this.handleClick, this.handleDblClick, { signal: this.signal });
     // Ctlr Media Listeners
-    this.media.on("state.currentTime", this.updateTime, { signal: this.signal });
-    this.media.on("status.duration", this.updateDuration, { signal: this.signal });
+    this.media.on("state.currentTime", this.syncTime, { signal: this.signal });
+    this.media.on("status.duration", this.syncDuration, { signal: this.signal });
     // ---- Config --------
-    this.ctlr.config.on("settings.time.format", this.updateUI, { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.time.mode", this.updateTime, { signal: this.signal });
-    this.ctlr.config.on("settings.keys.shortcuts.timeMode", this.updateARIA, { signal: this.signal, immediate: true });
-    this.ctlr.config.on("settings.keys.shortcuts.timeFormat", this.updateARIA, { signal: this.signal });
+    this.ctlr.config.on("settings.time.format", this.syncUI, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.time.mode", this.syncTime, { signal: this.signal });
+    this.ctlr.config.on("settings.keys.shortcuts.timeMode", this.syncARIA, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.keys.shortcuts.timeFormat", this.syncARIA, { signal: this.signal });
   }
 
-  protected updateUI(): void {
-    this.bridge.textContent = { digital: "/", human: "of", "human-long": "out of" }[this.ctlr.settings.time.format] || "/";
-    (this.updateTime(), this.updateDuration());
+  protected handleClick(): void {
+    this.plug?.toggleMode();
   }
-  protected updateTime(): void {
+  protected handleDblClick(): void {
+    this.plug?.rotateFormat();
+  }
+
+  protected syncUI(): void {
+    this.bridge.textContent = { digital: "/", human: "of", "human-long": "out of" }[this.ctlr.settings.time.format] || "/";
+    (this.syncTime(), this.syncDuration());
+  }
+  protected syncTime(): void {
     this.time.textContent = this.plug?.toTimeText(this.media.state.currentTime, true) || "-:--";
   }
-  protected updateDuration(): void {
+  protected syncDuration(): void {
     this.duration.textContent = this.plug?.toTimeText(this.media.status.duration) || "--:--";
   }
-  protected updateARIA() {
+  protected syncARIA() {
     this.state.label = `Show ${this.plug?.nextMode} time`;
-    this.state.cmd = formatKeyForDisplay(this.ctlr.settings.time.mode);
+    this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.timeMode);
     this.el.title = `Switch (mode${this.state.cmd} / DblClick→format${formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.timeFormat)})`;
     this.setBtnARIA("Switch time format");
   }

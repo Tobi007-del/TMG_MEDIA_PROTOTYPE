@@ -1,4 +1,4 @@
-import { BasePlug, OverlayPlug } from ".";
+import { BasePlug, KeysPlug, OverlayPlug } from ".";
 import type { Controller } from "../core/controller";
 import type { ScreenLocked } from "../components";
 import type { CtlrConfig } from "../types/config";
@@ -24,16 +24,16 @@ export class LockedPlug extends BasePlug<Locked, LockedState> {
     super(ctlr, config, { visible: false });
   }
 
-  public mount(): void {
+  public override mount(): void {
     // Variables Assignment
     this.wrapper = createEl("div", { className: "tmg-video-screen-locked-wrapper", innerHTML: `<p>Screen Locked</p><p>Tap to Unlock</p>` });
-    this.control = ComponentRegistry.init<ScreenLocked>("screenlocked", this.ctlr);
+    this.control = ComponentRegistry.init<ScreenLocked>("screenlock", this.ctlr);
     // DOM Injection
     this.control?.mount();
     this.ctlr.DOM.containerContentWrapper?.append(this.wrapper);
   }
 
-  public wire(): void {
+  public override wire(): void {
     // Event Listeners
     this.ctlr.videoContainer.addEventListener("click", this.handleScreenClick, { signal: this.signal });
     // Ctlr Config Listeners
@@ -50,14 +50,14 @@ export class LockedPlug extends BasePlug<Locked, LockedState> {
       setTimeout(this.showOverlay, 0, this.signal);
       this.ctlr.videoContainer.classList.add("tmg-video-locked", "tmg-video-progress-bar");
       this.ctlr.plug<OverlayPlug>("overlay")?.remove("force");
-      // JS: this.ctlr.setKeyEventListeners?.("remove");
+      this.ctlr.plug<KeysPlug>("keys")?.setEventListeners("remove");
     } else {
       this.removeOverlay();
       await mockAsync(parseCSSTime(this.ctlr.settings.css.switchTransitionTime));
       this.ctlr.videoContainer.classList.toggle("tmg-video-progress-bar", this.ctlr.settings.controlPanel.progressBar);
       this.ctlr.videoContainer.classList.remove("tmg-video-locked");
       this.ctlr.plug<OverlayPlug>("overlay")?.show();
-      // JS: this.ctlr.setKeyEventListeners?.("add");
+      this.ctlr.plug<KeysPlug>("keys")?.setEventListeners("add");
     }
   }
 
@@ -77,7 +77,7 @@ export class LockedPlug extends BasePlug<Locked, LockedState> {
     this.lockOverlayDelayId = setTimeout(this.removeOverlay, this.ctlr.settings.overlay.delay, this.signal);
   }
 
-  protected onDestroy(): void {
+  protected override onDestroy(): void {
     this.control?.destroy();
   }
 }

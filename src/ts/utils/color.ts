@@ -2,7 +2,6 @@ import { isStr, createEl, clamp } from ".";
 
 // Types
 type RGB = [number, number, number];
-type ColorFormat = "rgb" | "hex";
 
 // RGB Analysis
 export function getRGBBri([r, g, b]: RGB): number {
@@ -20,28 +19,26 @@ export function clampRGBBri([r, g, b]: RGB, m = 40): RGB {
 }
 
 // Dominant Color Detection
-export async function getDominantColor(src: string | HTMLImageElement | HTMLCanvasElement | { canvas: HTMLCanvasElement; width: number; height: number }, format: ColorFormat = "rgb", raw = false): Promise<string | RGB | null> {
+export async function getDominantColor(src: string | HTMLImageElement | HTMLCanvasElement | { canvas: HTMLCanvasElement; width: number; height: number }, format: "rgb" | "hex" = "rgb", raw = false): Promise<string | RGB | null> {
   if (isStr(src))
     src = await new Promise<HTMLImageElement>((res, rej) => {
       const i = createEl("img", { src: String(src), crossOrigin: "anonymous", onload: () => res(i), onerror: () => rej(new Error(`Image load error: ${src}`)) });
     });
   if ((src as { canvas?: HTMLCanvasElement })?.canvas) src = (src as { canvas: HTMLCanvasElement }).canvas;
-  const c = document.createElement("canvas"),
-    x = c.getContext("2d"),
-    s = Math.min(64, (src as HTMLImageElement | HTMLCanvasElement).width, (src as HTMLImageElement | HTMLCanvasElement).height);
-  c.width = c.height = s;
-  src?.width && src?.height && x?.drawImage(src as CanvasImageSource, 0, 0, s, s);
-  const d = src && (x?.getImageData(0, 0, s, s).data as Uint8ClampedArray), // had to fool ts, coallesced to 0 below
+  const s = Math.min(64, (src as HTMLImageElement | HTMLCanvasElement).width, (src as HTMLImageElement | HTMLCanvasElement).height),
+    c = createEl("canvas", { width: s, height: s }),
+    x = c.getContext("2d");
+  const d = src?.width && src?.height ? (x?.drawImage(src as CanvasImageSource, 0, 0, s, s), x?.getImageData(0, 0, s, s).data as Uint8ClampedArray) : null, // had to fool ts, coallesced to 0 below
     ct: Record<string, number> = {},
     pt: Record<string, RGB> = {} as Record<string, RGB>;
   for (let i = 0; i < (d?.length ?? 0); i += 4) {
-    if (d[i + 3] < 128) continue;
-    const r = d[i] & 0xf0,
-      g = d[i + 1] & 0xf0,
-      b = d[i + 2] & 0xf0; // Optimized bitwise extraction
+    if (d![i + 3] < 128) continue;
+    const r = d![i] & 0xf0,
+      g = d![i + 1] & 0xf0,
+      b = d![i + 2] & 0xf0; // Optimized bitwise extraction
     const k = (r << 16) | (g << 8) | b;
     ct[k] = (ct[k] || 0) + 1;
-    pt[k] = pt[k] ? [pt[k][0] + d[i], pt[k][1] + d[i + 1], pt[k][2] + d[i + 2]] : [d[i], d[i + 1], d[i + 2]];
+    pt[k] = pt[k] ? [pt[k][0] + d![i], pt[k][1] + d![i + 1], pt[k][2] + d![i + 2]] : [d![i], d![i + 1], d![i + 2]];
   }
   const clrs = Object.keys(ct)
     .sort((a, b) => ct[b] - ct[a])

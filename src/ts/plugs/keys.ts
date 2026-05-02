@@ -25,7 +25,7 @@ export class KeysPlug extends BasePlug<Keys> {
   public static readonly plugName: string = "keys";
   protected playTriggerCounter = 0;
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr Config Listeners
     this.ctlr.config.on("settings.keys.disabled", this.syncKeyEventListeners, { signal: this.signal, immediate: true });
     this.ctlr.config.on("disabled", this.syncKeyEventListeners, { signal: this.signal });
@@ -45,7 +45,7 @@ export class KeysPlug extends BasePlug<Keys> {
     this.register("end", () => (this.media.intent.currentTime = this.media.status.duration), { phase: "keyup" });
     "123456789".split("").forEach((n) => this.register(n, () => (this.media.intent.currentTime = (+n / 10) * this.media.status.duration), { phase: "keyup" }));
     this.register("playpause", this.handlePlayTriggerDown, { phase: "keydown" });
-    // JS: this.register("settings", () => this.toggleSettingsView(), { phase: "keyup", zen: true });
+    // JS: this.register("settings", () => this.toggleSettingsView(), { phase: "keyup", zen: true }); // will be in Settings Plug
   }
 
   public register(action: string, handler: KeyHandler, options: KeyRegOptions = {}): void {
@@ -59,7 +59,7 @@ export class KeysPlug extends BasePlug<Keys> {
   }
 
   protected syncKeyEventListeners(): void {
-    this.setKeyEventListeners(this.shouldListen() ? "add" : "remove");
+    this.setEventListeners(this.shouldListen() ? "add" : "remove");
   }
 
   protected handleKeyDown(e: KeyboardEvent, action = allowed(e, this.ctlr.settings.keys), mod = this.getMod(e)): void {
@@ -112,15 +112,15 @@ export class KeysPlug extends BasePlug<Keys> {
     // JS: this.notify("fwd");
   }
   protected handleArrowUp(_: KeyboardEvent, mod: KeyMod): void {
-    this.ctlr.plug<VolumePlug>("volume")?.changeVolume(this.getModded("volume", mod, 5));
+    this.ctlr.plug<VolumePlug>("volume")?.setAptValue(this.getModded("volume", mod, 5));
     // JS: this.notify("volumeup");
   }
   protected handleArrowDown(_: KeyboardEvent, mod: KeyMod): void {
-    this.ctlr.plug<VolumePlug>("volume")?.changeVolume(-this.getModded("volume", mod, 5));
+    this.ctlr.plug<VolumePlug>("volume")?.setAptValue(-this.getModded("volume", mod, 5));
     // JS: this.settings.volume.value === 0 ? this.notify("volumemuted") : this.notify("volumedown");
   }
 
-  public setKeyEventListeners(action: "add" | "remove" = "add", zen = this.ctlr.isUIActive("settings")): void {
+  public setEventListeners(action: "add" | "remove" = "add", zen = this.ctlr.isUIActive("settings")): void {
     const ws = this.getWindows();
     ws.forEach((w) => (w.removeEventListener("keydown", this.handleKeyDown), w.removeEventListener("keyup", this.handleKeyUp), w.removeEventListener("keyup", this.handleZenKeyUp)));
     if (action === "remove" || !this.shouldListen()) return;

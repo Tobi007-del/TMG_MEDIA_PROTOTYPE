@@ -18,18 +18,6 @@ export function parseIfPercent(percent: any, amount: any, autocap = 0.25): numbe
   return val && amount && autocap && amount <= val ? amount * autocap : val;
 }
 
-export function parseCSSTime(time: any): number {
-  return time?.endsWith?.("ms") ? parseFloat(time) : parseFloat(time) * 1000;
-}
-
-export function parseCSSUnit(val: any): number {
-  return val?.endsWith?.("px") ? parseFloat(val) : remToPx(parseFloat(val));
-}
-
-export function remToPx(val: number): number {
-  return parseFloat(getComputedStyle(document.documentElement).fontSize) * val;
-}
-
 // Helpers
 export function stepNum<T extends AptRange>(v = 0, { min, max, step }: T): number {
   const s = Math.round((safeNum(v) - min) / step) * step + min;

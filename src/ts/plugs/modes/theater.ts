@@ -12,7 +12,7 @@ export class ModesTheaterPin extends BasePin<ModesPlug, ModesTheater> {
   public static readonly pinName: string = "theater";
   public static readonly plugName: string = "modes";
 
-  public wire(): void {
+  public override wire(): void {
     // Ctlr Config Listeners
     this.ctlr.config.on("settings.modes.theater.disabled", this.handleDisabled, { signal: this.signal });
     // ---- Media --------

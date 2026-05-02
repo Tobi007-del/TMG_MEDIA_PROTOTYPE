@@ -14,7 +14,7 @@ export class GestureGeneralPin extends BasePin<GesturePlug, GestureGeneral> {
   protected focusSubjectId = "";
   protected skipPersistPosition: "left" | "right" | null = null;
 
-  public wire(): void {
+  public override wire(): void {
     // Event Listeners
     addSafeClicks(this.ctlr.DOM.controlsContainer, this.handleClick, this.handleDblClick, { capture: true, signal: this.signal });
     [this.ctlr.DOM.controlsContainer, this.ctlr.DOM.bottomControlsWrapper].forEach((el) => {
@@ -29,7 +29,7 @@ export class GestureGeneralPin extends BasePin<GesturePlug, GestureGeneral> {
 
   protected handleAnyClick(): void {
     this.ctlr.plug<OverlayPlug>("overlay")?.delay();
-    this.ctlr.plug<ControlPanelPlug>("controlPanel")?.getControl<Timeline>("timeline")?.stopScrubbing();
+    this.ctlr.plug<ControlPanelPlug>("controlPanel")?.getCtrl<Timeline>("timeline")?.stopScrubbing();
   }
 
   protected handleRightClick(e: MouseEvent): void {

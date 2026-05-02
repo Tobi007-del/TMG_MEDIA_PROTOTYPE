@@ -15,7 +15,3 @@ export * from "./keys";
 // Function Helpers
 export * from "./fn";
 export * from "./methd";
-// Quirks
-export * from "./quirks/ripple";
-export * from "./quirks/scroll";
-export * from "./quirks/arrowFocusNav";
