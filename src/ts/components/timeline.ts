@@ -106,12 +106,7 @@ export class Timeline extends RangeSlider<TimelineConfig> {
   }
   protected handleBufferedStatus(): void {
     const buffered = this.media.status.buffered;
-    for (let i = 0; i < buffered.length; i++) {
-      if (buffered.start(buffered.length - 1 - i) < this.media.state.currentTime) {
-        this.bufferedBar.style.width = `${safeNum(buffered.end(buffered.length - 1 - i) / this.media.status.duration) * 100}%`;
-        break;
-      }
-    }
+    for (let i = 0; i < buffered.length; i++) if (buffered.start(buffered.length - 1 - i) < this.media.state.currentTime) return void (this.bufferedBar.style.width = `${safeNum(buffered.end(buffered.length - 1 - i) / this.media.status.duration) * 100}%`);
   }
   protected handleDurationStatus({ value }: REvent<CtlrMedia, "status.duration">): void {
     this.container.ariaValueMax = String(Math.floor(value));

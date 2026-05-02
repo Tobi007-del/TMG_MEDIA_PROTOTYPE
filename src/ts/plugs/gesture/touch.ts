@@ -1,5 +1,5 @@
-import { clamp, setTimeout } from "../../utils";
-import { BasePin, GesturePlug, OverlayPlug, VolumePlug, type FastPlayPlug } from "../";
+import { BasePin, GestureBasePin, GesturePlug, OverlayPlug, TimePlug, VolumePlug, type FastPlayPlug } from "../";
+import { clamp, safeNum, setTimeout } from "../../utils";
 
 export interface GestureTouch {
   volume: boolean;
@@ -13,9 +13,8 @@ export interface GestureTouch {
   inset: number;
 }
 
-export class GestureTouchPin extends BasePin<GesturePlug, GestureTouch> {
+export class GestureTouchPin extends GestureBasePin<GestureTouch> {
   public static readonly pinName: string = "touch";
-  public static readonly plugName: string = "gesture";
   protected lastX = 0;
   protected lastY = 0;
   protected zone: { x: "left" | "right"; y: "top" | "bottom" } | null = null;
@@ -24,7 +23,6 @@ export class GestureTouchPin extends BasePin<GesturePlug, GestureTouch> {
   protected canCancel = true;
   protected cancelTimeoutId = -1;
   protected sliderTimeoutId = -1;
-  protected nextTime = 0;
 
   public override wire() {
     // Event Listeners
@@ -150,19 +148,6 @@ export class GestureTouchPin extends BasePin<GesturePlug, GestureTouch> {
     this.canCancel = true;
     this.ctlr.videoContainer.removeEventListener("touchmove", this.handleInit);
     ["touchend", "touchcancel"].forEach((evt) => this.ctlr.videoContainer.removeEventListener(evt, this.handleEnd));
-  }
-
-  protected applyTimeline({ percent, sign, multiplier }: { percent: number; sign: string; multiplier: number }): void {
-    const { currentTime } = this.media.state,
-      { duration } = this.media.status,
-      change = percent * duration * +multiplier.toFixed(1);
-    this.nextTime = clamp(0, currentTime + (sign === "+" ? change : -change), duration);
-  }
-
-  protected applyRange(key: "volume" | "brightness", percent: number, sign: string): void {
-    const range = this.ctlr.settings[key],
-      value = sign === "+" ? range.value! + percent * range.max : range.value! - percent * range.max;
-    this.ctlr.plug<VolumePlug>(key)?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }
 }
 

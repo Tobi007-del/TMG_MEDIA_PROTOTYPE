@@ -3,7 +3,7 @@ import { type REvent, type DeepPartial } from "sia-reactor";
 import { CtlrConfig } from "../types/config";
 import { CtlrMedia } from "../types/contract";
 import type { AptAutoplayOption, PosterPreview } from "../types/generics";
-import { isStr, clamp, addSources } from "../utils";
+import { isStr, clamp, addSources, safeNum } from "../utils";
 
 export interface Auto {
   play: boolean | AptAutoplayOption;
@@ -69,10 +69,10 @@ export class AutoPlug extends BasePlug<Auto> {
   }
 
   protected autonextVideo = (): void => {
-    if (!this.media.status.loadedMetadata || !this.ctlr.config.playlist || this.config.next.value < 0 || !this.canAutoMovePlaylist || this.ctlr.plug<PlaylistPlug>("playlist")!.currentIndex >= this.ctlr.config.playlist.length - 1 || this.media.state.paused || this.media.status.waiting) return;
+    if (!this.media.status.loadedMetadata || !this.ctlr.config.playlist || this.config.next.value < 0 || !this.canAutoMovePlaylist || this.ctlr.plug<PlaylistPlug>("playlist")!.state.currentIndex >= this.ctlr.config.playlist.length - 1 || this.media.state.paused || this.media.status.waiting) return;
     this.canAutoMovePlaylist = false;
-    const count = clamp(1, Math.round((this.ctlr.settings.time.end ?? this.media.status.duration) - this.media.state.currentTime), this.config.next.value),
-      v = this.ctlr.config.playlist[this.ctlr.plug<PlaylistPlug>("playlist")!.currentIndex + 1],
+    const count = clamp(1, Math.round(safeNum(this.ctlr.settings.time.end ?? this.media.status.duration) - safeNum(this.media.state.currentTime)), this.config.next.value),
+      v = this.ctlr.config.playlist[this.ctlr.plug<PlaylistPlug>("playlist")!.state.currentIndex + 1],
       toastsPlug = this.ctlr.plug<ToastsPlug>("toasts"),
       timePlug = this.ctlr.plug<TimePlug>("time");
     const nVTId = toastsPlug?.toast?.("", {
@@ -92,19 +92,19 @@ export class AutoPlug extends BasePlug<Auto> {
         const el = this.ctlr.queryDOM(".tmg-video-next-countdown");
         if (el) el.textContent = String(Math.round((count * 1000 - time) / 1000) || 1);
       },
-      onClose: (timeElapsed) => (removeListeners(), timeElapsed && this.ctlr.plug<PlaylistPlug>("playlist")?.nextVideo()),
+      onClose: (timeElapsed) => (removeListeners(), timeElapsed && this.ctlr.plug<PlaylistPlug>("playlist")?.next()),
       tag: "tmg-anvi",
     });
     const cleanUp = (permanent = false) => (nVTId && window.t007?.toast.dismiss(nVTId, "instant"), (this.nextVideoPreview = null), (this.canAutoMovePlaylist = !permanent)),
       cleanUpWhenNeeded = () => !this.media.element.ended && cleanUp(),
-      autoCleanUpToast = () => Math.floor((this.ctlr.settings.time.end ?? this.media.status.duration) - this.media.state.currentTime) > this.config.next.value && cleanUp(),
+      autoCleanUpToast = () => Math.floor(safeNum((this.ctlr.settings.time.end ?? this.media.status.duration) - this.media.state.currentTime)) > this.config.next.value && cleanUp(),
       removeListeners = () => ["timeupdate", "pause", "waiting"].forEach((e, i) => this.media.element.removeEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
     ["timeupdate", "pause", "waiting"].forEach((e, i) => this.media.element.addEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
     const nVP = (this.nextVideoPreview = this.ctlr.queryDOM<HTMLVideoElement>(".tmg-video-next-preview"))!;
     if (v.sources?.length) addSources(v.sources, nVP);
     ["loadedmetadata", "loaded", "durationchange"].forEach((e) => nVP?.addEventListener(e, ({ target: p }) => ((p as HTMLVideoElement).nextElementSibling!.textContent = timePlug?.toTimeText((p as HTMLVideoElement).duration) ?? "0:00")));
     this.ctlr.settings.auto.next.preview = this.config.next.preview; // force update
-    nVP?.previousElementSibling?.addEventListener("click", () => (cleanUp(true), this.ctlr.plug<PlaylistPlug>("playlist")?.nextVideo()), { capture: true });
+    nVP?.previousElementSibling?.addEventListener("click", () => (cleanUp(true), this.ctlr.plug<PlaylistPlug>("playlist")?.next()), { capture: true });
   };
 }
 

@@ -2,8 +2,8 @@ import { BasePlug, type KeysPlug } from ".";
 import type { CtlrConfig, Settings } from "../types/config";
 import { type REvent, type DeepPartial } from "sia-reactor";
 import { mergeObjs, deepClone } from "sia-reactor/utils";
-import { isBool, isSameURL } from "../utils";
-import { Controller } from "../..";
+import { isBool, isSameURL, safeNum } from "../utils";
+import { Controller } from "../core/controller";
 
 const timeKeys = ["min", "max", "start", "end", "previews"] as const;
 export type PlaylistItemTimeKey = (typeof timeKeys)[number];
@@ -71,7 +71,7 @@ export class PlaylistPlug extends BasePlug<Playlist> {
   }
 
   public previous(): void {
-    if (this.media.state.currentTime >= 3) (this.media.intent.currentTime = 0), (this.media.intent.paused = false);
+    if (safeNum(this.media.state.currentTime) >= 3) (this.media.intent.currentTime = 0), (this.media.intent.paused = false);
     else if (this.ctlr.config.playlist && this.state.currentIndex > 0) this.moveTo(this.state.currentIndex - 1, true);
   }
 

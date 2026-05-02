@@ -68,12 +68,12 @@ export class TimePlug extends BasePlug<CTime, TimeState> {
   }
 
   protected handleCurrentTimeState({ value: curr }: REvent<CtlrMedia, "state.currentTime">): void {
-    const dur = this.media.status.duration;
+    curr = safeNum(curr);
     if (curr < this.config.min || curr > this.config.max) {
       this.media.intent.currentTime = this.config.loop ? this.config.min : curr;
       if (!this.config.loop) this.media.intent.paused = true;
     }
-    if (this.media.status.readyState && curr && this.ctlr.state.readyState > 1) this.config.start = this.pseudoStart = curr > 3 && curr < (this.config.end ?? dur) - 3 ? curr : this.actualStart;
+    if (this.media.status.readyState && curr && this.ctlr.state.readyState > 1) this.config.start = this.pseudoStart = curr > 3 && curr < (this.config.end ?? this.media.status.duration) - 3 ? curr : this.actualStart;
   }
 
   protected handleWaitingStatus({ value }: REvent<CtlrMedia, "status.waiting">): void {
@@ -106,7 +106,7 @@ export class TimePlug extends BasePlug<CTime, TimeState> {
   public skip(duration: number): void {
     const overlay = this.ctlr.plug<OverlayPlug>("overlay"),
       notifier = duration > 0 ? this.ctlr.queryDOM(".tmg-video-fwd-notifier") : this.ctlr.queryDOM(".tmg-video-bwd-notifier");
-    duration = duration > 0 ? (this.media.status.duration - this.media.state.currentTime > duration ? duration : this.media.status.duration - this.media.state.currentTime) : duration < 0 ? (this.media.state.currentTime > Math.abs(duration) ? duration : -this.media.state.currentTime) : 0;
+    duration = safeNum(duration > 0 ? (this.media.status.duration - this.media.state.currentTime > duration ? duration : this.media.status.duration - this.media.state.currentTime) : duration < 0 ? (this.media.state.currentTime > Math.abs(duration) ? duration : -this.media.state.currentTime) : 0);
     this.media.intent.currentTime = this.media.state.currentTime + duration; // Apprentice Slider syncs, no CSS hack
     // this.ctlr.settings.css.currentPlayedPosition = this.ctlr.settings.css.currentThumbPosition = safeNum(this.media.intent.currentTime / this.media.status.duration);
     const mdle = this.ctlr.plug<GesturePlug>("gesture")?.general;

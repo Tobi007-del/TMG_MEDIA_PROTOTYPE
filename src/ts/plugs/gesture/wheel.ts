@@ -1,5 +1,26 @@
-import { clamp, setTimeout } from "../../utils";
 import { BasePin, VolumePlug, type GesturePlug, type FastPlayPlug } from "../";
+import { clamp, safeNum, setTimeout } from "../../utils";
+
+export class GestureBasePin<Config> extends BasePin<GesturePlug, Config> {
+  public static readonly plugName: string = "gesture";
+  protected nextTime = 0;
+
+  protected applyTimeline({ percent, sign, multiplier }: { percent: number; sign: string; multiplier: number }): void {
+    multiplier = +multiplier.toFixed(1);
+    percent = percent * multiplier;
+    const curr = safeNum(this.media.state.currentTime),
+      change = percent * safeNum(this.media.status.duration) * multiplier,
+      next = curr + (sign === "+" ? change : -change);
+    this.nextTime = clamp(0, next, this.media.status.duration);
+    // JS: this.ctlr.DOM.touchTimelineNotifier.textContent = `${sign}${this.ctlr.plug<TimePlug>("time")?.toTimeText(Math.abs(this.nextTime - curr))} (${this.ctlr.plug<TimePlug>("time")?.toTimeText(this.nextTime, true)}) ${multiplier < 1 ? `x${multiplier}` : ""}`;
+  }
+
+  protected applyRange(key: "volume" | "brightness", percent: number, sign: string): void {
+    const range = this.ctlr.settings[key],
+      value = sign === "+" ? range.value! + percent * range.max : range.value! - percent * range.max;
+    this.ctlr.plug<VolumePlug>(key)?.handleSliderInput(clamp(0, Math.round(value), range.max));
+  }
+}
 
 export interface GestureWheel {
   volume: { normal: boolean; slider: boolean };
@@ -10,9 +31,8 @@ export interface GestureWheel {
   yRatio: number;
 }
 
-export class GestureWheelPin extends BasePin<GesturePlug, GestureWheel> {
+export class GestureWheelPin extends GestureBasePin<GestureWheel> {
   public static readonly pinName: string = "wheel";
-  public static readonly plugName: string = "gesture";
   protected timeoutId: number | null = null;
   protected zone: { x: "left" | "right"; y: "top" | "bottom" } | null = null;
   protected xCheck = false;
@@ -59,14 +79,14 @@ export class GestureWheelPin extends BasePin<GesturePlug, GestureWheel> {
     if (deltaX || shiftKey) {
       if (!wc.timeline.normal || this.yCheck) return this.handleStop();
       this.xCheck = true;
-      this.applyTimeline(xPercent, xSign, this.timeMultiplier);
+      this.applyTimeline({ percent: xPercent, sign: xSign, multiplier: this.timeMultiplier });
       if (shiftKey) return;
     }
     if (deltaY) {
       if (this.xCheck) {
         const mY = clamp(0, Math.abs((this.deltaY += deltaY)), height * wc.yRatio * 0.5);
         this.timeMultiplier = 1 - mY / (height * wc.yRatio * 0.5);
-        return this.applyTimeline(xPercent, xSign, this.timeMultiplier);
+        return this.applyTimeline({ percent: xPercent, sign: xSign, multiplier: this.timeMultiplier });
       }
       const cancel = (this.zone?.x === "right" && !wc.volume.normal) || (this.zone?.x === "left" && !wc.brightness.normal),
         currentXZone = x - rect.left > width * 0.5 ? "right" : "left";
@@ -85,19 +105,6 @@ export class GestureWheelPin extends BasePin<GesturePlug, GestureWheel> {
       this.xCheck = false;
       this.media.intent.currentTime = this.nextTime;
     }
-  }
-
-  protected applyTimeline(percent: number, sign: string, multiplier: number): void {
-    const { currentTime } = this.media.state,
-      { duration } = this.media.status,
-      change = percent * duration * +multiplier.toFixed(1);
-    this.nextTime = clamp(0, currentTime + (sign === "+" ? change : -change), duration);
-  }
-
-  protected applyRange(key: "volume" | "brightness", percent: number, sign: string): void {
-    const range = this.ctlr.settings[key],
-      value = range.value! + (sign === "+" ? percent : -percent) * range.max;
-    this.ctlr.plug<VolumePlug>(key)?.handleSliderInput(clamp(0, Math.round(value), range.max));
   }
 }
 

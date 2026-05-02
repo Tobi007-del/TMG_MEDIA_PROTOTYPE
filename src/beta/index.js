@@ -1982,7 +1982,7 @@
       </div>
       <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid currentColor; padding-bottom: 5px; opacity: 0.85;">\u{1F39B}\uFE0F The Smart Canvas (Touch & Mouse)</h3>
       <ul style="padding-left: 20px; line-height: 1.6; margin-bottom: 25px;">
-        <li><strong>Hyper-Speed on Demand:</strong> Click and hold the right side of the video screen or the play key (<strong>Spacebar</strong>) to fast-forward, left side or <strong>Alt</strong> + play key rewinds.</li>
+        <li><strong>Hyper-Speed on Demand:</strong> Click and hold the right side of the video screen or the play key (<strong>Spacebar</strong>) to fast-forward, left side or <strong>Shift</strong> + play key rewinds.</li>
         <li><strong>Smart Scrubbing:</strong> Don't hunt for the tiny progress bar. Just swipe horizontally across the middle of the screen to scrub smoothly through time.</li>
         <li><strong>Invisible Sliders:</strong> Swipe vertically on the <em>right edge</em> for Volume, and the <em>left edge</em> for Brightness.</li>
         <li><strong>Precision Taps:</strong> Double-tap the edges to skip forward or backward. Double tap the center to toggle Fullscreen (or Play/Pause on mobile).</li>
@@ -2752,7 +2752,7 @@
       const res = await t007.confirm(mssg, { id: `${this.id}-error-dialog`, rootElement: this.DOM.videoContainerContent, confirmText: "Try Again", cancelText: "Dismiss" });
       if (res === true) {
         const time = this.currentTime;
-        this.video.load(), this.video.currentTime = time, this.togglePlay(true);
+        this.video.load(), this.settings.time.value = time, this.togglePlay(true);
       } else if (res !== "recovered") this.deactivate(mssg);
     }
     _handleLoadStart() {
@@ -2992,12 +2992,12 @@
         case "arrowdown":
           e.preventDefault();
           e.stopImmediatePropagation();
-          return this.currentTime -= e.shiftKey ? 5 : 1;
+          return this.settings.time.value -= e.shiftKey ? 5 : 1;
         case "arrowright":
         case "arrowup":
           e.preventDefault();
           e.stopImmediatePropagation();
-          return this.currentTime += e.shiftKey ? 5 : 1;
+          return this.settings.time.value += e.shiftKey ? 5 : 1;
       }
     }
     _handleTimeUpdate() {
@@ -3037,7 +3037,7 @@
     skip(duration) {
       const notifier = duration > 0 ? this.DOM.fwdNotifier : this.DOM.bwdNotifier;
       duration = duration > 0 ? this.duration - this.currentTime > duration ? duration : this.duration - this.currentTime : duration < 0 ? this.currentTime > Math.abs(duration) ? duration : -this.currentTime : 0;
-      this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.safeNum((this.video.currentTime += duration) / this.video.duration);
+      this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.safeNum((this.settings.time.value += duration) / this.video.duration);
       if (this.skipPersist) {
         if (this.currentSkipNotifier && notifier !== this.currentSkipNotifier) this.skipDuration = 0, this.currentSkipNotifier.classList.remove("tmg-video-control-persist");
         this.showOverlay();
@@ -3129,7 +3129,7 @@
     }
     rewindVideo() {
       !this.video.paused && this.togglePlay(false);
-      this.currentTime -= this.rewindPlaybackRate / this.pfps;
+      this.settings.time.value -= this.rewindPlaybackRate / this.pfps;
       this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.safeNum(this.video.currentTime / this.video.duration);
       this.DOM.playbackRateNotifier?.setAttribute("data-current-time", this.toTimeText(this.video.currentTime, true));
     }

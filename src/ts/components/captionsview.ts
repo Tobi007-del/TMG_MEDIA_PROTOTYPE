@@ -123,7 +123,7 @@ export class CaptionsView extends BaseComponent<CaptionsViewConfig, ComponentSta
   public syncKaraoke(): void {
     if (!this.karaokeNodes) return;
     for (const { el, time } of this.karaokeNodes) {
-      const isPast = this.media.state.currentTime > time;
+      const isPast = safeNum(this.media.state.currentTime) > time;
       (el.toggleAttribute("data-past", isPast), el.toggleAttribute("data-future", !isPast));
     }
   }

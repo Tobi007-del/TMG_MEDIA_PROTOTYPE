@@ -1,5 +1,5 @@
 import { BasePlug, type KeysPlug, type ToastsPlug } from ".";
-import { createEl, clamp, parseCSSTime, formatMediaTime, getDominantColor, getRGBBri, getRGBSat } from "../utils";
+import { createEl, clamp, parseCSSTime, formatMediaTime, getDominantColor, getRGBBri, getRGBSat, safeNum } from "../utils";
 
 export interface Frame {
   disabled: boolean;
@@ -20,7 +20,7 @@ export class FramePlug extends BasePlug<Frame> {
     keys?.register("stepBwd", () => this.moveFrame("backwards"), { phase: "keydown" });
   }
 
-  public async getFrame(display: any = "", time = this.media.state.currentTime, raw = false, min = 0, video = this.ctlr.pseudoVideo): Promise<{ canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } | { blob: Blob | false; url: string | false }> {
+  public async getFrame(display: any = "", time = safeNum(this.media.state.currentTime), raw = false, min = 0, video = this.ctlr.pseudoVideo): Promise<{ canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } | { blob: Blob | false; url: string | false }> {
     if (video !== this.media.element) {
       await this.ctlr.state.frameReadyPromise; // wait for it to get set by last getter 5 lines below
       if (Math.abs(video.currentTime - time) > 0.01 || !video.readyState) {
@@ -39,7 +39,7 @@ export class FramePlug extends BasePlug<Frame> {
     return { blob: blob || false, url: blob ? URL.createObjectURL(blob) : false };
   }
 
-  public async captureFrame(display: any = "", time = this.media.state.currentTime): Promise<void> {
+  public async captureFrame(display: any = "", time = safeNum(this.media.state.currentTime)): Promise<void> {
     // JS: this.notify("capture");
     const toast = this.ctlr.plug<ToastsPlug>("toasts")?.toast,
       tTxt = formatMediaTime({ time, format: "human", showMs: true }),
@@ -62,7 +62,7 @@ export class FramePlug extends BasePlug<Frame> {
     frame?.url ? toast?.success(frameToastId, { render: `Captured ${fTxt}`, image: frame.url, autoClose: this.config.captureAutoClose, actions: { Save, Share }, onClose: () => URL.revokeObjectURL(frame.url as string) }) : toast?.error(frameToastId, { render: `Failed capturing ${fTxt}` });
   }
 
-  public async findGoodTime({ time: t = this.media.state.currentTime, secondsLimit: s = 25, saturation: sat = 12, brightness: bri = 40 } = {}): Promise<number | null> {
+  public async findGoodTime({ time: t = safeNum(this.media.state.currentTime), secondsLimit: s = 25, saturation: sat = 12, brightness: bri = 40 } = {}): Promise<number | null> {
     const end = clamp(0, t + s, this.media.status.duration);
     for (; t <= end; t += 0.333) {
       const rgb = (await getDominantColor(((await this.getFrame("", t, true, 1)) as { canvas: HTMLCanvasElement }).canvas, "rgb", true)) as [number, number, number] | null;
