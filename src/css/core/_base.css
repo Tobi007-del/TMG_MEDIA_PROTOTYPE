@@ -66,7 +66,9 @@
 .tmg-video-screen-locked-wrapper,
 .tmg-video-top-controls-wrapper,
 .tmg-video-bottom-controls-wrapper,
-.tmg-video-touch-vb-notifier {
+.tmg-video-touch-vb-notifier,
+.tmg-video-picture-in-picture-wrapper p,
+.tmg-video-settings-content * {
   text-shadow: 0px 0px 2px rgba(0, 0, 0, 0.5);
 }
 :is(.tmg-video-top-controls-wrapper, .tmg-video-bottom-controls-wrapper, .tmg-video-touch-vb-notifier) svg,

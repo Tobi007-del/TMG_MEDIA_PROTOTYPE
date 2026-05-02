@@ -47,8 +47,8 @@
   z-index: 1;
   background-color: var(--tmg-video-settings-background-color);
   transform: rotateY(180deg);
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--tmg-video-settings-view-transition-time) var(--tmg-video-bounce-timing);
