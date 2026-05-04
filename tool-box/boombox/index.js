@@ -29,8 +29,10 @@ class Boombox {
     tmg.bindAllMethods(this);
     tmg.loadResource(`https://cdn.jsdelivr.net/npm/sia-reactor/dist/styles/time-travel-overlay.min.css`);
     this.store = window.bbStore = tmg.reactive(structuredClone(bbStore));
-    this.store.use((window[`TTM`] = new tmg.TimeTravelModule({ blacklist: ["audio.vibe", "audio.state"] })));
-    window[`TTO`] = new tmg.TimeTravelOverlay(window[`TTM`], { title: `TMG Boombox Time` });
+    window.TTM = new tmg.TimeTravelModule({ blacklist: ["audio.vibe", "audio.state"] });
+    window.TTP = new tmg.PersistModule({ key: "NINO'S_BOOMBOX", adapter: new tmg.IndexedDBAdapter({ durability: "relaxed" }), useSnapshot: true, throttle: 150 }).attach(TTM.state, "timeTravel");
+    this.store.use(TTP, "app"), TTP.state.once("hydrated", () => this.store.use(TTM));
+    window.TTO = new tmg.TimeTravelOverlay(window.TTM, { startOpen: true, title: `NINO's Boombox Tape` });
     this.media = new Audio("/tmg-media-player/assets/media/Subway-Surfers-Theme-Sound-Effect.mp3");
     this.media.loop = true;
     this.bbSens = { translate: 1.2, rotate: 0.6, zoom: 2.4, overflow: 70 }; // S.I.A. configuration
@@ -48,10 +50,11 @@ class Boombox {
     this.moveModeBtn = this.bbEl.querySelector(".tmg-bbfm-move-mode");
     this.playBtn = this.bbEl.querySelector(".tmg-bbfs-play");
     this.resetBtn = document.querySelector(".tmg-bbb-reset");
-    ((this.bbPtrs = new Map()), (this.rafLoopMap = new Map()), (this.rafLoopFnMap = new Map()));
+    (this.bbPtrs = new Map()), (this.rafLoopMap = new Map()), (this.rafLoopFnMap = new Map());
   }
   wire() {
     // State Listeners: using watchers for forwarded intents so it doesn't take two microtasks, listeners otherwise
+    this.store.watch("ui.color", this.handleColor, { immediate: true });
     this.store.on("audio.intent.paused", this.handlePausedIntent, { immediate: true });
     this.store.on("audio.state.paused", this.handlePausedState, { immediate: true });
     this.store.watch("audio.volume.value", this.onVolume, { immediate: true });
@@ -65,7 +68,6 @@ class Boombox {
     this.store.on("audio.moveMode", this.handleMoveMode, { immediate: true });
     this.store.on("audio.vibe", this.handleVibe, { immediate: true });
     this.store.on("audio.vibeDisabled", this.handleVibeDisabled, { immediate: true });
-    this.store.on("ui.color", this.handleColor, { immediate: true });
     this.store.on("transform", this.handleTransform, { immediate: true });
     this.store.set("transform.x", this.setTransformX); // UI Guard: prevents out of bounds behaviour with respect to overflow
     this.store.set("transform.y", this.setTransformY); // UI Guard: ---------------------------------------------------------
@@ -147,11 +149,11 @@ class Boombox {
     // We connect back to TVP's limiter so we don't blow out the user's speakers
     this.analyser.connect(tmg._limiter);
   }
-  handleColor({ value: color }) {
-    document.documentElement.style.setProperty("--brand", (window[`TTO`].config.color = color.toLowerCase()));
+  handleColor(color) {
+    document.documentElement.style.setProperty("--brand", (window.TTO.config.color = color.toLowerCase()));
   }
   handlePausedIntent({ value: paused }) {
-    !paused ? this.media.play().catch((e) => (t007.toast.error(`Failed to play audio: ${e?.message || 'Something went wrong'}`), console.error("Failed to play audio:", e))) : this.media.pause(); // dummy
+    !paused ? this.media.play().catch((e) => (t007.toast.error(e?.message || "Something went wrong"), console.error(e))) : this.media.pause(); // dummy
     // this.ctlr.media.intent.paused = paused; // real
   }
   handlePausedState({ value: paused }) {
@@ -231,8 +233,8 @@ class Boombox {
     this.panner?.orientationY.setTargetAtTime(vecY, this.ctime, 0.02);
     this.panner?.orientationZ.setTargetAtTime(vecZ, this.ctime, 0.02);
     // UI Update
-    (this.bbEl.style.setProperty("--bb-x", `${x}%`), this.bbEl.style.setProperty("--bb-y", `${y}%`), this.bbEl.style.setProperty("--bb-z", z));
-    (this.bbEl.style.setProperty("--bb-rx", `${rotateX}deg`), this.bbEl.style.setProperty("--bb-ry", `${rotateY}deg`));
+    this.bbEl.style.setProperty("--bb-x", `${x}%`), this.bbEl.style.setProperty("--bb-y", `${y}%`), this.bbEl.style.setProperty("--bb-z", z);
+    this.bbEl.style.setProperty("--bb-rx", `${rotateX}deg`), this.bbEl.style.setProperty("--bb-ry", `${rotateY}deg`);
   }
   setTransformX(v) {
     if (!this.bbEl) return v;
@@ -321,7 +323,7 @@ class Boombox {
     });
   }
   handlePointerUp(e) {
-    (this.cancelRAFLoop("bbDragging"), this.bbPtrs.delete(e.pointerId));
+    this.cancelRAFLoop("bbDragging"), this.bbPtrs.delete(e.pointerId);
     this.eS.bounds = this.eS.rect = undefined;
     if (this.bbPtrs.size === 0) this.eS.isZSliding = false;
     else if (this.bbPtrs.size === 1) {

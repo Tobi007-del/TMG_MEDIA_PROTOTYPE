@@ -29,7 +29,7 @@ export class FullscreenOrientationButton extends BaseComponent<FullscreenOrienta
     this.pin?.changeScreenOrientation();
   }
 
-  protected syncARIA(): void {
+  public syncARIA(): void {
     this.el.title = this.state.label = "Change orientation";
     this.setBtnARIA();
   }

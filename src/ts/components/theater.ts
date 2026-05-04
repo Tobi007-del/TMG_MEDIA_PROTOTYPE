@@ -26,11 +26,11 @@ export class TheaterButton extends BaseComponent<TheaterConfig, ComponentState, 
     this.media.intent.theater = !this.media.state.theater;
   }
 
-  protected syncUI(): void {
+  public syncUI(): void {
     this.ctlr.settings.modes.theater.disabled ? this.disable() : this.enable();
     this.syncARIA();
   }
-  protected syncARIA(): void {
+  public syncARIA(): void {
     this.state.label = this.media.state.theater ? "Default view" : "Cinema mode";
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.theater);
     this.el.title = this.state.label + this.state.cmd;

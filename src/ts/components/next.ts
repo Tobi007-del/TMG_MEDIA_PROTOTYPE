@@ -14,7 +14,7 @@ export class NextButton extends BaseComponent<NextConfig, ComponentState, HTMLBu
 
   public override create() {
     this.element = createEl("button", { className: "tmg-video-next-btn", type: "button", innerHTML: IconRegistry.get("next") }, { draggableControl: "", controlId: this.name });
-    return (this.hide(), this.element);
+    return this.hide(), this.element;
   }
 
   public override wire(): void {
@@ -30,7 +30,7 @@ export class NextButton extends BaseComponent<NextConfig, ComponentState, HTMLBu
     this.plug?.next();
   }
 
-  protected syncARIA(): void {
+  public syncARIA(): void {
     this.state.label = "Next";
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.next);
     this.el.title = this.state.label + this.state.cmd;

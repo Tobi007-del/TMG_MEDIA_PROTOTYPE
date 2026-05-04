@@ -32,7 +32,7 @@ export class ObjectFitButton extends BaseComponent<ObjectFitConfig, ComponentSta
     this.plug?.rotateObjectFit();
   }
 
-  protected syncARIA(): void {
+  public syncARIA(): void {
     this.state.label = { contain: "Fit to screen", cover: "Stretch", fill: "Crop to fit" }[this.media.state.objectFit];
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.objectFit);
     this.el.title = this.state.label + this.state.cmd;

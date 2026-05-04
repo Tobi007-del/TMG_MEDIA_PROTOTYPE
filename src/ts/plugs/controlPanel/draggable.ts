@@ -47,7 +47,7 @@ export class ControlPanelDraggablePin extends BasePin<ControlPanelPlug, ControlP
     return zoneW ? { coord: key + pos, zoneW: getAny(this.plug.zoneWs as any, (key + pos) as any) } : key + pos;
   }
 
-  protected syncConfig(): void {
+  public syncConfig(): void {
     const id = (el: HTMLElement) => el.dataset.controlId;
     const derive = (zoneW: ZoneSlot, center = false) => [center ? "spacer" : "", ...(zoneW instanceof HTMLElement ? [id(zoneW)] : Array.from(zoneW.zone.children as HTMLCollectionOf<HTMLElement>, id)), center && (zoneW instanceof HTMLElement ? true : zoneW.zone.children.length) ? "spacer" : ""].filter(Boolean) as SControl[]; // at least one spacer
     this.ctlr.settings.controlPanel.top = [...derive(this.plug.cZoneWs.top.left), ...derive(this.plug.cZoneWs.top.center, true), ...derive(this.plug.cZoneWs.top.right)];

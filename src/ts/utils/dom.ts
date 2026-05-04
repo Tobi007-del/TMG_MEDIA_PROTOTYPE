@@ -3,11 +3,7 @@ import { win } from "../tools/runtime";
 import { bindCleanupToSignal as bindSig } from "./fn";
 
 // Element Factory
-export { createEl, assignEl } from "@t007/utils";
-
-export function getWindow(el?: any): (Window & typeof globalThis) | undefined {
-  return (el instanceof Window ? el : el instanceof Document ? el?.defaultView : el?.ownerDocument?.defaultView) ?? undefined;
-}
+export { createEl, assignEl, getWindow } from "@t007/utils";
 
 // Resource Loading
 export { loadResource } from "@t007/utils";

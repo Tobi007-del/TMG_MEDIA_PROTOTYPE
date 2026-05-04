@@ -270,6 +270,7 @@
       CTX.isCascading = prev;
     }
   }
+  var fanoutOptsArr = ["merge", "depth", "atomic"];
   function mergeObjs(o1, o2, config, pojocheck = true) {
     if (pojocheck && (!isPOJO(o1 || NIL, config) || !isPOJO(o2 || NIL, config))) return o2;
     const merged = { ...o1 ||= {}, ...o2 ||= {} }, keys2 = Object.keys(merged);
@@ -320,7 +321,7 @@
     }
   }
 
-  // ../sia-reactor/dist/chunk-AKQSBLBX.js
+  // ../sia-reactor/dist/chunk-6HZSS2TX.js
   var ReactorEvent = class _ReactorEvent {
     /** No active propagation phase. */
     static NONE = 0;
@@ -806,9 +807,8 @@
       if (cord) return cord.clup;
       let task;
       cord = { cb, once, clup: () => (lazy && this.nostall(task), this[`no${key}`](path, cb)) };
-      immediate && onImmediate(immediate);
       task = () => (cords ?? (store.set(path, cords = []), cords)).push(cord);
-      lazy ? this.stall(task) : task();
+      immediate && onImmediate(immediate), lazy ? this.stall(task) : task();
       return this.bindSignal(cord, signal);
     }
     dropSync(store, path, cb) {
@@ -906,7 +906,7 @@
      * const cleanup = rtr.watch("user.name", (value) => console.log(value));
      */
     watch(path, callback, options) {
-      return this.addSync("watch", path, callback, options, (imm) => imm !== "auto" && inAny(this.core, path) && ((target) => callback(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false }))(this.getContext(path)));
+      return this.addSync("watch", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && ((target) => callback(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false }))(this.getContext(path)));
     }
     /** Registers a watcher for a path that only triggers once. */
     wonce(path, callback, options) {
@@ -1034,7 +1034,7 @@
     return target[RAW] || target;
   }
 
-  // ../t007-tools/packages/utils/dist/chunk-N5KX6IW4.js
+  // ../t007-tools/packages/utils/dist/chunk-Y5YJMRXD.js
   var INTERACTIVE_SELECTOR = ":is(button,[href],input:not([type='hidden']),select,textarea,details>summary,[contenteditable='true'],iframe,audio[controls],video[controls],[tabindex]):not([disabled],[tabindex='-1'],[data-focus-guard],[inert],[inert] *)";
   var isInteractive = (target) => target instanceof HTMLElement && target.matches(INTERACTIVE_SELECTOR);
   var VIRTUAL_RESOURCE = /* @__PURE__ */ Symbol.for("T007_VIRTUAL_RESOURCE");
@@ -1117,7 +1117,7 @@
     window.T007_DIALOG_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/dialog@latest/dist/index.min.css`;
   }
 
-  // ../t007-tools/packages/utils/dist/chunk-NLR4ANGT.js
+  // ../t007-tools/packages/utils/dist/chunk-YDARUYLO.js
   function rippleHandler(e, { target, forceCenter = false, wrapperClassName = "t007-ripple-wrapper", className = "t007-ripple", holdClassName = "t007-ripple-hold", fadeClassName = "t007-ripple-fade" } = NIL) {
     const el = target || e.currentTarget;
     if (!el || e.target !== e.currentTarget && isInteractive(e.target) || el.hasAttribute("disabled") || e.pointerType === "mouse" && e.button !== 0) return;
@@ -1209,7 +1209,7 @@
     return t007._scrollers.set(el, handle), handle;
   }
 
-  // ../sia-reactor/dist/chunk-GD7HZBXA.js
+  // ../sia-reactor/dist/chunk-QPJNSYXT.js
   var BaseReactorModule = class {
     static moduleName;
     get name() {
@@ -1311,6 +1311,223 @@
   var wpArr = ["*"];
 
   // ../sia-reactor/dist/modules.js
+  var BaseStorageAdapter = class {
+    name = "StorageAdapter";
+    config;
+    warn = (act = "", mssg = "Support issue or Private Mode", key = "", store = "") => this.config.debug && console.warn(`[${this.constructor.name} \`${act}\`] Failed${key ? `for ${key}` : ""} ${store ? ` on "${store}"` : ""} ${this.config.dbName ? ` at ${this.config.dbName}` : ""} (${mssg})`);
+    constructor(config) {
+      this.config = { debug: false, ...config };
+    }
+  };
+  var StorageAdapter = class extends BaseStorageAdapter {
+    name = "SyncStorageAdapter";
+  };
+  var AsyncStorageAdapter = class extends BaseStorageAdapter {
+    name = "AsyncStorageAdapter";
+  };
+  var LocalStorageAdapter = class extends StorageAdapter {
+    name = "LocalStorage";
+    /**
+     * Reads and parses a value from localStorage.
+     * @param key Storage key.
+     * @returns Parsed value, or `undefined` when missing/unreadable.
+     */
+    get(key = this.config.key, reviver = this.config.reviver) {
+      try {
+        const v = localStorage.getItem(key);
+        return v ? JSON.parse(v, reviver) : void 0;
+      } catch {
+        return void 0;
+      }
+    }
+    /**
+     * Serializes and writes a value to localStorage.
+     * @param key Storage key.
+     * @param value Value to serialize.
+     * @returns `true` when write succeeds, else `false`.
+     */
+    set(key = this.config.key, value, replacer = this.config.replacer) {
+      try {
+        return localStorage.setItem(key, JSON.stringify(value, replacer)), true;
+      } catch (e) {
+        return this.warn("setItem", void 0, key), false;
+      }
+    }
+    /**
+     * Removes a single key from localStorage.
+     * @param key Storage key.
+     * @returns `true` when removal succeeds, else `false`.
+     */
+    remove(key = this.config.key) {
+      try {
+        return localStorage.removeItem(key), true;
+      } catch (e) {
+        return this.warn("removeItem", void 0, key), false;
+      }
+    }
+    /**
+     * Clears all localStorage entries for the current origin.
+     * @returns `true` when clear succeeds, else `false`.
+     */
+    clear() {
+      try {
+        return localStorage.clear(), true;
+      } catch (e) {
+        return this.warn("clear", void 0), false;
+      }
+    }
+  };
+  var IndexedDBAdapter = class extends AsyncStorageAdapter {
+    name = "IndexedDB";
+    db;
+    constructor(build) {
+      super({ ...INDEXED_DB_ADAPTER_BUILD, ...build });
+    }
+    /**
+     * Returns a connected IndexedDB instance, opening it when needed.
+     * @returns Connected database handle.
+     */
+    async idb() {
+      const idb = this.config.onidb();
+      if (idb || this.db) return Promise.resolve(idb || this.db);
+      return new Promise((res, rej) => {
+        const req = indexedDB.open(this.config.dbName, this.config.version);
+        req.onupgradeneeded = (e) => (this.config.onupgradeneeded(req.result, e), this.config.stores.forEach((s) => !req.result.objectStoreNames.contains(s) && req.result.createObjectStore(s)));
+        req.onsuccess = (e) => (this.config.onsuccess(req.result, e), req.result.onversionchange = (e2) => (this.config.onversionchange(req.result, e2), this.warn("update", "Updated in another tab"), req.result.close()), res(this.db = req.result));
+        req.onerror = (e) => (this.config.onerror(req.error, e), this.warn("open", "Something went wrong"), rej(req.error));
+        req.onblocked = (e) => (this.config.onblocked(e), this.warn("open", "Close other tabs for updates"));
+      });
+    }
+    /**
+     * Reads a value by key from an object store.
+     * @param key Record key.
+     * @param store Optional object-store override.
+     * @returns Stored value, or `undefined` when missing/unreadable.
+     */
+    async get(key = this.config.key, store = this.config.stores[0], options = this.config) {
+      try {
+        const req = (await this.idb()).transaction(store, "readonly", options).objectStore(store).get(key);
+        return new Promise((res) => req.onsuccess = () => res(req.result));
+      } catch {
+        return this.warn("get", void 0, store), void 0;
+      }
+    }
+    /**
+     * Writes a value by key into an object store.
+     * @param key Record key.
+     * @param value Value to store.
+     * @param store Optional object-store override.
+     * @returns `true` when write succeeds, else `false`.
+     */
+    async set(key = this.config.key, value, store = this.config.stores[0], options = this.config) {
+      try {
+        const req = (await this.idb()).transaction(store, "readwrite", options).objectStore(store).put(value, key);
+        return new Promise((res) => req.onsuccess = () => res(true));
+      } catch (e) {
+        return this.warn("put", void 0, store), false;
+      }
+    }
+    /**
+     * Deletes a value by key from an object store.
+     * @param key Record key.
+     * @param store Optional object-store override.
+     * @returns `true` when delete succeeds, else `false`.
+     */
+    async remove(key = this.config.key, store = this.config.stores[0], options = this.config) {
+      try {
+        const req = (await this.idb()).transaction(store, "readwrite", options).objectStore(store).delete(key);
+        return new Promise((res) => req.onsuccess = () => res(true));
+      } catch (e) {
+        return this.warn("delete", void 0, store), false;
+      }
+    }
+    /**
+     * Clears one or more object stores.
+     * @param stores Store name or list of store names to clear.
+     * @returns `true` when all clears succeed, else `false`.
+     */
+    async clear(stores = this.config.stores, options = this.config) {
+      let success = true;
+      for (const store of Array.isArray(stores) ? stores : [stores])
+        try {
+          const req = (await this.idb()).transaction(store, "readwrite", options).objectStore(store).clear();
+          await new Promise((res) => req.onsuccess = () => res(true));
+        } catch (e) {
+          this.warn("clear", void 0, store), success = false;
+        }
+      return success;
+    }
+  };
+  var INDEXED_DB_ADAPTER_BUILD = { dbName: "REACTOR_IDB", stores: ["VAULT"], version: 1, onidb: NOOP, onupgradeneeded: NOOP, onversionchange: NOOP, onsuccess: NOOP, onerror: NOOP, onblocked: NOOP };
+  var PersistModule = class extends BaseReactorModule {
+    static moduleName = "persist";
+    adapter;
+    hydrateSeq = 0;
+    saveTimeoutId = 0;
+    get payload() {
+      let res = this.rtrs.size > 1 ? {} : void 0;
+      for (const [rid, rtr] of this.rtrs) {
+        const snap = this.config.useSnapshot ? (this.config.useSnapshot === true && (rtr.config.referenceTracking = rtr.config.smartCloning = true), rtr.snapshot()) : rtr.core, paths = this.getPaths(this.config.whitelist, rid), val = this.config.whitelist ? paths.reduce((acc, p) => (setAny(acc, p, getAny(snap, p)), acc), {}) : snap;
+        this.rtrs.size > 1 ? setAny(res, rid, val) : res = val;
+      }
+      return res;
+    }
+    constructor(config, rtr) {
+      super(mergeObjs(PERSIST_MODULE_BUILD, config), rtr, { hydrated: false });
+    }
+    wire() {
+      "undefined" !== typeof window && window.addEventListener("pagehide", this.onDestroy, { signal: this.signal });
+      "undefined" !== typeof document && document.addEventListener("visibilitychange", () => document.visibilityState === "hidden" && this.onDestroy(), { signal: this.signal });
+      this.config.on("adapter", this.handleAdapter, { signal: this.signal, immediate: true });
+      this.config.on("disabled", this.handleDisabled, { signal: this.signal, immediate: true });
+      this.config.on("whitelist", this.handleWhitelist, { signal: this.signal, immediate: true });
+    }
+    onAttach = this.attachPaths;
+    onPath(e, rid) {
+      if (!this.state.hydrated) return e.stopImmediatePropagation();
+      if (!this.saveTimeoutId) this.saveTimeoutId = setTimeout2(() => (this.adapter.set(this.config.key, this.payload), this.saveTimeoutId = 0), this.config.throttle, this.signal);
+    }
+    async handleAdapter({ value = LocalStorageAdapter }) {
+      const seq = ++this.hydrateSeq;
+      if (this.adapter && value === this.adapter.constructor) return;
+      this.state.hydrated = false;
+      this.adapter?.remove(this.config.key);
+      this.adapter = "function" === typeof value ? new value({ debug: !!this.rtrs.values().next().value?.canLog }) : value;
+      try {
+        let saved = this.adapter.get(this.config.key);
+        const isAsync = saved instanceof Promise, { depth, merge = true } = parseEvtOpts(this.config.fanout ?? isAsync, fanoutOptsArr, "depth");
+        saved = !isAsync ? saved : await saved;
+        if (seq !== this.hydrateSeq || !saved) return;
+        for (const [rid, rtr] of this.rtrs) {
+          const paths = this.getPaths(this.config.whitelist, rid), entry = this.rtrs.size > 1 ? getAny(saved, rid) : saved;
+          if (!entry) continue;
+          const set = (p, news, olds) => (depth ? fanout : setAny)(rtr.core, p, merge ? mergeObjs(news, olds) : olds, depth ? { depth, crossRealms: rtr.config.crossRealms } : void 0), setPaths = this.config.whitelist ? paths : wpArr;
+          for (let i = 0, len = setPaths.length; i < len; i++) {
+            const path = setPaths[i];
+            set(path, getAny(rtr.core, path), getAny(entry, path));
+          }
+        }
+        for (const [rid, rtr] of this.rtrs) rtr.tick(depth ? "*" : this.config.whitelist ? this.getPaths(this.config.whitelist, rid) : "*");
+      } finally {
+        if (seq === this.hydrateSeq) this.state.hydrated = true;
+      }
+    }
+    handleDisabled({ value }) {
+      for (const [rid, rtr] of this.rtrs) this.onAttach(rtr, rid);
+      value && this.adapter?.remove(this.config.key);
+    }
+    /** Clears persisted payload for this module instance and drops any pending save. */
+    clear() {
+      clearTimeout(this.saveTimeoutId);
+      this.saveTimeoutId = -1;
+      for (const rtr of this.rtrs.values()) rtr.stall(() => this.saveTimeoutId = 0);
+      this.adapter?.remove(this.config.key);
+    }
+    onDestroy() {
+      this.state.hydrated && !this.config.disabled && this.adapter?.set(this.config.key, this.payload);
+    }
+  };
+  var PERSIST_MODULE_BUILD = { disabled: false, key: "REACTOR_STORE", throttle: 2500, useSnapshot: false };
   var TimeTravelModule = class extends BaseReactorModule {
     static moduleName = "timeTravel";
     lastTimestamp = 0;
@@ -1418,7 +1635,7 @@
   };
   var TIME_TRAVEL_MODULE_BUILD = { maxPlaybackDelay: 2e3 };
 
-  // ../sia-reactor/dist/chunk-XNYVGOKB.js
+  // ../sia-reactor/dist/chunk-UXQ5NJIO.js
   var Autotracker = class {
     proxy;
     deps = /* @__PURE__ */ new Map();
@@ -1876,8 +2093,8 @@
         { option: "Custom Hue", value: "custom" },
         { option: "Video Derived", value: "auto" }
       ], gcolors = options.slice(0, -2).map((opt) => opt.value), defs = { brand: this.settings.css.brandColor ?? "#e26e02", theme: this.settings.css.themeColor ?? "#ffffff", bcolors: ["#e26e02", ...gcolors], tcolors: ["#ffffff", ...gcolors] }, bField = t007.field({ type: "select", label: "Brand Color", helperText: { info: "You should just try changing your brand color for now" }, options: [{ option: "Tastey Orange", value: "#e26e02" }, ...options], value: !defs.bcolors.includes(defs.brand) ? !this.settings.css.syncWithMedia.brandColor ? "custom" : "auto" : defs.brand }), cBField = t007.field({ type: "color" }), tField = t007.field({ type: "select", label: "Theme Color", helperText: { info: "You should also try changing your theme color for now" }, options: [{ option: "Pure White", value: "#ffffff" }, ...options], value: !defs.tcolors.includes(defs.theme) ? !this.settings.css.syncWithMedia.themeColor ? "custom" : "auto" : defs.theme }), cTField = t007.field({ type: "color" }), bWrapper = tmg.createEl("div"), tWrapper = tmg.createEl("div");
-      this.config.on("settings.css.brandColor", ({ target: { value: v = defs.brand } }) => (v = v.toLowerCase(), cBField.inputEl.value = v, cBField.style.setProperty("--input-current-color", v), bField.inputEl.value = !defs.bcolors.includes(v) ? !this.settings.css.syncWithMedia.brandColor ? "custom" : "auto" : v), { immediate: true });
-      this.config.on("settings.css.themeColor", ({ target: { value: v = defs.theme } }) => (v = v.toLowerCase(), cTField.inputEl.value = v, cTField.style.setProperty("--input-current-color", v), tField.inputEl.value = !defs.tcolors.includes(v) ? !this.settings.css.syncWithMedia.themeColor ? "custom" : "auto" : v), { immediate: true });
+      this.config.watch("settings.css.brandColor", (v = defs.brand) => (v = v.toLowerCase(), cBField.inputEl.value = v, cBField.style.setProperty("--input-current-color", v), bField.inputEl.value = !defs.bcolors.includes(v) ? !this.settings.css.syncWithMedia.brandColor ? "custom" : "auto" : v), { immediate: true });
+      this.config.watch("settings.css.themeColor", (v = defs.theme) => (v = v.toLowerCase(), cTField.inputEl.value = v, cTField.style.setProperty("--input-current-color", v), tField.inputEl.value = !defs.tcolors.includes(v) ? !this.settings.css.syncWithMedia.themeColor ? "custom" : "auto" : v), { immediate: true });
       this.queryDOM(".tmg-video-settings-bottom-panel").append((bWrapper.append(bField, cBField), bWrapper), (tWrapper.append(tField, cTField), tWrapper));
       const id = { theme: "", brand: "" }, sync = (cb, req = true, type = "brand") => (this.settings.css.syncWithMedia[`${type}Color`] = req, cb(req)), assert = (opts, type = "brand") => this.toast?.update(id[type], { render: `Still here in case you change your choice about the ${type}`, ...opts }), onBColorChange = ({ target: { value: val } }) => {
         this.throttle(
@@ -1887,9 +2104,9 @@
             let col;
             if (val === "custom") return cBField.inputEl.click();
             if (val !== "auto") col = this.settings.css.brandColor = val;
-            else col = this.settings.css.brandColor = (this.loaded ? await this.getMediaMainColor(this.currentTime, null) : null) ?? this.CSSCache.brandColor;
+            else col = this.settings.css.brandColor = (this.loaded ? await this.getMediaMainColor(this.settings.time.value, null) : null) ?? this.CSSCache.brandColor;
             const cb = (sync2) => bField.inputEl.value = defs.bcolors.includes(col) ? col : sync2 ? "auto" : "custom", No = () => (sync(cb, false), assert({ actions: { Yes } })), Yes = () => (sync(cb, true), assert({ actions: { No } }));
-            sync(cb, val === "auto"), val === "auto" && (id.brand = this.toast?.("Should the brand color change anytime a video loads?", { icon: "\u{1F3A8}", autoClose: 15e3, hideProgressBar: false, actions: { Yes, No }, onDismis: () => id.brand = "" }));
+            sync(cb, val === "auto"), val === "auto" && (id.brand = this.toast?.("Should the brand color change anytime a video loads?", { icon: "\u{1F3A8}", autoClose: 15e3, hideProgressBar: false, actions: { Yes, No }, onDismiss: () => id.brand = "" }));
           },
           30,
           false
@@ -1902,7 +2119,7 @@
             let col;
             if (val === "custom") return cTField.inputEl.click();
             if (val !== "auto") col = this.settings.css.themeColor = val;
-            else col = this.settings.css.themeColor = (this.loaded ? await this.getMediaMainColor(this.currentTime, null) : null) ?? this.CSSCache.themeColor;
+            else col = this.settings.css.themeColor = (this.loaded ? await this.getMediaMainColor(this.settings.time.value, null) : null) ?? this.CSSCache.themeColor;
             const cb = (sync2) => tField.inputEl.value = defs.tcolors.includes(col) ? col : sync2 ? "auto" : "custom", No = () => (sync(cb, false, "theme"), assert({ actions: { Yes } }, "theme")), Yes = () => (sync(cb, true, "theme"), assert({ actions: { No } }, "theme"));
             sync(cb, val === "auto", "theme"), val === "auto" && (id.theme = this.toast?.("Should the theme color change anytime a video loads?", { icon: "\u{1F3A8}", autoClose: 15e3, hideProgressBar: false, actions: { Yes, No }, onDismiss: () => id.theme = "" }));
           },
@@ -1983,8 +2200,8 @@
       <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid currentColor; padding-bottom: 5px; opacity: 0.85;">\u{1F39B}\uFE0F The Smart Canvas (Touch & Mouse)</h3>
       <ul style="padding-left: 20px; line-height: 1.6; margin-bottom: 25px;">
         <li><strong>Hyper-Speed on Demand:</strong> Click and hold the right side of the video screen or the play key (<strong>Spacebar</strong>) to fast-forward, left side or <strong>Shift</strong> + play key rewinds.</li>
-        <li><strong>Smart Scrubbing:</strong> Don't hunt for the tiny progress bar. Just swipe horizontally across the middle of the screen to scrub smoothly through time.</li>
-        <li><strong>Invisible Sliders:</strong> Swipe vertically on the <em>right edge</em> for Volume, and the <em>left edge</em> for Brightness.</li>
+        <li><strong>Smart Scrubbing:</strong> Don't hunt for the tiny progress bar. Just scroll horizontally across the middle of the screen to scrub smoothly through time.</li>
+        <li><strong>Invisible Sliders:</strong> Scroll vertically on the <em>right edge</em> for Volume, and the <em>left edge</em> for Brightness.</li>
         <li><strong>Precision Taps:</strong> Double-tap the edges to skip forward or backward. Double tap the center to toggle Fullscreen (or Play/Pause on mobile).</li>
       </ul>
       <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid currentColor; padding-bottom: 5px; opacity: 0.85;">\u{1F3D7}\uFE0F Total UI Control</h3>
@@ -1992,17 +2209,19 @@
         <li><strong>Build Your Own Player:</strong> Don't like our layout? <strong>Click and drag</strong> almost any button on the bottom control bar to physically rearrange the interface exactly how you want it.</li>
         <li><strong>Draggable Subtitles:</strong> Subtitles blocking a crucial part of the scene? Just grab the text box and drag it anywhere else on the screen.</li>
         <li><strong>The Chameleon Engine:</strong> Head to settings and set your Brand/Theme colors to "Video Derived". TVP will actively analyze the video frames and extract dominant colors to paint the UI dynamically.</li>
+        <li><strong>Descriptive Hints:</strong> Hover over the controls to expose their tooltips and get more information about how to trigger each function.</li>
       </ul>
       <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid currentColor; padding-bottom: 5px; opacity: 0.85;">\u2328\uFE0F Keyboard Ninja Status</h3>
       <ul style="padding-left: 20px; line-height: 1.6; margin-bottom: 25px;">
-        <li><strong>The Holy Trinity (J, K, L):</strong> Skip backward, Play/Pause, and Skip forward like a pro editor.</li>
+        <li><strong>The Playback Trinity (J, K, L):</strong> Skip backward, Play/Pause, and Skip forward like a pro editor. Do the same with arrow keys, hold <strong>Ctrl</strong>, <strong>Shift</strong> or <strong>Alt</strong> to spice things up.</li>
         <li><strong>Time Travel (0 - 9):</strong> Hit any number key to instantly jump to that percentage of the video (e.g., hitting '5' jumps to the exact middle).</li>
         <li><strong>Frame-by-Frame:</strong> Paused the video? Use <strong>,</strong> (comma) and <strong>.</strong> (period) to step backward or forward one single frame at a time.</li>
         <li><strong>Warp Speed:</strong> Use <strong>&gt;</strong> and <strong>&lt;</strong> to crank the playback speed up or down.</li>
       </ul>
       <h3 style="margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid currentColor; padding-bottom: 5px; opacity: 0.85;">\u{1F52C} Advanced Window Tech</h3>
       <ul style="padding-left: 20px; line-height: 1.6; margin-bottom: 20px;">
-        <li><strong>The Snapshot Engine:</strong> Click the Camera icon to download a high-res screenshot of the exact frame. <em>(Easter Egg: Hold <strong>Alt</strong> while clicking to capture it in pure Black & White!)</em></li>
+        <li><strong>The Snapshot Engine:</strong> Click the Camera icon or press <strong>s</strong> to screenshot a high-res image of the exact frame. <em>(Easter Egg: Double-Click or press <strong>Alt + s</strong> to capture in pure Black & White!)</em></li>
+        <li><strong>Ultra-readable Time:</strong> Click the time display or press <strong>q</strong> to toggle between elapsed time and remaining time. <em>(Easter Egg: Double-Click or press <strong>z</strong> to display the time in different formats!)</em></li>
         <li><strong>Floating Miniplayer:</strong> Start playing a video and just scroll down the page. TVP will automatically detach into a draggable miniplayer so you never miss a second.</li>
         <li><strong>Custom Picture-in-Picture:</strong> We bypassed standard browser limits to give you a floating player that actually keeps all your custom UI controls intact.</li>
       </ul>
@@ -2076,7 +2295,7 @@
           innerHTML: `<span class="tmg-video-touch-brightness-content tmg-video-touch-vb-content">0</span><div class="tmg-video-touch-brightness-slider tmg-video-touch-vb-slider"></div><span><svg viewBox="0 0 25 25" class="tmg-video-brightness-high-icon"><path transform="translate(1.5, 1.5)" style="scale: 1.05;" d="M10 14.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h3a1 1 0 0 1 0 2h-3a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm0-15a1 1 0 0 1 1 1v3a1 1 0 0 1-2 0v-3a1 1 0 0 1 1-1zm-9 9h3a1 1 0 1 1 0 2H1a1 1 0 0 1 0-2zm13.95 4.535l2.121 2.122a1 1 0 0 1-1.414 1.414l-2.121-2.121a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-2.12 2.12a1 1 0 1 1-1.415-1.413l2.121-2.122a1 1 0 0 1 1.414 0zM17.071 3.787a1 1 0 0 1 0 1.414L14.95 7.322a1 1 0 0 1-1.414-1.414l2.12-2.121a1 1 0 0 1 1.415 0zm-12.728 0l2.121 2.121A1 1 0 1 1 5.05 7.322L2.93 5.201a1 1 0 0 1 1.414-1.414z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-brightness-low-icon"><path transform="translate(3.25, 3.25)" style="scale: 1.05;" d="M8 12.858a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6-5h1a1 1 0 0 1 0 2h-1a1 1 0 0 1 0-2zm-6 6a1 1 0 0 1 1 1v1a1 1 0 0 1-2 0v-1a1 1 0 0 1 1-1zm0-13a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zm-7 7h1a1 1 0 1 1 0 2H1a1 1 0 1 1 0-2zm11.95 4.535l.707.708a1 1 0 1 1-1.414 1.414l-.707-.707a1 1 0 0 1 1.414-1.415zm-8.486 0a1 1 0 0 1 0 1.415l-.707.707A1 1 0 0 1 2.343 13.1l.707-.708a1 1 0 0 1 1.414 0zm9.193-9.192a1 1 0 0 1 0 1.414l-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0zm-9.9 0l.707.707A1 1 0 1 1 3.05 5.322l-.707-.707a1 1 0 0 1 1.414-1.414z"></path></svg><svg viewBox="0 0 25 25" class="tmg-video-brightness-dark-icon"><path transform="translate(2, 2.5)" style="scale: 1.2;" d="M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM8.5 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm0 11a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm5-5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm-11 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm9.743-4.036a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm-7.779 7.779a.5.5 0 1 1-.707-.707.5.5 0 0 1 .707.707zm7.072 0a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707zM3.757 4.464a.5.5 0 1 1 .707-.707.5.5 0 0 1-.707.707z"></path></svg></span>`
         }),
         expandminiplayer: tmg.createEl("button", { className: "tmg-video-miniplayer-expand-btn", innerHTML: `<svg class="tmg-video-miniplayer-expand-icon" viewBox="0 -960 960 960" data-control-title="Expand miniplayer" style="scale: 0.9; rotate: 90deg;"><path d="M120-120v-320h80v184l504-504H520v-80h320v320h-80v-184L256-200h184v80H120Z"/></svg>` }, { draggableControl: "", controlId: "expandminiplayer" }),
-        removeminiplayer: tmg.createEl("button", { className: "tmg-video-miniplayer-remove-btn", innerHTML: `<svg class="tmg-video-miniplayer-remove-icon" viewBox="0 -960 960 960" data-control-title="Remove miniplayer"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>` }, { draggableControl: "", controlId: "removeminiplayer" }),
+        removeminiplayer: tmg.createEl("button", { className: "tmg-video-miniplayer-remove-btn", innerHTML: `<svg class="tmg-video-miniplayer-remove-icon" viewBox="0 -960 960 960" data-control-title="Remove miniplayer (Escape)"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>` }, { draggableControl: "", controlId: "removeminiplayer" }),
         capture: tmg.createEl("button", { className: "tmg-video-capture-btn", innerHTML: `<svg viewBox="0 0 24 24" class="tmg-video-capture-icon" data-control-title="Capture${k["capture"]} \u2194 DblClick\u2192B&W (+alt)"><path fill-rule="evenodd" d="M6.937 5.845c.07-.098.15-.219.25-.381l.295-.486C8.31 3.622 8.913 3 10 3h4c1.087 0 1.69.622 2.518 1.978l.295.486c.1.162.18.283.25.381q.071.098.12.155H20a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3h2.816q.05-.057.121-.155M4 8a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-3c-.664 0-1.112-.364-1.56-.987a8 8 0 0 1-.329-.499c-.062-.1-.27-.445-.3-.492C14.36 5.282 14.088 5 14 5h-4c-.087 0-.36.282-.812 1.022-.029.047-.237.391-.3.492a8 8 0 0 1-.327.5C8.112 7.635 7.664 8 7 8zm15 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-7 7a5 5 0 1 1 0-10 5 5 0 0 1 0 10m0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>` }, { draggableControl: "", controlId: "capture" }),
         fullscreenorientation: tmg.createEl(
           "button",
@@ -2286,8 +2505,8 @@
       this.observeResize(), this.observeIntersection();
       this.setUpSvgs();
       this.setVideoEventListeners(), this.setControlsEventListeners();
-      this.plugMedia(), this.plugLightState(), this.plugVolumeSettings(), this.plugBrightnessSettings(), this.plugPlaybackRateSettings(), this.plugCaptionsSettings();
-      this.plugTimeSettings(), this.plugModesSettings(), this.plugKeysSettings(), this.plugToastsSettings(), this.plugLocked();
+      this.plugMedia(), this.plugTimeSettings(), this.plugLightState(), this.plugVolumeSettings(), this.plugBrightnessSettings(), this.plugPlaybackRateSettings();
+      this.plugCaptionsSettings(), this.plugModesSettings(), this.plugKeysSettings(), this.plugToastsSettings(), this.plugLocked();
       this[`toggle${tmg.capitalize(this.config.initialMode)}Mode`]?.(true);
       !this.video.currentSrc && this._handleLoadedError();
       this._handleLoadStart();
@@ -2657,7 +2876,7 @@
       this.pseudoVideoContainer.parentElement?.replaceChild(destroy ? this.video : this.videoContainer, this.pseudoVideoContainer);
       !destroy && setTimeout(() => this.mutatingDOMM = false);
     }
-    async getVideoFrame(display, time = this.currentTime, raw = false, min = 0, video = this.pseudoVideo) {
+    async getVideoFrame(display, time = this.settings.time.value, raw = false, min = 0, video = this.pseudoVideo) {
       if (video !== this.video) {
         await this.frameReadyPromise;
         if (Math.abs(video.currentTime - time) > 0.01 || !video.readyState) {
@@ -2675,7 +2894,7 @@
       const blob = (this.exportCanvas.width || this.exportCanvas.height) && await new Promise((res) => this.exportCanvas.toBlob(res));
       return { blob, url: blob && URL.createObjectURL(blob) };
     }
-    async captureVideoFrame(display = "", time = this.currentTime) {
+    async captureVideoFrame(display = "", time = this.settings.time.value) {
       this.notify("capture");
       const tTxt = tmg.formatMediaTime({ time, format: "human", showMs: true }), fTxt = `video frame ${display === "monochrome" ? "in b&w " : ""}at ${tTxt}`, frameToastId = this.toast?.loading(`Capturing ${fTxt}...`, { delay: tmg.parseCSSTime(this.settings.css.notifiersAnimationTime), image: TMG_VIDEO_ALT_IMG_SRC, tag: `tmg-${this.config.media.title ?? "Video"}fcpa${tTxt}${display}` }), frame = await this.getVideoFrame(display, time, false, 0, this.video), filename = `${this.config.media.title ?? "Video"}_${display === "monochrome" ? `black&white_` : ""}at_${tTxt}.png`.replace(/[\/:*?"<>|\s]+/g, "_");
       const Save = () => {
@@ -2692,7 +2911,7 @@
       };
       frame?.url ? this.toast?.success(frameToastId, { render: `Captured ${fTxt}`, image: frame.url, autoClose: this.settings.toasts.captureAutoClose, actions: { Save, Share }, onClose: () => URL.revokeObjectURL(frame.url) }) : this.toast?.error(frameToastId, { render: `Failed capturing ${fTxt}` });
     }
-    async findGoodFrameTime({ time: t = this.currentTime, secondsLimit: s = 25, saturation: sat = 12, brightness: bri = 40 }) {
+    async findGoodFrameTime({ time: t = this.settings.time.value, secondsLimit: s = 25, saturation: sat = 12, brightness: bri = 40 }) {
       const end = tmg.clamp(0, t + s, this.duration);
       for (; t <= end; t += 0.333) {
         const rgb = await tmg.getDominantColor((await this.getVideoFrame("", t, true, 1)).canvas, "rgb", true);
@@ -2751,7 +2970,7 @@
       if (t007.dialog?.isActive?.(`${this.id}-error-dialog`)) return;
       const res = await t007.confirm(mssg, { id: `${this.id}-error-dialog`, rootElement: this.DOM.videoContainerContent, confirmText: "Try Again", cancelText: "Dismiss" });
       if (res === true) {
-        const time = this.currentTime;
+        const time = this.video.currentTime;
         this.video.load(), this.settings.time.value = time, this.togglePlay(true);
       } else if (res !== "recovered") this.deactivate(mssg);
     }
@@ -2781,12 +3000,12 @@
       this.DOM.timelineContainer?.setAttribute("aria-valuemax", Math.floor(this.duration));
     };
     _handleLoadedProgress() {
-      for (let i = 0; i < this.video.buffered.length; i++) if (this.video.buffered.start(this.video.buffered.length - 1 - i) < this.currentTime) return this.settings.css.currentBufferedPosition = this.video.buffered.end(this.video.buffered.length - 1 - i) / this.duration;
+      for (let i = 0; i < this.video.buffered.length; i++) if (this.video.buffered.start(this.video.buffered.length - 1 - i) < this.settings.time.value) return this.settings.css.currentBufferedPosition = this.video.buffered.end(this.video.buffered.length - 1 - i) / this.duration;
     }
     togglePlay = async (bool) => await this.video[("boolean" === typeof bool ? bool : this.video.paused) ? "play" : "pause"]();
     replay = () => (this.settings.time.value = 0, this.video.play());
     // ! - start is 0 and falsy
-    previousVideo = () => this.currentTime >= 3 ? this.replay() : this.config.playlist && this.currentPlaylistIndex > 0 && this.movePlaylistTo(this.currentPlaylistIndex - 1, true);
+    previousVideo = () => this.settings.time.value >= 3 ? this.replay() : this.config.playlist && this.currentPlaylistIndex > 0 && this.movePlaylistTo(this.currentPlaylistIndex - 1, true);
     nextVideo = () => this.config.playlist && this.currentPlaylistIndex < this.config.playlist.length - 1 && this.movePlaylistTo(this.currentPlaylistIndex + 1, true);
     movePlaylistTo(index, shouldPlay) {
       if (!this.config.playlist) return this.setControlsState("playlist");
@@ -2806,7 +3025,7 @@
     autonextVideo() {
       if (!this.loaded || !this.config.playlist || this.settings.auto.next < 0 || !this.canAutoMovePlaylist || this.currentPlaylistIndex >= this.config.playlist.length - 1 || this.video.paused || this.buffering) return;
       this.canAutoMovePlaylist = false;
-      const count = tmg.clamp(1, Math.round((this.settings.time.end ?? this.duration) - this.currentTime), this.settings.auto.next), v = this.config.playlist[this.currentPlaylistIndex + 1];
+      const count = tmg.clamp(1, Math.round((this.settings.time.end ?? this.duration) - this.settings.time.value), this.settings.auto.next), v = this.config.playlist[this.currentPlaylistIndex + 1];
       const nVTId = this.toast?.("", {
         autoClose: count * 1e3,
         hideProgressBar: false,
@@ -2824,7 +3043,7 @@
         onClose: (timeElapsed) => (removeListeners(), timeElapsed && this.nextVideo()),
         tag: "tmg-anvi"
       });
-      const cleanUpWhenNeeded = () => !this.video.ended && cleanUp(), autoCleanUpToast = () => Math.floor((this.settings.time.end ?? this.duration) - this.currentTime) > this.settings.auto.next && cleanUp(), cleanUp = (permanent = false) => (t007.toast.dismiss(nVTId, "instant"), this.nextVideoPreview = null, this.canAutoMovePlaylist = !permanent), removeListeners = () => ["timeupdate", "pause", "waiting"].forEach((e, i) => this.video.removeEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
+      const cleanUpWhenNeeded = () => !this.video.ended && cleanUp(), autoCleanUpToast = () => Math.floor((this.settings.time.end ?? this.duration) - this.settings.time.value) > this.settings.auto.next && cleanUp(), cleanUp = (permanent = false) => (t007.toast.dismiss(nVTId, "instant"), this.nextVideoPreview = null, this.canAutoMovePlaylist = !permanent), removeListeners = () => ["timeupdate", "pause", "waiting"].forEach((e, i) => this.video.removeEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
       ["timeupdate", "pause", "waiting"].forEach((e, i) => this.video.addEventListener(e, !i ? autoCleanUpToast : cleanUpWhenNeeded));
       const nVP = this.nextVideoPreview = this.queryDOM(".tmg-video-next-preview");
       nVP?.toggleAttribute("poster", v.media?.artwork?.[0]?.src);
@@ -2867,17 +3086,9 @@
     get duration() {
       return tmg.safeNum(this.video.duration);
     }
-    get currentTime() {
-      return tmg.safeNum(this.video.currentTime);
-    }
     plugTimeSettings() {
-      this.config.watch(
-        "settings.time.value",
-        (value) => {
-          this.video.currentTime = tmg.safeNum(tmg.clamp(this.settings.time.min, value, this.settings.time.max));
-        },
-        { immediate: true }
-      );
+      this.config.get("settings.time.value", () => tmg.safeNum(this.video.currentTime));
+      this.config.watch("settings.time.value", (value) => this.video.currentTime = tmg.safeNum(tmg.clamp(this.settings.time.min, value, this.settings.time.max)), { immediate: "auto" });
       this.config.set("settings.time.previews", (value, _, { target: { oldValue } }) => tmg.isObj(value) && tmg.isObj(oldValue) ? tmg.mergeObjs(oldValue, value) : value);
       this.config.on(
         "settings.time.previews",
@@ -2981,10 +3192,10 @@
     _handleGestureTimelineInput({ percent, sign, multiplier }) {
       multiplier = multiplier.toFixed(1);
       percent = percent * multiplier;
-      const time = sign === "+" ? this.currentTime + percent * this.duration : this.currentTime - percent * this.duration;
+      const time = sign === "+" ? this.settings.time.value + percent * this.duration : this.settings.time.value - percent * this.duration;
       this.gestureNextTime = tmg.clamp(0, time, this.duration);
       if (this.overTimeline) this.settings.time.value = this.gestureNextTime;
-      this.DOM.touchTimelineNotifier.textContent = `${sign}${this.toTimeText(Math.abs(this.gestureNextTime - this.currentTime))} (${this.toTimeText(this.gestureNextTime, true)}) ${multiplier < 1 ? `x${multiplier}` : ""}`;
+      this.DOM.touchTimelineNotifier.textContent = `${sign}${this.toTimeText(Math.abs(this.gestureNextTime - this.settings.time.value))} (${this.toTimeText(this.gestureNextTime, true)}) ${multiplier < 1 ? `x${multiplier}` : ""}`;
     }
     _handleTimelineKeyDown(e) {
       switch (e.key?.toLowerCase()) {
@@ -3001,7 +3212,7 @@
       }
     }
     _handleTimeUpdate() {
-      const t = { c: this.currentTime, vc: this.video.currentTime, d: this.duration, s: this.settings };
+      const t = { c: this.settings.time.value, vc: this.video.currentTime, d: this.duration, s: this.settings };
       this.video.paused && this._handleTimeUpdateLoop(false, t.vc, t.s);
       if (t.c < t.s.time.min || t.c > t.s.time.max) this.settings.time.value = t.s.time.loop ? t.s.time.min : t.c, !t.s.time.loop && this.togglePlay(false);
       this.DOM.currentTimeElement.textContent = this.toTimeText(t.vc, true);
@@ -3036,7 +3247,7 @@
     }
     skip(duration) {
       const notifier = duration > 0 ? this.DOM.fwdNotifier : this.DOM.bwdNotifier;
-      duration = duration > 0 ? this.duration - this.currentTime > duration ? duration : this.duration - this.currentTime : duration < 0 ? this.currentTime > Math.abs(duration) ? duration : -this.currentTime : 0;
+      duration = duration > 0 ? this.duration - this.settings.time.value > duration ? duration : this.duration - this.settings.time.value : duration < 0 ? this.settings.time.value > Math.abs(duration) ? duration : -this.settings.time.value : 0;
       this.settings.css.currentPlayedPosition = this.settings.css.currentThumbPosition = tmg.safeNum((this.settings.time.value += duration) / this.video.duration);
       if (this.skipPersist) {
         if (this.currentSkipNotifier && notifier !== this.currentSkipNotifier) this.skipDuration = 0, this.currentSkipNotifier.classList.remove("tmg-video-control-persist");
@@ -3077,7 +3288,7 @@
       this.stats = { ...m, now, fps, droppedFrames };
       this.frameCallbackId = this.video.requestVideoFrameCallback?.(this._handleFrameUpdate);
     }
-    moveVideoFrame = (dir = "forwards") => this.video.paused && this.throttle("frameStepping", () => this.settings.time.value = tmg.clamp(0, Math.round(this.currentTime * this.pfps) + (dir === "backwards" ? -1 : 1), Math.floor(this.duration * this.pfps)) / this.pfps, this.pframeDelay);
+    moveVideoFrame = (dir = "forwards") => this.video.paused && this.throttle("frameStepping", () => this.settings.time.value = tmg.clamp(0, Math.round(this.settings.time.value * this.pfps) + (dir === "backwards" ? -1 : 1), Math.floor(this.duration * this.pfps)) / this.pfps, this.pframeDelay);
     plugPlaybackRateSettings() {
       this.config.watch("settings.playbackRate.value", (value, { target: { object } }) => this.video.playbackRate = this.video.defaultPlaybackRate = tmg.clamp(object.min, value, object.max));
       this.config.watch("settings.playbackRate.min", (min, { target: { object } }) => object.value < min && (object.value = min));
@@ -3251,7 +3462,7 @@
     _handleCaptionsKaraoke() {
       if (!this.currentKaraokeNodes) return;
       for (const { el, time } of this.currentKaraokeNodes) {
-        const isPast = this.currentTime > time;
+        const isPast = this.settings.time.value > time;
         el.toggleAttribute("data-past", isPast), el.toggleAttribute("data-future", !isPast);
       }
     }
@@ -4203,6 +4414,8 @@
     _mutationSet: /* @__PURE__ */ new WeakSet(),
     _mutationId: null,
     _currentFullscreenController: null,
+    PersistModule,
+    IndexedDBAdapter,
     TimeTravelModule,
     TimeTravelOverlay,
     async timeTravel() {
@@ -4211,7 +4424,7 @@
         const con = tmg.Controllers[i];
         if (con.config.__Reactor__.modules?.has(window[`TTM${n + 1}`])) continue;
         con.config.use(window[`TTM${++n}`] = new TimeTravelModule({ blacklist: ["settings.css.syncWithMedia"] }));
-        window[`TTO${n}`] = new TimeTravelOverlay(window[`TTM${n}`], { title: `TMG Controller ${n} Time` });
+        window[`TTO${n}`] = new TimeTravelOverlay(window[`TTM${n}`], { title: `TMG Controller ${n} Tape` });
         con.config.watch("settings.css.brandColor", (v) => window[`TTO${n}`].config.color = v, { immediate: true });
       }
     },

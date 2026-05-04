@@ -1,5 +1,5 @@
-@use "./_container.css" as *;
-@use "./_video.css" as *;
-@use "./_center-zone.css" as *;
-@use "./_top-zone.css" as *;
-@use "./_bottom-zone.css" as *;
+@forward "./_container.css";
+@forward "./_video.css";
+@forward "./_center-zone.css";
+@forward "./_top-zone.css";
+@forward "./_bottom-zone.css";

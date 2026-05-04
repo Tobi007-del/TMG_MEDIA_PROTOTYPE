@@ -21,8 +21,7 @@ export class TimeAndDurationButton extends BaseComponent<TimeAndDurationConfig, 
     this.bridge = createEl("span", { className: "tmg-video-time-bridge" });
     this.duration = createEl("span", { className: "tmg-video-duration-time" });
     // DOM Injection
-    this.element.append(this.time, this.bridge, this.duration);
-    return this.element;
+    return this.element.append(this.time, this.bridge, this.duration), this.element;
   }
 
   public override wire(): void {
@@ -45,17 +44,17 @@ export class TimeAndDurationButton extends BaseComponent<TimeAndDurationConfig, 
     this.plug?.rotateFormat();
   }
 
-  protected syncUI(): void {
+  public syncUI(): void {
     this.bridge.textContent = { digital: "/", human: "of", "human-long": "out of" }[this.ctlr.settings.time.format] || "/";
-    (this.syncTime(), this.syncDuration());
+    this.syncTime(), this.syncDuration();
   }
-  protected syncTime(): void {
+  public syncTime(): void {
     this.time.textContent = this.plug?.toTimeText(this.media.state.currentTime, true) || "-:--";
   }
-  protected syncDuration(): void {
+  public syncDuration(): void {
     this.duration.textContent = this.plug?.toTimeText(this.media.status.duration) || "--:--";
   }
-  protected syncARIA() {
+  public syncARIA() {
     this.state.label = `Show ${this.plug?.nextMode} time`;
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.timeMode);
     this.el.title = `Switch (mode${this.state.cmd} / DblClick→format${formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.timeFormat)})`;

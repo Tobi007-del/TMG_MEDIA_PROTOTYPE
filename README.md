@@ -14,7 +14,7 @@
 
 I am currently completely re-architecting the web video experience from the ground up. 
 
-The next generation of **TMG Media Player** is actively in development. We are stripping away the bloated frameworks and building a zero-dependency, hardware-accelerated, highly customizable video engine powered by the experimental [S.I.A. Data DOM Architecture](https://github.com/Tobi007-del/sia-reactor).
+The next generation of **TMG Media Player** is actively in development. We are stripping away the bloated frameworks and building a hardware-accelerated, highly customizable video engine powered by the experimental [S.I.A. Data DOM Architecture](https://github.com/Tobi007-del/sia-reactor).
 
 ### What's cooking in the lab?
 - 🌊 Physics-driven gesture controls

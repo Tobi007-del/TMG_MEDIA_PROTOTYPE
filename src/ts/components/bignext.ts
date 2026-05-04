@@ -14,7 +14,7 @@ export class BigNextButton extends BaseComponent<BigNextConfig, ComponentState, 
 
   public override create() {
     this.element = createEl("button", { className: "tmg-video-big-next-btn", type: "button", innerHTML: IconRegistry.get("next") }, { draggableControl: "", dragId: "big", controlId: this.name });
-    return (this.hide(), this.element);
+    return this.hide(), this.element;
   }
 
   public override wire(): void {
@@ -29,10 +29,10 @@ export class BigNextButton extends BaseComponent<BigNextConfig, ComponentState, 
     this.plug?.next();
   }
 
-  protected syncUI(): void {
-    (this[this.ctlr.config.playlist && this.ctlr.config.playlist.length > 1 ? "show" : "hide"](), this[(this.plug?.atLast ?? true) ? "disable" : "enable"]());
+  public syncUI(): void {
+    this[this.ctlr.config.playlist && this.ctlr.config.playlist.length > 1 ? "show" : "hide"](), this[this.plug?.atLast ?? true ? "disable" : "enable"]();
   }
-  protected syncARIA(): void {
+  public syncARIA(): void {
     this.state.label = "Next";
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.next);
     this.el.title = this.state.label + this.state.cmd;

@@ -30,7 +30,7 @@ export class PrevButton extends BaseComponent<PrevConfig, ComponentState, HTMLBu
     this.plug?.previous();
   }
 
-  protected syncARIA(): void {
+  public syncARIA(): void {
     this.state.label = "Previous";
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.prev);
     this.el.title = this.state.label + this.state.cmd;

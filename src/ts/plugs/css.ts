@@ -22,7 +22,7 @@ export class CSSPlug extends BasePlug<Css> {
     // Ctlr Config Getters
     this.ctlr.config.get("*", (val, { target: { key, path } }: any) => {
       if (!path.startsWith("settings.css.") || path.includes("sync")) return val;
-      return ((this._cache[key] ||= val = this.get(key)), val);
+      return (this._cache[key] ||= val = this.get(key)), val;
     });
     // ---- Media Watchers
     this.media.watch("status.videoWidth", this.syncAspectRatio, { signal: this.signal, immediate: true });
@@ -78,7 +78,7 @@ export class CSSPlug extends BasePlug<Css> {
     this[this.classKeys.includes(key) ? "setClassValue" : "setCssVariable"](key, value);
   }
 
-  protected syncAspectRatio() {
+  public syncAspectRatio() {
     const { videoWidth: w, videoHeight: h } = this.media.status;
     this.ctlr.settings.css.aspectRatio = w && h ? `${w} / ${h}` : "16 / 9";
   }

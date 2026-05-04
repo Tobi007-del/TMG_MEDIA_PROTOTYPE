@@ -46,7 +46,7 @@
   min-height: 150px;
   min-width: 170px;
   max-height: 35dvh;
-  max-width: min(50dvw, 400px);
+  max-width: min(400px, 50dvw);
   aspect-ratio: var(--tmg-video-aspect-ratio);
 }
 .tmg-media-container.tmg-video-floating-player .tmg-media {

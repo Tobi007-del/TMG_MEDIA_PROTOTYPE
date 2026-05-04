@@ -30,7 +30,7 @@ export class CaptureButton extends BaseComponent<CaptureConfig, ComponentState, 
     this.plug?.captureFrame("monochrome");
   }
 
-  protected syncARIA(): void {
+  public syncARIA(): void {
     this.state.label = "Capture frame";
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.capture);
     this.el.title = `Capture${this.state.cmd} ↔ DblClick→B&W (+alt)`;

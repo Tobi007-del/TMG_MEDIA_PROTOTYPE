@@ -27,7 +27,7 @@ export class PictureInPictureButton extends BaseComponent<PictureInPictureConfig
     this.media.intent.pictureInPicture = !this.media.state.pictureInPicture;
   }
 
-  protected syncARIA(): void {
+  public syncARIA(): void {
     this.state.label = this.media.state.pictureInPicture ? "Exit picture in picture" : "Picture in picture";
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.pictureInPicture);
     this.el.title = this.state.label + this.state.cmd;

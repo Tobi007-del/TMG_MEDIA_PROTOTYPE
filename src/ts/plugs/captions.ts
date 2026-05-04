@@ -47,7 +47,7 @@ export class CaptionsPlug extends BasePlug<Captions> {
     this.iView = ComponentRegistry.init<CaptionsView>("captions", this.ctlr);
     if (this.view) this.ctlr.DOM.captionsContainer = this.view.element;
     // DOM Injection
-    (this.view?.mount(), this.iView?.mount());
+    this.view?.mount(), this.iView?.mount();
   }
 
   public override wire(): void {
@@ -64,7 +64,7 @@ export class CaptionsPlug extends BasePlug<Captions> {
     this.ctlr.config.on("settings.captions.font.size.min", this.handleFontSizeMin, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.captions.font.size.max", this.handleFontSizeMax, { signal: this.signal, immediate: true });
     // Post Wiring
-    (this.ctlr.settings.css.currentCaptionsX, this.ctlr.settings.css.currentCaptionsY); // Read once so CSSPlug can cache computed values.
+    this.ctlr.settings.css.currentCaptionsX, this.ctlr.settings.css.currentCaptionsY; // Read once so CSSPlug can cache computed values.
     const keys = this.ctlr.plug<KeysPlug>("keys");
     keys?.register("captions", this.toggleCaptions, { phase: "keyup" });
     // JS: return this.media.status.textTracks[this.media.state.currentTextTrack] && this.notify("captions");
@@ -82,7 +82,7 @@ export class CaptionsPlug extends BasePlug<Captions> {
 
   protected handleVisible({ value }: REvent<CtlrConfig, "settings.captions.visible">): void {
     const cssPlug = this.ctlr.plug<CSSPlug>("css");
-    ((this.ctlr.settings.css.currentCaptionsX = cssPlug?._cache.currentCaptionsX!), (this.ctlr.settings.css.currentCaptionsY = cssPlug?._cache.currentCaptionsY!));
+    (this.ctlr.settings.css.currentCaptionsX = cssPlug?._cache.currentCaptionsX!), (this.ctlr.settings.css.currentCaptionsY = cssPlug?._cache.currentCaptionsY!);
     if (!this.media.status.textTracks[this.media.state.currentTextTrack]) return;
     !value ? this.ctlr.videoContainer.classList.add("tmg-video-captions") : this.ctlr.videoContainer.classList.remove("tmg-video-captions", "tmg-video-captions-preview");
     !value && this.iView?.preview({ text: `${this.media.status.textTracks[this.media.state.currentTextTrack]?.label} ${this.ctlr.videoContainer.dataset.trackKind} \n Click ⚙ for settings`, region: { viewportAnchorX: 10, viewportAnchorY: 10 } });
@@ -125,7 +125,7 @@ export class CaptionsPlug extends BasePlug<Captions> {
     this.view && this.ctlr.config.stall(this.view.preview);
   }
 
-  protected syncUI(): void {
+  public syncUI(): void {
     this.ctlr.videoContainer.classList.toggle("tmg-video-captions", this.media.status.textTracks.length > 0 && !this.config.visible);
     this.ctlr.videoContainer.dataset.trackKind = this.media.status.textTracks[this.media.state.currentTextTrack]?.kind || "captions";
     // JS: this.ctlr.setControlsState("captions");

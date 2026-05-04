@@ -1,12 +1,13 @@
 .tmg-video-big-controls-wrapper {
-  --cmptd-big-ctrl-scale-x-pad: var(--cmptd-big-ctrl-scale-pad); /* computed x padding */
+  --cmptd-big-ctrl-scale-x-pad: var(--cmptd-big-ctrl-scale-y-pad); /* computed x padding */
+  top: clamp(calc(var(--cmptd-ctrl-box-y-in-pad) + (var(--cmptd-big-ctrl-scale-height) / 2)), calc(100% - var(--tmg-video-current-bottom-wrapper-height) - var(--cmptd-ctrl-box-y-in-pad) - (var(--cmptd-big-ctrl-scale-height) / 2)), 50%);
   display: none;
   align-items: center;
   gap: calc(var(--tmg-video-current-unit) * 2.75);
-  padding: calc(var(--cmptd-big-ctrl-scale-pad) + var(--cmptd-ctrl-box-x-in-pad)) calc(var(--cmptd-big-ctrl-scale-x-pad) + var(--cmptd-ctrl-box-x-in-pad));
+  padding: calc(var(--cmptd-big-ctrl-scale-y-pad) + var(--cmptd-ctrl-box-x-in-pad)) calc(var(--cmptd-big-ctrl-scale-x-pad) + var(--cmptd-ctrl-box-x-in-pad));
 }
 .tmg-video-big-controls-wrapper:not(:has(.tmg-video-control-hidden)) {
-  --cmptd-big-ctrl-scale-x-pad: calc(var(--cmptd-big-ctrl-scale-pad) / var(--tmg-video-large-scale));
+  --cmptd-big-ctrl-scale-x-pad: calc(var(--cmptd-big-ctrl-scale-y-pad) / var(--tmg-video-large-scale));
 }
 .tmg-video-big-controls-wrapper > * {
   display: none;

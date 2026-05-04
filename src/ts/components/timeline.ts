@@ -114,7 +114,7 @@ export class Timeline extends RangeSlider<TimelineConfig> {
   protected handleErrorStatus({ value }: REvent<CtlrMedia, "status.error">): void {
     if (value) this.bufferedBar.style.width = "0";
   }
-  protected syncValue(auto = true): void {
+  public syncValue(auto = true): void {
     if (auto && !this.ctlr.state.mediaIntersecting) return;
     if (!this.state.scrubbing) this.config.value = safeNum(this.media.state.currentTime / safeNum(this.media.status.duration, 60)) * 100;
   }
@@ -189,10 +189,10 @@ export class Timeline extends RangeSlider<TimelineConfig> {
     }
   }
 
-  protected syncPreviewTime(): void {
+  public syncPreviewTime(): void {
     if (this.plug) this.previewContainer.dataset.previewTime = this.plug.toTimeText(this.config.previewValue, true);
   }
-  protected syncCanvasPreviews(): void {
+  public syncCanvasPreviews(): void {
     if (!this.media.status.loadedData || this.ctlr.state.frameReadyPromise || !this.ctlr.pseudoVideo) return;
     this.ctlr.throttle(
       "canvasPreviewSync",
@@ -207,7 +207,7 @@ export class Timeline extends RangeSlider<TimelineConfig> {
       33
     );
   }
-  protected syncThumbnailSize(): void {
+  public syncThumbnailSize(): void {
     if (!this.thumbnailCanvas || !this.thumbnailImg) return;
     const { width = this.ctlr.videoContainer.offsetWidth, height = this.ctlr.videoContainer.offsetHeight } = getRenderedBox(this.media.element);
     this.ctlr.settings.css.currentThumbnailHeight = height + 1 + "px";

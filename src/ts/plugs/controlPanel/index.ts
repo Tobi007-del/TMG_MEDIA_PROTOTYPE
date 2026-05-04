@@ -85,7 +85,6 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     // Ctlr Config Setters
     this.ctlr.config.set("settings.controlPanel.bottom", (value) => parsePanelBottomObj(value), { immediate: true });
     // ----------- Listeners
-    (["settings.controlPanel.title", "settings.controlPanel.artist", "settings.controlPanel.profile"] as const).forEach((e) => this.ctlr.config.on(e, this.handleMetaLayout, { signal: this.signal, immediate: true }));
     this.ctlr.config.on("settings.controlPanel.top", this.handleTop, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.center", this.handleCenter, { signal: this.signal, immediate: true });
     this.ctlr.config.on("settings.controlPanel.bottom", this.handleBottom, { signal: this.signal, immediate: true });
@@ -97,16 +96,11 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     this.initScrollAndResize();
   }
 
-  protected handleMetaLayout({ target: { key, value } }: REvent<CtlrConfig, "settings.controlPanel.title" | "settings.controlPanel.artist" | "settings.controlPanel.profile">): void {
-    // const meta = this.getCtrl<Meta>("meta");
-    // value !== true && (meta[key][key === "profile" ? "src" : "textContent"] = meta[key].dataset["video" + capitalize(key)] = value || "");
-  }
-
   protected handleTop({ value }: REvent<CtlrConfig, "settings.controlPanel.top">): void {
     if (!value || isBool(value)) return;
     const { left, center, right } = this.getSplitControls(value);
     this.fillSWrapper(this.topW, [(this.cZoneWs.top.left = this.getZoneW(left, this.zoneWs.top.left)), (this.cZoneWs.top.center = this.getZoneW(center, this.zoneWs.top.center)), (this.cZoneWs.top.right = this.getZoneW(right, this.zoneWs.top.right))]);
-    (this.fillZone(this.cZoneWs.top.left, left), this.fillZone(this.cZoneWs.top.center, center), this.fillZone(this.cZoneWs.top.right, right));
+    this.fillZone(this.cZoneWs.top.left, left), this.fillZone(this.cZoneWs.top.center, center), this.fillZone(this.cZoneWs.top.right, right);
   }
 
   protected handleCenter({ value }: REvent<CtlrConfig, "settings.controlPanel.center">): void {
@@ -119,7 +113,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
     ([1, 2, 3] as Row[]).forEach((i) => {
       const { left, center, right } = this.getSplitControls((value as ControlPanelBottomTuple)[i]);
       this.fillSWrapper(this.bottomW.children[i - 1] as HTMLElement, [(this.cZoneWs.bottom[i].left = this.getZoneW(left, this.zoneWs.bottom[i].left)), (this.cZoneWs.bottom[i].center = this.getZoneW(center, this.zoneWs.bottom[i].center)), (this.cZoneWs.bottom[i].right = this.getZoneW(right, this.zoneWs.bottom[i].right))]);
-      (this.fillZone(this.cZoneWs.bottom[i].left, left), this.fillZone(this.cZoneWs.bottom[i].center, center), this.fillZone(this.cZoneWs.bottom[i].right, right));
+      this.fillZone(this.cZoneWs.bottom[i].left, left), this.fillZone(this.cZoneWs.bottom[i].center, center), this.fillZone(this.cZoneWs.bottom[i].right, right);
     });
   }
 
@@ -132,7 +126,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   protected buildWSkel(side: string): ZoneW {
     const zone = createEl("div", { className: `tmg-video-side-controls-wrapper tmg-video-${side}-side-controls-wrapper` }, { dropZone: "", scroller: side === "right" ? "reverse" : "" }),
       cover = createEl("div", { className: `tmg-video-side-controls-wrapper-cover tmg-video-${side}-side-controls-wrapper-cover` });
-    return (cover.append(zone), { cover, zone });
+    return cover.append(zone), { cover, zone };
   }
 
   protected getSplitControls(row: SControl[]): { left: SControl[]; center: SControl[]; right: SControl[] } {
@@ -143,12 +137,12 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   }
 
   protected getZoneW(ids: SControl[], fallback: ZoneW): ZoneSlot {
-    return ids.length === 1 ? (ids.includes("meta") ? (this.getCtrlEl("meta") ?? fallback) : ids.includes("timeline") ? (this.getCtrlEl("timeline") ?? fallback) : fallback) : fallback;
+    return ids.length === 1 ? (ids.includes("meta") ? this.getCtrlEl("meta") ?? fallback : ids.includes("timeline") ? this.getCtrlEl("timeline") ?? fallback : fallback) : fallback;
   }
 
   protected fillSWrapper(wrapper: HTMLElement, zoneWs: ZoneSlot[]): void {
     wrapper.innerHTML = "";
-    wrapper.append(...zoneWs.map((zoneW) => (zoneW instanceof HTMLElement ? zoneW : (zoneW.cover ?? zoneW.zone))));
+    wrapper.append(...zoneWs.map((zoneW) => (zoneW instanceof HTMLElement ? zoneW : zoneW.cover ?? zoneW.zone)));
   }
 
   protected fillZone(zoneW: ZoneSlot, ids: SControl[] | BigControl[]): void {
@@ -159,12 +153,9 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   }
 
   protected initScrollAndResize(): void {
-    // const meta = this.getCtrl<Meta>("meta");
-    // if (meta) this.scrollers.push((initScrollAssist(meta.title, { pxPerSecond: 60, assistClassName: "tmg-video-controls-scroll-assist" }), meta.title));
-    // if (meta) this.scrollers.push((initScrollAssist(meta.artist, { pxPerSecond: 30, assistClassName: "tmg-video-controls-scroll-assist" }), meta.artist));
     this.zonesArr.forEach((zone) => {
       this.handleControlsView(zone);
-      this.scrollers.push((initScrollAssist(zone, { pxPerSecond: 60, assistClassName: "tmg-video-controls-scroll-assist" }), zone));
+      this.scrollers.push((initScrollAssist(zone, { pxPerSecond: 60 }), zone));
       observeResize(zone, () => this.handleControlsView(zone), this.signal);
       zone.addEventListener("scroll", this.handleDirtyScroll, { passive: true, signal: this.signal });
     });
@@ -198,7 +189,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
   protected override onDestroy(): void {
     this.draggable?.destroy();
     this.scrollers.forEach(removeScrollAssist);
-    (this.controls.forEach((instance) => instance.destroy()), this.controls.clear());
+    this.controls.forEach((instance) => instance.destroy()), this.controls.clear();
   }
 }
 

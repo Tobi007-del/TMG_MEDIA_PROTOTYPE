@@ -188,9 +188,9 @@
 .tmg-video-container {
   --t007-ripple-color: rgb(from var(--tmg-video-theme-color) r g b / 0.3);
   --t007-scroll-assist-color: rgb(from var(--tmg-video-curtain-color) r g b/1);
-  --t007-scroll-assist-min-width: calc(var(--tmg-video-current-unit) * 1.05);
-  --t007-scroll-assist-height: var(--tmg-video-current-unit);
-  --t007-scroll-assist-inline-offset: calc(var(--tmg-video-current-unit) * -0.25);
+  --t007-scroll-assist-width: calc(var(--tmg-video-current-unit) * 1.05);
+  --t007-scroll-assist-height: var(--t007-scroll-assist-width);
+  --t007-scroll-assist-inset-x: calc(var(--tmg-video-current-unit) * -0.25);
 }
 .tmg-video-container .t007-toast {
   --t007-toast-type-color: var(--tmg-video-theme-inverse-color);
@@ -230,13 +230,13 @@
   width: 100%;
 }
 .tmg-media-container .t007-input-field {
-  --t007-input-font-size: calc(var(--tmg-video-current-unit) / 1.8);
+  --t007-input-unit: calc(var(--tmg-video-current-unit) / 1.8);
   --t007-input-height: calc(var(--tmg-video-current-unit) * 1.5);
-  --t007-input-color: var(--tmg-video-theme-color);
   --t007-input-border-radius: calc(var(--tmg-video-current-unit) / 2.5);
+  --t007-input-color: var(--tmg-video-theme-color);
 }
 .tmg-media-container:is([data-size-tier^="xx"], .tmg-video-mobile) .t007-input-field {
-  --t007-input-font-size: calc(var(--tmg-video-current-unit) / 1.6);
+  --t007-input-unit: calc(var(--tmg-video-current-unit) / 1.6);
 }
 .tmg-video-container .t007-dialog {
   --t007-dialog-unit: calc(var(--tmg-video-current-unit) / 1.8);
@@ -257,7 +257,8 @@
   --cmptd-ctrl-box-out-nudge: calc(var(--cmptd-ctrl-box-x-in-pad) * 0.25);
   --cmptd-ctrl-box-min-width: calc(var(--cmptd-ctrl-size) + (var(--tmg-video-current-controls-column-gap) * 2));
   --cmptd-ctrl-box-height: calc(var(--cmptd-ctrl-size) + (var(--cmptd-ctrl-box-y-in-pad) * 2));
-  --cmptd-big-ctrl-scale-pad: calc(((var(--tmg-video-big-controls-size) * var(--tmg-video-current-big-controls-scale) * var(--tmg-video-large-scale)) - var(--tmg-video-big-controls-size)) / 2);
+  --cmptd-big-ctrl-scale-height: calc(var(--tmg-video-big-controls-size) * var(--tmg-video-current-big-controls-scale) * var(--tmg-video-large-scale));
+  --cmptd-big-ctrl-scale-y-pad: calc((var(--cmptd-big-ctrl-scale-height) - var(--tmg-video-big-controls-size)) / 2);
   --cmptd-cue-font-factor: (1 + (var(--tmg-video-captions-font-size) - 100) / ((100 * var(--tmg-video-captions-doubling-factor)) - 100));
 }
 .tmg-media-container:is(.tmg-video-mobile, [data-size-tier^="xxxx"]) {

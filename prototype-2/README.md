@@ -539,7 +539,7 @@ player.configure({
 | `f`      | Toggle fullscreen         |
 | `t`      | Toggle theater mode       |
 | `i`      | Toggle picture-in-picture |
-| `e`      | Expand miniplayer        |
+| `e`      | Expand miniplayer         |
 | `Escape` | Exit fullscreen/theater   |
 
 ### Timeline Navigation

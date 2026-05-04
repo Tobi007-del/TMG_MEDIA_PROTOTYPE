@@ -1,6 +1,6 @@
-@use "./_next-preview.css" as *;
-@use "./_locked.css" as *;
-@use "./_notifiers.css" as *;
-@use "./_notifiers.css" as *;
-@use "./_adjust.css" as *;
-@use "./_dragging.css" as *;
+@forward "./_next-preview.css";
+@forward "./_locked.css";
+@forward "./_notifiers.css";
+@forward "./_notifiers.css";
+@forward "./_adjust.css";
+@forward "./_dragging.css";

@@ -27,7 +27,7 @@ export class FullscreenButton extends BaseComponent<FullscreenConfig, ComponentS
     this.media.intent.fullscreen = !this.media.state.fullscreen;
   }
 
-  protected syncARIA(): void {
+  public syncARIA(): void {
     this.state.label = this.media.state.fullscreen ? "Exit full screen" : "Full screen";
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.fullscreen);
     this.el.title = this.state.label + this.state.cmd;

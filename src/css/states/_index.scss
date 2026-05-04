@@ -1,3 +1,3 @@
-@use "./_disabled.css" as *;
-@use "./_override.css" as *;
-@use "./_light.css" as *;
+@forward "./_disabled.css";
+@forward "./_override.css";
+@forward "./_light.css";

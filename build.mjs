@@ -1,6 +1,7 @@
 import esbuild from "esbuild";
 import { sassPlugin } from "esbuild-sass-plugin";
 import { execSync } from "child_process";
+import path from 'node:path';
 
 const isProd = process.env.NODE_ENV === "production" || process.argv.includes("--prod");
 console.log(`Building in ${isProd ? "production" : "development"} mode...`);
@@ -11,7 +12,7 @@ const base = {
   minify: isProd,
   target: ["es2020"],
   platform: "browser",
-  plugins: [sassPlugin()],
+  plugins: [sassPlugin({ loadPaths: [path.resolve(import.meta.dirname, "node_modules")] })],
 };
 
 console.log("Generating IIFE build...");

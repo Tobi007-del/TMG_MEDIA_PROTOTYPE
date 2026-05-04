@@ -89,7 +89,7 @@
 .tmg-video-playback-rate-notifier,
 .tmg-video-scrub-notifier,
 .tmg-video-cancel-scrub-notifier {
-  top: min(5%, var(--tmg-video-current-unit));
+  top: min(var(--tmg-video-current-unit), 5%);
   min-width: calc(var(--tmg-video-current-unit) * 1.3);
 }
 .tmg-video-playback-rate-notifier:not(.tmg-video-rewind)::before,

@@ -79,15 +79,11 @@ export class ModesMiniplayerPin extends BasePin<ModesPlug, ModesMiniplayer> {
   }
 
   public expand(): void {
-    if (!this.ctlr.videoContainer.classList.contains("tmg-video-miniplayer")) return;
-    this.exit("smooth");
-    this.media.state.miniplayer = false;
+    this.ctlr.videoContainer.classList.contains("tmg-video-miniplayer") && this.exit("smooth");
   }
 
   public remove(): void {
-    this.media.intent.paused = true;
-    this.exit();
-    this.media.state.miniplayer = false;
+    (this.media.intent.paused = true), this.exit();
   }
 
   protected handleDragStart(e: globalThis.Event): void {
@@ -96,10 +92,10 @@ export class ModesMiniplayerPin extends BasePin<ModesPlug, ModesMiniplayer> {
       clientY = (e as MouseEvent).clientY ?? (e as TouchEvent).targetTouches?.[0]?.clientY ?? 0;
     if (!this.ctlr.isUIActive("miniplayer") || target.scrollWidth > target.clientWidth || [this.ctlr.DOM.topControlsWrapper, inBoolArrOpt(this.ctlr.settings.controlPanel.draggable, "big") ? this.ctlr.DOM.bigControlsWrapper : null, this.ctlr.DOM.bottomControlsWrapper, this.ctlr.DOM.captionsContainer].some((w) => w?.contains(target)) || target.closest("[class$='toast-container']")) return;
     const { left, bottom } = getComputedStyle(this.ctlr.videoContainer);
-    ((this.lastMiniplayerPosX = parseFloat(left)), (this.lastMiniplayerPosY = parseFloat(bottom)));
-    ((this.lastMiniplayerPtrX = clientX), (this.lastMiniplayerPtrY = clientY));
-    ((this.nextMiniplayerX = this.ctlr.settings.css.currentMiniplayerX as string), (this.nextMiniplayerY = this.ctlr.settings.css.currentMiniplayerY as string));
-    ((this.wildMiniplayerX = this.nextMiniplayerX), (this.wildMiniplayerY = this.nextMiniplayerY));
+    (this.lastMiniplayerPosX = parseFloat(left)), (this.lastMiniplayerPosY = parseFloat(bottom));
+    (this.lastMiniplayerPtrX = clientX), (this.lastMiniplayerPtrY = clientY);
+    (this.nextMiniplayerX = this.ctlr.settings.css.currentMiniplayerX as string), (this.nextMiniplayerY = this.ctlr.settings.css.currentMiniplayerY as string);
+    (this.wildMiniplayerX = this.nextMiniplayerX), (this.wildMiniplayerY = this.nextMiniplayerY);
     document.addEventListener("mousemove", this.handleDragging, { signal: this.signal });
     document.addEventListener("touchmove", this.handleDragging, { passive: false, signal: this.signal });
     ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach((type) => document.addEventListener(type, this.handleDragEnd, { signal: this.signal }));
@@ -121,8 +117,8 @@ export class ModesMiniplayerPin extends BasePin<ModesPlug, ModesMiniplayer> {
         posX = clamp(w / 2, newX, ww - w / 2),
         posY = clamp(h / 2, newY, wh - h / 2);
       this.ctlr.videoContainer.style.setProperty("transform", `translate(${x - this.lastMiniplayerPtrX}px, ${y - this.lastMiniplayerPtrY}px)`, "important");
-      ((this.nextMiniplayerX = `${(posX / ww) * 100}%`), (this.nextMiniplayerY = `${(posY / wh) * 100}%`));
-      ((this.wildMiniplayerX = `${(newX / ww) * 100}%`), (this.wildMiniplayerY = `${(newY / wh) * 100}%`));
+      (this.nextMiniplayerX = `${(posX / ww) * 100}%`), (this.nextMiniplayerY = `${(posY / wh) * 100}%`);
+      (this.wildMiniplayerX = `${(newX / ww) * 100}%`), (this.wildMiniplayerY = `${(newY / wh) * 100}%`);
     });
   }
 
@@ -134,7 +130,7 @@ export class ModesMiniplayerPin extends BasePin<ModesPlug, ModesMiniplayer> {
     this.ctlr.videoContainer.style.removeProperty("transform");
     setTimeout(
       () => {
-        ((this.ctlr.settings.css.currentMiniplayerX = this.nextMiniplayerX), (this.ctlr.settings.css.currentMiniplayerY = this.nextMiniplayerY));
+        (this.ctlr.settings.css.currentMiniplayerX = this.nextMiniplayerX), (this.ctlr.settings.css.currentMiniplayerY = this.nextMiniplayerY);
         ["transition", "left", "bottom"].forEach((prop) => this.ctlr.videoContainer.style.removeProperty(prop));
       },
       0,

@@ -110,10 +110,7 @@ export interface MediaStatus {
   videoTracks: unknown[]; // | VideoTrackList
   levels: unknown[];
   // --- VR / XR Info ---
-  xrCapabilities: Record<
-    "hasPosition" | "hasOrientation" | "isEmulated", // 6DoF- Room-scale, 3DoF- Head rotation, Emulated- Magic Window
-    boolean
-  > | null;
+  xrCapabilities: Record<"hasPosition" | "hasOrientation" | "isEmulated", boolean> | null; // 6DoF- Room-scale, 3DoF- Head rotation, Emulated- Magic Window
   // --- Active Content ---
   activeCue: Inert<TextTrackCue> | null; // The current subtitle/caption line
 }

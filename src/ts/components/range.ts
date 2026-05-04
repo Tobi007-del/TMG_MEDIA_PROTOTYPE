@@ -26,7 +26,7 @@ export interface RangeState extends ComponentState {
 }
 
 export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends RangeState = RangeState> extends BaseComponent<Reactive<Config>, State> {
-  declare public config: Reactive<Config> & Reactive<RangeConfig>;
+  public declare config: Reactive<Config> & Reactive<RangeConfig>;
   public static readonly componentName: string = "Range";
   public container!: HTMLElement;
   public barsWrapper!: HTMLElement;
@@ -79,7 +79,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
 
   protected handleValue({ value }: REvent<RangeConfig, "value">): void {
     const pos = this.getValueAsPos();
-    (this.syncThumbPos(pos), this.syncBarPos(pos));
+    this.syncThumbPos(pos), this.syncBarPos(pos);
     if (!this.state.scrubbing) this.container.ariaValueNow = String(value);
   }
 
@@ -91,7 +91,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
     const s = window.getComputedStyle(this.container);
     this.isVertical = s.writingMode.includes("vertical");
     this.isRTL = s.direction === "rtl";
-    ((this.lastPtrPos = this.getPos(e)), (this.lastThumbPos = this.getValueAsPos()));
+    (this.lastPtrPos = this.getPos(e)), (this.lastThumbPos = this.getValueAsPos());
     this.handleInput(e);
     this.container.addEventListener("pointermove", this.handleInput, { signal: this.signal });
     this.container.addEventListener("pointerup", this.stopScrubbing, { signal: this.signal });
@@ -161,11 +161,11 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
     }
   };
 
-  protected syncThumbPos(pos: number): void {
+  public syncThumbPos(pos: number): void {
     this.thumbIndicator.style.cssText = `${this.isVertical ? "inset-block-end" : "inset-inline-start"}: ${pos * 100}%`;
     // this.thumbIndicator.style.transform = this.isVertical ? `translateY(-${pos * 100}%)` : `translateX(${pos * 100}%)`;
   }
-  protected syncBarPos(pos: number): void {
+  public syncBarPos(pos: number): void {
     this.valueBar.style.cssText = `${this.isVertical ? "block-size" : "inline-size"}: ${pos * 100}%`;
     // this.valueBar.style.transform = this.isVertical ? `scaleY(${pos * 100})` : `scaleX(${pos * 100}%)`;
   }

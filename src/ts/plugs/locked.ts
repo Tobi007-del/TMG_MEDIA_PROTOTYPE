@@ -1,6 +1,6 @@
 import { BasePlug, KeysPlug, OverlayPlug } from ".";
 import type { Controller } from "../core/controller";
-import type { ScreenLocked } from "../components";
+import type { FullscreenLockButton } from "../components";
 import type { CtlrConfig } from "../types/config";
 import type { REvent } from "sia-reactor";
 import { ComponentRegistry } from "../core/registry";
@@ -18,7 +18,7 @@ export class LockedPlug extends BasePlug<Locked, LockedState> {
   public static readonly plugName: string = "locked";
   public lockOverlayDelayId = -1;
   public wrapper!: HTMLDivElement;
-  public control: ScreenLocked | null = null;
+  public control: FullscreenLockButton | null = null;
 
   constructor(ctlr: Controller, config: Locked) {
     super(ctlr, config, { visible: false });
@@ -27,7 +27,7 @@ export class LockedPlug extends BasePlug<Locked, LockedState> {
   public override mount(): void {
     // Variables Assignment
     this.wrapper = createEl("div", { className: "tmg-video-screen-locked-wrapper", innerHTML: `<p>Screen Locked</p><p>Tap to Unlock</p>` });
-    this.control = ComponentRegistry.init<ScreenLocked>("screenlock", this.ctlr);
+    this.control = ComponentRegistry.init<FullscreenLockButton>("screenlock", this.ctlr);
     // DOM Injection
     this.control?.mount();
     this.ctlr.DOM.containerContentWrapper?.append(this.wrapper);

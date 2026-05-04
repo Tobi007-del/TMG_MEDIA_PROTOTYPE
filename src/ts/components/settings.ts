@@ -26,7 +26,7 @@ export class SettingsButton extends BaseComponent<SettingsConfig, ComponentState
     // JS: this.plug?.toggleSettingsView();
   }
 
-  protected syncARIA(): void {
+  public syncARIA(): void {
     this.state.label = "Settings";
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.settings);
     this.el.title = this.state.label + this.state.cmd;

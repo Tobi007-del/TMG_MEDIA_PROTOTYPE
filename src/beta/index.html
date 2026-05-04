@@ -53,7 +53,7 @@
     <button type="button" id="beta-time-travel" onclick="__betaTimeTravel()" style="position: fixed; bottom: 0; right: 0; z-index: 9999">Time travel?</button>
     <script>
       function __betaTimeTravel() {
-        window.tmg?.Controllers && (window.tmg.timeTravel(), document.getElementById("beta-time-travel")?.remove());
+        window.tmg?.Controllers?.length && (window.tmg.timeTravel(), document.getElementById("beta-time-travel")?.remove());
       }
     </script>
   </body>

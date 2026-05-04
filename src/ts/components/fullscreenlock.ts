@@ -36,10 +36,10 @@ export class FullscreenLockButton extends BaseComponent<FullscreenLockConfig, Co
     else this.el.classList.add("tmg-video-control-unlock");
   }
 
-  protected syncUI(): void {
+  public syncUI(): void {
     if (!this.plug?.state.visible) this.el.classList.remove("tmg-video-control-unlock");
   }
-  protected syncARIA(): void {
+  public syncARIA(): void {
     this.el.title = this.state.label = "Unlock Screen";
     this.setBtnARIA();
   }

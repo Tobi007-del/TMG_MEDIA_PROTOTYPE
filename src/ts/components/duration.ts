@@ -28,10 +28,10 @@ export class DurationButton extends BaseComponent<DurationConfig, ComponentState
     this.plug?.rotateFormat();
   }
 
-  protected syncUI(): void {
+  public syncUI(): void {
     this.element.textContent = this.plug?.toTimeText(this.media.status.duration) ?? "--:--";
   }
-  protected syncARIA() {
+  public syncARIA() {
     this.state.label = "Switch time format";
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.time.format);
     this.el.title = this.state.label + this.state.cmd;

@@ -34,10 +34,10 @@ export class TimeButton extends BaseComponent<TimeConfig, ComponentState, HTMLBu
     this.plug?.rotateFormat();
   }
 
-  protected syncUI(): void {
+  public syncUI(): void {
     this.element.textContent = this.plug?.toTimeText(this.media.state.currentTime, true) || "-:--";
   }
-  protected syncARIA() {
+  public syncARIA() {
     this.state.label = `Show ${this.plug?.nextMode} time`;
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.timeMode);
     this.el.title = `Switch (mode${this.state.cmd} / DblClick→format${formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.timeFormat)})`;

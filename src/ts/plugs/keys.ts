@@ -55,10 +55,10 @@ export class KeysPlug extends BasePlug<Keys> {
 
   public unregister(action: string, phase?: KeyPhase): void {
     if (phase) return void delete this.config._handlers[phase][action];
-    (delete this.config._handlers.keydown[action], delete this.config._handlers.keyup[action]);
+    delete this.config._handlers.keydown[action], delete this.config._handlers.keyup[action];
   }
 
-  protected syncKeyEventListeners(): void {
+  public syncKeyEventListeners(): void {
     this.setEventListeners(this.shouldListen() ? "add" : "remove");
   }
 
@@ -140,7 +140,7 @@ export class KeysPlug extends BasePlug<Keys> {
     return this.config.mods.disabled ? "" : e.ctrlKey ? "ctrl" : e.altKey ? "alt" : e.shiftKey ? "shift" : "";
   }
   public getModded(action: ModdedKeyShortcutAction, mod: KeyMod, fallback: number): number {
-    return mod ? (this.config.mods[action]?.[mod] ?? fallback) : fallback;
+    return mod ? this.config.mods[action]?.[mod] ?? fallback : fallback;
   }
 }
 

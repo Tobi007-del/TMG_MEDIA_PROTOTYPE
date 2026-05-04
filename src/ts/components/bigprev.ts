@@ -14,7 +14,7 @@ export class BigPrevButton extends BaseComponent<BigPrevConfig, ComponentState, 
 
   public override create() {
     this.element = createEl("button", { className: "tmg-video-big-prev-btn", type: "button", innerHTML: IconRegistry.get("prev") }, { draggableControl: "", dragId: "big", controlId: this.name });
-    return (this.hide(), this.element);
+    return this.hide(), this.element;
   }
 
   public override wire(): void {
@@ -29,10 +29,10 @@ export class BigPrevButton extends BaseComponent<BigPrevConfig, ComponentState, 
     this.plug?.previous();
   }
 
-  protected syncUI(): void {
-    (this[this.ctlr.config.playlist && this.ctlr.config.playlist.length > 1 ? "show" : "hide"](), this[(this.plug?.atFirst ?? true) ? "disable" : "enable"]());
+  public syncUI(): void {
+    this[this.ctlr.config.playlist && this.ctlr.config.playlist.length > 1 ? "show" : "hide"](), this[this.plug?.atFirst ?? true ? "disable" : "enable"]();
   }
-  protected syncARIA(): void {
+  public syncARIA(): void {
     this.state.label = "Previous";
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.prev);
     this.el.title = this.state.label + this.state.cmd;

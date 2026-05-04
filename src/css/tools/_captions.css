@@ -1,13 +1,16 @@
 .tmg-video-captions-container {
   --f-f: var(--cmptd-cue-font-factor);
+  --cmptd-cue-font-size: calc(var(--tmg-video-captions-font-size-base) * var(--f-f));
+  --cmptd-cue-box-floor: calc(var(--tmg-video-current-captions-offset-bottom) + (var(--tmg-video-current-captions-container-height) / 2));
+  --cmptd-cue-box-ceil: calc(100% - (var(--tmg-video-current-captions-offset-top) + (var(--tmg-video-current-captions-container-height) / 2)));
   display: none;
   position: absolute;
-  bottom: clamp(var(--tmg-video-current-captions-offset-bottom) + calc(var(--tmg-video-current-captions-container-height) / 2), var(--tmg-video-current-captions-y), calc(100% - (var(--tmg-video-current-captions-offset-top) + (var(--tmg-video-current-captions-container-height) / 2))));
+  bottom: clamp(min(calc(100% - (var(--tmg-video-current-captions-container-height) / 2)), var(--cmptd-cue-box-floor)), var(--tmg-video-current-captions-y), var(--cmptd-cue-box-ceil)); /* offset edgecase handling */
   left: clamp(calc(var(--tmg-video-current-captions-container-width) / 2), var(--tmg-video-current-captions-x), calc(100% - (var(--tmg-video-current-captions-container-width) / 2)));
   translate: -50% 50%;
-  max-height: calc(100% - (var(--tmg-video-current-captions-offset-top) + var(--tmg-video-current-captions-offset-bottom)));
+  max-height: max(calc(0.4em + 5px + (var(--cmptd-cue-font-size) * 1.4)), calc(100% - (var(--tmg-video-current-captions-offset-top) + var(--tmg-video-current-captions-offset-bottom))));
   padding: 0.2em 1em;
-  font-size: calc(var(--tmg-video-captions-font-size-base) * var(--f-f));
+  font-size: var(--cmptd-cue-font-size);
   overflow-y: auto;
   background: rgb(from var(--tmg-video-captions-window-color) r g b / var(--tmg-video-captions-window-opacity));
   touch-action: none;
@@ -44,18 +47,13 @@
   text-align: right;
 }
 .tmg-video-captions-character-edge-style-drop-shadow .tmg-video-captions-container {
-  text-shadow:
-    calc(1px * var(--f-f)) calc(1px * var(--f-f)) calc(1.5px * var(--f-f)) rgb(34, 34, 34),
-    calc(1px * var(--f-f)) calc(1px * var(--f-f)) calc(2px * var(--f-f)) rgb(34, 34, 34),
-    calc(1px * var(--f-f)) calc(1px * var(--f-f)) calc(2.5px * var(--f-f)) rgb(34, 34, 34);
+  text-shadow: calc(1px * var(--f-f)) calc(1px * var(--f-f)) calc(1.5px * var(--f-f)) rgb(34, 34, 34), calc(1px * var(--f-f)) calc(1px * var(--f-f)) calc(2px * var(--f-f)) rgb(34, 34, 34), calc(1px * var(--f-f)) calc(1px * var(--f-f)) calc(2.5px * var(--f-f)) rgb(34, 34, 34);
 }
 .tmg-video-captions-character-edge-style-raised .tmg-video-captions-container {
   text-shadow: calc(1px * var(--f-f)) calc(1px * var(--f-f)) rgb(34, 34, 34);
 }
 .tmg-video-captions-character-edge-style-depressed .tmg-video-captions-container {
-  text-shadow:
-    calc(1px * var(--f-f)) calc(1px * var(--f-f)) rgb(204, 204, 204),
-    calc(-1px * var(--f-f)) calc(-1px * var(--f-f)) rgb(34, 34, 34);
+  text-shadow: calc(1px * var(--f-f)) calc(1px * var(--f-f)) rgb(204, 204, 204), calc(-1px * var(--f-f)) calc(-1px * var(--f-f)) rgb(34, 34, 34);
 }
 .tmg-video-captions-character-edge-style-outline .tmg-video-captions-container {
   --s-s: 0 0 calc(1px * var(--f-f)) rgb(34, 34, 34); /* shadow-step */
