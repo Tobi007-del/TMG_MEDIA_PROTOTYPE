@@ -20,6 +20,8 @@ export class AutoPlug extends BasePlug<Auto> {
   protected canAutoMovePlaylist = true;
 
   public override wire(): void {
+    // Plug Listeners
+    this.ctlr.plug<PlaylistPlug>("playlist")?.state.watch("currentIndex", () => (this.canAutoMovePlaylist = true), { signal: this.signal });
     // Ctlr Config Getters
     this.ctlr.config.get("settings.auto.play", () => this.media.state.autoplay, { signal: this.signal, lazy: true }); // #VIRTUAL: reliable return value
     // ----------- Watchers
@@ -43,7 +45,7 @@ export class AutoPlug extends BasePlug<Auto> {
   }
 
   protected handleMediaParentIntersecting(): void {
-    (this.mediaAptAutoplay(this.config.pause, false), this.mediaAptAutoplay());
+    this.mediaAptAutoplay(this.config.pause, false), this.mediaAptAutoplay();
   }
 
   protected handleNextPreviewUsePoster({ target: { value, object } }: REvent<CtlrConfig, "settings.auto.next.preview.usePoster">): void {

@@ -116,6 +116,7 @@
   cursor: pointer;
 }
 .tmg-video-big-controls-wrapper,
+.tmg-video-buffer,
 .tmg-video-thumbnail,
 .tmg-video-captions-btn::after,
 .tmg-video-thumb-indicator::before {
@@ -125,7 +126,6 @@
   translate: -50% -50%;
 }
 .tmg-video-picture-in-picture-wrapper,
-.tmg-video-buffer,
 .tmg-video-next-preview-wrapper > button {
   position: absolute;
   inset: 0;

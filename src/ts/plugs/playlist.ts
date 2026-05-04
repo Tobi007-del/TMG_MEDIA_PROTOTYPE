@@ -42,9 +42,9 @@ export class PlaylistPlug extends BasePlug<Playlist> {
     // Post Wiring
     const keys = this.ctlr.plug<KeysPlug>("keys");
     keys?.register("prev", this.previous, { phase: "keydown" });
-    // JS: return (this.previousVideo(), this.notify("videoprev"));
+    // JS: return (this.previous(), this.notify("videoprev"));
     keys?.register("next", this.next, { phase: "keydown" });
-    // JS: return (this.nextVideo(), this.notify("videonext"));
+    // JS: return (this.next(), this.notify("videonext"));
   }
 
   protected handle({ currentTarget: { value: list }, root }: REvent<CtlrConfig, "playlist", 1>): void {

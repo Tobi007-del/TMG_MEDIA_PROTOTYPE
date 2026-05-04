@@ -591,6 +591,7 @@
 
 /* ==================== AI OVERLAY BLOCK ===================== */
 .tmg-video-big-controls-wrapper,
+.tmg-video-buffer,
 .tmg-video-thumbnail,
 .tmg-video-captions-btn::after,
 .tmg-video-thumb-indicator::before {
@@ -600,7 +601,6 @@
   translate: -50% -50%;
 }
 .tmg-video-picture-in-picture-wrapper,
-.tmg-video-buffer,
 .tmg-video-next-preview-wrapper > button {
   position: absolute;
   inset: 0;
@@ -1357,9 +1357,12 @@ body:not(:has(.tmg-video-container.tmg-video-miniplayer)) .tmg-pseudo-video-cont
   text-overflow: ellipsis;
   overflow: hidden;
 }
+.tmg-video-big-controls-wrapper,
+.tmg-video-buffer {
+  top: clamp(calc((var(--cmptd-big-ctrl-scale-height) / 2)), calc(100% - var(--tmg-video-current-bottom-wrapper-height) - (var(--cmptd-big-ctrl-scale-height) / 2)), 50%);
+}
 .tmg-video-big-controls-wrapper {
   --cmptd-big-ctrl-scale-x-pad: var(--cmptd-big-ctrl-scale-pad); /* computed x padding */
-  top: clamp(calc(var(--cmptd-ctrl-box-x-in-pad) + (var(--cmptd-big-ctrl-scale-height) / 2)), calc(100% - var(--tmg-video-current-bottom-wrapper-height) - var(--cmptd-ctrl-box-x-in-pad) - (var(--cmptd-big-ctrl-scale-height) / 2)), 50%);
   display: none;
   align-items: center;
   gap: calc(var(--tmg-video-current-unit) * 2.75);

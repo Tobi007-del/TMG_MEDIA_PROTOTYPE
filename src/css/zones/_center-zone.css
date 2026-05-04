@@ -1,6 +1,9 @@
+.tmg-video-big-controls-wrapper,
+.tmg-video-buffer {
+  top: clamp(calc((var(--cmptd-big-ctrl-scale-height) / 2)), calc(100% - var(--tmg-video-current-bottom-wrapper-height) - (var(--cmptd-big-ctrl-scale-height) / 2)), 50%);
+}
 .tmg-video-big-controls-wrapper {
   --cmptd-big-ctrl-scale-x-pad: var(--cmptd-big-ctrl-scale-y-pad); /* computed x padding */
-  top: clamp(calc(var(--cmptd-ctrl-box-y-in-pad) + (var(--cmptd-big-ctrl-scale-height) / 2)), calc(100% - var(--tmg-video-current-bottom-wrapper-height) - var(--cmptd-ctrl-box-y-in-pad) - (var(--cmptd-big-ctrl-scale-height) / 2)), 50%);
   display: none;
   align-items: center;
   gap: calc(var(--tmg-video-current-unit) * 2.75);
