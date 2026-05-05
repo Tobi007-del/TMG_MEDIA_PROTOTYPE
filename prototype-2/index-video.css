@@ -1374,8 +1374,8 @@ body:not(:has(.T_M_G-video-container.T_M_G-video-mini-player)) .T_M_G-pseudo-vid
   border-bottom-left-radius: inherit;
   border-bottom-right-radius: inherit;
 }
-.T_M_G-video-top-controls-wrapper:not(:has(.T_M_G-video-title:not(:empty), .T_M_G-video-artist:not(:empty), [data-control-displayed="true"])) ~ .T_M_G-video-top-curtain,
-.T_M_G-video-bottom-controls-wrapper:not(:has([data-control-displayed="true"])) ~ .T_M_G-video-bottom-curtain {
+.tmg-video-top-controls-wrapper:not(:has(.tmg-video-title:not(:empty), .tmg-video-artist:not(:empty), [data-displayed="true"])) ~ .tmg-video-top-curtain,
+.tmg-video-bottom-controls-wrapper:not(:has(.tmg-video-title:not(:empty), .tmg-video-artist:not(:empty), [data-displayed="true"])) ~ .tmg-video-bottom-curtain {
   display: none;
 }
 .T_M_G-video-cover-curtain {
