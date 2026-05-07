@@ -33,6 +33,4 @@ declare global {
   var tmg: TMGNamespace; // for IIFE build
 }
 
-declare module "*.scss";
-
 export {};

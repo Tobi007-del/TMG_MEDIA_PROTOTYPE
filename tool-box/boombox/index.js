@@ -3,36 +3,45 @@ const bbStore = {
   audio: {
     intent: { paused: true },
     state: { paused: true },
-    volume: { min: 0, value: 50, max: 300, muted: false }, // Range: 0 to 100 (or 200 if boost is on); dummy though
-    pan: 0, // -1 (Left), 0 (Center), 1 (Right)
-    boost: false, // true = allows volume > 100
-    moveMode: "3d", // "2d" (Translate X/Y) or "3d" (Rotate X/Y)
-    vibe: 0.35, // 0 - 100 representing analyser perceived loudness
-    vibeDisabled: false, // Toggle for the viber
+    settings: {
+      volume: { min: 0, value: 50, max: 300, muted: false }, // Range: 0 to 100 (or 200 if boost is on); dummy though
+      pan: 0, // -1 (Left), 0 (Center), 1 (Right)
+      boost: false, // true = allows volume > 100
+      moveMode: "3d", // "2d" (Translate X/Y) or "3d" (Rotate X/Y)
+      vibe: 0.35, // 0 - 100 representing analyser perceived loudness
+      vibeDisabled: false, // Toggle for the viber
+    },
   }, // the volume and muted will not be treated seriously as they are already implemented in main environment
   transform: {
-    x: 0, // Percentage (%) offset from center
-    y: 0, // Percentage (%) offset from center
-    z: 1, // Scale multiplier (Depth)
-    rotateX: 0, // Degrees (Tilt up/down)
-    rotateY: 0, // Degrees (Spin left/right)
+    translate: {
+      x: 0, // Percentage (%) offset from center
+      y: 0, // Percentage (%) offset from center
+      z: 1, // Scale multiplier (Depth)
+    },
+    rotate: {
+      x: 0, // Degrees (Tilt up/down)
+      y: 0, // Degrees (Spin left/right)
+    },
   },
 };
 class Boombox {
+  get settings() {
+    return this.store.audio.settings;
+  }
   get ctime() {
     return this.context?.currentTime ?? 0;
   }
   get bbOverflow() {
-    return this.bbSens.overflow * this.store.transform.z; // Since OffsetWidth doesn't  with transform, we have to account for it
+    return this.bbSens.overflow * this.store.transform.translate.z; // Since OffsetWidth doesn't  with transform, we have to account for it
   }
   constructor() {
     tmg.bindAllMethods(this);
     tmg.loadResource(`https://cdn.jsdelivr.net/npm/sia-reactor/dist/styles/time-travel-overlay.min.css`);
     this.store = window.bbStore = tmg.reactive(structuredClone(bbStore));
-    window.TTM = new tmg.TimeTravelModule({ blacklist: ["audio.vibe", "audio.state"] });
+    window.TTM = new tmg.TimeTravelModule({ blacklist: ["audio.state", "audio.settings.vibe"] });
     window.TTP = new tmg.PersistModule({ key: "NINO'S_BOOMBOX", adapter: new tmg.IndexedDBAdapter({ durability: "relaxed" }), useSnapshot: true, throttle: 150 }).attach(TTM.state, "timeTravel");
     this.store.use(TTP, "app"), TTP.state.once("hydrated", () => this.store.use(TTM));
-    window.TTO = new tmg.TimeTravelOverlay(window.TTM, { startOpen: true, title: `NINO's Boombox Tape` });
+    window.TTO = new tmg.TimeTravelOverlay(window.TTM, { title: `NINO's Boombox Tape` });
     this.media = new Audio("/tmg-media-player/assets/media/Subway-Surfers-Theme-Sound-Effect.mp3");
     this.media.loop = true;
     this.bbSens = { translate: 1.2, rotate: 0.6, zoom: 2.4, overflow: 70 }; // S.I.A. configuration
@@ -57,17 +66,17 @@ class Boombox {
     this.store.watch("ui.color", this.handleColor, { immediate: true });
     this.store.on("audio.intent.paused", this.handlePausedIntent, { immediate: true });
     this.store.on("audio.state.paused", this.handlePausedState, { immediate: true });
-    this.store.watch("audio.volume.value", this.onVolume, { immediate: true });
-    this.store.on("audio.volume.value", this.handleVolume, { immediate: true });
-    this.store.on("audio.volume.min", this.handleMin, { immediate: true });
-    this.store.on("audio.volume.max", this.handleMax, { immediate: true });
-    this.store.watch("audio.volume.muted", this.onMuted, { immediate: true });
-    this.store.on("audio.volume.muted", this.handleMuted, { immediate: true });
-    this.store.on("audio.pan", this.handlePan, { immediate: true });
-    this.store.on("audio.boost", this.handleBoost, { immediate: true });
-    this.store.on("audio.moveMode", this.handleMoveMode, { immediate: true });
-    this.store.on("audio.vibe", this.handleVibe, { immediate: true });
-    this.store.on("audio.vibeDisabled", this.handleVibeDisabled, { immediate: true });
+    this.store.watch("audio.settings.volume.value", this.onVolume, { immediate: true });
+    this.store.on("audio.settings.volume.value", this.handleVolume, { immediate: true });
+    this.store.on("audio.settings.volume.min", this.handleMin, { immediate: true });
+    this.store.on("audio.settings.volume.max", this.handleMax, { immediate: true });
+    this.store.watch("audio.settings.volume.muted", this.onMuted, { immediate: true });
+    this.store.on("audio.settings.volume.muted", this.handleMuted, { immediate: true });
+    this.store.on("audio.settings.pan", this.handlePan, { immediate: true });
+    this.store.on("audio.settings.boost", this.handleBoost, { immediate: true });
+    this.store.on("audio.settings.moveMode", this.handleMoveMode, { immediate: true });
+    this.store.on("audio.settings.vibe", this.handleVibe, { immediate: true });
+    this.store.on("audio.settings.vibeDisabled", this.handleVibeDisabled, { immediate: true });
     this.store.on("transform", this.handleTransform, { immediate: true });
     this.store.set("transform.x", this.setTransformX); // UI Guard: prevents out of bounds behaviour with respect to overflow
     this.store.set("transform.y", this.setTransformY); // UI Guard: ---------------------------------------------------------
@@ -81,11 +90,11 @@ class Boombox {
     this.bbEl.addEventListener("auxclick", (e) => e.preventDefault()); // Prevent middle-click auto-scroll
     this.bbEl.addEventListener("mousedown", this.handleAuxDown);
     this.bbEl.addEventListener("mouseup", this.handleAuxUp);
-    [this.stereoLeftBtn, this.stereoRightBtn, this.stereoCenterBtn].forEach((btn) => btn.addEventListener("click", () => (this.store.audio.pan = Number(btn.dataset.pan))));
-    this.volumeSlider.addEventListener("input", (e) => (this.store.audio.volume.value = this.lastVolume = Number(e.target.value)));
-    this.muteBtn.addEventListener("click", () => (this.store.audio.volume.muted = !this.store.audio.volume.muted));
-    this.boostBtn.addEventListener("click", () => (this.store.audio.boost = !this.store.audio.boost));
-    this.moveModeBtn.addEventListener("click", () => (this.store.audio.moveMode = this.store.audio.moveMode === "2d" ? "3d" : "2d"));
+    [this.stereoLeftBtn, this.stereoRightBtn, this.stereoCenterBtn].forEach((btn) => btn.addEventListener("click", () => (this.settings.pan = Number(btn.dataset.pan))));
+    this.volumeSlider.addEventListener("input", (e) => (this.settings.volume.value = this.lastVolume = Number(e.target.value)));
+    this.muteBtn.addEventListener("click", () => (this.settings.volume.muted = !this.settings.volume.muted));
+    this.boostBtn.addEventListener("click", () => (this.settings.boost = !this.settings.boost));
+    this.moveModeBtn.addEventListener("click", () => (this.settings.moveMode = this.settings.moveMode === "2d" ? "3d" : "2d"));
     this.playBtn.addEventListener("click", () => (this.store.audio.intent.paused = !this.store.audio.intent.paused));
     this.resetBtn?.addEventListener("click", this.resetPos);
   }
@@ -115,8 +124,8 @@ class Boombox {
     this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
     this.wireAudioGraph();
     this.mediaSetup = true; // Applying initials now
-    this.store.audio.pan = this.store.audio.pan;
-    this.store.audio.volume.value = this.store.audio.volume.value;
+    this.settings.pan = this.settings.pan;
+    this.settings.volume.value = this.settings.volume.value;
     this.store.transform = this.store.transform;
   }
   wireAudioGraph() {
@@ -162,25 +171,25 @@ class Boombox {
   }
   onVolume(value) {
     this.gainer?.gain.setTargetAtTime((value / 100) * 2, this.ctime, 0.02); // dummy: doubling for dat anroid feel btw, real one does it too
-    this.store.audio.volume.muted = value === 0;
+    this.settings.volume.muted = value === 0;
     // this.ctlr.media.intent.volume = value; // real
   }
   handleVolume({ value }) {
     this.volumeText.textContent = `${(this.volumeSlider.value = value)}%`;
   }
   handleMin({ value }) {
-    if (value >= this.store.audio.volume.value) this.store.audio.volume.value = value;
+    if (value >= this.settings.volume.value) this.settings.volume.value = value;
     this.volumeSlider.min = value;
   }
   handleMax({ value }) {
-    if (value <= this.store.audio.volume.value) this.store.audio.volume.value = value;
+    if (value <= this.settings.volume.value) this.settings.volume.value = value;
     this.volumeSlider.max = value;
   }
   onMuted(muted, { target: { oldValue } }) {
     if (muted) {
-      this.lastVolume = this.store.audio.volume.value;
-      this.store.audio.volume.value = 0;
-    } else if (tmg.isValidNum(this.lastVolume)) this.store.audio.volume.value = this.lastVolume; // dummy
+      this.lastVolume = this.settings.volume.value;
+      this.settings.volume.value = 0;
+    } else if (tmg.isValidNum(this.lastVolume)) this.settings.volume.value = this.lastVolume; // dummy
     // this.ctlr.media.intent.muted = muted; // real
   }
   handleMuted({ value: muted }) {
@@ -192,9 +201,9 @@ class Boombox {
   }
   handleBoost({ value: boost }) {
     if (!boost) {
-      this.lastMax = this.store.audio.volume.max;
-      this.store.audio.volume.max = tmg.clamp(this.store.audio.volume.min, this.store.audio.volume.max, boost ? Infinity : 100);
-    } else if (tmg.isValidNum(this.lastMax)) this.store.audio.volume.max = this.lastMax; // dummy
+      this.lastMax = this.settings.volume.max;
+      this.settings.volume.max = tmg.clamp(this.settings.volume.min, this.settings.volume.max, boost ? Infinity : 100);
+    } else if (tmg.isValidNum(this.lastMax)) this.settings.volume.max = this.lastMax; // dummy
     // no real yet but likely same
     this.boostBtn.classList.toggle("activated", boost);
   }
@@ -208,7 +217,10 @@ class Boombox {
     !disabled ? this.RAFLoop("vibing", this.startVibing) : this.cancelRAFLoop("vibing");
   }
   handleTransform() {
-    const { x, y, z, rotateX, rotateY } = this.store.transform,
+    const {
+        translate: { x, y, z },
+        rotate: { x: rotateX, y: rotateY },
+      } = this.store.transform,
       // --- POSITION MATH ---
       // WebAudio space is much smaller than screen pixels.
       // We map your CSS % to an n-unit grid. CSS Y is down (+), WebAudio Y is up (+), so we invert Y.
@@ -239,7 +251,7 @@ class Boombox {
   setTransformX(v) {
     if (!this.bbEl) return v;
     const { bounds: b = this.boundsEl.getBoundingClientRect(), rect: r = this.bbEl.getBoundingClientRect() } = this.eS,
-      growth = (r.width * this.store.transform.z - r.width) / 2,
+      growth = (r.width * this.store.transform.translate.z - r.width) / 2,
       limLeft = Math.max(0, ((r.left - b.left - growth) / r.width) * 100) + this.bbOverflow,
       limRight = Math.max(0, ((b.right - r.right - growth) / r.width) * 100) + this.bbOverflow;
     return tmg.clamp(-limLeft, v, limRight);
@@ -247,7 +259,7 @@ class Boombox {
   setTransformY(v) {
     if (!this.bbEl) return v;
     const { bounds: b = this.boundsEl.getBoundingClientRect(), rect: r = this.bbEl.getBoundingClientRect() } = this.eS,
-      growth = (r.height * this.store.transform.z - r.height) / 2,
+      growth = (r.height * this.store.transform.translate.z - r.height) / 2,
       limUp = Math.max(0, ((r.top - b.top - growth) / r.height) * 100) + this.bbOverflow,
       limDown = Math.max(0, ((b.bottom - r.bottom - growth) / r.height) * 100) + this.bbOverflow;
     return tmg.clamp(-limUp, v, limDown);
@@ -272,7 +284,7 @@ class Boombox {
       // gets crushed down to 12.5%. But a heavy kick drum hit of 100% (1.0) stays at 100%.
       vibeIntensity = normalized * normalized * normalized * 100; // This creates a sharp, physical "snap" instead of a muddy wobble.
     // Mutate the state
-    this.store.audio.vibe = vibeIntensity;
+    this.store.audio.settings.vibe = vibeIntensity;
   }
   handlePointerDown(e) {
     if (e.target.closest("button, input, .tmg-bbfm-master")) return;
@@ -302,12 +314,12 @@ class Boombox {
         const ptr = Array.from(this.bbPtrs.values())[0],
           deltaX = ptr.clientX - this.eS.lastX,
           deltaY = ptr.clientY - this.eS.lastY;
-        if (this.store.audio.moveMode === "2d") {
-          this.store.transform.x += (deltaX / this.bbEl.offsetWidth) * 100 * this.bbSens.translate;
-          this.store.transform.y += (deltaY / this.bbEl.offsetHeight) * 100 * this.bbSens.translate;
+        if (this.store.audio.settings.moveMode === "2d") {
+          this.store.transform.translate.x += (deltaX / this.bbEl.offsetWidth) * 100 * this.bbSens.translate;
+          this.store.transform.translate.y += (deltaY / this.bbEl.offsetHeight) * 100 * this.bbSens.translate;
         } else {
-          this.store.transform.rotateY += deltaX * this.bbSens.rotate;
-          this.store.transform.rotateX -= deltaY * this.bbSens.rotate;
+          this.store.transform.rotate.y += deltaX * this.bbSens.rotate;
+          this.store.transform.rotate.x -= deltaY * this.bbSens.rotate;
         }
         this.eS.lastX = ptr.clientX;
         this.eS.lastY = ptr.clientY;
@@ -317,7 +329,7 @@ class Boombox {
           currentMidY = (pts[0].clientY + pts[1].clientY) / 2,
           deltaY = currentMidY - this.eS.lastY;
         // Push up = move away (smaller Z). Pull down = bring closer (larger Z).
-        this.store.transform.z = this.store.transform.z + (deltaY / this.bbEl.offsetHeight) * this.bbSens.zoom;
+        this.store.transform.translate.z = this.store.transform.translate.z + (deltaY / this.bbEl.offsetHeight) * this.bbSens.zoom;
         this.eS.lastY = currentMidY;
       }
     });
@@ -337,15 +349,15 @@ class Boombox {
     const dY = e.shiftKey ? 0 : e.deltaY,
       dX = e.shiftKey ? e.deltaY : e.deltaX;
     if (this.eS.auxDown) {
-      this.store.transform.z = this.store.transform.z + (dY / this.bbEl.offsetHeight) * (this.bbSens.zoom * 0.1);
+      this.store.transform.translate.z = this.store.transform.translate.z + (dY / this.bbEl.offsetHeight) * (this.bbSens.zoom * 0.1);
       return;
     }
-    if (this.store.audio.moveMode === "2d") {
-      this.store.transform.x -= (dX / this.bbEl.offsetWidth) * 100 * this.bbSens.translate;
-      this.store.transform.y -= (dY / this.bbEl.offsetHeight) * 100 * this.bbSens.translate;
+    if (this.store.audio.settings.moveMode === "2d") {
+      this.store.transform.translate.x -= (dX / this.bbEl.offsetWidth) * 100 * this.bbSens.translate;
+      this.store.transform.translate.y -= (dY / this.bbEl.offsetHeight) * 100 * this.bbSens.translate;
     } else {
-      this.store.transform.rotateY -= dX * (this.bbSens.rotate * 0.1);
-      this.store.transform.rotateX += dY * (this.bbSens.rotate * 0.1);
+      this.store.transform.rotate.y -= dX * (this.bbSens.rotate * 0.1);
+      this.store.transform.rotate.x += dY * (this.bbSens.rotate * 0.1);
     }
   }
   handleAuxDown(e) {

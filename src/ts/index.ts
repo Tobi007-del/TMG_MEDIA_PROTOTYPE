@@ -1,9 +1,10 @@
+// @ts-expect-error side-effect stylesheet import is handled by the bundler
 import "../css/index.scss";
 import "./types/global.d.ts";
 import { init, win } from "./tools/runtime";
 import { loadResource } from "./utils/dom";
 
-export * from "./api";
+export * from "./super";
 
 if (win) {
   window.tmg ??= {} as any; // bundler will handle the rest

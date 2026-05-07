@@ -21,15 +21,15 @@ export class VolumePlug extends BasePlug<Volume, VolumeState> {
   protected sliderAptVolume = 5;
   protected shouldSetAptVolume = false;
   protected audioSetup = false;
-  protected gainNode?: GainNode;
+  protected gainNode?: GainNode | null;
+  protected get ctime(): number {
+    return AUDIO_CONTEXT?.currentTime ?? 0;
+  }
 
   constructor(ctlr: Controller, config: Volume) {
     super(ctlr, config, { aptVolume: 0 });
   }
 
-  get ctime(): number {
-    return AUDIO_CONTEXT?.currentTime ?? 0;
-  }
   public override mount(): void {
     if (this.ctlr.state.audioContextReady) this.setupAudio();
     else this.ctlr.state.once("audioContextReady", this.setupAudio, { signal: this.signal });
@@ -171,15 +171,15 @@ export class VolumePlug extends BasePlug<Volume, VolumeState> {
 
   protected setupAudio(): void {
     if (this.audioSetup || connectMediaToAudioManager(this.media.element) === "unavailable") return;
-    this.gainNode = (this.media.element as any)._tmgGainNode;
-    const DCN = (this.media.element as any)._tmgDynamicsCompressorNode;
-    if (DCN) ((DCN.threshold.value = -30), (DCN.knee.value = 20), (DCN.ratio.value = 12), (DCN.attack.value = 0.003), (DCN.release.value = 0.25));
+    this.gainNode = this.media.element._tmgGainNode;
+    const DCN = this.media.element._tmgDynamicsCompressorNode;
+    if (DCN) (DCN.threshold.value = -30), (DCN.knee.value = 20), (DCN.ratio.value = 12), (DCN.attack.value = 0.003), (DCN.release.value = 0.25);
     this.audioSetup = true;
   }
 
   protected cancelAudio(): void {
     this.media.intent.volume = clamp(this.config.min, ((this.gainNode?.gain?.value ?? 2) / 2) * 100, this.config.max);
-    (this.media.element as any).mediaElementSourceNode?.disconnect();
+    this.media.element.mediaElementSourceNode?.disconnect();
     this.gainNode?.disconnect();
     this.audioSetup = false;
   }

@@ -1,7 +1,7 @@
 import { BasePlug, type KeysPlug } from ".";
 import type { CtlrMedia, MediaState } from "../types/contract";
 import type { REvent } from "sia-reactor";
-import { rotate } from "../utils";
+import { rotateAny } from "../utils";
 
 const objectFits = ["contain", "cover", "fill"] as const;
 
@@ -40,7 +40,7 @@ export class ObjectFitPlug extends BasePlug<ObjectFit> {
   }
 
   public rotateObjectFit(): void {
-    this.media.intent.objectFit = rotate(this.media.state.objectFit, objectFits);
+    this.media.intent.objectFit = rotateAny(this.media.state.objectFit, objectFits);
     // JS: this.DOM.objectFitNotifierContent.textContent = nextFit[1];
     // JS: this.ctlr.plug<NotifiersPlug>("notifiers")?.notify(`objectfit${this.media.intent.objectFit}`);
   }

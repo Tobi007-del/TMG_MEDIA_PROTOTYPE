@@ -1,0 +1,19 @@
+.tmg-video-vb-slider .tmg-video-value-bar {
+  background: linear-gradient(var(--tmg-video-current-slider-gradient-dir), var(--tmg-video-slider-color) calc(var(--tmg-video-current-slider-position) * 100%), var(--tmg-video-slider-base-color) 0%);
+  width: 100%;
+  height: 100%;
+}
+.tmg-video-container.tmg-video-volume-boost .tmg-video-volume-slider .tmg-video-value-bar,
+.tmg-video-container.tmg-video-brightness-boost .tmg-video-brightness-slider .tmg-video-value-bar {
+  background: linear-gradient(var(--tmg-video-current-slider-gradient-dir), var(--tmg-video-slider-color) calc(var(--tmg-video-current-slider-position) * (var(--tmg-video-slider-percent) * 1%)), var(--tmg-video-slider-boost-color) calc(var(--tmg-video-slider-boost-percent) * 1%), var(--tmg-video-slider-boost-color) calc((var(--tmg-video-slider-boost-percent) * 1%) + (var(--tmg-video-current-slider-boost-position) * (100% - (var(--tmg-video-slider-boost-percent) * 1%)))), transparent 0%), linear-gradient(var(--tmg-video-current-slider-gradient-dir), var(--tmg-video-slider-base-color) calc(var(--tmg-video-slider-percent) * 1%), var(--tmg-video-slider-base-boost-color) 0%);
+}
+
+.tmg-video-vb-slider .tmg-video-base-bar {
+  display: none;
+}
+.tmg-video-vb-slider .tmg-video-thumb-indicator {
+  width: calc(var(--tmg-video-range-thumb-size) * 0.9);
+  height: calc(var(--tmg-video-range-thumb-size) * 0.9);
+  background: var(--tmg-video-slider-thumb-background);
+  border-radius: 50%;
+}

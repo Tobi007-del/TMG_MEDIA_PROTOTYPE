@@ -12,9 +12,7 @@
   display: flex;
   align-items: center;
   clip-path: inset(0);
-  transition:
-    width var(--tmg-video-fade-transition-time) ease-out,
-    clip-path var(--tmg-video-fade-transition-time) ease-out;
+  transition: width var(--tmg-video-fade-transition-time) ease-out, clip-path var(--tmg-video-fade-transition-time) ease-out;
 }
 .tmg-video-left-side-controls-wrapper .tmg-video-vb-slider-wrapper {
   left: calc(var(--tmg-video-current-unit) / 3);

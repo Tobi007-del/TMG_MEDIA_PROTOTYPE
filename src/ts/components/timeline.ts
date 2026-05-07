@@ -30,8 +30,8 @@ export class Timeline extends RangeSlider<TimelineConfig> {
     return this.ctlr.plug<TimePlug>("time");
   }
 
-  constructor(ctlr: Controller, options?: Partial<TimelineConfig>) {
-    super(ctlr, { label: "Video timeline", ...options });
+  constructor(ctlr: Controller, config?: Partial<TimelineConfig>) {
+    super(ctlr, { label: "Video timeline", ...config });
   }
 
   public override create() {

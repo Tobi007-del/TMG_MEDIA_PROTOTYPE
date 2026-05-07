@@ -1,5 +1,6 @@
 import { AptRange } from "../types/generics";
-import { isNum, clamp } from "@t007/utils";
+import { isNum, clamp, NOOP } from "@t007/utils";
+import { noExtension } from "./file";
 
 // Validators
 export { clamp };
@@ -18,16 +19,28 @@ export function parseIfPercent(percent: any, amount: any, autocap = 0.25): numbe
   return val && amount && autocap && amount <= val ? amount * autocap : val;
 }
 
+export function parseRomanNum(roman: string, valid = /^[IVXLCDM]+$/i.test(roman), ROMAN = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 } as Record<string, number>): number {
+  if (!valid) return 0; // ← Invalid input
+  return roman
+    .toUpperCase() // Ensure consistent uppercase (e.g., 'iv' becomes 'IV')
+    .split("") // Turn into array of characters: 'XIV' → ['X','I','V']
+    .reduce((acc, val, i, arr) => {
+      const curr = ROMAN[val] || 0, // Current character's value
+        next = ROMAN[arr[i + 1]] || 0; // Look ahead to the next character (if any)
+      return acc + (curr < next ? -curr : curr); // Subtractive notation: if current is less than next (e.g., I before V → 4); Otherwise, just add normally
+    }, 0); // Start accumulator at 0
+}
+
 // Helpers
 export function stepNum<T extends AptRange>(v = 0, { min, max, step }: T): number {
   const s = Math.round((safeNum(v) - min) / step) * step + min;
-  return clamp(min, +s.toFixed(10), max);
+  return clamp(min, +s.toFixed(10), max); // no gymnastics, for sliders only; to reach near native speed
 }
 
 const _stepsCache = new Map<string, number[]>();
-export function rotate<T>(cur: T, steps: T[] | readonly T[], dir?: "forwards" | "backwards", wrap?: boolean): T;
-export function rotate(cur: number, steps: AptRange, dir?: "forwards" | "backwards", wrap?: boolean): number;
-export function rotate(cur: any, steps: any, dir: "forwards" | "backwards" = "forwards", wrap = true): any {
+export function rotateAny<T>(cur: T, steps: T[] | readonly T[], dir?: "forwards" | "backwards", wrap?: boolean): T;
+export function rotateAny(cur: number, steps: AptRange, dir?: "forwards" | "backwards", wrap?: boolean): number;
+export function rotateAny(cur: any, steps: any, dir: "forwards" | "backwards" = "forwards", wrap = true): any {
   let list: any[];
   if (Array.isArray(steps)) list = steps;
   else {

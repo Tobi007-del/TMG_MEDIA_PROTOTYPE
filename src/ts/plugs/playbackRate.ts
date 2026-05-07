@@ -3,9 +3,9 @@ import type { REvent } from "sia-reactor";
 import { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";
-import { clamp, rotate } from "../utils";
+import { clamp, rotateAny } from "../utils";
 
-export interface PlaybackRate extends OptRange {}
+export interface PlaybackRate extends OptRange { }
 
 export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
   public static readonly plugName: string = "playbackRate";
@@ -54,7 +54,7 @@ export class PlaybackRatePlug extends BasePlug<PlaybackRate> {
   }
 
   public rotateRate(dir: "forwards" | "backwards" = "forwards"): void {
-    this.config.value = rotate(this.config.value!, { min: this.config.min, max: this.config.max, step: this.config.skip }, dir);
+    this.config.value = rotateAny(this.config.value!, { min: this.config.min, max: this.config.max, step: this.config.skip }, dir);
   }
 
   public changeRate(value: number): void {

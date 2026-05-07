@@ -119,8 +119,7 @@ export class ControlPanelPlug extends BasePlug<ControlPanel> {
 
   protected handleTimelineSeek({ currentTarget: { value } }: REvent<CtlrConfig, "settings.controlPanel.timeline.seek">): void {
     const timeline = this.getCtrl<Timeline>("timeline");
-    if (timeline) timeline.config.scrub.relative = value!.relative;
-    if (timeline) timeline.config.scrub.cancel = value!.cancel;
+    if (timeline) (timeline.config.scrub.relative = value!.relative), (timeline.config.scrub.cancel = value!.cancel);
   }
 
   protected buildWSkel(side: string): ZoneW {

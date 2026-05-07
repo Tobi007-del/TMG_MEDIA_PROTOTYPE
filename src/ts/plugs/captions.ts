@@ -7,7 +7,7 @@ import type { CtlrConfig } from "../types/config";
 import type { CtlrMedia } from "../types/contract";
 import type { OptRange } from "../types/generics";
 import type { UIOption, UISettings } from "../types/UIOptions";
-import { camelize, parseUIObj, rotate } from "../utils";
+import { camelize, parseUIObj, rotateAny } from "../utils";
 
 export interface Captions {
   visible: boolean;
@@ -121,7 +121,7 @@ export class CaptionsPlug extends BasePlug<Captions> {
 
   protected rotateProp(steps: PathValue<CtlrConfig["settings"], (typeof ROTATE_PATHS)[number]>[], prop: (typeof ROTATE_PATHS)[number], numeric = true): void {
     if (!steps.length) return;
-    setAny(this.ctlr.settings, prop, rotate((numeric ? Number : String)(this.ctlr.settings.css[camelize(prop.replace(".value", ""), /\./)]), steps));
+    setAny(this.ctlr.settings, prop, rotateAny((numeric ? Number : String)(this.ctlr.settings.css[camelize(prop.replace(".value", ""), /\./)]), steps));
     this.view && this.ctlr.config.stall(this.view.preview);
   }
 

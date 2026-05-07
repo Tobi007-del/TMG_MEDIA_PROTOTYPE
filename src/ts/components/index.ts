@@ -22,5 +22,7 @@ export * from "./fullscreenorientation";
 export * from "./removeminiplayer";
 export * from "./expandminiplayer";
 export * from "./timeline";
+export * from "./volume";
+export * from "./brightness";
 export * from "./captionsview";
 // export * from "./notifiers";

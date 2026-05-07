@@ -63,10 +63,10 @@ export abstract class BaseComponent<Config = any, State extends ComponentState =
     (e.oldValue ?? this.state.hidden) === this.state.hidden && (e.value ? this.hide() : this.show());
   }
 
-  protected setBtnARIA(dblAction?: string): void {
-    this.el.setAttribute("aria-label", this.state.label);
-    this.el.setAttribute("aria-keyshortcuts", parseForARIAKS(this.state.cmd));
-    if (dblAction) this.el.setAttribute("aria-description", `Double-press to ${dblAction}`);
-    else if (this.el.hasAttribute("aria-description")) this.el.removeAttribute("aria-description");
+  protected setBtnARIA(dblAction?: string, target: HTMLElement = this.el): void {
+    target.setAttribute("aria-label", this.state.label);
+    target.setAttribute("aria-keyshortcuts", parseForARIAKS(this.state.cmd));
+    if (dblAction) target.setAttribute("aria-description", `Double-press to ${dblAction}`);
+    else if (target.hasAttribute("aria-description")) target.removeAttribute("aria-description");
   }
 }

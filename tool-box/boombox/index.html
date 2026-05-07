@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -43,15 +43,7 @@
           radial-gradient(circle at 0% 100%, rgb(from var(--highlight) r g b / 0.07) 0%, transparent 20%),
           /* 5. The Base: Untouched heavy, dark mechanical vignette */ 
           radial-gradient(ellipse at center, #151515 0%, #050505 60%, #000000 100%);
-        font-family:
-          system-ui,
-          -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          Roboto,
-          "Helvetica Neue",
-          Arial,
-          sans-serif;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       }
       body {
         margin: 0;
@@ -82,6 +74,14 @@
         margin-block: 20px 0.7em;
         text-align: center;
       }
+      .container.tmg-media-container > p {
+        text-align: center;
+        font-size: calc(0.62 * var(--tmg-video-current-unit));
+        opacity: 0.4;
+      }
+      .container.tmg-media-container > p:last-of-type {
+        margin-bottom: 0.5em;
+      }
       .dual-field-wrapper {
         width: calc(var(--tmg-video-current-unit) * 30.77);
         display: flex;
@@ -108,6 +108,8 @@
   <body>
     <div class="container tmg-media-container tmg-video-container">
       <h2>🎧 NINO's Boombox 🎵</h2>
+      <p>Move the boombox around by dragging, two fingers or mouse wheel pressed moves backwards, toggle 3d too!</p>
+      <p>Use the tape controls to travel through your actions in linear time, Play or Rewind to relive it! It persists locally.</p>
       <div class="tmg-boombox paused">
         <div class="tmg-boombox-body">
           <!-- <div class="tmg-bb-handle"></div> "No handle for now, no actual use yet needs more nodes than speaker body" -->
@@ -147,7 +149,7 @@
     <script defer>
       window.addEventListener("load", () => {
         const bbInst = window.NinoBoombox,
-          fileInput = field({ type: "file", label: "Load Your Own Audio File", helperText: { info: "Make the experience yours! For best results, use a stereo audio file" }, accept: "audio/*", multiple: false });
+          fileInput = field({ type: "file", label: "Load Your Own Audio", helperText: { info: "Press Play to start listening or make the experience yours if you wish!" }, accept: "audio/*", multiple: false });
         document.querySelector(".container > h2").insertAdjacentElement("afterend", fileInput);
         fileInput.addEventListener("change", (e) => {
           const file = e.target.files[0];

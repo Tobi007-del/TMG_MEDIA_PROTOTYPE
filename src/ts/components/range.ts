@@ -8,15 +8,8 @@ export interface RangeConfig extends AptRange {
   value: number;
   previewValue: number;
   label: string;
-  scrub: {
-    sync: boolean;
-    relative: boolean;
-    cancel: { delta: number; timeout: number };
-  };
-  wheel: {
-    disabled: boolean;
-    axisRatio: number;
-  };
+  scrub: { sync: boolean; relative: boolean; cancel: { delta: number; timeout: number } };
+  wheel: { disabled: boolean; axisRatio: number };
 }
 
 export interface RangeState extends ComponentState {
@@ -40,7 +33,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
   protected cancelScrubTimeoutId: number | null = null;
   protected rect!: DOMRect;
 
-  constructor(ctlr: Controller, config?: Partial<Config>) {
+  constructor(ctlr: Controller, config: Partial<Config> = {}) {
     const defaults = { label: "Range", min: 0, max: 100, value: 0, previewValue: 50, step: 1, scrub: { sync: false, relative: true, cancel: { delta: 15, timeout: 2000 }, wheel: { disabled: false, axisRatio: 6 } } };
     super(ctlr, reactive({ ...defaults, ...config }) as unknown as Reactive<Config>, { scrubbing: false, shouldCancelScrub: false, stallCancelScrub: false } as State);
   }
@@ -143,8 +136,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
 
   protected handleWheel(e: WheelEvent): void {
     if (this.config.wheel.disabled) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
+    e.preventDefault(), e.stopImmediatePropagation();
     const dimension = this.isVertical ? window.innerHeight : window.innerWidth,
       pos = clamp(0, Math.abs(-e.deltaY), dimension * this.config.wheel.axisRatio) / (dimension * this.config.wheel.axisRatio),
       value = this.config.value + (-e.deltaY >= 0 ? pos : -pos) * (this.config.max - this.config.min);
@@ -153,8 +145,7 @@ export class RangeSlider<Config extends RangeConfig = RangeConfig, State extends
   protected handleKeyDown = (e: KeyboardEvent): void => {
     const key = e.key?.toLowerCase();
     if (["arrowleft", "arrowdown", "arrowright", "arrowup"].includes(key)) {
-      e.preventDefault();
-      e.stopImmediatePropagation();
+      e.preventDefault(), e.stopImmediatePropagation();
       const delta = e.shiftKey ? 2 : 1,
         direction = ["arrowleft", "arrowdown"].includes(key) ? -1 : 1;
       this.config.value += direction * delta * this.config.step;
