@@ -1,9 +1,9 @@
 export interface QueueJob<T = any> {
-  task: () => Promise<T>;
   id?: string;
+  task: () => Promise<T>;
   preTask?: () => void;
+  resolve: (value: T | QueueResult) => void;
   cancelled?: boolean;
-  resolve: (value: any) => void;
 }
 
 export interface QueueResult {
@@ -35,11 +35,11 @@ export class AsyncQueue {
   public drop(id: string): boolean {
     const job = this.jobs.find((j) => j.id === id);
     job?.resolve({ success: false, cancelled: true, dropped: true });
-    return (job && this.jobs.splice(this.jobs.indexOf(job), 1), !!job); // stops immediately, cant't remove a running job
+    return job && this.jobs.splice(this.jobs.indexOf(job), 1), !!job; // stops immediately, cant't remove a running job
   }
 
   public cancel(id: string): boolean {
     const job = this.jobs.find((j) => j.id === id);
-    return (job && (job.cancelled = true), !!job?.cancelled); // stops when it should have for metrics, can't cancel a running job
+    return job && (job.cancelled = true), !!job?.cancelled; // stops when it should have for metrics, can't cancel a running job
   }
 }

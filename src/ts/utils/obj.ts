@@ -1,7 +1,7 @@
 import { camelize } from ".";
 import type { Control, ControlPanelBottomTuple } from "../plugs";
 import { type Paths, type PathValue } from "sia-reactor";
-import { setAny } from "sia-reactor/utils";
+import { setPath } from "sia-reactor/utils";
 import type { UIObject, UISettings } from "../types/UIOptions";
 import { isObj, isArr } from "@t007/utils";
 
@@ -25,7 +25,7 @@ export function setHTMLConfig<T extends object>(target: T, attr: `tmg--${Paths<T
     if (/^\d+$/.test(value)) return Number(value);
     return value;
   })() as PathValue<T, typeof path, "--">;
-  setAny<T, "--">(target, path, parsedValue, "--", (p) => camelize(p));
+  setPath<T, "--">(target, path, parsedValue, "--", (p) => camelize(p));
 }
 
 export function parseUIObj<T extends Record<string, any>>(obj: T): UIObject<T> {

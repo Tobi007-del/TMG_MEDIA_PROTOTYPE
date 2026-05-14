@@ -1,0 +1,118 @@
+import { BasePin, ModesPlug, KeysPlug, MediaPlug, OverlayPlug, SkeletonPlug, ModesPictureInPicture } from "../..";
+import type { REvent } from "sia-reactor";
+import type { CtlrMedia } from "../../../types/contract";
+import type { CtlrConfig } from "../../../types/config";
+import { handleDOMMutation } from "../../../tools/runtime";
+import { isStr, mockAsync, breath, loadResource, observeMutation, isSameURL, createEl, supportsPictureInPicture } from "../../../utils";
+import { PictureInPicturePlaceholder } from "../../../components/pictureinpictureplaceholder";
+import { ComponentRegistry } from "../../../super";
+
+export class ModesPictureInPicturePin extends BasePin<ModesPlug, ModesPictureInPicture> {
+  public static readonly pinName: string = "pictureInPicture";
+  public static readonly plugName: string = "modes";
+  public inFloatingPlayer = false; // a quick notice flag for external deps
+  public floatingWindow: (Window & typeof globalThis) | null = null;
+  public whitelist: string[] = [];
+  public blacklist: string[] = [];
+  protected placeholder: PictureInPicturePlaceholder | null = null;
+
+  public override mount(): void {
+    // Variables Assignment
+    this.placeholder = ComponentRegistry.init<PictureInPicturePlaceholder>("pictureinpictureplaceholder", this.ctlr);
+    // DOM Injection
+    this.placeholder && this.media.pseudoContainer.prepend(this.placeholder.element.cloneNode(true));
+  }
+
+  public override wire(): void {
+    // Ctlr Config Listeners
+    this.ctlr.config.on("settings.modes.pictureInPicture.disabled", this.handleDisabled, { signal: this.signal, immediate: true });
+    // ---- Media --------
+    this.media.on("intent.pictureInPicture", this.handlePictureInPictureIntent, { capture: true, signal: this.signal });
+    // ---- State --------
+    this.media.on("state.pictureInPicture", this.handlePictureInPictureState, { signal: this.signal });
+  }
+
+  protected handleDisabled({ value }: REvent<CtlrConfig, "settings.modes.pictureInPicture.disabled">): void {
+    this.media.tech.features.pictureInPicture = !value && supportsPictureInPicture() && !this.media.state.disablePictureInPicture;
+    if (value && (this.ctlr.isUIActive("pictureInPicture") || this.ctlr.isUIActive("floatingPlayer"))) this.media.intent.pictureInPicture = false;
+  }
+
+  protected handlePictureInPictureIntent(e: REvent<CtlrMedia, "intent.pictureInPicture">): void {
+    if (e.resolved) return;
+    if (this.media.element !== this.media.tech.element && this.config.floatingPlayer.disabled) return e.reject(this.name);
+    if (this.config.disabled && !this.ctlr.isUIActive("pictureInPicture") && !this.inFloatingPlayer) return e.resolve(this.name);
+    if (this.ctlr.isUIActive("fullscreen")) this.media.intent.fullscreen = false;
+    if (!this.ctlr.isUIActive("pictureInPicture") && (window as any).documentPictureInPicture && !this.config.floatingPlayer.disabled) {
+      !this.inFloatingPlayer ? this.initFloatingPlayer() : this.floatingWindow?.close();
+      e.resolve(this.name);
+    } // tech will handle PiP toggle if not using floating player
+  }
+
+  protected async handlePictureInPictureState({ value }: REvent<CtlrMedia, "state.pictureInPicture">): Promise<void> {
+    if (this.floatingWindow) return;
+    if (value) {
+      this.media.container.classList.add("tmg-media-picture-in-picture");
+      this.ctlr.plug<OverlayPlug>("overlay")?.show();
+      this.media.intent.miniplayer = false;
+      this.ctlr.plug<MediaPlug>("media")?.syncSession();
+    } else {
+      await mockAsync(180);
+      this.media.container.classList.remove("tmg-media-picture-in-picture");
+      this.media.intent.miniplayer = "auto";
+      this.ctlr.plug<OverlayPlug>("overlay")?.delay();
+    }
+  }
+
+  protected async initFloatingPlayer(): Promise<void> {
+    if (this.inFloatingPlayer) return;
+    (window as any).documentPictureInPicture?.window?.close?.();
+    this.media.intent.miniplayer = false;
+    this.floatingWindow = await (window as any).documentPictureInPicture.requestWindow(this.config.floatingPlayer);
+    this.inFloatingPlayer = true;
+    this.floatingWindow!.document.documentElement.style.cssText = `height:100%; background:url(${this.ctlr.config.media?.profile}) center / 32px no-repeat, url(${this.media.state.poster}) center / ${this.ctlr.settings.css.bgSafeObjectFit} no-repeat, black;`;
+    await breath(this.floatingWindow! as Window & typeof globalThis);
+    const cssTexts = [],
+      parse = (src: any) => (isStr(src) ? src : null),
+      whitelist = this.whitelist.concat([parse(window.T007_TOAST_CSS_SRC), parse(window.T007_INPUT_CSS_SRC), parse(window.T007_DIALOG_CSS_SRC), parse(window.TMG_VIDEO_CSS_SRC)].filter(Boolean) as string[]), // CSS too experimental; needs a link (href) :)
+      blacklist = whitelist.concat(this.blacklist);
+    for (const sheet of document.styleSheets) {
+      try {
+        if (!blacklist.some((src) => isSameURL(src, sheet.href))) for (const cssRule of sheet.cssRules) if ((cssRule as CSSStyleRule).selectorText?.includes(":root") || cssRule.cssText.includes("tmg") || cssRule.cssText.includes("t007")) cssTexts.push(cssRule.cssText);
+      } catch {
+        continue;
+      }
+    }
+    this.floatingWindow!.document.head.append(createEl("style", { textContent: cssTexts.join("\n") }));
+    await Promise.all(whitelist.map((href) => href.includes(".css") && loadResource(href, "style", undefined, this.floatingWindow!)));
+    this.ctlr.plug<SkeletonPlug>("skeleton")?.activatePseudoMode();
+    this.media.container.classList.add("tmg-media-floating-player", "tmg-media-progress-bar");
+    this.floatingWindow!.document.body.append(this.media.container);
+    this.floatingWindow!.document.documentElement.id = document.documentElement.id;
+    this.floatingWindow!.document.documentElement.className = document.documentElement.className;
+    document.documentElement.getAttributeNames().forEach((attr) => this.floatingWindow!.document.documentElement.setAttribute(attr, document.documentElement.getAttribute(attr)!));
+    this.signal.addEventListener("abort", observeMutation(this.floatingWindow!.document.documentElement, handleDOMMutation, { childList: true, subtree: true }), { once: true });
+    this.floatingWindow!.addEventListener("resize", this.handleFloatingPlayerResize, { signal: this.signal });
+    this.floatingWindow!.addEventListener("pagehide", this.handleFloatingPlayerClose, { signal: this.signal });
+    this.ctlr.plug<KeysPlug>("keys")?.setEventListeners("add");
+    this.media.state.pictureInPicture = true;
+  }
+
+  protected handleFloatingPlayerResize(): void {
+    this.config.floatingPlayer.width = this.floatingWindow?.innerWidth ?? this.config.floatingPlayer.width;
+    this.config.floatingPlayer.height = this.floatingWindow?.innerHeight ?? this.config.floatingPlayer.height;
+  }
+
+  protected handleFloatingPlayerClose(): void {
+    this.inFloatingPlayer = false;
+    this.floatingWindow = null;
+    this.media.container.classList.toggle("tmg-media-progress-bar", this.ctlr.settings.controlPanel.progressBar);
+    this.media.container.classList.remove("tmg-media-floating-player");
+    this.ctlr.plug<SkeletonPlug>("skeleton")?.deactivatePseudoMode();
+    this.media.intent.miniplayer = "auto";
+    this.media.state.pictureInPicture = false;
+  }
+
+  protected override onDestroy(): void {
+    this.placeholder?.destroy();
+  }
+}

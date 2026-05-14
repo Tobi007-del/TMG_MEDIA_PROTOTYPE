@@ -105,7 +105,7 @@ _(The Artist wipes his brush clean and leaves the canvas alone. He paints nothin
 - **If Accepted:** It paints `0:50` instantly.
 - **If Rejected:** It discards the drag input and snaps back to `0:10` (or stays there).
 
-- **User Experience:** "Bouncy." The slider feels fast, but if you try to do something illegal, it physically resists or snaps back immediately. It feels like a physical lock.
+- **User Experience:** "Bouncy." The slider feels fast, but if you try to do something illegal, it physically resists immediately; no rollback. It feels like a physical lock.
 - **Use Case:** The Gold Standard for most rich media UIs.
 
 ---

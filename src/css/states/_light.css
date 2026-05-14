@@ -1,40 +1,31 @@
-.tmg-video-container.tmg-video-light .tmg-video-container-content {
+.tmg-media-container.tmg-media-light .tmg-media-container-content {
   cursor: pointer;
 }
-.tmg-video-container.tmg-video-light :is(.tmg-video-picture-in-picture-wrapper, .tmg-video-apt-controls-wrapper, .tmg-video-big-controls-wrapper),
-.tmg-video-container.tmg-video-stall .tmg-video-big-play-pause-btn {
+.tmg-media-container.tmg-media-light :is(.tmg-media-picture-in-picture-placeholder, .tmg-media-apt-controls-wrapper, .tmg-media-big-controls-wrapper-cover),
+.tmg-media-container.tmg-media-stall .tmg-media-big-play-pause-btn {
   pointer-events: all;
   opacity: 1;
 }
-.tmg-video-container.tmg-video-light :is(.tmg-video-top-curtain, .tmg-video-bottom-curtain) {
-  --tmg-video-current-curtain-color: var(--tmg-video-curtain-color);
+.tmg-media-container.tmg-media-light :is(.tmg-media-top-curtain, .tmg-media-bottom-curtain) {
+  --tmg-media-current-curtain-color: var(--tmg-media-curtain-color);
   opacity: 1;
 }
-.tmg-video-container.tmg-video-light :is([data-control-id]:not([data-light-control="true"]), .tmg-video-settings, .tmg-video-cover-curtain, .tmg-video-captions-container),
-.tmg-video-container:is(.tmg-video-light, .tmg-video-stall) :is(.tmg-video-play-notifier, .tmg-video-pause-notifier, .tmg-video-buffer, .tmg-video-big-play-pause-btn svg) {
+.tmg-media-container.tmg-media-light :is([data-control-id]:not([data-light-control="true"]), .tmg-media-settings, .tmg-media-cover-curtain, .tmg-media-captions-container),
+.tmg-media-container:is(.tmg-media-light, .tmg-media-stall) :is(.tmg-media-play-notifier, .tmg-media-pause-notifier, .tmg-media-buffer, .tmg-media-big-play-pause-btn svg) {
   display: none;
 }
-.tmg-video-container:is(.tmg-video-light, .tmg-video-stall) :is(.tmg-video-big-controls-wrapper, .tmg-video-big-play-pause-btn .tmg-video-play-icon),
-.tmg-video-container.tmg-video-light [data-light-control="true"],
-.tmg-video-container.tmg-video-stall .tmg-video-big-play-pause-btn {
+.tmg-media-container:is(.tmg-media-light, .tmg-media-stall) :is(.tmg-media-big-controls-wrapper-cover, .tmg-media-big-play-pause-btn .tmg-media-play-icon),
+.tmg-media-container.tmg-media-light [data-light-control="true"],
+.tmg-media-container.tmg-media-stall .tmg-media-big-play-pause-btn {
   display: flex;
 }
-.tmg-video-container:is(.tmg-video-light, .tmg-video-stall) .tmg-video-big-play-pause-btn .tmg-video-play-icon {
-  animation: inherit;
-  transition: inherit;
-}
-.tmg-video-container.tmg-video-light .tmg-video-big-play-pause-btn:is(:hover, :focus-visible),
-.tmg-video-container.tmg-video-stall .tmg-video-big-play-pause-btn {
-  transform: scale(var(--tmg-video-large-scale));
-  transition: all var(--tmg-video-slow-transition-time) ease;
-}
-.tmg-video-container.tmg-video-light .tmg-video-big-play-pause-btn:is(:hover, :focus-visible),
-.tmg-video-container.tmg-video-stall .tmg-video-play-icon {
+.tmg-media-container.tmg-media-light .tmg-media-big-play-pause-btn:is(:hover, :focus-visible),
+.tmg-media-container.tmg-media-stall .tmg-media-play-icon {
   animation: none !important;
 }
-.tmg-video-container.tmg-video-light .tmg-video-big-play-pause-btn {
+.tmg-media-container.tmg-media-light .tmg-media-big-play-pause-btn {
   animation: tmg-beat 1s infinite ease-out;
 }
-.tmg-video-container.tmg-video-stall .tmg-video-big-play-pause-btn {
+.tmg-media-container.tmg-media-stall .tmg-media-big-play-pause-btn {
   animation: tmg-spin 1s ease-out;
 }

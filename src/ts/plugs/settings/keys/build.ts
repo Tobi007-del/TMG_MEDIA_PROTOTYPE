@@ -1,0 +1,70 @@
+import { DeepPartial } from "sia-reactor";
+import { KEYS_BLOCKS, KEYS_WHITELIST } from "../../../consts";
+import { Keys } from "./types";
+
+export const KEYS_BUILD: DeepPartial<Keys> = {
+  disabled: false,
+  strictMatches: false,
+  overrides: [" ", "ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Home", "End"],
+  shortcuts: {
+    prev: "Shift+p",
+    next: "Shift+n",
+    playPause: "k",
+    mute: "m",
+    dark: "d",
+    skipBwd: "j",
+    skipFwd: "l",
+    stepFwd: ".",
+    stepBwd: ",",
+    volumeUp: "ArrowUp",
+    volumeDown: "ArrowDown",
+    brightnessUp: "y",
+    brightnessDown: "h",
+    playbackRateUp: ">",
+    playbackRateDown: "<",
+    timeFormat: "z",
+    timeMode: "q",
+    capture: "s",
+    objectFit: "a",
+    pictureInPicture: "i",
+    theater: "t",
+    fullscreen: "f",
+    captions: "c",
+    captionsFontSizeUp: ["+", "="],
+    captionsFontSizeDown: ["-", "_"],
+    captionsFontFamily: "u",
+    captionsFontWeight: "g",
+    captionsFontVariant: "v",
+    captionsFontOpacity: "o",
+    captionsBackgroundOpacity: "b",
+    captionsWindowOpacity: "w",
+    captionsCharacterEdgeStyle: "e",
+    captionsTextAlignment: "x",
+    settings: "?",
+  },
+  blocks: KEYS_BLOCKS,
+  whitelist: KEYS_WHITELIST,
+  mods: {
+    disabled: false,
+    skip: {
+      ctrl: 60,
+      shift: 10,
+    },
+    volume: {
+      ctrl: 50,
+      shift: 10,
+    },
+    brightness: {
+      ctrl: 50,
+      shift: 10,
+    },
+    playbackRate: {
+      ctrl: 1,
+    },
+    captionsFontSize: {},
+  },
+  _handlers: {
+    keydown: {},
+    keyup: {},
+  },
+};

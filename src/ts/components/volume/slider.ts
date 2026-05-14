@@ -12,7 +12,7 @@ export class VolumeSlider extends RangeSlider<RangeConfig, RangeState> {
   }
 
   constructor(ctlr: Controller, config?: VolumeSliderConfig) {
-    super(ctlr, { label: "Volume", min: 0, max: 100, step: 1, value: 0, previewValue: 0, scrub: { sync: true, relative: true, cancel: { delta: 15, timeout: 2000 } }, wheel: { disabled: false, axisRatio: 6 }, ...config });
+    super(ctlr, { label: "Volume", ...config });
   }
 
   public override wire(): void {
@@ -22,11 +22,10 @@ export class VolumeSlider extends RangeSlider<RangeConfig, RangeState> {
     // ---- Config --------
     this.ctlr.config.on("settings.volume.max", ({ value }) => (this.config.max = value!), { signal: this.signal, immediate: true });
   }
-  public override syncBarPos(): void {}
-
   protected override seek(value: number): void {
     super.seek(value), this.plug?.handleSliderInput(value);
   }
+  public override syncBarPos(): void {}
 
   protected handleVolumeState({ value }: REvent<CtlrMedia, "state.volume">): void {
     this.config.value = value;

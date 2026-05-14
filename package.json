@@ -13,15 +13,17 @@
   },
   "homepage": "https://github.com/Tobi007-del/tmg-media-player#readme",
   "type": "module",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "unpkg": "./dist/index.global.js",
-  "jsdelivr": "./dist/index.global.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "unpkg": "./dist/super.global.js",
+  "jsdelivr": "./dist/super.global.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
       "default": "./dist/index.js"
     },
     "./style.css": "./dist/index.css",
@@ -29,27 +31,29 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit --watch",
-    "dev": "vite",
-    "build": "node build.mjs",
-    "build:prod": "node build.mjs --prod",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "files": [
     "dist"
   ],
-  "keywords": [],
   "devDependencies": {
-    "esbuild": "^0.27.2",
+    "@types/youtube": "^0.2.0",
+    "@vimeo/player": "^2.30.4",
+    "dashjs": "^5.1.1",
     "esbuild-sass-plugin": "^3.6.0",
+    "hls.js": "^1.6.16",
     "sass": "^1.98.0",
+    "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
   },
   "dependencies": {
-    "sia-reactor": "^0.0.33",
-    "@t007/utils": "^0.0.31",
-    "@t007/input": "^0.0.29",
-    "@t007/toast": "^0.0.29",
-    "@t007/dialog": "^0.0.28"
+    "@t007/dialog": "^0.0.30",
+    "@t007/input": "^0.0.31",
+    "@t007/toast": "^0.0.31",
+    "@t007/utils": "^0.0.33",
+    "sia-reactor": "^0.0.34"
   }
 }

@@ -12,7 +12,7 @@ export class TimeButton extends BaseComponent<TimeConfig, ComponentState, HTMLBu
   }
 
   public override create() {
-    return (this.element = createEl("button", { className: "tmg-video-current-time" }, { draggableControl: "", controlId: this.name }));
+    return (this.element = createEl("button", { className: "tmg-media-current-time" }, { draggableControl: "", controlId: this.name }));
   }
 
   public override wire(): void {
@@ -37,7 +37,7 @@ export class TimeButton extends BaseComponent<TimeConfig, ComponentState, HTMLBu
   public syncUI(): void {
     this.element.textContent = this.plug?.toTimeText(this.media.state.currentTime, true) || "-:--";
   }
-  public syncARIA() {
+  public syncARIA(): void {
     this.state.label = `Show ${this.plug?.nextMode} time`;
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.timeMode);
     this.el.title = `Switch (mode${this.state.cmd} / DblClick→format${formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.timeFormat)})`;

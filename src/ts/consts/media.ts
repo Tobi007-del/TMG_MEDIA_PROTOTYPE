@@ -32,7 +32,7 @@ export const MEDIA_STATE_BUILD: MediaState = {
   panningX: 0,
   panningY: 0,
   panningZ: 0,
-  xrInputSource: null,
+  xrInputSource: [],
   // Tracks & Streaming
   currentTextTrack: -1,
   currentAudioTrack: -1,
@@ -98,5 +98,6 @@ export const MEDIA_STATUS_BUILD: MediaStatus = {
 export const MEDIA_SETTINGS_BUILD: MediaSettings = {
   defaultMuted: false,
   defaultPlaybackRate: 1,
+  protection: null,
   srcObject: null,
 };

@@ -1,4 +1,4 @@
-import type { Mode } from "./generics";
+import type { MediaType, Mode } from "./generics";
 import type {
   Sources,
   Src,
@@ -36,19 +36,19 @@ import type {
 
 export interface Settings {
   auto: Auto;
-  css: Css;
   brightness: Brightness;
   captions: Captions;
   controlPanel: ControlPanel;
+  css: Css;
   errorMessages: ErrorMessages;
   fastPlay: FastPlay;
+  frame: Frame;
   gesture: Gesture;
   keys: Keys;
   locked: Locked;
   modes: Modes;
-  objectFit: ObjectFit;
-  frame: Frame;
   notifiers: Notifiers;
+  objectFit: ObjectFit;
   overlay: Overlay;
   persist: Persist;
   playbackRate: PlaybackRate;
@@ -68,7 +68,7 @@ export interface CtlrConfig {
   lightState: LightState;
   media: Media;
   mediaPlayer: "TMG";
-  mediaType: "video";
+  mediaType: MediaType;
   playlist: Playlist;
   settings: Settings;
   sources: Sources;

@@ -1,75 +1,25 @@
 import { MEDIA_INTENT_BUILD, MEDIA_SETTINGS_BUILD, MEDIA_STATE_BUILD, MEDIA_STATUS_BUILD } from "../consts/media";
 import { MediaState, MediaReport } from "../types/contract";
 import type { Source, Sources, Track, Tracks } from "../plugs";
-import { isStr, isNum, createEl, isIter, isSameURL, loadResource, queryFullscreenEl, queryPictureInPictureEl } from ".";
+import { isStr, isNum, createEl, isIter, isSameURL, loadResource, queryFullscreenEl, queryPictureInPictureEl, cleanURL } from ".";
+import { MediaType } from "../types/generics";
 
 // ============ Video Utilities ============
 // Types
 export type Dimensions = Record<"width" | "height", number>;
-
 type SourceLike = Source | (HTMLSourceElement & Record<string, any>);
 type TrackLike = Track | (HTMLTrackElement & Record<string, any>);
 
 // Report Generation
 export function getMediaReport(m: HTMLMediaElement): MediaReport {
-  const txtTrackIdx = getTrackIdx(m, "Text");
+  const isVid = m instanceof HTMLVideoElement,
+    txtTrackIdx = getTrackIdx(m, "Text");
   const report = {
-    state: {
-      src: m.src,
-      currentTime: m.currentTime,
-      paused: m.paused,
-      volume: m.volume,
-      muted: m.muted,
-      playbackRate: m.playbackRate,
-      pictureInPicture: queryPictureInPictureEl() === m,
-      fullscreen: queryFullscreenEl() === m,
-      currentTextTrack: txtTrackIdx,
-      currentAudioTrack: getTrackIdx(m, "Audio"),
-      currentVideoTrack: getTrackIdx(m, "Video"),
-      poster: m instanceof HTMLVideoElement ? m.poster : "",
-      autoplay: m.autoplay,
-      loop: m.loop,
-      preload: m.preload,
-      playsInline: m instanceof HTMLVideoElement ? m.playsInline : false,
-      crossOrigin: m.crossOrigin,
-      controls: m.controls,
-      controlsList: m.controlsList ?? m.getAttribute("controlsList"),
-      disablePictureInPicture: m instanceof HTMLVideoElement ? (m.disablePictureInPicture ?? m.hasAttribute("disablePictureInPicture")) : false,
-      sources: getSources(m),
-      tracks: getTracks(m),
-    },
-    status: {
-      readyState: m.readyState,
-      networkState: m.networkState,
-      error: m.error,
-      seeking: m.seeking,
-      buffered: m.buffered,
-      played: m.played,
-      seekable: m.seekable,
-      duration: m.duration,
-      ended: m.ended,
-      loadedMetadata: m.readyState >= 1,
-      loadedData: m.readyState >= 2,
-      canPlay: m.readyState >= 3,
-      canPlayThrough: m.readyState >= 4,
-      videoWidth: m instanceof HTMLVideoElement ? m.videoWidth : 0,
-      videoHeight: m instanceof HTMLVideoElement ? m.videoHeight : 0,
-      textTracks: m.textTracks,
-      audioTracks: (m as any).audioTracks,
-      videoTracks: (m as any).videoTracks,
-      activeCue: m.textTracks[txtTrackIdx]?.activeCues?.[0] || null,
-    },
-    settings: {
-      defaultMuted: m.defaultMuted,
-      defaultPlaybackRate: m.defaultPlaybackRate,
-    },
+    state: { src: m.src, currentTime: m.currentTime, paused: m.paused, volume: m.volume, muted: m.muted, playbackRate: m.playbackRate, pictureInPicture: queryPictureInPictureEl() === m, fullscreen: queryFullscreenEl() === m, currentTextTrack: txtTrackIdx, currentAudioTrack: getTrackIdx(m, "Audio"), currentVideoTrack: getTrackIdx(m, "Video"), poster: isVid ? m.poster : "", autoplay: m.autoplay, loop: m.loop, preload: m.preload, playsInline: isVid ? m.playsInline : false, crossOrigin: m.crossOrigin, controls: m.controls, controlsList: m.controlsList ?? m.getAttribute("controlsList"), disablePictureInPicture: isVid ? m.disablePictureInPicture ?? m.hasAttribute("disablePictureInPicture") : false, sources: getSources(m), tracks: getTracks(m) },
+    status: { readyState: m.readyState, networkState: m.networkState, error: m.error, seeking: m.seeking, buffered: m.buffered, played: m.played, seekable: m.seekable, duration: m.duration, ended: m.ended, loadedMetadata: m.readyState >= 1, loadedData: m.readyState >= 2, canPlay: m.readyState >= 3, canPlayThrough: m.readyState >= 4, videoWidth: isVid ? m.videoWidth : 0, videoHeight: isVid ? m.videoHeight : 0, textTracks: m.textTracks, audioTracks: (m as any).audioTracks, videoTracks: (m as any).videoTracks, activeCue: m.textTracks[txtTrackIdx]?.activeCues?.[0] || null },
+    settings: { defaultMuted: m.defaultMuted, defaultPlaybackRate: m.defaultPlaybackRate },
   };
-  return {
-    state: { ...MEDIA_STATE_BUILD, ...report.state },
-    intent: { ...MEDIA_INTENT_BUILD, ...report.state },
-    status: { ...MEDIA_STATUS_BUILD, ...report.status },
-    settings: { ...MEDIA_SETTINGS_BUILD, ...report.settings },
-  };
+  return { state: { ...MEDIA_STATE_BUILD, ...report.state }, intent: { ...MEDIA_INTENT_BUILD, ...report.state }, status: { ...MEDIA_STATUS_BUILD, ...report.status }, settings: { ...MEDIA_SETTINGS_BUILD, ...report.settings } };
 }
 
 // Geometry
@@ -106,8 +56,7 @@ export function getRenderedBox(elem: HTMLElement & { videoWidth?: number; videoH
       outRatio = 1;
     if (width < bbox.width) outRatio = bbox.width / width;
     if (Math.abs(outRatio - 1) < 1e-14 && height < bbox.height) outRatio = bbox.height / height;
-    width *= outRatio;
-    height *= outRatio;
+    (width *= outRatio), (height *= outRatio);
     return { ...parseObjectPosition(objectPosition, bbox, { width, height }), width, height };
   }
   return {};
@@ -142,7 +91,7 @@ export function cloneMedia<M extends HTMLMediaElement>(v: M): M {
 }
 
 // Source Management
-export function putSourceDetails(source: any, el: HTMLSourceElement | Record<string, any>) {
+export function putSourceDetails(source: any, el: HTMLSourceElement | Record<string, any>): void {
   if (source.src) el.src = source.src;
   if (source.type) el.type = source.type;
   if (source.media) el.media = source.media;
@@ -168,12 +117,13 @@ export function getSources(medium: HTMLElement): MediaState["sources"] {
 export const removeSources = (medium: HTMLElement): void => medium?.querySelectorAll("source")?.forEach((source) => source.remove());
 export function isSameSources(a?: Sources, b?: Sources): boolean {
   if (!a || !b || a.length !== b.length) return false;
-  return a.every((s1) => b.some((s2) => isSameURL(s1.src, s2.src) && s1.type === s2.type && s1.media === s2.media));
+  const set = new Set(b.map((s) => `${cleanURL(s.src)}|${s.type}|${s.media}`));
+  return a.every((s) => set.has(`${cleanURL(s.src)}|${s.type}|${s.media}`));
 }
 
 // Track Management
 export type TrackType = "Audio" | "Video" | "Text";
-export function putTrackDetails(track: any, el: HTMLTrackElement | Record<string, any>) {
+export function putTrackDetails(track: any, el: HTMLTrackElement | Record<string, any>): void {
   if (track.id) el.id = track.id;
   if (track.kind) el.kind = track.kind;
   if (track.label) el.label = track.label;
@@ -184,8 +134,7 @@ export function putTrackDetails(track: any, el: HTMLTrackElement | Record<string
 export function addTracks(tracks: TrackLike | Iterable<TrackLike> = [], medium: HTMLElement): HTMLTrackElement | HTMLTrackElement[] {
   const addTrack = (track: TrackLike, med: HTMLElement) => {
     const trackEl = createEl("track");
-    putTrackDetails(track, trackEl);
-    return med.appendChild(trackEl);
+    return putTrackDetails(track, trackEl), med.appendChild(trackEl);
   };
   return isIter(tracks) ? Array.from(tracks as Iterable<TrackLike>, (track) => addTrack(track, medium)) : addTrack(tracks, medium);
 }
@@ -194,20 +143,19 @@ export function getTracks(medium: HTMLElement, cues = false): TrackLike[] {
     _tracks: TrackLike[] = [];
   tracks.forEach((track) => {
     const obj: Record<string, any> = {};
-    putTrackDetails(track, obj);
-    _tracks.push(obj as TrackLike);
+    putTrackDetails(track, obj), _tracks.push(obj as TrackLike);
   });
   return _tracks;
 }
 export const removeTracks = (medium: HTMLElement): void => medium.querySelectorAll("track")?.forEach((track) => (track.kind === "subtitles" || track.kind === "captions") && track.remove());
 export function isSameTracks(a?: Tracks, b?: Tracks): boolean {
   if (!a || !b || a.length !== b.length) return false;
-  return a.every((t1) => b.some((t2) => isSameURL(t1.src, t2.src) && t1.kind === t2.kind && t1.label === t2.label && t1.srclang === t2.srclang && t1.default === t2.default));
+  const set = new Set(b.map((t) => `${cleanURL(t.src)}|${t.kind}|${t.label}|${t.srclang}|${t.default}`));
+  return a.every((t) => set.has(`${cleanURL(t.src)}|${t.kind}|${t.label}|${t.srclang}|${t.default}`));
 }
 const isTrack = (type: TrackType, term: any) => `${type}Track` in window && term instanceof (window as any)[`${type}Track`];
-export function getTrackIdx(medium: HTMLMediaElement, type: TrackType, term: any = "active"): number {
+export function getTrackIdx(medium: HTMLMediaElement, type: TrackType, term: any = "active", list = (medium as any)[`${type.toLowerCase()}Tracks`]): number {
   if (isNum(term)) return term;
-  const list = (medium as any)[`${type.toLowerCase()}Tracks`];
   if (term === "active") {
     if (type === "Text") for (let i = 0; i < +list?.length; i++) if (list[i].mode === "showing") return i;
     if (type === "Audio") for (let i = 0; i < +list?.length; i++) if (list[i].enabled) return i;
@@ -220,48 +168,46 @@ export function getTrackIdx(medium: HTMLMediaElement, type: TrackType, term: any
   }
   return -1;
 }
-export function setCurrentTrack(medium: HTMLMediaElement, type: TrackType, term: any, flush = false): void {
-  const list = (medium as any)[`${type.toLowerCase()}Tracks`],
-    idx = getTrackIdx(medium, type, term);
+export function setCurrentTrack(medium: HTMLMediaElement, type: TrackType, term: any, flush = false, list = (medium as any)[`${type.toLowerCase()}Tracks`]): void {
+  const idx = getTrackIdx(medium, type, term, list);
   if (type !== "Video") for (let i = 0; i < list.length; i++) type === "Text" ? (list[i].mode = i === idx ? "showing" : flush ? "disabled" : "hidden") : (list[i].enabled = i === idx);
   else list[idx] && (list[idx].selected = true);
 }
 
 // Capbailities
 export const DUMMY_VID = createEl("video");
-export function canVidCtrlVolume(): boolean {
-  if (!DUMMY_VID) return false;
+export const DUMMY_AUD = createEl("audio");
+export function canCtrlVolume(type: MediaType = "video", dummy = type === "video" ? DUMMY_VID : DUMMY_AUD): boolean {
   try {
-    const prev = DUMMY_VID.volume;
-    DUMMY_VID.volume = 0.5;
-    const works = DUMMY_VID.volume === 0.5;
-    return ((DUMMY_VID.volume = prev), works);
+    const prev = dummy.volume;
+    dummy.volume = 0.5;
+    const works = dummy.volume === 0.5;
+    return (dummy.volume = prev), works;
   } catch {
     return false;
   }
 }
-export function canVidMuteVolume(): boolean {
-  return !!DUMMY_VID && "muted" in DUMMY_VID;
+export function canMuteVolume(type: MediaType = "video", dummy = type === "video" ? DUMMY_VID : DUMMY_AUD): boolean {
+  return !!dummy && "muted" in dummy;
 }
-export function canVidCtrlRate(): boolean {
-  if (!DUMMY_VID) return false;
+export function canCtrlRate(type: MediaType = "video", dummy = type === "video" ? DUMMY_VID : DUMMY_AUD): boolean {
   try {
-    const prev = DUMMY_VID.playbackRate;
-    DUMMY_VID.playbackRate = 0.5;
-    const works = DUMMY_VID.playbackRate === 0.5;
-    return ((DUMMY_VID.playbackRate = prev), works);
+    const prev = dummy.playbackRate;
+    dummy.playbackRate = 0.5;
+    const works = dummy.playbackRate === 0.5;
+    return (dummy.playbackRate = prev), works;
   } catch {
     return false;
   }
 }
-export function canVidTextTracks(): boolean {
-  return !!DUMMY_VID && "textTracks" in DUMMY_VID;
+export function canTextTracks(type: MediaType = "video", dummy = type === "video" ? DUMMY_VID : DUMMY_AUD): boolean {
+  return !!dummy && "textTracks" in dummy;
 }
-export function canVidVideoTracks(): boolean {
-  return !!DUMMY_VID && "videoTracks" in DUMMY_VID;
+export function canVideoTracks(type: MediaType = "video", dummy = type === "video" ? DUMMY_VID : DUMMY_AUD): boolean {
+  return !!dummy && "videoTracks" in dummy;
 }
-export function canVidAudioTracks(): boolean {
-  return !!DUMMY_VID && "audioTracks" in DUMMY_VID;
+export function canAudioTracks(type: MediaType = "video", dummy = type === "video" ? DUMMY_VID : DUMMY_AUD): boolean {
+  return !!dummy && "audioTracks" in dummy;
 }
 
 // ============ Caption/Subtitle Utilities ============
@@ -287,7 +233,7 @@ export function srtToVtt(srt: string, vttLines: string[] = ["WEBVTT", ""]): stri
 
 export function parseVttText(text: string): string {
   const state = { tag: /<(\/)?([a-z0-9.:]+)([^>]*)>/gi, o: "", l: 0, p: null as string | null, c: "" },
-    esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+    esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
   let m: RegExpExecArray | null;
   while ((m = state.tag.exec(text))) {
     const chunk = text.slice(state.l, m.index);
@@ -324,16 +270,16 @@ export function formatVttLine(p: string, maxChars: number): string[] {
       const m = tok.match(/^<\/?\s*([a-z0-9._:-]+)/i),
         n = m?.[1] || "",
         timing = /^\d/.test(n);
-      if (timing) return ((state.timeTag = tok), (state.line += tok), (state.lastWasTag = true));
-      if (!closeTag && !tok.endsWith("/>") && n) (state.stack.push(n), updateTags());
-      if (closeTag && state.stack.length) (state.stack.pop(), updateTags());
-      return ((state.lastWasTag = true), (state.line += tok));
+      if (timing) return (state.timeTag = tok), (state.line += tok), (state.lastWasTag = true);
+      if (!closeTag && !tok.endsWith("/>") && n) state.stack.push(n), updateTags();
+      if (closeTag && state.stack.length) state.stack.pop(), updateTags();
+      return (state.lastWasTag = true), (state.line += tok);
     }
     const len = stripTags(tok).length,
       needSpace = state.line && !state.lastWasTag;
     if (state.len + (needSpace ? 1 : 0) + len > maxChars) flush();
-    if (needSpace) ((state.line += " "), (state.len += 1));
-    ((state.line += tok), (state.len += len), (state.lastWasTag = false));
+    if (needSpace) (state.line += " "), (state.len += 1);
+    (state.line += tok), (state.len += len), (state.lastWasTag = false);
   });
-  return (flush(), state.parts);
+  return flush(), state.parts;
 }

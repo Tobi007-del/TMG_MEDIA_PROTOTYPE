@@ -1,18 +1,19 @@
 import {
-  errorCodes,
-  modes,
-  keyShortcutActions,
-  moddedKeyShortcutActions,
-  aptAutoplayOptions,
-  orientationOptions,
+  ERROR_CODES,
+  MODES,
+  KEYSHORTCUT_ACTIONS,
+  MODDED_KEYSHORTCUT_ACTIONS,
+  APT_AUTOPLAY_OPTIONS,
+  ORIENTATION_OPTIONS,
 } from "../consts/generics";
 
-export type ErrorCode = (typeof errorCodes)[number];
-export type Mode = (typeof modes)[number];
-export type KeyShortcutAction = (typeof keyShortcutActions)[number];
-export type ModdedKeyShortcutAction = (typeof moddedKeyShortcutActions)[number];
-export type AptAutoplayOption = (typeof aptAutoplayOptions)[number];
-export type OrientationOption = (typeof orientationOptions)[number];
+export type MediaType = "video" | "audio";
+export type ErrorCode = (typeof ERROR_CODES)[number];
+export type Mode = (typeof MODES)[number];
+export type KeyShortcutAction = (typeof KEYSHORTCUT_ACTIONS)[number];
+export type ModdedKeyShortcutAction = (typeof MODDED_KEYSHORTCUT_ACTIONS)[number];
+export type AptAutoplayOption = (typeof APT_AUTOPLAY_OPTIONS)[number];
+export type OrientationOption = (typeof ORIENTATION_OPTIONS)[number];
 
 export interface PosterPreview {
   usePoster: boolean;

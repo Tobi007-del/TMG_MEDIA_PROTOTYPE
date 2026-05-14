@@ -1,10 +1,11 @@
 import type { Controller } from "./controller";
 import type { Inert, Intent, State, Volatile } from "sia-reactor";
-import type { Sources, Src, SrcObject, Tracks, ObjectFit } from "../plugs";
-import type { BaseTech } from "../media";
+import type { Sources, Src, SrcObject, Tracks, ObjectFit, CueLike } from "../plugs";
+import type { BaseTech } from "../techs";
+import { MediaType } from "./generics";
 
 export interface MediaContract {
-  // "Must Haves" to be even considered media
+  // "Must Haves" to be considered media
   src: Src;
   currentTime: number;
   duration: number;
@@ -46,13 +47,13 @@ export interface MediaState {
   panningY: number; // Pitch (Up/Down)
   panningZ: number; // Roll (Tilt/Barrel)
   // --- Interaction (XR Controllers) ---
-  xrInputSource: unknown; // Reference to active controllers/hand-tracking
-  // --- Track Switching (Async Buffering/Streaming) --- NOTE: "Disabled" value is "-1"
+  xrInputSource: ArrayLike<any>; // Reference to active controllers/hand-tracking
+  // --- Track Switching (Async Buffering/Streaming) --- NOTE: "Disabled" value is "-1" where applicable
   currentTextTrack: number; // Subtitle
   currentAudioTrack: number; // Language (English -> Spanish)
   currentVideoTrack: number; // Angle
+  currentLevel: number; // Quality (280p -> 4K)
   autoLevel: boolean; // ABR Algorithm enabled?
-  currentLevel: number; // Quality (1080p -> 4K)
   // --- HTML Attributes ---
   poster: string;
   autoplay: boolean;
@@ -79,7 +80,7 @@ export type MediaIntent = Omit<
   currentAudioTrack: unknown;
   currentVideoTrack: unknown;
   currentTextTrack: unknown;
-}; // Tech's responsibility to receive `unknown` intent and produce a `number` that can index their status (track/level) lists
+}; // Tech will accept `unknown` intent and return a `number` that can index their status lists
 
 export interface MediaStatus {
   // --- Network & Health ---
@@ -105,20 +106,21 @@ export interface MediaStatus {
   canPlay: boolean; // Can we start?
   canPlayThrough: boolean; // Can we finish?
   // --- Lists ---
-  textTracks: Inert<TextTrackList> | any[];
-  audioTracks: unknown[]; // | AudioTrackList
-  videoTracks: unknown[]; // | VideoTrackList
-  levels: unknown[];
+  textTracks: ArrayLike<any>; // | TextTrackList
+  audioTracks: ArrayLike<any>; // | AudioTrackList
+  videoTracks: ArrayLike<any>; // | VideoTrackList
+  levels: ArrayLike<any>;
+  // --- Active Content ---
+  activeCue: Inert<CueLike> | null; // The current subtitle/caption line
   // --- VR / XR Info ---
   xrCapabilities: Record<"hasPosition" | "hasOrientation" | "isEmulated", boolean> | null; // 6DoF- Room-scale, 3DoF- Head rotation, Emulated- Magic Window
-  // --- Active Content ---
-  activeCue: Inert<TextTrackCue> | null; // The current subtitle/caption line
 }
 
 export interface MediaSettings {
   // --- Defaults (Startup values) ---
   defaultMuted: boolean;
   defaultPlaybackRate: number;
+  protection: Record<string, { serverURL: string }> | null; // { "com.widevine.alpha": { serverURL: "https://..." } }
   // --- Stream Sources ---
   srcObject: SrcObject; // HTML courtesy
 }
@@ -138,7 +140,19 @@ export interface MediaReport {
   settings: State<MediaSettings>;
 }
 
-export type CtlrMedia = {
+export type CtlrMedia = MediaReport & {
   tech: Inert<BaseTech>;
-  element: Inert<HTMLVideoElement>;
-} & MediaReport; // Controller Media
+  container: Inert<HTMLElement>;
+  pseudoContainer: Inert<HTMLElement>; // a replacement when container needs to eject, e.t.c
+} & (
+    | {
+        type: "video";
+        element: Inert<HTMLVideoElement>;
+        pseudoElement: Inert<HTMLVideoElement>; // a replacement when element needs to eject, frame processing, e.t.c
+      }
+    | {
+        type: "audio";
+        element: Inert<HTMLAudioElement>;
+        pseudoElement: Inert<HTMLAudioElement>; // a replacement when element needs to eject, frame processing, e.t.c
+      }
+  ); // Controller Media

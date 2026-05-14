@@ -25,4 +25,5 @@ export * from "./timeline";
 export * from "./volume";
 export * from "./brightness";
 export * from "./captionsview";
+export * from "./pictureinpictureplaceholder";
 // export * from "./notifiers";

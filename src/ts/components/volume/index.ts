@@ -1,12 +1,10 @@
 import { BaseComponent, type ComponentState } from "..";
-import type { Controller } from "../../core/controller";
 import { IconRegistry } from "../../core/registry";
-import { createEl, formatKeyForDisplay } from "../../utils";
+import { createEl, formatKeyForDisplay, setTimeout } from "../../utils";
 import type { CtlrMedia } from "../../types/contract";
 import type { REvent } from "sia-reactor";
-import type { RangeState } from "../range";
 import { VolumeSlider, type VolumeSliderConfig } from "./slider";
-import type { VolumePlug } from "../../plugs";
+import { OverlayPlug, type VolumePlug } from "../../plugs";
 
 export type VolumeConfig = VolumeSliderConfig;
 
@@ -24,13 +22,13 @@ export class VolumeControl extends BaseComponent<VolumeConfig, ComponentState> {
   public override create(): HTMLElement {
     // Variables Assignments
     this.slider = new VolumeSlider(this.ctlr, this.config);
-    this.button = createEl("button", { className: "tmg-video-mute-btn tmg-video-vb-btn", type: "button", innerHTML: IconRegistry.get("volumehigh") + IconRegistry.get("volumelow") + IconRegistry.get("volumemuted") });
-    this.sliderWrapper = createEl("span", { className: "tmg-video-volume-slider-wrapper tmg-video-vb-slider-wrapper" });
-    const sliderEl = this.slider.create(),
-      container = createEl("div", { className: "tmg-video-volume-container tmg-video-vb-container" }, { draggableControl: "", controlId: this.name });
+    this.button = createEl("button", { className: "tmg-media-mute-btn tmg-media-vb-btn", type: "button", innerHTML: IconRegistry.get("volumehigh") + IconRegistry.get("volumelow") + IconRegistry.get("volumemuted") });
+    this.sliderWrapper = createEl("span", { className: "tmg-media-volume-slider-wrapper tmg-media-vb-slider-wrapper" });
+    const slider = this.slider.create(),
+      container = createEl("div", { className: "tmg-media-volume-container tmg-media-vb-container" }, { draggableControl: "", controlId: this.name });
     // DOM Injection
-    sliderEl.classList.add("tmg-video-vb-slider", "tmg-video-volume-slider");
-    this.sliderWrapper.append(sliderEl);
+    slider.classList.add("tmg-media-vb-slider", "tmg-media-volume-slider");
+    this.sliderWrapper.append(slider);
     container.append(this.button, this.sliderWrapper);
     return (this.element = container);
   }
@@ -44,13 +42,13 @@ export class VolumeControl extends BaseComponent<VolumeConfig, ComponentState> {
     this.button.addEventListener("click", this.handleClick, { signal: this.signal });
     this.el.addEventListener("mousemove", this.startActive, { signal: this.signal });
     this.el.addEventListener("mouseleave", this.stopActive, { signal: this.signal });
-    // ---- State Listeners
-    this.slider.state.on("scrubbing", this.syncActive, { signal: this.signal });
-    // ---- Media Listeners
+    // State Listeners
+    this.slider.config.on("value", this.delayActive, { signal: this.signal });
+    // Ctlr Media Listeners
     this.media.on("state.volume", this.handleVolumeState, { signal: this.signal, immediate: true });
-    this.media.on("state.muted", this.syncARIA, { signal: this.signal, immediate: true });
+    this.media.on("state.muted", this.syncARIA, { signal: this.signal });
     // ---- Config --------
-    this.ctlr.config.on("settings.keys.shortcuts.mute", this.syncARIA, { signal: this.signal, immediate: true });
+    this.ctlr.config.on("settings.keys.shortcuts.mute", this.syncARIA, { signal: this.signal });
   }
 
   protected handleClick(): void {
@@ -63,24 +61,18 @@ export class VolumeControl extends BaseComponent<VolumeConfig, ComponentState> {
   }
 
   protected startActive(): void {
-    this.el.classList.add("tmg-video-control-active");
-    this.delayActive();
+    this.slider.element.classList.add("tmg-media-control-active"), this.delayActive();
   }
-
   protected delayActive(): void {
+    this.ctlr.plug<OverlayPlug>("overlay")?.delay();
     clearTimeout(this.delayActiveId);
-    this.delayActiveId = window.setTimeout(() => this.stopActive(), this.ctlr.settings.overlay.delay);
+    this.delayActiveId = setTimeout(() => this.stopActive(), this.ctlr.settings.overlay.delay, this.signal);
   }
-
   protected stopActive = (): void => {
-    if (this.slider.element?.matches(":active")) return this.delayActive();
-    clearTimeout(this.delayActiveId);
-    this.el.classList.remove("tmg-video-control-active");
+    if (this.slider.element.matches(":active")) return this.delayActive();
+    clearTimeout(this.delayActiveId), this.slider.element.classList.remove("tmg-media-control-active");
   };
 
-  protected syncActive(): void {
-    this.el.classList.toggle("tmg-video-control-active", this.slider.state.scrubbing || this.el.matches(":hover") || this.el.matches(":focus-within"));
-  }
   public syncARIA(): void {
     this.state.label = this.media.state.muted || this.media.state.volume === 0 ? "Unmute" : "Mute";
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.mute);
@@ -89,7 +81,6 @@ export class VolumeControl extends BaseComponent<VolumeConfig, ComponentState> {
   }
 
   protected override onDestroy(): void {
-    clearTimeout(this.delayActiveId);
     this.slider.destroy(), super.onDestroy();
   }
 }

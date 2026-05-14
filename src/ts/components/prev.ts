@@ -13,7 +13,7 @@ export class PrevButton extends BaseComponent<PrevConfig, ComponentState, HTMLBu
   }
 
   public override create() {
-    this.element = createEl("button", { className: "tmg-video-prev-btn", type: "button", innerHTML: IconRegistry.get("prev") }, { draggableControl: "", controlId: this.name });
+    this.element = createEl("button", { className: "tmg-media-prev-btn", type: "button", innerHTML: IconRegistry.get("prev") }, { draggableControl: "", controlId: this.name });
     return this.hide(), this.element;
   }
 

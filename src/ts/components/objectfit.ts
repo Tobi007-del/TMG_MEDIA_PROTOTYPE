@@ -14,7 +14,7 @@ export class ObjectFitButton extends BaseComponent<ObjectFitConfig, ComponentSta
   }
 
   public override create() {
-    return (this.element = createEl("button", { className: "tmg-video-object-fit-btn", type: "button", innerHTML: IconRegistry.get("objectFitContain") + IconRegistry.get("objectFitCover") + IconRegistry.get("objectFitFill") }, { draggableControl: "", controlId: this.name }));
+    return (this.element = createEl("button", { className: "tmg-media-object-fit-btn", type: "button", innerHTML: IconRegistry.get("objectFitContain") + IconRegistry.get("objectFitCover") + IconRegistry.get("objectFitFill") }, { draggableControl: "", controlId: this.name }));
   }
 
   public override wire(): void {

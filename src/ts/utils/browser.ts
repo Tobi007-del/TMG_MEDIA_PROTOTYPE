@@ -89,4 +89,4 @@ export const IS_MOBILE = Boolean(IS_ANDROID || IS_IPHONE || IS_IPOD || IS_IPAD);
 export const IS_SMART_TV = IS_TIZEN || IS_WEBOS;
 
 // Media Queries
-export const queryMediaMobile = (query = "(max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape)"): boolean => Boolean(win && "matchMedia" in win && win.matchMedia(query).matches);
+export const queryMediaMobile = (query = `(max-width: 480px), (max-width: 940px) and (max-height: 480px) and (orientation: landscape)`) => Boolean(win && "matchMedia" in win && win.matchMedia(query).matches);

@@ -13,7 +13,7 @@ export class CaptureButton extends BaseComponent<CaptureConfig, ComponentState, 
   }
 
   public override create() {
-    return (this.element = createEl("button", { className: "tmg-video-capture-btn", type: "button", innerHTML: IconRegistry.get("capture") }, { draggableControl: "", controlId: this.name }));
+    return (this.element = createEl("button", { className: "tmg-media-capture-btn", type: "button", innerHTML: IconRegistry.get("capture") }, { draggableControl: "", controlId: this.name }));
   }
 
   public override wire(): void {
@@ -24,10 +24,10 @@ export class CaptureButton extends BaseComponent<CaptureConfig, ComponentState, 
   }
 
   protected handleClick(): void {
-    this.plug?.captureFrame();
+    this.plug?.capture();
   }
   protected handleDblClick(): void {
-    this.plug?.captureFrame("monochrome");
+    this.plug?.capture("monochrome");
   }
 
   public syncARIA(): void {

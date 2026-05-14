@@ -19,6 +19,9 @@ export function clampRGBBri([r, g, b]: RGB, m = 40): RGB {
 }
 
 // Dominant Color Detection
+export async function getDominantColor(src: string | HTMLImageElement | HTMLCanvasElement | { canvas: HTMLCanvasElement; width: number; height: number }, format: "hex", raw?: false): Promise<string | null>;
+export async function getDominantColor(src: string | HTMLImageElement | HTMLCanvasElement | { canvas: HTMLCanvasElement; width: number; height: number }, format: "rgb", raw: true): Promise<RGB | null>;
+export async function getDominantColor(src: string | HTMLImageElement | HTMLCanvasElement | { canvas: HTMLCanvasElement; width: number; height: number }, format?: "rgb", raw?: false): Promise<string | null>;
 export async function getDominantColor(src: string | HTMLImageElement | HTMLCanvasElement | { canvas: HTMLCanvasElement; width: number; height: number }, format: "rgb" | "hex" = "rgb", raw = false): Promise<string | RGB | null> {
   if (isStr(src))
     src = await new Promise<HTMLImageElement>((res, rej) => {
@@ -49,11 +52,11 @@ export async function getDominantColor(src: string | HTMLImageElement | HTMLCanv
   return format === "hex" ? `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}` : raw == false ? `rgb(${r},${g},${b})` : [r, g, b];
 }
 
-export function convertToMonoChrome(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) {
+export function convertToMonoChrome(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D): void {
   const frame = context.getImageData(0, 0, canvas.width || 1, canvas.height || 1);
   for (let i = 0; i < frame.data.length / 4; i++) {
     const grey = (frame.data[i * 4 + 0] + frame.data[i * 4 + 1] + frame.data[i * 4 + 2]) / 3;
-    ((frame.data[i * 4 + 0] = grey), (frame.data[i * 4 + 1] = grey), (frame.data[i * 4 + 2] = grey));
+    (frame.data[i * 4 + 0] = grey), (frame.data[i * 4 + 1] = grey), (frame.data[i * 4 + 2] = grey);
   }
   context.putImageData(frame, 0, 0);
 }

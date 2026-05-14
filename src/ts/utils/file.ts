@@ -1,5 +1,6 @@
 import { NOOP } from "sia-reactor";
 import { parseRomanNum } from "./num";
+import { mimeTypes, VIDEO_EXTENSIONS } from "./matcher";
 
 // File Size Formatting
 export { formatSize } from "@t007/utils";
@@ -10,16 +11,15 @@ export function getExtension(fn: string): string {
 }
 
 export function noExtension(fn: string, generic = false): string {
-  return fn.replace(!generic ? /(?:\.(?:mp4|mkv|avi|mov|webm|flv|wmv|m4v|mpg|mpeg|3gp|ogv|ts))+$/i : /(?:\.[a-z0-9]{2,5})+$/i, "");
+  return fn.replace(!generic ? VIDEO_EXTENSIONS : /(?:\.[a-z0-9]{2,5})+$/i, "");
 }
 
 // MIME Type Resolution
-export function getMimeTypeFromExtension(fn: string): string {
-  return ({ m3u8: "application/vnd.apple.mpegurl", mpd: "application/dash+xml", avi: "video/x-msvideo", mp4: "video/mp4", mkv: "video/x-matroska", mov: "video/quicktime", flv: "video/x-flv", webm: "video/webm", ogg: "video/ogg", wmv: "video/x-ms-wmv", "3gp": "video/3gpp", "3g2": "video/3gpp2", mpeg: "video/mpeg", ts: "video/mp2t", m4v: "video/x-m4v" } as Record<string, string>)[getExtension(fn)] || "application/octet-stream";
+export function getMimeTypeFromExtension(name: string) {
+  return mimeTypes[getExtension(name)] || "application/octet-stream"; // Default to binary stream
 }
 
 // Sorters
-
 export function smartFlatSort<F extends { name: string }>(files: F[], debug = true, stripExt = noExtension, log = debug ? (title: string, ...body: any[]) => console.log(`[Sorter][${title}]`, ...body) : NOOP, bCache = new Map(), kCache = new Map(), groups = new Map()) {
   debug && console.time("[Sorter]"), log("Init", `Sorting ${files.length} items...`);
   // Extracts the main series title + optional season

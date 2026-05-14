@@ -33,8 +33,7 @@ export abstract class BaseComponent<Config = any, State extends ComponentState =
   }
   protected override onSetup(): void {
     this.mount?.();
-    if (this.ctlr.state.readyState) this.wire?.();
-    else this.wire && this.ctlr.state.once("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup
+    this.ctlr.state.readyState ? this.wire?.() : this.wire && this.ctlr.state.once("readyState", this.wire, { signal: this.signal }); // wire after all plugs setup
   }
   protected override onDestroy(): void {
     this.unmount();
@@ -48,16 +47,16 @@ export abstract class BaseComponent<Config = any, State extends ComponentState =
   public wire?(): void {} // auto unwiring
 
   public hide(): void {
-    this.el.classList.toggle("tmg-video-control-hidden", (this.state.hidden = true));
+    this.el.classList.toggle("tmg-media-control-hidden", (this.state.hidden = true));
   }
   public show(): void {
-    this.el.classList.toggle("tmg-video-control-hidden", (this.state.hidden = false));
+    this.el.classList.toggle("tmg-media-control-hidden", (this.state.hidden = false));
   }
   public disable(): void {
-    this.el.classList.toggle("tmg-video-control-disabled", (this.state.disabled = true));
+    this.el.classList.toggle("tmg-media-control-disabled", (this.state.disabled = true));
   }
   public enable(): void {
-    this.el.classList.toggle("tmg-video-control-disabled", (this.state.disabled = false));
+    this.el.classList.toggle("tmg-media-control-disabled", (this.state.disabled = false));
   }
   protected gate(e: REvent<MediaFeatures, keyof MediaFeatures>): void {
     (e.oldValue ?? this.state.hidden) === this.state.hidden && (e.value ? this.hide() : this.show());

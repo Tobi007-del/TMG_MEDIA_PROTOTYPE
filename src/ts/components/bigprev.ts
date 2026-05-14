@@ -13,8 +13,8 @@ export class BigPrevButton extends BaseComponent<BigPrevConfig, ComponentState, 
   }
 
   public override create() {
-    this.element = createEl("button", { className: "tmg-video-big-prev-btn", type: "button", innerHTML: IconRegistry.get("prev") }, { draggableControl: "", dragId: "big", controlId: this.name });
-    return this.hide(), this.element;
+    this.element = createEl("button", { className: "tmg-media-big-prev-btn", type: "button", innerHTML: IconRegistry.get("prev") }, { draggableControl: "", dragId: "big", controlId: this.name });
+    return this.disable(), this.element;
   }
 
   public override wire(): void {
@@ -30,7 +30,7 @@ export class BigPrevButton extends BaseComponent<BigPrevConfig, ComponentState, 
   }
 
   public syncUI(): void {
-    this[this.ctlr.config.playlist && this.ctlr.config.playlist.length > 1 ? "show" : "hide"](), this[this.plug?.atFirst ?? true ? "disable" : "enable"]();
+    this[this.ctlr.config.playlist && this.ctlr.config.playlist.length > 1 ? "enable" : "disable"](), this[this.plug?.atFirst ?? true ? "disable" : "enable"]();
   }
   public syncARIA(): void {
     this.state.label = "Previous";

@@ -12,7 +12,7 @@ export class BrightnessSlider extends RangeSlider<RangeConfig, RangeState> {
   }
 
   constructor(ctlr: Controller, config?: BrightnessSliderConfig) {
-    super(ctlr, { label: "Brightness", min: 0, max: 100, step: 1, value: 100, previewValue: 100, scrub: { sync: true, relative: true, cancel: { delta: 15, timeout: 2000 } }, wheel: { disabled: false, axisRatio: 6 }, ...config });
+    super(ctlr, { label: "Brightness", ...config });
   }
 
   public override wire(): void {
@@ -22,11 +22,10 @@ export class BrightnessSlider extends RangeSlider<RangeConfig, RangeState> {
     // ---- Config --------
     this.ctlr.config.on("settings.brightness.max", ({ value }) => (this.config.max = value!), { signal: this.signal, immediate: true });
   }
-  public override syncBarPos(): void {}
-
   protected override seek(value: number): void {
     super.seek(value), this.plug?.handleSliderInput(value);
   }
+  public override syncBarPos(): void {}
 
   protected handleBrightnessState({ value }: REvent<CtlrMedia, "state.brightness">): void {
     this.config.value = value;

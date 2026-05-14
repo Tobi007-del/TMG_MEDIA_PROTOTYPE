@@ -20,11 +20,11 @@ export const uid = (prefix = "tmg_") => _uid(prefix);
 
 export function luid(key = LUID_KEY, prefix = "tmg_local_"): string {
   let id = localStorage.getItem(key);
-  return (!id && localStorage.setItem(key, (id = uid(prefix))), id || "");
+  return !id && localStorage.setItem(key, (id = uid(prefix))), id || "";
 }
 
 // Parsers
 export { remToPx, pxToRem, parseCSSTime, parseCSSSize } from "@t007/utils";
 
 // Checkers
-export { isSameURL } from "@t007/utils";
+export { cleanURL, isSameURL } from "@t007/utils";

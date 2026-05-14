@@ -24,15 +24,15 @@ export abstract class Controllable<Config = any, State = any> {
     this.state = (isObj(state) ? reactive(state) : state) as Controllable["state"];
   }
 
-  public setup() {
+  public setup(): this {
     return this.onSetup(), this; // We let the subclass do its work
   }
   protected abstract onSetup(): void;
 
-  public destroy() {
+  public destroy(): void {
     !this.signal.aborted && this.ac.abort(`[TMG Controllable] Instance is being destroyed`); // incase controller already aborted, kills all listeners and timers before proper destruction below
-    (this.onDestroy(), ((this.state as any)?.destroy?.(), (this.config as any)?.destroy?.())); // Can I clean here?... Anatoly :)
+    this.onDestroy(), ((this.state as any)?.destroy?.(), (this.config as any)?.destroy?.()); // Can I clean here?... Anatoly :)
     nuke(this);
   }
-  protected onDestroy() {}
+  protected onDestroy(): void {}
 }

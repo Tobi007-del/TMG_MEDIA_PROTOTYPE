@@ -76,7 +76,8 @@ Dash convention:
 
 ```ts
 public override wire(): void {
-  // Variables Assignment         <- plug refs, DOM refs, computed initial values
+  // Variables Assignment         <- plug refs, DOM refs, computed initial values (for other methods too)
+  // DOM Injection                <-  goes in mount(), create()
   // Event Listeners              <- native addEventListener
   // Plug Listeners               <- where applicable if plug has reactive state
   // [If this.config or this.state is reactive -- own listeners come BEFORE ctlr.*] - S->C
@@ -94,7 +95,7 @@ public override wire(): void {
   // ---- Config -------          <- same
 
   // Features Gating              <- tech.features.X hides or disables based on tech capabilities
-  // Post Wiring                  <- final imperative calls (tech.features.X = true, etc.)
+  // Post Wiring|Mounting                  <- final imperative calls (tech.features.X = true, etc.)
 }
 ```
 

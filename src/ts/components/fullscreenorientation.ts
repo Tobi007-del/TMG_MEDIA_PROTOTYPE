@@ -13,7 +13,7 @@ export class FullscreenOrientationButton extends BaseComponent<FullscreenOrienta
   }
 
   public override create() {
-    return (this.element = createEl("button", { className: "tmg-video-fullscreen-orientation-btn", type: "button", innerHTML: IconRegistry.get("fullscreenorientation") }, { draggableControl: "", controlId: this.name }));
+    return (this.element = createEl("button", { className: "tmg-media-fullscreen-orientation-btn", type: "button", innerHTML: IconRegistry.get("fullscreenorientation") }, { draggableControl: "", controlId: this.name }));
   }
 
   public override wire(): void {

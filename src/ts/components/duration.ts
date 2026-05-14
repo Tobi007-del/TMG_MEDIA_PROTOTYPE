@@ -12,7 +12,7 @@ export class DurationButton extends BaseComponent<DurationConfig, ComponentState
   }
 
   public override create() {
-    return (this.element = createEl("button", { className: "tmg-video-total-time" }, { draggableControl: "", controlId: this.name }));
+    return (this.element = createEl("button", { className: "tmg-media-total-time" }, { draggableControl: "", controlId: this.name }));
   }
 
   public override wire(): void {
@@ -31,7 +31,7 @@ export class DurationButton extends BaseComponent<DurationConfig, ComponentState
   public syncUI(): void {
     this.element.textContent = this.plug?.toTimeText(this.media.status.duration) ?? "--:--";
   }
-  public syncARIA() {
+  public syncARIA(): void {
     this.state.label = "Switch time format";
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.time.format);
     this.el.title = this.state.label + this.state.cmd;

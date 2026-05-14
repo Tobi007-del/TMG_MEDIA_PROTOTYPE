@@ -1,27 +1,26 @@
 import { Controller } from "../core/controller";
 import { Controllers } from "./runtime";
-import { loadResource, isIter, setHTMLConfig, isObj, supportsFullscreen, supportsPictureInPicture, luid } from "../utils";
+import { loadResource, isIter, setHTMLConfig, isObj, luid } from "../utils";
 import { CONFIG_BUILD } from "../consts";
 import { PLAYLIST_ITEM_BUILD } from "../plugs";
 import type { CtlrConfig } from "../types/config";
 import { DeepPartial, Paths, PathValue } from "sia-reactor";
-import { mergeObjs, parseAnyObj, setAny } from "sia-reactor/utils";
+import { mergeObjs, parsePathObj } from "sia-reactor/utils";
+import { MediaType } from "../types/generics";
 
-export type BuildPaths = Paths<CtlrConfig>;
-export type BuildParam = DeepPartial<CtlrConfig> & Record<BuildPaths, PathValue<CtlrConfig, BuildPaths>>;
+export type BuildParam = DeepPartial<CtlrConfig> & Record<Paths<CtlrConfig>, PathValue<CtlrConfig>>;
 
 export class Player {
   private medium: HTMLMediaElement | null = null;
   private active: boolean = false;
-  private controller: Controller | null = null;
   private _build: CtlrConfig = structuredClone(CONFIG_BUILD) as CtlrConfig;
+  private controller: Controller | null = null;
+  public get Controller() {
+    return this.controller;
+  }
 
   constructor(customBuild: BuildParam = {} as BuildParam) {
     this.configure({ ...customBuild, id: customBuild.id ?? `${luid()}_Controller_${Controllers.length + 1}` });
-  }
-
-  public get Controller() {
-    return this.controller;
   }
 
   public get build(): CtlrConfig {
@@ -36,7 +35,7 @@ export class Player {
 
   public configure(customBuild: BuildParam): void {
     if (!this.queryBuild() || !isObj(customBuild)) return;
-    this._build = mergeObjs(this._build, parseAnyObj(customBuild));
+    this._build = mergeObjs(this._build, parsePathObj(customBuild));
   }
 
   public async attach(medium: HTMLMediaElement) {
@@ -53,7 +52,7 @@ export class Player {
     if (!this.active) return;
     const medium = this.controller?.destroy() ?? ({} as any);
     this.controller && Controllers.splice(Controllers.indexOf(this.controller), 1);
-    medium?.classList?.remove(`tmg-${medium?.tagName.toLowerCase()}`, "tmg-media");
+    medium.classList?.remove(`tmg-${this._build.mediaType}`, "tmg-media", "tmg-host");
     medium.tmgcontrols = this.active = false;
     this.controller?.fire("tmgdetached", this.controller.payload);
     return ((medium.tmgPlayer = this.controller = this.medium = null), medium);
@@ -72,25 +71,24 @@ export class Player {
     }
     const customBuild = {} as BuildParam,
       attributes = this.medium.getAttributeNames().filter((attr) => attr.startsWith("tmg--"));
-    attributes?.forEach((attr) => setHTMLConfig<BuildParam>(customBuild, attr as `tmg--${BuildPaths}`, this.medium!.getAttribute(attr)!));
+    attributes?.forEach((attr) => setHTMLConfig<BuildParam>(customBuild, attr as `tmg--${Paths<CtlrConfig, "--">}`, this.medium!.getAttribute(attr)!));
     if (this.medium instanceof HTMLVideoElement && this.medium.poster) this.configure({ "media.artwork[0].src": this.medium.poster } as any);
     this.configure(customBuild);
   }
 
   private async deployController() {
     if (this.active || !this.medium?.isConnected) return;
-    if (this._build.playlist?.[0]) this.configure(mergeObjs(structuredClone(PLAYLIST_ITEM_BUILD), parseAnyObj(this._build.playlist[0])) as BuildParam);
-    if (!(this.medium instanceof HTMLVideoElement)) return this.notice({ error: `Could not deploy custom controls on the '${this.medium.tagName}' element as it is not supported`, warning: "Only the 'VIDEO' element is currently supported", tip: "" });
+    if (this._build.playlist?.[0]) this.configure(mergeObjs(structuredClone(PLAYLIST_ITEM_BUILD), parsePathObj(this._build.playlist[0])) as BuildParam);
+    if (!(this.medium instanceof HTMLMediaElement)) return this.notice({ error: `Could not deploy custom controls on the '${(this.medium as HTMLElement).tagName}' element as it is not supported`, warning: "Only the 'VIDEO' and 'AUDIO' elements are currently supported", tip: "" });
+    this._build.mediaType = this.medium.tagName.toLowerCase() as MediaType;
     this.medium.controls = false;
     this.medium.tmgcontrols = this.active = true;
-    this.medium.classList.add(`tmg-${this.medium.tagName.toLowerCase()}`, "tmg-media");
-    const modes: Record<string, boolean> = { fullscreen: supportsFullscreen(), pictureInPicture: supportsPictureInPicture() };
-    Object.keys(this._build.settings.modes).forEach((k) => ((this._build.settings.modes as any)[k].disabled = !(this._build.settings.modes as any)[k].disabled && (modes[String(k)] ?? true) ? false : true));
+    this.medium.classList.add(`tmg-${this._build.mediaType}`, "tmg-media", "tmg-host");
     await Promise.all([loadResource(window.TMG_VIDEO_CSS_SRC!), loadResource(window.T007_TOAST_JS_SRC!, "script", { module: true }), loadResource(window.T007_INPUT_JS_SRC!, "script")]);
     Controllers[Controllers.indexOf(this._build.id as any)] = this.controller = new Controller(this.medium, this._build);
   }
 
-  private notice({ error, warning, tip }: Partial<Record<"error" | "warning" | "tip", string>>) {
+  private notice({ error, warning, tip }: Partial<Record<"error" | "warning" | "tip", string>>): void {
     (error && console.error(`[TMG Player] ${error}`), warning && console.warn(`[TMG Player] ${warning}`), tip && console.info(`[TMG Player] ${tip}`));
   }
 }

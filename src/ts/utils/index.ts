@@ -11,6 +11,7 @@ export * from "./file";
 export * from "./color";
 // Browser & Environment
 export * from "./browser";
+export * from "./matcher";
 export * from "./keys";
 // Function Helpers
 export * from "./fn";

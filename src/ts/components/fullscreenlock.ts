@@ -12,7 +12,7 @@ export class FullscreenLockButton extends BaseComponent<FullscreenLockConfig, Co
   }
 
   public override create() {
-    return (this.element = createEl("button", { type: "button", title: "Unlock Screen", ariaLabel: "Unlock Screen", className: "tmg-video-screen-locked-btn", tabIndex: -1, innerHTML: `${IconRegistry.get("lock")}${IconRegistry.get("unlock")}<p>Unlock controls?</p>` }));
+    return (this.element = createEl("button", { type: "button", title: "Unlock Screen", ariaLabel: "Unlock Screen", className: "tmg-media-screen-locked-btn", tabIndex: -1, innerHTML: `${IconRegistry.get("lock")}${IconRegistry.get("unlock")}<p>Unlock controls?</p>` }));
   }
 
   public override mount(): void {
@@ -32,12 +32,12 @@ export class FullscreenLockButton extends BaseComponent<FullscreenLockConfig, Co
   protected handleClick(e: MouseEvent): void {
     e.stopPropagation();
     this.plug?.delayOverlay();
-    if (this.el.classList.contains("tmg-video-control-unlock")) this.ctlr.settings.locked.disabled = true;
-    else this.el.classList.add("tmg-video-control-unlock");
+    if (this.el.classList.contains("tmg-media-control-unlock")) this.ctlr.settings.locked.disabled = true;
+    else this.el.classList.add("tmg-media-control-unlock");
   }
 
   public syncUI(): void {
-    if (!this.plug?.state.visible) this.el.classList.remove("tmg-video-control-unlock");
+    if (!this.plug?.state.visible) this.el.classList.remove("tmg-media-control-unlock");
   }
   public syncARIA(): void {
     this.el.title = this.state.label = "Unlock Screen";

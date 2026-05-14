@@ -15,14 +15,14 @@ export class Meta extends BaseComponent<MetaConfig, ComponentState, HTMLDivEleme
 
   public override create(): HTMLDivElement {
     // Variables Assignment
-    this.element = createEl("div", { className: "tmg-video-meta-wrapper-cover" }, { draggableControl: "", dragId: "wrapper", controlId: this.name });
-    const textsCover = createEl("div", { className: "tmg-video-meta-text-wrapper-cover" }),
-      profileLink = createEl("a", { className: "tmg-video-profile-link" }),
-      titleWrapper = createEl("div", { className: "tmg-video-title-wrapper" }),
-      artistWrapper = createEl("div", { className: "tmg-video-artist-wrapper" });
-    this.ctlr.DOM.videoProfile = this.profile = createEl("img", { alt: "Profile", className: "tmg-video-profile" });
-    this.ctlr.DOM.videoTitle = this.title = createEl("a", { className: "tmg-video-title" });
-    this.ctlr.DOM.videoArtist = this.artist = createEl("a", { className: "tmg-video-artist" });
+    this.element = createEl("div", { className: "tmg-media-meta-wrapper" }, { draggableControl: "", dragId: "wrapper", controlId: this.name });
+    const textsCover = createEl("div", { className: "tmg-media-meta-text-wrapper-cover" }),
+      profileLink = createEl("a", { className: "tmg-media-profile-link" }),
+      titleWrapper = createEl("div", { className: "tmg-media-title-wrapper" }),
+      artistWrapper = createEl("div", { className: "tmg-media-artist-wrapper" });
+    this.ctlr.DOM.mediaProfile = this.profile = createEl("img", { alt: "Profile", className: "tmg-media-profile" });
+    this.ctlr.DOM.mediaTitle = this.title = createEl("a", { className: "tmg-media-title" });
+    this.ctlr.DOM.mediaArtist = this.artist = createEl("a", { className: "tmg-media-artist" });
     // DOM Injection
     profileLink.append(this.profile), titleWrapper.append(this.title), artistWrapper.append(this.artist);
     textsCover.append(titleWrapper, artistWrapper);
@@ -47,15 +47,15 @@ export class Meta extends BaseComponent<MetaConfig, ComponentState, HTMLDivEleme
   }
   public syncProfile(): void {
     const profile = this.ctlr.settings.controlPanel.profile;
-    if (profile !== true) this.profile.dataset.videoProfile = this.profile.src = profile || "";
+    if (profile !== true) this.profile.dataset.mediaProfile = this.profile.src = profile || "";
   }
   public syncTitle(): void {
     const title = this.ctlr.settings.controlPanel.title;
-    if (title !== true) this.title.dataset.videoTitle = this.title.textContent = title || "";
+    if (title !== true) this.title.dataset.mediaTitle = this.title.textContent = title || "";
   }
   public syncArtist(): void {
     const artist = this.ctlr.settings.controlPanel.artist;
-    if (artist !== true) this.artist.dataset.videoArtist = this.artist.textContent = artist || "";
+    if (artist !== true) this.artist.dataset.mediaArtist = this.artist.textContent = artist || "";
   }
 
   protected onDestroy(): void {

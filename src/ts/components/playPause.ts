@@ -9,7 +9,7 @@ export class PlayPauseButton extends BaseComponent<PlayPauseConfig, ComponentSta
   public static readonly isControl: boolean = true;
 
   public override create() {
-    return (this.element = createEl("button", { className: "tmg-video-play-pause-btn", innerHTML: IconRegistry.get("play") + IconRegistry.get("pause") + IconRegistry.get("replay") }, { draggableControl: "", controlId: this.name }));
+    return (this.element = createEl("button", { className: "tmg-media-play-pause-btn", innerHTML: IconRegistry.get("play") + IconRegistry.get("pause") + IconRegistry.get("replay") }, { draggableControl: "", controlId: this.name }));
   }
 
   public override wire(): void {
@@ -22,11 +22,11 @@ export class PlayPauseButton extends BaseComponent<PlayPauseConfig, ComponentSta
     this.ctlr.config.on("settings.keys.shortcuts.playPause", this.syncARIA, { signal: this.signal });
   }
 
-  protected handleClick() {
+  protected handleClick(): void {
     this.media.intent.paused = !this.media.state.paused;
   }
 
-  public syncARIA() {
+  public syncARIA(): void {
     this.state.label = this.media.status.ended ? "Replay" : this.media.state.paused ? "Play" : "Pause";
     this.state.cmd = formatKeyForDisplay(this.ctlr.settings.keys.shortcuts.playPause);
     this.el.title = this.state.label + this.state.cmd;

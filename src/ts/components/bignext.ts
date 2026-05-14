@@ -13,8 +13,8 @@ export class BigNextButton extends BaseComponent<BigNextConfig, ComponentState, 
   }
 
   public override create() {
-    this.element = createEl("button", { className: "tmg-video-big-next-btn", type: "button", innerHTML: IconRegistry.get("next") }, { draggableControl: "", dragId: "big", controlId: this.name });
-    return this.hide(), this.element;
+    this.element = createEl("button", { className: "tmg-media-big-next-btn", type: "button", innerHTML: IconRegistry.get("next") }, { draggableControl: "", dragId: "big", controlId: this.name });
+    return this.disable(), this.element;
   }
 
   public override wire(): void {
@@ -30,7 +30,7 @@ export class BigNextButton extends BaseComponent<BigNextConfig, ComponentState, 
   }
 
   public syncUI(): void {
-    this[this.ctlr.config.playlist && this.ctlr.config.playlist.length > 1 ? "show" : "hide"](), this[this.plug?.atLast ?? true ? "disable" : "enable"]();
+    this[this.ctlr.config.playlist && this.ctlr.config.playlist.length > 1 ? "enable" : "disable"](), this[this.plug?.atLast ?? true ? "disable" : "enable"]();
   }
   public syncARIA(): void {
     this.state.label = "Next";

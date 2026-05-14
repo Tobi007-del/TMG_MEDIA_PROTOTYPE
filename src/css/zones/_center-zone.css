@@ -1,39 +1,53 @@
-.tmg-video-big-controls-wrapper,
-.tmg-video-buffer {
-  top: clamp(calc((var(--cmptd-big-ctrl-scale-height) / 2)), calc(100% - var(--tmg-video-current-bottom-wrapper-height) - (var(--cmptd-big-ctrl-scale-height) / 2)), 50%);
+.tmg-media-big-controls-wrapper-cover,
+.tmg-media-buffer {
+  top: clamp(calc((var(--cmptd-big-ctrl-scale-size) / 2)), calc(100% - var(--tmg-media-current-bottom-wrapper-height) - (var(--cmptd-big-ctrl-scale-size) / 2)), 50%);
 }
-.tmg-video-big-controls-wrapper {
-  --cmptd-big-ctrl-scale-x-pad: var(--cmptd-big-ctrl-scale-y-pad); /* computed x padding */
-  display: none;
-  align-items: center;
-  gap: calc(var(--tmg-video-current-unit) * 2.75);
-  padding: calc(var(--cmptd-big-ctrl-scale-y-pad) + var(--cmptd-ctrl-box-x-in-pad)) calc(var(--cmptd-big-ctrl-scale-x-pad) + var(--cmptd-ctrl-box-x-in-pad));
+.tmg-media-big-controls-wrapper-cover {
+  max-width: 100%;
 }
-.tmg-video-big-controls-wrapper:not(:has(.tmg-video-control-hidden)) {
-  --cmptd-big-ctrl-scale-x-pad: calc(var(--cmptd-big-ctrl-scale-y-pad) / var(--tmg-video-large-scale));
-}
-.tmg-video-big-controls-wrapper > * {
-  display: none;
-  transition: none;
-}
-.tmg-video-container:is(.tmg-video-previewing, .tmg-video-scrubbing, :has(.tmg-video-touch-timeline-notifier.tmg-video-control-active)) .tmg-video-big-controls-wrapper {
-  display: none;
-}
-.tmg-media-container[data-size-tier^="xxx"] .tmg-video-big-controls-wrapper {
-  gap: calc(var(--tmg-video-current-unit) * 2.125);
-}
-.tmg-media-container[data-size-tier^="xxxx"] .tmg-video-big-controls-wrapper {
-  gap: calc(var(--tmg-video-current-unit) * 1.5);
-}
-.tmg-video-container:is(.tmg-video-replay, .tmg-video-miniplayer, .tmg-video-floating-player, .tmg-video-mobile) :is(.tmg-video-big-controls-wrapper, .tmg-video-big-controls-wrapper > *) {
+.tmg-media-container:is(.tmg-media-replay, .tmg-media-miniplayer, .tmg-media-floating-player, .tmg-media-mobile) .tmg-media-big-controls-wrapper-cover,
+.tmg-media-big-controls-wrapper-cover:has(.tmg-media-big-controls-wrapper > :not(:where(button[class^="tmg-media-big-"]))[data-displayed="true"]),
+.tmg-media-container:has(.tmg-media-control-dragging:not([data-drag-id="wrapper"])) .tmg-media-big-controls-wrapper-cover {
   display: flex;
 }
-:is(.tmg-video-big-controls-wrapper, .tmg-video-notifiers-container) > * {
-  width: var(--tmg-video-big-controls-size);
-  height: var(--tmg-video-big-controls-size);
+.tmg-media-container:is(.tmg-media-replay, .tmg-media-miniplayer, .tmg-media-floating-player, .tmg-media-mobile) .tmg-media-big-controls-wrapper-cover {
+  display: flex;
+}
+.tmg-media-big-controls-wrapper {
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--tmg-media-current-unit) * 2.75);
+  padding: var(--cmptd-ctrl-box-x-in-pad);
+}
+.tmg-media-big-controls-wrapper > * {
+  width: calc(var(--cmptd-big-ctrl-scale-size) / var(--tmg-media-large-scale));
+  height: calc(var(--cmptd-big-ctrl-scale-size) / var(--tmg-media-large-scale));
+  min-width: -webkit-fill-available;
+  min-width: fit-content;
+  flex-shrink: 0;
+  transition: none;
+}
+.tmg-media-big-controls-wrapper > .tmg-media-big-play-pause-btn {
+  width: var(--cmptd-big-ctrl-scale-size);
+  height: var(--cmptd-big-ctrl-scale-size);
+}
+.tmg-host-container[data-size-tier^="xxx"] .tmg-media-big-controls-wrapper {
+  gap: calc(var(--tmg-media-current-unit) * 2.125);
+}
+.tmg-host-container[data-size-tier^="xxxx"] .tmg-media-big-controls-wrapper {
+  gap: calc(var(--tmg-media-current-unit) * 1.5);
+}
+
+:is(.tmg-media-big-controls-wrapper, .tmg-media-notifiers-container) > * {
   justify-content: center;
   align-items: center;
-  scale: var(--tmg-video-current-big-controls-scale);
-  background-color: var(--tmg-video-brand-complement-color);
+  background-color: var(--tmg-media-brand-complement-color);
   border-radius: 50%;
+}
+:is(.tmg-media-big-controls-wrapper > *, :where(button[class^="tmg-media-big-"])) > svg {
+  transform: scale(var(--tmg-media-current-big-controls-scale));
+}
+.tmg-media-big-play-pause-btn > svg {
+  transform: scale(calc(var(--tmg-media-current-big-controls-scale) * var(--tmg-media-large-scale)));
 }

@@ -2,11 +2,11 @@
   from,
   to {
     opacity: 0.85;
-    transform: scale(1);
+    transform: scale(calc(1 / var(--tmg-media-large-scale)));
   }
   50% {
     opacity: 1;
-    transform: scale(var(--tmg-video-large-scale));
+    transform: scale(1);
   }
 }
 @keyframes tmg-spin {
@@ -51,7 +51,7 @@
 }
 @keyframes tmg-scale-up {
   to {
-    transform: scale(var(--tmg-video-large-scale));
+    transform: scale(var(--tmg-media-large-scale));
   }
 }
 @keyframes tmg-arrow-1 {

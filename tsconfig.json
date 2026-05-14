@@ -9,8 +9,7 @@
     "resolveJsonModule": true,
     "incremental": true,
     "forceConsistentCasingInFileNames": true,
-    "preserveSymlinks": true
-  },
-  "include": ["src/ts/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+    "preserveSymlinks": true,
+    "types": ["node", "youtube"]
+  }
 }

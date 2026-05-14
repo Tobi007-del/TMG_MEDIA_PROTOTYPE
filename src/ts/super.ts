@@ -4,7 +4,7 @@ export * from "./core/registry";
 export * from "./tools/player";
 export * from "./tools/queue";
 export * from "./tools/runtime";
-export * as media from "./media";
+export * as techs from "./techs";
 export * as plugs from "./plugs";
 export * as comps from "./components";
 export * as consts from "./consts";

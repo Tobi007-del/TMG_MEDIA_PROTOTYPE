@@ -1,19 +1,19 @@
-.tmg-video-container.tmg-video-settings-view .tmg-video-container-content-wrapper {
+.tmg-media-container.tmg-media-settings-view .tmg-media-container-content-wrapper {
   transform: rotateY(180deg);
 }
-.tmg-video-container.tmg-video-settings-view .tmg-video-settings {
+.tmg-media-container.tmg-media-settings-view .tmg-media-settings {
   opacity: 1;
   pointer-events: all;
 }
-.tmg-video-container.tmg-video-settings-view .tmg-video-container-content .tmg-video {
-  filter: var(--tmg-video-filter) blur(10px);
+.tmg-media-container.tmg-media-settings-view .tmg-media-container-content .tmg-media {
+  filter: var(--tmg-media-filter) blur(10px);
 }
-.tmg-video-container.tmg-video-settings-view .tmg-video-settings-btn svg {
+.tmg-media-container.tmg-media-settings-view .tmg-media-settings-btn svg {
   transform: rotate(30deg);
 }
-.tmg-video-container-content-wrapper,
-.tmg-video-container-content,
-.tmg-video-settings {
+.tmg-media-container-content-wrapper,
+.tmg-media-container-content,
+.tmg-media-settings {
   position: relative;
   max-width: inherit;
   max-height: inherit;
@@ -21,66 +21,66 @@
   min-height: inherit;
   border-radius: inherit;
 }
-.tmg-video-container-content-wrapper {
+.tmg-media-container-content-wrapper {
   width: inherit;
   height: inherit;
   transform-style: preserve-3d;
-  transition: transform var(--tmg-video-settings-view-transition-time) var(--tmg-video-bounce-timing);
+  transition: transform var(--tmg-media-settings-view-transition-time) var(--tmg-media-bounce-timing);
 }
-.tmg-video-container-content,
-.tmg-video-settings {
+.tmg-media-container-content,
+.tmg-media-settings {
   width: 100%;
   height: 100%;
   transform-style: inherit;
   transition: inherit;
   overflow: hidden;
 }
-.tmg-video-container-content {
+.tmg-media-container-content {
   display: flex;
   justify-content: center;
-  background: var(--tmg-video-background);
+  background: var(--tmg-media-background);
   cursor: none;
 }
-.tmg-video-settings {
+.tmg-media-settings {
   position: absolute;
   inset: 0;
   z-index: 1;
-  background-color: var(--tmg-video-settings-background-color);
+  background-color: var(--tmg-media-settings-background-color);
   transform: rotateY(180deg);
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3.5px);
+  backdrop-filter: blur(3.5px);
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--tmg-video-settings-view-transition-time) var(--tmg-video-bounce-timing);
+  transition: opacity var(--tmg-media-settings-view-transition-time) var(--tmg-media-bounce-timing);
 }
-.tmg-video-settings-content {
+.tmg-media-settings-content {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: var(--tmg-video-settings-content-padding);
-  color: var(--tmg-video-settings-text-color);
+  padding: var(--tmg-media-settings-content-padding);
+  color: var(--tmg-media-settings-text-color);
   border-radius: inherit;
 }
-.tmg-video-settings-content > div {
+.tmg-media-settings-content > div {
   display: flex;
 }
-.tmg-video-settings-top-panel {
-  padding-block-end: var(--tmg-video-settings-content-padding);
-  border-bottom: 1px solid var(--tmg-video-settings-border-color);
+.tmg-media-settings-top-panel {
+  padding-block-end: var(--tmg-media-settings-content-padding);
+  border-bottom: 1px solid var(--tmg-media-settings-border-color);
 }
-.tmg-video-settings-close-btn {
+.tmg-media-settings-close-btn {
   display: flex;
   align-items: center;
-  gap: calc(var(--tmg-video-current-unit) / 7.5);
-  height: calc(var(--tmg-video-current-unit) / 1.25);
-  font-size: calc(var(--tmg-video-current-unit) / 1.35);
+  gap: calc(var(--tmg-media-current-unit) / 7.5);
+  height: calc(var(--tmg-media-current-unit) / 1.25);
+  font-size: calc(var(--tmg-media-current-unit) / 1.35);
 }
-.tmg-video-settings-bottom-panel {
+.tmg-media-settings-bottom-panel {
   flex-grow: 1;
   justify-content: center;
   align-items: center;
-  color: var(--tmg-video-brand-accent-color);
-  font-size: calc(var(--tmg-video-current-unit));
+  color: var(--tmg-media-brand-accent-color);
+  font-size: calc(var(--tmg-media-current-unit));
   text-align: center;
 }

@@ -123,7 +123,7 @@
     });
   }
 
-  // ../sia-reactor/dist/chunk-EZ4VRGYI.js
+  // ../sia-reactor/dist/chunk-4PLMBUCP.js
   var CTX = {
     /** Flag indicating whether the application is running in development mode. */
     isDevEnv: "undefined" !== typeof process ? true : true,
@@ -158,9 +158,8 @@
     if (config.preserveContext) return !(obj instanceof String) && !(obj instanceof Number) && !(obj instanceof Function) && !(obj instanceof Date) && !(obj instanceof Error) && !(obj instanceof RegExp) && !(obj instanceof Promise) && !(obj instanceof Map) && !(obj instanceof WeakMap) && !(obj instanceof Set) && !(obj instanceof WeakSet) && !(obj instanceof EventTarget);
     return false;
   }
-  function getAny(source, key, separator = ".", keyFunc) {
+  function getPath(source, key, separator = ".", keyFunc) {
     if (key === "*") return source;
-    if (!key.includes(separator)) return source[keyFunc ? keyFunc(key) : key];
     const keys2 = key.split(separator);
     let currObj = source;
     for (let i = 0, len = keys2.length; i < len; i++) {
@@ -176,9 +175,8 @@
     }
     return currObj;
   }
-  function setAny(target, key, value, separator = ".", keyFunc) {
+  function setPath(target, key, value, separator = ".", keyFunc) {
     if (key === "*") return Object.assign(target, value);
-    if (!key.includes(separator)) return void (target[keyFunc ? keyFunc(key) : key] = value);
     const keys2 = key.split(separator);
     for (let currObj = target, i = 0, len = keys2.length; i < len; i++) {
       const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRegex);
@@ -193,13 +191,12 @@
       }
     }
   }
-  function deleteAny(target, key, separator = ".", keyFunc) {
+  function deletePath(target, key, separator = ".", keyFunc) {
     if (key === "*") {
       const keys22 = Object.keys(target);
       for (let i = 0, len = keys22.length; i < len; i++) delete target[keys22[i]];
       return;
     }
-    if (!key.includes(separator)) return void delete target[keyFunc ? keyFunc(key) : key];
     const keys2 = key.split(separator);
     for (let currObj = target, i = 0, len = keys2.length; i < len; i++) {
       const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRegex);
@@ -215,9 +212,8 @@
       }
     }
   }
-  function inAny(source, key, separator = ".", keyFunc) {
+  function hasPath(source, key, separator = ".", keyFunc) {
     if (key === "*") return true;
-    if (!key.includes(separator)) return key in source;
     const keys2 = key.split(separator);
     for (let currObj = source, i = 0, len = keys2.length; i < len; i++) {
       const key2 = keyFunc ? keyFunc(keys2[i]) : keys2[i], match = key2.includes("[") && key2.match(arrRegex);
@@ -234,13 +230,13 @@
     }
     return true;
   }
-  function parseAnyObj(obj, separator = ".", keyFunc = (p) => p, seen = /* @__PURE__ */ new WeakSet()) {
+  function parsePathObj(obj, separator = ".", keyFunc = (p) => p, seen = /* @__PURE__ */ new WeakSet()) {
     if (!isObj(obj) || seen.has(obj)) return obj;
     seen.add(obj);
     const result = {}, keys2 = Object.keys(obj);
     for (let i = 0, len = keys2.length; i < len; i++) {
       const key = keys2[i], val = obj[key];
-      key === "*" || key.includes(separator) ? setAny(result, key, parseAnyObj(val, separator, keyFunc, seen), separator, keyFunc) : result[key] = isObj(val) ? parseAnyObj(val, separator, keyFunc, seen) : val;
+      key === "*" || key.includes(separator) ? setPath(result, key, parsePathObj(val, separator, keyFunc, seen), separator, keyFunc) : result[key] = isObj(val) ? parsePathObj(val, separator, keyFunc, seen) : val;
     }
     return result;
   }
@@ -248,7 +244,7 @@
     return Object.assign(result, "boolean" === typeof options ? { [boolOpt]: options } : options), result;
   }
   function fanout(a, b, c, d) {
-    const isEvPd = !!a?.target, isPath = !isEvPd && "string" === typeof b, [state2, path, olds, news, opts, type] = isEvPd ? [a.root, a.currentTarget.path, a.currentTarget.oldValue, a.currentTarget.value, b || NIL, a.type] : isPath ? [a, b, getAny(a, b), c, d || NIL, void 0] : [void 0, void 0, a, b, c || NIL, void 0], target = isEvPd ? getAny(a.root, a.currentTarget.path) : isPath ? getAny(state2, path) : olds;
+    const isEvPd = !!a?.target, isPath = !isEvPd && "string" === typeof b, [state2, path, olds, news, opts, type] = isEvPd ? [a.root, a.currentTarget.path, a.currentTarget.oldValue, a.currentTarget.value, b || NIL, a.type] : isPath ? [a, b, getPath(a, b), c, d || NIL, void 0] : [void 0, void 0, a, b, c || NIL, void 0], target = isEvPd ? getPath(a.root, a.currentTarget.path) : isPath ? getPath(state2, path) : olds;
     if (isEvPd && type !== "set" && type !== "delete" || !target || !canHandle(news, opts)) return;
     const prev = CTX.isCascading;
     CTX.isCascading = isEvPd;
@@ -264,7 +260,7 @@
           }
         }
       };
-      if ((opts.atomic ?? true) && Array.isArray(news) && isPath) setAny(state2, path, news), getAny(state2, path).length = news.length;
+      if ((opts.atomic ?? true) && Array.isArray(news) && isPath) setPath(state2, path, news), getPath(state2, path).length = news.length;
       else walk(target, opts.merge ? mergeObjs(olds, news, opts) : news, opts.depth === true ? Infinity : opts.depth);
     } finally {
       CTX.isCascading = prev;
@@ -321,7 +317,7 @@
     }
   }
 
-  // ../sia-reactor/dist/chunk-6HZSS2TX.js
+  // ../sia-reactor/dist/chunk-T2CAL5F4.js
   var ReactorEvent = class _ReactorEvent {
     /** No active propagation phase. */
     static NONE = 0;
@@ -414,7 +410,7 @@
     resolve(message) {
       if (!this.rejectable) return this.reactor.log(`[ReactorEvent] Ignored \`resolve()\` call on a non-rejectable ${this.staticType} at "${this.path}"`);
       if (this.eventPhase !== _ReactorEvent.CAPTURING_PHASE) this.reactor.log(`[ReactorEvent] Resolving an intent on ${this.staticType} at "${this.path}" outside of the capture phase is unadvised.`);
-      if (this.rejectable) this.reactor.log(`[ReactorEvent] ${this._resolved = message || `Could ${this.staticType} intended value at "${this.path}"`}`);
+      if (this.rejectable) this.reactor.log(`[ReactorEvent] ${this._resolved = message || `${this.staticType} intent resolved at "${this.path}"`}`);
     }
     /** Rejection reason for rejectable events. */
     get rejected() {
@@ -429,7 +425,7 @@
     reject(reason) {
       if (!this.rejectable) return this.reactor.log(`[ReactorEvent] Ignored \`reject()\` call on a non-rejectable ${this.staticType} at "${this.path}"`);
       if (this.eventPhase !== _ReactorEvent.CAPTURING_PHASE) this.reactor.log(`[ReactorEvent] Rejecting an intent on ${this.staticType} at "${this.path}" outside of the capture phase is unadvised.`);
-      if (this.rejectable) this.reactor.log(`[ReactorEvent] ${this._rejected = reason || `Couldn't ${this.staticType} intended value at "${this.path}"`}`);
+      if (this.rejectable) this.reactor.log(`[ReactorEvent] ${this._rejected = reason || `${this.staticType} intent rejected at "${this.path}"`}`);
     }
     /**
      * Returns event path values from target to root.
@@ -765,7 +761,7 @@
       return depth;
     }
     getContext(path) {
-      const last = path.lastIndexOf("."), value = getAny(this.core, path), object = last === -1 ? this.core : getAny(this.core, path.slice(0, last));
+      const last = path.lastIndexOf("."), value = getPath(this.core, path), object = last === -1 ? this.core : getPath(this.core, path.slice(0, last));
       return { path, value, key: path.slice(last + 1) || "", hadKey: true, object };
     }
     bindSignal(cord, sig) {
@@ -830,7 +826,7 @@
      * const cleanup = rtr.get("user.name", (value) => String(value).trim());
      */
     get(path, callback, options) {
-      return this.addSync("get", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && getAny(this.core, path));
+      return this.addSync("get", path, callback, options, (imm) => (imm !== "auto" || hasPath(this.core, path)) && getPath(this.core, path));
     }
     /** Registers a get mediator for a path that only triggers once. */
     gonce(path, callback, options) {
@@ -855,7 +851,7 @@
      * rtr.set("user.name", (value) => String(value).trim());
      */
     set(path, callback, options) {
-      return this.addSync("set", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && setAny(this.core, path, getAny(this.core, path)));
+      return this.addSync("set", path, callback, options, (imm) => (imm !== "auto" || hasPath(this.core, path)) && setPath(this.core, path, getPath(this.core, path)));
     }
     /** Registers a set mediator for a path that only triggers once. */
     sonce(path, callback, options) {
@@ -880,7 +876,7 @@
      * rtr.delete("cache.temp", () => TERMINATOR);
      */
     delete(path, callback, options) {
-      return this.addSync("delete", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && deleteAny(this.core, path));
+      return this.addSync("delete", path, callback, options, (imm) => (imm !== "auto" || hasPath(this.core, path)) && deletePath(this.core, path));
     }
     /** Registers a delete mediator for a path that only triggers once. */
     donce(path, callback, options) {
@@ -906,7 +902,7 @@
      * const cleanup = rtr.watch("user.name", (value) => console.log(value));
      */
     watch(path, callback, options) {
-      return this.addSync("watch", path, callback, options, (imm) => (imm !== "auto" || inAny(this.core, path)) && ((target) => callback(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false }))(this.getContext(path)));
+      return this.addSync("watch", path, callback, options, (imm) => (imm !== "auto" || hasPath(this.core, path)) && (imm === "strict" ? setPath(this.core, path, getPath(this.core, path)) : ((target) => callback(target.value, { type: "init", target, currentTarget: target, root: this.core, rejectable: false }))(this.getContext(path))));
     }
     /** Registers a watcher for a path that only triggers once. */
     wonce(path, callback, options) {
@@ -945,10 +941,12 @@
         }
       if (cord) return cord.clup;
       cord = { cb: callback, capture, depth, once, clup: () => this.off(path, callback, options), lDepth: depth !== void 0 ? this.getDepth(path) : depth };
-      if (immediate && (immediate !== "auto" || inAny(this.core, path))) {
-        const target = this.getContext(path);
-        callback(new ReactorEvent({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, this));
-      }
+      if (immediate && (immediate !== "auto" || hasPath(this.core, path)))
+        if (immediate === "strict") setPath(this.core, path, getPath(this.core, path));
+        else {
+          const target = this.getContext(path);
+          callback(new ReactorEvent({ type: "init", target, currentTarget: target, root: this.core, rejectable: false }, this));
+        }
       (cords ?? (this.listeners.set(path, cords = []), cords)).push(cord);
       return this.bindSignal(cord, signal);
     }
@@ -1034,7 +1032,7 @@
     return target[RAW] || target;
   }
 
-  // ../t007-tools/packages/utils/dist/chunk-Y5YJMRXD.js
+  // ../t007-tools/packages/utils/dist/chunk-4O76EZJ4.js
   var INTERACTIVE_SELECTOR = ":is(button,[href],input:not([type='hidden']),select,textarea,details>summary,[contenteditable='true'],iframe,audio[controls],video[controls],[tabindex]):not([disabled],[tabindex='-1'],[data-focus-guard],[inert],[inert] *)";
   var isInteractive = (target) => target instanceof HTMLElement && target.matches(INTERACTIVE_SELECTOR);
   var VIRTUAL_RESOURCE = /* @__PURE__ */ Symbol.for("T007_VIRTUAL_RESOURCE");
@@ -1092,14 +1090,17 @@
   function parseCSSSize(size, el) {
     return size?.endsWith?.("px") ? parseFloat(size) : remToPx(parseFloat(size), el);
   }
-  function isSameURL(src1, src2) {
-    if (!isStr(src1) || !isStr(src2) || !src1 || !src2) return false;
+  function cleanURL(url) {
     try {
-      const u1 = new URL(src1, window.location.href), u2 = new URL(src2, window.location.href);
-      return decodeURIComponent(u1.origin + u1.pathname) === decodeURIComponent(u2.origin + u2.pathname);
+      const u = new URL(url, window.location.href);
+      return decodeURIComponent(u.origin + u.pathname);
     } catch {
-      return src1.replace(/\\/g, "/").split("?")[0].trim() === src2.replace(/\\/g, "/").split("?")[0].trim();
+      return url.replace(/\\/g, "/").split("?")[0].trim();
     }
+  }
+  function isSameURL(url1, url2) {
+    if (!isStr(url1) || !isStr(url2) || !url1 || !url2) return false;
+    return cleanURL(url1) === cleanURL(url2);
   }
   var mockAsync = (timeout = 250) => new Promise((resolve) => setTimeout(resolve, timeout));
   function formatSize(bytes, decimals = 3, base = 1e3) {
@@ -1117,7 +1118,7 @@
     window.T007_DIALOG_CSS_SRC ??= `https://cdn.jsdelivr.net/npm/@t007/dialog@latest/dist/index.min.css`;
   }
 
-  // ../t007-tools/packages/utils/dist/chunk-LBDWVTYF.js
+  // ../t007-tools/packages/utils/dist/chunk-QJ72EQCJ.js
   function rippleHandler(e, { target, forceCenter = false, wrapperClassName = "t007-ripple-wrapper", className = "t007-ripple", holdClassName = "t007-ripple-hold", fadeClassName = "t007-ripple-fade" } = NIL) {
     const el = target || e.currentTarget;
     if (!el || e.target !== e.currentTarget && isInteractive(e.target) || el.hasAttribute("disabled") || e.pointerType === "mouse" && e.button !== 0) return;
@@ -1208,8 +1209,9 @@
     t007._scrollers_r_observer.observe(el), t007._scrollers_m_observer.observe(el, { childList: true, subtree: true, characterData: true });
     return t007._scrollers.set(el, handle), handle;
   }
+  var removeScrollAssist = (el) => t007._scrollers.get(el)?.destroy();
 
-  // ../sia-reactor/dist/chunk-QPJNSYXT.js
+  // ../sia-reactor/dist/chunk-VIDZLTP2.js
   var BaseReactorModule = class {
     static moduleName;
     get name() {
@@ -1467,8 +1469,8 @@
     get payload() {
       let res = this.rtrs.size > 1 ? {} : void 0;
       for (const [rid, rtr] of this.rtrs) {
-        const snap = this.config.useSnapshot ? (this.config.useSnapshot === true && (rtr.config.referenceTracking = rtr.config.smartCloning = true), rtr.snapshot()) : rtr.core, paths = this.getPaths(this.config.whitelist, rid), val = this.config.whitelist ? paths.reduce((acc, p) => (setAny(acc, p, getAny(snap, p)), acc), {}) : snap;
-        this.rtrs.size > 1 ? setAny(res, rid, val) : res = val;
+        const snap = this.config.useSnapshot ? (this.config.useSnapshot === true && (rtr.config.referenceTracking = rtr.config.smartCloning = true), rtr.snapshot()) : rtr.core, paths = this.getPaths(this.config.whitelist, rid), val = this.config.whitelist ? paths.reduce((acc, p) => (setPath(acc, p, getPath(snap, p)), acc), {}) : snap;
+        this.rtrs.size > 1 ? setPath(res, rid, val) : res = val;
       }
       return res;
     }
@@ -1492,19 +1494,19 @@
       if (this.adapter && value === this.adapter.constructor) return;
       this.state.hydrated = false;
       this.adapter?.remove(this.config.key);
-      this.adapter = "function" === typeof value ? new value({ debug: !!this.rtrs.values().next().value?.canLog }) : value;
+      this.adapter = "function" === typeof value ? new value({ debug: !!this.rtrs.values().next().value?.canLog }) : (value.config.debug = !!this.rtrs.values().next().value?.canLog, value);
       try {
         let saved = this.adapter.get(this.config.key);
         const isAsync = saved instanceof Promise, { depth, merge = true } = parseEvtOpts(this.config.fanout ?? isAsync, fanoutOptsArr, "depth");
         saved = !isAsync ? saved : await saved;
         if (seq !== this.hydrateSeq || !saved) return;
         for (const [rid, rtr] of this.rtrs) {
-          const paths = this.getPaths(this.config.whitelist, rid), entry = this.rtrs.size > 1 ? getAny(saved, rid) : saved;
+          const paths = this.getPaths(this.config.whitelist, rid), entry = this.rtrs.size > 1 ? getPath(saved, rid) : saved;
           if (!entry) continue;
-          const set = (p, news, olds) => (depth ? fanout : setAny)(rtr.core, p, merge ? mergeObjs(news, olds) : olds, depth ? { depth, crossRealms: rtr.config.crossRealms } : void 0), setPaths = this.config.whitelist ? paths : wpArr;
+          const set = (p, news, olds) => (depth ? fanout : setPath)(rtr.core, p, merge ? mergeObjs(news, olds) : olds, depth ? { depth, crossRealms: rtr.config.crossRealms } : void 0), setPaths = this.config.whitelist ? paths : wpArr;
           for (let i = 0, len = setPaths.length; i < len; i++) {
             const path = setPaths[i];
-            set(path, getAny(rtr.core, path), getAny(entry, path));
+            set(path, getPath(rtr.core, path), getPath(entry, path));
           }
         }
         for (const [rid, rtr] of this.rtrs) rtr.tick(depth ? "*" : this.config.whitelist ? this.getPaths(this.config.whitelist, rid) : "*");
@@ -1579,8 +1581,8 @@
         const e = this.state.history[forward ? this.state.currentFrame : this.state.currentFrame - 1];
         if (!e) break;
         const rtr = this.rtrs.get(e.rid) || this.rtrs.values().next().value;
-        if (forward) e.type === "delete" ? deleteAny(rtr.core, e.path) : setAny(rtr.core, e.path, deepClone(e.value, rtr.config));
-        else e.hadKey === false ? deleteAny(rtr.core, e.path) : setAny(rtr.core, e.path, deepClone(e.oldValue, rtr.config));
+        if (forward) e.type === "delete" ? deletePath(rtr.core, e.path) : setPath(rtr.core, e.path, deepClone(e.value, rtr.config));
+        else e.hadKey === false ? deletePath(rtr.core, e.path) : setPath(rtr.core, e.path, deepClone(e.oldValue, rtr.config));
         forward ? this.state.currentFrame++ : this.state.currentFrame--;
         if (e.rejected) rtr.log(`[Reactor ${this.name} Module] ${forward ? "Replaying" : "Reversing"} REJECTED intent at "${e.path}"`);
       }
@@ -1593,9 +1595,13 @@
       this.pause(), forward ? this.jumpTo(this.state.currentFrame + stride) : this.jumpTo(this.state.currentFrame - stride);
     }
     /** Step back in time, Moves the playhead backward and teleports the state. */
-    undo = () => this.step(1, false);
+    undo() {
+      this.step(1, false);
+    }
     /** Step forward in time, Restores previously undone actions. */
-    redo = () => this.step(1, true);
+    redo() {
+      this.step(1, true);
+    }
     // ===========================================================================
     // THE VCR (Automated Playback)
     // ===========================================================================
@@ -1624,7 +1630,7 @@
     }
     /** Imports a session from a JSON string, allowing you to replay or analyze past states. */
     import(json, reviver) {
-      setAny(this.state, "*", JSON.parse(json, reviver));
+      setPath(this.state, "*", JSON.parse(json, reviver));
       this.lastTimestamp = performance.now();
       const resume = !this.state.paused, target = this.state.currentFrame;
       this.state.paused = false;
@@ -1635,7 +1641,7 @@
   };
   var TIME_TRAVEL_MODULE_BUILD = { maxPlaybackDelay: 2e3 };
 
-  // ../sia-reactor/dist/chunk-UXQ5NJIO.js
+  // ../sia-reactor/dist/chunk-CEPDD5XN.js
   var Autotracker = class {
     proxy;
     deps = /* @__PURE__ */ new Map();
@@ -1922,7 +1928,7 @@
     }
     plugPlaylist() {
       this.config.get("playlist", (value) => value?.length ? value : null);
-      this.config.set("playlist", (value) => value?.map((v) => tmg.mergeObjs(tmg.DEFAULT_VIDEO_ITEM_BUILD, tmg.parseAnyObj(v))));
+      this.config.set("playlist", (value) => value?.map((v) => tmg.mergeObjs(tmg.DEFAULT_VIDEO_ITEM_BUILD, tmg.parsePathObj(v))));
       this.config.on(
         "playlist",
         ({ root }) => {
@@ -2093,8 +2099,8 @@
         { option: "Custom Hue", value: "custom" },
         { option: "Video Derived", value: "auto" }
       ], gcolors = options.slice(0, -2).map((opt) => opt.value), defs = { brand: this.settings.css.brandColor ?? "#e26e02", theme: this.settings.css.themeColor ?? "#ffffff", bcolors: ["#e26e02", ...gcolors], tcolors: ["#ffffff", ...gcolors] }, bField = t007.field({ type: "select", label: "Brand Color", helperText: { info: "You should just try changing your brand color for now" }, options: [{ option: "Tastey Orange", value: "#e26e02" }, ...options], value: !defs.bcolors.includes(defs.brand) ? !this.settings.css.syncWithMedia.brandColor ? "custom" : "auto" : defs.brand }), cBField = t007.field({ type: "color" }), tField = t007.field({ type: "select", label: "Theme Color", helperText: { info: "You should also try changing your theme color for now" }, options: [{ option: "Pure White", value: "#ffffff" }, ...options], value: !defs.tcolors.includes(defs.theme) ? !this.settings.css.syncWithMedia.themeColor ? "custom" : "auto" : defs.theme }), cTField = t007.field({ type: "color" }), bWrapper = tmg.createEl("div"), tWrapper = tmg.createEl("div");
-      this.config.watch("settings.css.brandColor", (v = defs.brand) => (v = v.toLowerCase(), cBField.inputEl.value = v, cBField.style.setProperty("--input-current-color", v), bField.inputEl.value = !defs.bcolors.includes(v) ? !this.settings.css.syncWithMedia.brandColor ? "custom" : "auto" : v), { immediate: true });
-      this.config.watch("settings.css.themeColor", (v = defs.theme) => (v = v.toLowerCase(), cTField.inputEl.value = v, cTField.style.setProperty("--input-current-color", v), tField.inputEl.value = !defs.tcolors.includes(v) ? !this.settings.css.syncWithMedia.themeColor ? "custom" : "auto" : v), { immediate: true });
+      this.config.watch("settings.css.brandColor", (v = defs.brand) => (v = v.toLowerCase(), cBField.inputEl.value = v, cBField.style.setProperty("--input-color", v), bField.inputEl.value = !defs.bcolors.includes(v) ? !this.settings.css.syncWithMedia.brandColor ? "custom" : "auto" : v), { immediate: true });
+      this.config.watch("settings.css.themeColor", (v = defs.theme) => (v = v.toLowerCase(), cTField.inputEl.value = v, cTField.style.setProperty("--input-color", v), tField.inputEl.value = !defs.tcolors.includes(v) ? !this.settings.css.syncWithMedia.themeColor ? "custom" : "auto" : v), { immediate: true });
       this.queryDOM(".tmg-video-settings-bottom-panel").append((bWrapper.append(bField, cBField), bWrapper), (tWrapper.append(tField, cTField), tWrapper));
       const id = { theme: "", brand: "" }, sync = (cb, req = true, type = "brand") => (this.settings.css.syncWithMedia[`${type}Color`] = req, cb(req)), assert = (opts, type = "brand") => this.toast?.update(id[type], { render: `Still here in case you change your choice about the ${type}`, ...opts }), onBColorChange = ({ target: { value: val } }) => {
         this.throttle(
@@ -2108,8 +2114,7 @@
             const cb = (sync2) => bField.inputEl.value = defs.bcolors.includes(col) ? col : sync2 ? "auto" : "custom", No = () => (sync(cb, false), assert({ actions: { Yes } })), Yes = () => (sync(cb, true), assert({ actions: { No } }));
             sync(cb, val === "auto"), val === "auto" && (id.brand = this.toast?.("Should the brand color change anytime a video loads?", { icon: "\u{1F3A8}", autoClose: 15e3, hideProgressBar: false, actions: { Yes, No }, onDismiss: () => id.brand = "" }));
           },
-          30,
-          false
+          150
         );
       }, onTColorChange = ({ target: { value: val } }) => {
         this.throttle(
@@ -2123,7 +2128,7 @@
             const cb = (sync2) => tField.inputEl.value = defs.tcolors.includes(col) ? col : sync2 ? "auto" : "custom", No = () => (sync(cb, false, "theme"), assert({ actions: { Yes } }, "theme")), Yes = () => (sync(cb, true, "theme"), assert({ actions: { No } }, "theme"));
             sync(cb, val === "auto", "theme"), val === "auto" && (id.theme = this.toast?.("Should the theme color change anytime a video loads?", { icon: "\u{1F3A8}", autoClose: 15e3, hideProgressBar: false, actions: { Yes, No }, onDismiss: () => id.theme = "" }));
           },
-          30
+          150
         );
       };
       bField.inputEl.addEventListener("input", onBColorChange);
@@ -2240,7 +2245,7 @@
           className: "tmg-video-picture-in-picture-wrapper",
           innerHTML: `<button type="button" class="tmg-video-picture-in-picture-icon-wrapper"><svg class="tmg-video-picture-in-picture-icon" viewBox="0 0 73 73"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><g transform="translate(2, 2)" fill-rule="nonzero" stroke-width="2" class="tmg-video-pip-icon-background"><rect x="-1" y="-1" width="71" height="71" rx="14"></rect></g><g transform="translate(15, 15)" fill-rule="nonzero"><g><polygon class="tmg-video-pip-icon-content-background" points="0 0 0 36 36 36 36 0"></polygon><rect class="tmg-video-pip-icon-content-backdrop" x="4.2890625" y="4.2890625" width="27.421875" height="13.2679687"></rect><g transform="translate(4.289063, 27.492187)"><rect x="0" y="0" width="3.1640625" height="2.109375" class="tmg-video-pip-icon-timeline-progress"></rect><rect x="7.3828125" y="0" width="20.0390625" height="2.109375" class="tmg-video-pip-icon-timeline-base"></rect></g><circle class="tmg-video-pip-icon-thumb-indicator" cx="9.5625" cy="28.546875" r="3.1640625"></circle><polygon class="tmg-video-pip-icon-content" points="31.7109375 17.5569609 31.7109375 23.2734375 4.2890625 23.2734375 4.2890625 17.5569609 13.78125 8.06477344 20.109375 14.3928984 24.328125 10.1741484"></polygon></g><g transform="translate(21, 26)"><polygon class="tmg-video-pip-icon-content-background" points="0 0 0 17.7727273 23 17.7727273 23 0"></polygon><rect class="tmg-video-pip-icon-content-backdrop" x="2.74023438" y="2.74023438" width="17.5195312" height="8.47675781"></rect><polygon class="tmg-video-pip-icon-content"points="20.2597656 11.2169473 20.2597656 14.8691406 2.74023438 14.8691406 2.74023438 11.2169473 8.8046875 5.15249414 12.8476562 9.19546289 15.5429687 6.50015039"></polygon></g></g></g></svg></button><p>Playing in picture-in-picture</p>`
         }),
-        meta: tmg.createEl("div", { className: "tmg-video-meta-wrapper-cover", innerHTML: `<a class="tmg-video-profile-link"><img alt="Profile" class="tmg-video-profile"></a><div class="tmg-video-meta-text-wrapper-cover"><div class="tmg-video-title-wrapper"><a class="tmg-video-title"></a></div><div class="tmg-video-artist-wrapper"><a class="tmg-video-artist"></a></div></div>` }, { draggableControl: "", dragId: "wrapper", controlId: "meta" }),
+        meta: tmg.createEl("div", { className: "tmg-video-meta-wrapper", innerHTML: `<a class="tmg-video-profile-link"><img alt="Profile" class="tmg-video-profile"></a><div class="tmg-video-meta-text-wrapper-cover"><div class="tmg-video-title-wrapper"><a class="tmg-video-title"></a></div><div class="tmg-video-artist-wrapper"><a class="tmg-video-artist"></a></div></div>` }, { draggableControl: "", dragId: "wrapper", controlId: "meta" }),
         videobuffer: tmg.createEl("div", { className: "tmg-video-buffer", innerHTML: `<div class="tmg-video-buffer-accent"></div><div class="tmg-video-buffer-eclipse"><div class="tmg-video-buffer-left"><div class="tmg-video-buffer-circle"></div></div><div class="tmg-video-buffer-right"><div class="tmg-video-buffer-circle"></div></div></div>` }),
         thumbnail: _batch(tmg.createEl("div", { className: "tmg-video-thumbnail" }), tmg.createEl("canvas", { className: "tmg-video-thumbnail" })),
         captionsContainer: tmg.createEl("div", { className: "tmg-video-captions-container" }, { part: "region" }),
@@ -2307,11 +2312,11 @@
         ),
         fullscreenlock: tmg.createEl("button", { className: "tmg-video-fullscreen-locked-btn", innerHTML: `<svg class="tmg-video-fullscreen-locked-icon" viewBox="0 0 512 512" data-control-title="Lock Screen" style="scale: 0.825;"><path d="M390.234 171.594v-37.375c.016-36.969-15.078-70.719-39.328-94.906A133.88 133.88 0 0 0 256 0a133.88 133.88 0 0 0-94.906 39.313c-24.25 24.188-39.344 57.938-39.313 94.906v37.375H24.906V512h462.188V171.594zm-210.343-37.375c.016-21.094 8.469-39.938 22.297-53.813C216.047 66.594 234.891 58.125 256 58.125s39.953 8.469 53.813 22.281c13.828 13.875 22.281 32.719 22.297 53.813v37.375H179.891zm-96.86 95.5h345.938v224.156H83.031z"/><path d="M297.859 321.844c0-23.125-18.75-41.875-41.859-41.875-23.125 0-41.859 18.75-41.859 41.875 0 17.031 10.219 31.625 24.828 38.156l-9.25 60.094h52.562L273.016 360c14.609-6.531 24.843-21.125 24.843-38.156"/></svg>` }, { draggableControl: "", controlId: "fullscreenlock" }),
         bigprev: tmg.createEl("button", { className: "tmg-video-big-prev-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-prev-icon" data-control-title="Previous video${k["prev"]}"><rect x="4" y="5.14" width="2.5" height="14" transform="translate(2.1,0)"/><path d="M17,5.14V19.14L6,12.14L17,5.14Z" transform="translate(2.5,0)" /></svg>` }, { draggableControl: "", dragId: "big", controlId: "bigprev" }),
-        bigplaypause: tmg.createEl("button", { className: "tmg-video-big-play-pause-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-play-icon" data-control-title="Play${k["playPause"]}"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-pause-icon" data-control-title="Pause${k["playPause"]}"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg><svg class="tmg-video-replay-icon" viewBox="0 -960 960 960" data-control-title="Replay${k["playPause"]}" ><path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/></svg>` }, { draggableControl: "", dragId: "big", controlId: "bigplaypause" }),
+        bigplaypause: tmg.createEl("button", { className: "tmg-video-big-play-pause-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-play-icon" data-control-title="Play${k["playPause"]}"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-pause-icon" data-control-title="Pause${k["playPause"]}"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg><svg class="tmg-video-replay-icon" viewBox="0 -960 960 960" data-control-title="Replay${k["playPause"]}"><path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/></svg>` }, { draggableControl: "", dragId: "big", controlId: "bigplaypause" }),
         bignext: tmg.createEl("button", { className: "tmg-video-big-next-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-next-icon" data-control-title="Next video${k["next"]}"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" transform="translate(-2.5,0)" /><rect x="19" y="5.14" width="2.5" height="14" transform="translate(-2.5,0)"/></svg>` }, { draggableControl: "", dragId: "big", controlId: "bignext" }),
         timeline: tmg.createEl("div", { className: "tmg-video-timeline-container", tabIndex: 0, role: "slider", "aria-label": "Video timeline", "aria-valuemin": "0", "aria-valuenow": "0", "aria-valuetext": "0 seconds out of 0 seconds", innerHTML: `<div class="tmg-video-timeline"><div class="tmg-video-seek-bars-wrapper"><div class="tmg-video-seek-bar tmg-video-base-seek-bar"></div><div class="tmg-video-seek-bar tmg-video-buffered-seek-bar"></div><div class="tmg-video-seek-bar tmg-video-preview-seek-bar"></div><div class="tmg-video-seek-bar tmg-video-played-seek-bar"></div></div><div class="tmg-video-thumb-indicator"></div><div class="tmg-video-preview-container"><div class="tmg-video-preview"></div><canvas class="tmg-video-preview"></canvas></div></div>` }, { controlId: "timeline" }),
         prev: tmg.createEl("button", { className: "tmg-video-prev-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-prev-icon" data-control-title="Previous video${k["prev"]}"><rect x="4" y="5.14" width="2.5" height="14" transform="translate(2.1,0)"/><path d="M17,5.14V19.14L6,12.14L17,5.14Z" transform="translate(2.5,0)" /></svg>` }, { draggableControl: "", controlId: "prev" }),
-        playpause: tmg.createEl("button", { className: "tmg-video-play-pause-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-play-icon" data-control-title="Play${k["playPause"]}" style="scale: 1.25;"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-pause-icon" data-control-title="Pause${k["playPause"]}" style="scale: 1.25;"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg><svg class="tmg-video-replay-icon" viewBox="0 -960 960 960" data-control-title="Replay${k["playPause"]}"><path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/></svg>` }, { draggableControl: "", controlId: "playpause" }),
+        playpause: tmg.createEl("button", { className: "tmg-video-play-pause-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-play-icon" data-control-title="Play${k["playPause"]}"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg><svg viewBox="0 0 25 25" class="tmg-video-pause-icon" data-control-title="Pause${k["playPause"]}"><path d="M14,19H18V5H14M6,19H10V5H6V19Z" /></svg><svg class="tmg-video-replay-icon" viewBox="0 -960 960 960" data-control-title="Replay${k["playPause"]}"><path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440h80q0 117 81.5 198.5T480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720h-6l62 62-56 58-160-160 160-160 56 58-62 62h6q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Z"/></svg>` }, { draggableControl: "", controlId: "playpause" }),
         next: tmg.createEl("button", { className: "tmg-video-next-btn", innerHTML: `<svg viewBox="0 0 25 25" class="tmg-video-next-icon" data-control-title="Next video${k["next"]}"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" transform="translate(-2.5,0)" /><rect x="19" y="5.14" width="2.5" height="14" transform="translate(-2.5,0)"/></svg>` }, { draggableControl: "", controlId: "next" }),
         volume: tmg.createEl(
           "div",
@@ -2368,15 +2373,15 @@
       this.zoneWs = { top: {}, center: {}, bottom: { 1: {}, 2: {}, 3: {} } }, this.cZoneWs = { top: {}, center: [], bottom: { 1: {}, 2: {}, 3: {} } };
       const topWrapper = tmg.createEl("div", { className: "tmg-video-top-controls-wrapper tmg-video-apt-controls-wrapper" }, { dropZone: "", dragId: "wrapper" });
       this.zoneWs.top.left = buildWSkel("left", false), this.zoneWs.top.center = buildWSkel("center", false), this.zoneWs.top.right = buildWSkel("right", true);
-      const centerWrapper = tmg.createEl("div", { className: "tmg-video-big-controls-wrapper" }, { dropZone: "", dragId: "big" });
-      this.zoneWs.center = this.cZoneWs.center = { zone: centerWrapper };
+      const centerWrapper = tmg.createEl("div", { className: "tmg-video-big-controls-wrapper" }, { dropZone: "", dragId: "big" }), centerWrapperCover = tmg.createEl("div", { className: "tmg-video-big-controls-wrapper-cover" });
+      this.zoneWs.center = this.cZoneWs.center = { zone: centerWrapper, cover: (centerWrapperCover.append(centerWrapper), centerWrapperCover) };
       const bottomWrapper = tmg.createEl("div", { className: "tmg-video-bottom-controls-wrapper" });
       [1, 2, 3].forEach((i) => {
         bottomWrapper.append(tmg.createEl("div", { className: `tmg-video-bottom-sub-controls-wrapper tmg-video-bottom-${i}-sub-controls-wrapper tmg-video-apt-controls-wrapper` }, { dropZone: "", dragId: "wrapper" }));
         this.zoneWs.bottom[i].left = buildWSkel("left", false), this.zoneWs.bottom[i].center = buildWSkel("center", false), this.zoneWs.bottom[i].right = buildWSkel("right", true);
       });
       this.zonesArr = [...Object.values(this.zoneWs.top), ...Object.values(this.zoneWs.bottom).map((v) => Object.values(v))].flat().map((w) => w.zone);
-      controlsContainer.prepend(...[HTML.pictureinpicturewrapper, HTML.thumbnail, HTML.videobuffer, HTML.captionsContainer].flat().filter(Boolean), notifiersContainer, topWrapper, centerWrapper, bottomWrapper);
+      controlsContainer.prepend(...[HTML.pictureinpicturewrapper, HTML.thumbnail, HTML.videobuffer, HTML.captionsContainer].flat().filter(Boolean), notifiersContainer, topWrapper, centerWrapperCover, bottomWrapper);
       this.pseudoVideoContainer.append(HTML.pictureinpicturewrapper?.cloneNode(true) || "");
       this.config.on(
         "settings.controlPanel.top",
@@ -2410,7 +2415,7 @@
       let key;
       const pos = { 0: "left", 1: "center", 2: "right" }[[...target.parentElement.children].indexOf(target)], cws = this.queryDOM(".tmg-video-top-controls-wrapper, .tmg-video-bottom-sub-controls-wrapper", false, true);
       cws.forEach((w, i) => w.contains(target) && (key = { 0: "top.", 1: "bottom.1.", 2: "bottom.2.", 3: "bottom.3." }[i]));
-      return zoneW ? { coord: key + pos, zoneW: tmg.getAny(this.zoneWs, key + pos) } : key + pos;
+      return zoneW ? { coord: key + pos, zoneW: tmg.getPath(this.zoneWs, key + pos) } : key + pos;
     }
     syncControlPanelToUI() {
       const id = (el) => el.dataset.controlId, derive = (zoneW, center = false) => [center ? "spacer" : "", ...!zoneW.zone ? [id(zoneW)] : Array.from(zoneW.zone.children || [], id), center && (zoneW.zone ? zoneW.zone.children.length : true) ? "spacer" : ""].filter(Boolean);
@@ -2712,21 +2717,18 @@
       this._handleMediaParentResize();
       initScrollAssist(this.DOM.videoTitle, { pxPerSecond: 60, assistClassName: "tmg-video-controls-scroll-assist" });
       initScrollAssist(this.DOM.videoArtist, { pxPerSecond: 30, assistClassName: "tmg-video-controls-scroll-assist" });
-      this.zonesArr.forEach((el) => {
+      [...this.zonesArr, this.zoneWs.center.zone].forEach((el) => {
         this._handleControlsView(el);
-        initScrollAssist(el, { pxPerSecond: 60, assistClassName: "tmg-video-controls-scroll-assist" });
+        initScrollAssist(el, { pxPerSecond: el.dataset.dragId === "big" ? 120 : 60, assistClassName: "tmg-video-controls-scroll-assist" });
         el && tmg.resizeObserver.observe(el);
         el?.addEventListener("scroll", this._handleDirtyScroll, { passive: true });
       });
       [this.videoContainer, this.pseudoVideoContainer].forEach((el) => tmg.resizeObserver.observe(el));
     }
     unobserveResize() {
-      initScrollAssist(this.DOM.videoTitle, { pxPerSecond: 60, assistClassName: "tmg-video-controls-scroll-assist" });
-      initScrollAssist(this.DOM.videoArtist, { pxPerSecond: 30, assistClassName: "tmg-video-controls-scroll-assist" });
-      this.zonesArr.forEach((el) => {
-        initScrollAssist(el, { pxPerSecond: 60, assistClassName: "tmg-video-controls-scroll-assist" });
-        el && tmg.resizeObserver.unobserve(el);
-      });
+      removeScrollAssist(this.DOM.videoTitle);
+      removeScrollAssist(this.DOM.videoArtist);
+      [...this.zonesArr, this.zoneWs.center.zone].forEach((el) => (removeScrollAssist(el), el && tmg.resizeObserver.unobserve(el)));
       [this.videoContainer, this.pseudoVideoContainer].forEach((el) => tmg.resizeObserver.unobserve(el));
     }
     observeIntersection() {
@@ -2863,7 +2865,7 @@
       this.mutatingDOMM = true;
       this.pseudoVideo.id = this.video.id, this.video.id = "";
       this.pseudoVideo.className += " " + this.video.className.replace(/tmg-media|tmg-video/g, "");
-      this.pseudoVideoContainer.className += " " + this.videoContainer.className.replace(/tmg-media-container|tmg-pseudo-video-container/g, "");
+      this.pseudoVideoContainer.className += " " + this.videoContainer.className.replace(/tmg-media-container|tmg-video-container/g, "");
       this.videoContainer.parentElement?.insertBefore(this.pseudoVideoContainer, this.videoContainer);
       document.body.append(this.videoContainer);
       setTimeout(() => this.mutatingDOMM = false);
@@ -3481,7 +3483,7 @@
     }
     rotateCaptionsProp(steps, prop, numeric = true) {
       const curr = this.settings.css[tmg.camelize(prop.replace(".value", ""), /\./)], i = Math.max(0, numeric ? steps.reduce((cIdx, s, idx) => Math.abs(s - curr) < Math.abs(steps[cIdx] - curr) ? idx : cIdx, 0) : steps.indexOf(curr));
-      tmg.setAny(this.settings, prop, steps[(i + 1) % steps.length]);
+      tmg.setPath(this.settings, prop, steps[(i + 1) % steps.length]);
       this.config.stall(this.previewCaptions);
     }
     rotateCaptionsFontFamily = () => this.rotateCaptionsProp(tmg.parseUIObj(this.settings.captions).font.family.values, "captions.font.family.value", false);
@@ -3807,7 +3809,7 @@
       this.inFloatingPlayer = true;
       this.floatingWindow.document.documentElement.style.cssText = `height:100%; background:url(${this.config.media.profile}) center / 32px no-repeat, url(${this.video.poster}) center / ${this.settings.css.bgSafeObjectFit} no-repeat, black;`;
       await tmg.breath(this.floatingWindow);
-      const cssTexts = [], parse = (src) => "string" === typeof src ? src : null, whitelist = [parse(window.T007_TOAST_CSS_SRC), parse(window.T007_INPUT_CSS_SRC), parse(window.TMG_VIDEO_CSS_SRC) ?? "/tmg-media-player/src/beta/index-video.css"].filter(Boolean);
+      const cssTexts = [], parse = (src) => "string" === typeof src ? src : null, whitelist = [parse(window.T007_TOAST_CSS_SRC), parse(window.T007_INPUT_CSS_SRC), parse(window.T007_DIALOG_CSS_SRC), parse(window.TMG_VIDEO_CSS_SRC)].filter(Boolean);
       for (const sheet of document.styleSheets) {
         try {
           if (!whitelist.some((src) => tmg.isSameURL(src, sheet.href))) {
@@ -3859,7 +3861,7 @@
       }
     }
     _handleMiniplayerDragStart({ target, clientX, clientY, targetTouches }) {
-      if (!this.isUIActive("miniplayer") || target.scrollWidth > target.clientWidth || [this.DOM.topControlsWrapper, tmg.inBoolArrOpt(this.settings.controlPanel.draggable, "big") ? this.DOM.bigControlsWrapper : null, this.DOM.bottomControlsWrapper, this.DOM.captionsContainer].some((w) => w?.contains?.(target)) || target.closest("[class$='toast-container']")) return;
+      if (!this.isUIActive("miniplayer") || target.scrollWidth > target.clientWidth || isInteractive(target) || [this.DOM.topControlsWrapper, this.DOM.bottomControlsWrapper, this.DOM.captionsContainer].some((w) => w?.contains?.(target)) || target.closest("[class$='toast-container']")) return;
       const { left, bottom } = getComputedStyle(this.videoContainer);
       this.lastMiniplayerPosX = parseFloat(left), this.lastMiniplayerPosY = parseFloat(bottom);
       this.lastMiniplayerPtrX = clientX ?? targetTouches[0].clientX, this.lastMiniplayerPtrY = clientY ?? targetTouches[0].clientY;
@@ -4287,7 +4289,7 @@
     }
     _handleDragStart(e) {
       const { target: t, dataTransfer } = e;
-      if (t.dataset.draggableControl !== "true" || !t?.tagName) return;
+      if (!t?.tagName || t.dataset.draggableControl !== "true") return;
       if (t.matches(":has(input:is(:hover, :active))")) return e.preventDefault();
       dataTransfer.effectAllowed = "move";
       this.dragging = t;
@@ -4295,17 +4297,17 @@
       this.dragSafeTimeoutId = setTimeout(() => t.classList.remove("tmg-video-control-dragging"), 1e3);
       if (t.dataset.dragId !== "wrapper" || t.parentElement?.dataset.dragId !== "wrapper") return;
       const { coord, zoneW } = this.getUIZoneWCoord(t, true);
-      tmg.setAny(this.cZoneWs, coord, zoneW);
+      tmg.setPath(this.cZoneWs, coord, zoneW);
       this.dragReplaced = { target: t.parentElement, child: zoneW.cover };
     }
     _handleDrag = () => (this.delayOverlay(), clearTimeout(this.dragSafeTimeoutId));
     _handleDragEnd({ target: t }) {
       t.classList.remove("tmg-video-control-dragging");
       this.dragReplaced = this.dragging = null;
-      if (t.dataset.dragId === "wrapper" && t.parentElement?.dataset.dragId === "wrapper") tmg.setAny(this.cZoneWs, this.getUIZoneWCoord(t), t);
+      if (t.dataset.dragId === "wrapper" && t.parentElement?.dataset.dragId === "wrapper") tmg.setPath(this.cZoneWs, this.getUIZoneWCoord(t), t);
       this.syncControlPanelToUI();
     }
-    noDropOff = (t, drop = this.dragging) => t.dataset.dropZone !== "true" || !drop?.tagName || t.dataset.dragId !== drop.dataset.dragId;
+    noDropOff = (t, drop = this.dragging) => t.dataset.dropZone !== "true" || !drop?.tagName || t.dataset.dragId !== drop.dataset.dragId && (t.dataset.dragId === "wrapper" || drop.dataset.dragId === "wrapper");
     _handleDragEnter = ({ target: t }) => !this.noDropOff(t) && this.dragging && t.classList.add("tmg-video-dragover");
     _handleDragOver(e) {
       const { target: t, clientX: x, dataTransfer } = e;
@@ -4350,7 +4352,7 @@
     queryBuild = () => !this.#active ? true : (console.error("TMG has already deployed the custom controls of your build configuration"), console.warn("Consider setting your build configuration before attaching your media element"), false);
     configure(customBuild) {
       if (!this.queryBuild() || !tmg.isObj(customBuild)) return;
-      this.#build = tmg.mergeObjs(this.#build, tmg.parseAnyObj(customBuild));
+      this.#build = tmg.mergeObjs(this.#build, tmg.parsePathObj(customBuild));
       Object.entries(this.#build.settings.keys.shortcuts).forEach(([k, v]) => this.#build.settings.keys.shortcuts[k] = tmg.cleanKeyCombo(v));
       ["blocks", "overrides"].forEach((k) => this.#build.settings.keys[k] = tmg.cleanKeyCombo(this.#build.settings.keys[k]));
     }
@@ -4386,7 +4388,7 @@
     }
     async #deployController() {
       if (this.#active || !this.#medium.isConnected) return;
-      if (this.#build.playlist?.[0]) this.configure(tmg.mergeObjs(tmg.DEFAULT_VIDEO_ITEM_BUILD, tmg.parseAnyObj(this.#build.playlist[0])));
+      if (this.#build.playlist?.[0]) this.configure(tmg.mergeObjs(tmg.DEFAULT_VIDEO_ITEM_BUILD, tmg.parsePathObj(this.#build.playlist[0])));
       if (!(this.#medium instanceof HTMLVideoElement)) return console.error(`TMG could not deploy custom controls on the '${this.#medium.tagName}' element as it is not supported`), console.warn("TMG only supports the 'VIDEO' element currently");
       this.#medium.tmgcontrols = this.#active = !(this.#medium.controls = false);
       this.#medium.classList.add("tmg-video", "tmg-media");
@@ -4406,7 +4408,7 @@
   };
   var tmg = {
     ON_MOBILE: /Mobi|Android|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent),
-    ALLOWED_CONTROLS: ["removeMiniplayer", "expandMiniplayer", "bigPrev", "bigPlayPause", "bigNext", "capture", "fullscreenOrientation", "fullscreenLock", "prev", "playPause", "next", "brightness", "volume", "timeAndDuration", "spacer", "playbackRate", "captions", "settings", "objectFit", "pictureInPicture", "theater", "fullscreen"],
+    ALLOWED_CONTROLS: ["removeminiplayer", "expandminiplayer", "bigprev", "bigplaypause", "bignext", "capture", "fullscreenorientation", "fullscreenLock", "prev", "playPause", "next", "brightness", "volume", "timeAndDuration", "spacer", "playbackRate", "captions", "settings", "objectFit", "pictureInPicture", "theater", "fullscreen"],
     NOTIFIER_EVENTS: ["videoplay", "videopause", "videoprev", "videonext", "playbackrateup", "playbackratedown", "volumeup", "volumedown", "volumemuted", "brightnessup", "brightnessdown", "brightnessdark", "objectfitcontain", "objectfitcover", "objectfitfill", "captions", "capture", "theater", "fullscreen", "fwd", "bwd"],
     WHITE_LISTED_KEYS: [" ", "Enter", "Escape", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => k.toLowerCase()),
     IS_DOC_TRANSIENT: false,
@@ -4672,10 +4674,10 @@
         if (/^\d+$/.test(value)) return Number(value);
         return value;
       })();
-      tmg.setAny(target, path, parsedValue, "--", (p) => tmg.camelize(p));
+      tmg.setPath(target, path, parsedValue, "--", (p) => tmg.camelize(p));
     },
-    setAny,
-    getAny,
+    setPath,
+    getPath,
     bindAllMethods,
     reactive,
     TERMINATOR,
@@ -4699,7 +4701,7 @@
       }
       return result;
     },
-    parseAnyObj,
+    parsePathObj,
     parsePanelBottomObj(obj = [], arr = false) {
       if (!tmg.isObj(obj) && !tmg.isArr(obj)) return false;
       const [third = [], second = [], first = []] = tmg.isObj(obj) ? Object.values(obj).reverse() : tmg.isArr(obj[0]) ? obj.toReversed() : [obj];
@@ -5035,7 +5037,7 @@
           buffer: "spinner",
           timeline: { thumbIndicator: true, seek: { relative: !tmg.ON_MOBILE, cancel: { delta: 15, timeout: 2e3 } } },
           progressBar: tmg.ON_MOBILE,
-          draggable: ["", "wrapper"]
+          draggable: ["", "big", "wrapper"]
         },
         errorMessages: { 1: "The video playback was aborted :(", 2: "The video failed due to a network error :(", 3: "The video could not be decoded :(", 4: "The video source is not supported :(" },
         fastPlay: { playbackRate: 2, key: true, pointer: { type: "all", threshold: 800, inset: 20 }, reset: true, rewind: true },
